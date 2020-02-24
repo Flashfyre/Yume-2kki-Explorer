@@ -1,0 +1,8 @@
+{
+  "presets": [
+    ["es2015", { "modules": "umd" }]
+  ],
+  "plugins": [
+      "add-module-exports"
+  ]
+}

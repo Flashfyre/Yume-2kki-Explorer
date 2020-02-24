@@ -1,0 +1,678 @@
+<html>
+    <head>
+        <style>
+            body {
+                margin: 0;
+                background: #000000 url(https://img2.wikia.nocookie.net/__cb20140715140243/yume2kki/images/5/50/Wiki-background) top left repeat;
+            }
+
+            .content {
+                background: rgba(0,0,0,0.8);
+            }
+        </style>
+        <!--<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>-->
+        <script src="//unpkg.com/force-graph"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.min.js"></script>
+    </head>
+    <body>
+        <div class="content">
+            <div id="graph"></div>
+
+            <script>
+                var worldData = [
+                    {"title":"Art Gallery","connections":[{"location":"Dizzy Spirals World","type":0},{"location":"Blue Forest","type":0},{"location":"Garden World","type":0},{"location":"The Baddies Bar","type":0},{"location":"Pastel Blue House","type":0},{"location":"Monochrome Feudal Japan","type":0},{"location":"Visine World","type":0},{"location":"Sky Kingdom","type":0},{"location":"Underwater Amusement Park","type":0},{"location":"Techno Condominium","type":0},{"location":"Cloud Tops","type":0},{"location":"Toy World","type":0},{"location":"Dream Park","type":0},{"location":"Dark Room","type":2},{"location":"Graffiti Maze","type":1},{"location":"Flooded Baths","type":0},{"location":"Never-Ending Hallway","type":2},{"location":"Simple Street","type":2}],"filename":"Art Gallery.png"},
+                    {"title":"Atlantis","connections":[{"location":"Snowy Pipe Organ","type":0},{"location":"Tapir-San's Place","type":0},{"location":"Underwater Amusement Park","type":0},{"location":"Realistic Beach","type":0},{"location":"Flooded Baths","type":0},{"location":"Star Ocean","type":0},{"location":"Botanical Garden","type":0},{"location":"Sunken City","type":2},{"location":"Scorched Wasteland","type":1}],"filename":"Atlantis.png"},
+                    {"title":"Blood World","connections":[{"location":"Intestines Maze","type":0},{"location":"Stone Maze","type":0}],"filename":"Blood World.jpg"},
+                    {"title":"Apartments","connections":[{"location":"Library","type":2},{"location":"School","type":0},{"location":"Sky Kingdom","type":0},{"location":"White Fern World","type":0},{"location":"The Docks","type":0},{"location":"Pastel Blue House","type":0},{"location":"Underground Garage","type":0},{"location":"Dream Park","type":0},{"location":"Urotsuki's Dream Apartments","type":1},{"location":"Fairy Tale Woods","type":1},{"location":"Broken Faces Area","type":1},{"location":"Monochrome GB World","type":1}],"filename":"Apartments.png"},
+                    {"title":"Bathhouse","connections":[{"location":"Mini-Maze","type":0}],"filename":"Bathhouse.png"},
+                    {"title":"Abandoned Chinatown","connections":[{"location":"Forest Carnival","type":0},{"location":"Laboratory","type":0}],"filename":"Abandoned Chinatown.png"},
+                    {"title":"Black Building","connections":[{"location":"Purple World","type":0},{"location":"Town Maze","type":0},{"location":"Highway","type":1}],"filename":"Black Building.png"},
+                    {"title":"Abandoned Factory","connections":[{"location":"Forest Pier","type":2},{"location":"Wind Tunnel","type":1},{"location":"Neon City","type":2},{"location":"Arc de Pillar World","type":0}],"filename":"Abandoned Factory.png"},
+                    {"title":"Arc de Pillar World","connections":[{"location":"Abandoned Factory","type":0},{"location":"Mansion","type":0},{"location":"Ruined Garden","type":0}],"filename":"Arc de Pillar World.jpg"},
+                    {"title":"Binary World","connections":[{"location":"Warehouse","type":2},{"location":"Circuit Board","type":1},{"location":"Cyber Bar","type":0},{"location":"Data Stream","type":2}],"filename":"Binary World.png"},
+                    {"title":"Bioluminescent Cavern","connections":[{"location":"Victorian Drains","type":0}],"filename":"Bioluminescent Cavern.png"},
+                    {"title":"Abandoned Apartments","connections":[{"location":"Planetarium","type":0},{"location":"Deserted Town","type":0}],"filename":"Abandoned Apartments.png"},
+                    {"title":"Aquatic Cafe","connections":[{"location":"Mutant Pig Farm","type":0},{"location":"Monkey Mansion","type":0}],"filename":"Aquatic Cafe.png"},
+                    {"title":"Alien Cellar","connections":[{"location":"Snowy Forest","type":0}],"filename":"Alien Cellar.png"},
+                    {"title":"Blob Desert","connections":[{"location":"Sugar Road","type":0}],"filename":"Blob Desert.png"},
+                    {"title":"Aquamarine Cave","connections":[{"location":"Sandy Plains","type":0},{"location":"Psychedelic Stone Path","type":0},{"location":"Underground Lake","type":0}],"filename":"Aquamarine Cave.PNG"},
+                    {"title":"Beetle Forest","connections":[{"location":"Dojo","type":0}],"filename":"Beetle Forest.png"},
+                    {"title":"Ancient Crypt","connections":[{"location":"Crimson Labyrinth","type":0},{"location":"Radiant Stones Pathway","type":0}],"filename":"Ancient Crypt.PNG"},
+                    {"title":"Aquatic Cube City","connections":[{"location":"Ocean Subsurface","type":0},{"location":"Surgical Scissors World","type":0}],"filename":"Aquatic Cube City.png"},
+                    {"title":"Broken Faces Area","connections":[{"location":"Geometry World","type":2},{"location":"Floating Red Tiles World","type":0},{"location":"Pastel Blue House","type":0},{"location":"Fairy Tale Woods","type":0},{"location":"The Baddies Bar","type":0},{"location":"Laboratory","type":0},{"location":"Dream Park","type":0},{"location":"Flesh Paths World","type":2},{"location":"Simple Street","type":2}],"filename":"Broken Faces Area.png"},
+                    {"title":"Bowling Zone","connections":[{"location":"Stone Maze","type":0},{"location":"The Invisible Maze","type":0},{"location":"Never-Ending Hallway","type":0},{"location":"The Baddies Bar","type":2}],"filename":"Bowling Zone.png"},
+                    {"title":"Bug Maze","connections":[{"location":"The Hand Hub","type":0},{"location":"Scenic Outlook","type":0},{"location":"Sign World","type":0},{"location":"Mushroom World","type":0}],"filename":"Bug Maze.png"},
+                    {"title":"Blue Forest","connections":[{"location":"Garden World","type":0},{"location":"Art Gallery","type":0},{"location":"Exhibition","type":0},{"location":"School","type":0},{"location":"Butterfly Forest","type":2},{"location":"Monkey Wasteland","type":2}],"filename":"Blue Forest.png"},
+                    {"title":"Boogie Street","connections":[{"location":"Gray Road","type":0},{"location":"Fountain World","type":0},{"location":"House Over the Rainbow","type":0},{"location":"Dream Park","type":0}],"filename":"Boogie Street.png"},
+                    {"title":"Botanical Garden","connections":[{"location":"Atlantis","type":0},{"location":"RGB Passage","type":0},{"location":"Flooded Baths","type":1}],"filename":"Botanical Garden.png"},
+                    {"title":"Broken City","connections":[{"location":"Rough Ash World","type":0},{"location":"Cloudy World","type":0}],"filename":"Broken City.png"},
+                    {"title":"Bridged Swamp Islands","connections":[{"location":"Red Streetlight World","type":0},{"location":"Cultivated Lands","type":0},{"location":"Rapeseed Fields","type":0},{"location":"Mosenite","type":0}],"filename":"Bridged Swamp Islands.PNG"},
+                    {"title":"Bottom Garden","connections":[{"location":"Radiant Ruins","type":0},{"location":"Overgrown Gate","type":0},{"location":"Town Maze","type":2}],"filename":"Bottom Garden.png"},
+                    {"title":"Butterfly Forest","connections":[{"location":"Fantasy Library","type":2},{"location":"Chaotic Medley World","type":2},{"location":"Red Sky Cliff","type":0},{"location":"Red Lily Lake","type":0},{"location":"Constellation World","type":1},{"location":"Blue Orb World","type":0},{"location":"Chaos World","type":0},{"location":"Cloud Tops","type":0},{"location":"Blue Forest","type":1},{"location":"Whipped Cream World","type":0},{"location":"Fountain World","type":1},{"location":"Snowy Pipe Organ","type":1},{"location":"Elvis Masada's Place","type":1}],"filename":"Butterfly Forest.png"},
+                    {"title":"Candy World","connections":[{"location":"Butterfly Forest","type":0},{"location":"Red Lily Lake","type":0},{"location":"Cloud Floor","type":0},{"location":"Constellation World","type":0}],"filename":"Candy World.png"},
+                    {"title":"Blue Orb World","connections":[{"location":"Butterfly Forest","type":0},{"location":"Cutlery World","type":0},{"location":"Scrambled Egg Zone","type":0},{"location":"Fruit Cake World","type":0}],"filename":"Blue Orb World.png"},
+                    {"title":"Buried City","connections":[{"location":"Sunken City","type":0},{"location":"Chaos Exhibition","type":0}],"filename":"Buried City.PNG"},
+                    {"title":"Burial Desert","connections":[{"location":"Vase World","type":0},{"location":"Chaos Exhibition","type":0},{"location":"Industrial Towers","type":1}],"filename":"Burial Desert.PNG"},
+                    {"title":"Chaos Exhibition","connections":[{"location":"Burial Desert","type":0},{"location":"Buried City","type":0},{"location":"Underground Laboratory","type":0},{"location":"Sugar Road","type":0},{"location":"Dark Warehouse","type":0},{"location":"Industrial Towers","type":1},{"location":"Mare Tranquillitatis","type":1}],"filename":"Chaos Exhibition.PNG"},
+                    {"title":"Cat Cemetery","connections":[{"location":"Doll House","type":0}],"filename":"Cat Cemetery.png"},
+                    {"title":"Blue Cactus Islands","connections":[{"location":"Graffiti City","type":0},{"location":"Hidden Shoal","type":0}],"filename":"Blue Cactus Islands.png"},
+                    {"title":"Chalkboard Playground","connections":[{"location":"Graffiti City","type":0},{"location":"Ghost Town","type":0}],"filename":"Chalkboard Playground.png"},
+                    {"title":"Candy Cane Fields","connections":[{"location":"Icy Plateau","type":0},{"location":"Haunted Forest Town","type":0}],"filename":"Candy Cane Fields.png"},
+                    {"title":"Celestial Garden","connections":[{"location":"Haunted Forest Town","type":0}],"filename":"Celestial Garden.png"},
+                    {"title":"Chocolate World","connections":[{"location":"Forest World","type":0},{"location":"Dark Room","type":0},{"location":"Stone Maze","type":0},{"location":"Green Tea Graveyard","type":0},{"location":"Simple Street","type":2},{"location":"High-rise Building","type":2},{"location":"Highway","type":1},{"location":"Flying Fish World","type":1},{"location":"Day & Night Towers","type":1},{"location":"Jigsaw Puzzle World","type":1}],"filename":"Chocolate World.jpg"},
+                    {"title":"Christmas World","connections":[{"location":"The Hand Hub","type":0},{"location":"Exhibition","type":0},{"location":"River Road","type":0},{"location":"Nightmarish Wilds","type":0}],"filename":"Christmas World.png"},
+                    {"title":"Closet Pinwheel Path","connections":[{"location":"Japan Town","type":0},{"location":"Train Tracks","type":0}],"filename":"Closet Pinwheel Path.png"},
+                    {"title":"Chaotic Buildings","connections":[{"location":"Deserted Town","type":0},{"location":"Pillars World","type":0},{"location":"Transmission Tower World","type":0},{"location":"Overgrown City","type":0}],"filename":"Chaotic Buildings.png"},
+                    {"title":"Cocktail Lounge","connections":[{"location":"Cyber Maze","type":0},{"location":"TV Labyrinth","type":0},{"location":"Florist","type":2}],"filename":"Cocktail Lounge.png"},
+                    {"title":"Cloud Floor","connections":[{"location":"Candy World","type":0},{"location":"Cloud Tops","type":0},{"location":"Fantasy Library","type":2},{"location":"Chaos World","type":1}],"filename":"Cloud Floor.png"},
+                    {"title":"Circuit Board","connections":[{"location":"Binary World","type":2},{"location":"Shogi Board","type":1}],"filename":"Circuit Board.png"},
+                    {"title":"Cloudy World","connections":[{"location":"Broken City","type":0}],"filename":"Cloudy World.png"},
+                    {"title":"Chaos World","connections":[{"location":"Vase World","type":0},{"location":"Butterfly Forest","type":0},{"location":"Neon Candle World","type":0},{"location":"Fruit Cake World","type":2}],"filename":"Chaos World.png"},
+                    {"title":"Character Plains","connections":[{"location":"Library","type":0}],"filename":"Character Plains.png"},
+                    {"title":"Cloud Tops","connections":[{"location":"Cloud Floor","type":0},{"location":"Butterfly Forest","type":0},{"location":"Constellation World","type":0},{"location":"Neon Candle World","type":0},{"location":"Art Gallery","type":0},{"location":"School","type":1},{"location":"Geometry World","type":1}],"filename":"Cloud Tops.png"},
+                    {"title":"CMYK Tiles World","connections":[{"location":"Monochromatic Abyss","type":0},{"location":"Riverside Waste Facility","type":0}],"filename":"CMYK Tiles World.png"},
+                    {"title":"Chess World","connections":[{"location":"Monkey Mansion","type":0}],"filename":"Chess World.png"},
+                    {"title":"Clay Statue World","connections":[{"location":"Rocky Cavern","type":0},{"location":"Oriental Lake","type":0}],"filename":"Clay Statue World.PNG"},
+                    {"title":"City Limits","connections":[{"location":"Escalator","type":0},{"location":"Ocean Storehouse","type":0},{"location":"Highway","type":0},{"location":"Container Forest","type":1}],"filename":"City Limits.png"},
+                    {"title":"Chemical Research Facility","connections":[{"location":"Highway","type":0},{"location":"Volcanic Subterrain","type":1}],"filename":"Chemical Research Facility.png"},
+                    {"title":"Cliffside Woods","connections":[{"location":"Frigid Meadow","type":0}],"filename":"Cliffside Woods.png"},
+                    {"title":"Clover Ponds","connections":[{"location":"Rainbow Tiles Maze","type":0}],"filename":"Clover Ponds.png"},
+                    {"title":"Cutlery World","connections":[{"location":"Theatre World","type":0},{"location":"Blue Orb World","type":0}],"filename":"Cutlery World.png"},
+                    {"title":"Dark Room","connections":[{"location":"Marijuana Goddess World","type":0},{"location":"Snowy Pipe Organ","type":0},{"location":"Chocolate World","type":0},{"location":"Tribe Settlement","type":0},{"location":"Sewers","type":0},{"location":"Art Gallery","type":1},{"location":"Hourglass Desert","type":0},{"location":"Snowy Forest","type":0}],"filename":"Dark Room.png"},
+                    {"title":"Concrete World","connections":[{"location":"Museum","type":0},{"location":"Frigid Meadow","type":0}],"filename":"Concrete World.png"},
+                    {"title":"Dark Museum","connections":[{"location":"Japan Town","type":0},{"location":"Geometry World","type":0},{"location":"Flying Fish World","type":0},{"location":"Museum","type":1}],"filename":"Dark Museum.png"},
+                    {"title":"Dark Forest","connections":[{"location":"Gray Road","type":0},{"location":"Forest Carnival","type":1}],"filename":"Dark Forest.png"},
+                    {"title":"Construction Frame Building","connections":[{"location":"Green Neon World","type":0},{"location":"Cog Maze","type":0},{"location":"TV Labyrinth","type":0}],"filename":"Construction Frame Building.png"},
+                    {"title":"Dark Alleys","connections":[{"location":"Floating Stones World","type":0}],"filename":"Dark Alleys.jpg"},
+                    {"title":"Cog Maze","connections":[{"location":"Construction Frame Building","type":0},{"location":"Forest Pier","type":1},{"location":"Nail World","type":1},{"location":"GALAXY Town B","type":2}],"filename":"Cog Maze.png"},
+                    {"title":"Daily Toy Box","connections":[{"location":"Jigsaw Puzzle World","type":0}],"filename":"Daily Toy Box.png"},
+                    {"title":"Complex","connections":[{"location":"Transmission Tower World","type":0},{"location":"Old Train Station","type":0}],"filename":"Complex.png"},
+                    {"title":"Cosmic World","connections":[{"location":"Old Train Station","type":0},{"location":"Square Ruins","type":0}],"filename":"Cosmic World.png"},
+                    {"title":"Cultivated Lands","connections":[{"location":"Bridged Swamp Islands","type":0},{"location":"The Ceiling","type":0}],"filename":"Cultivated Lands.PNG"},
+                    {"title":"Cyber Maze","connections":[{"location":"Valentine Land","type":0},{"location":"Exhibition","type":0},{"location":"GALAXY Town","type":0},{"location":"Cocktail Lounge","type":0},{"location":"Dream Mexico","type":0},{"location":"Sea Lily World","type":0},{"location":"Smiling Trees World","type":1},{"location":"Simple Street","type":2}],"filename":"Cyber Maze.png"},
+                    {"title":"Cyber Bar","connections":[{"location":"Binary World","type":0}],"filename":"Cyber Bar.png"},
+                    {"title":"Constellation World","connections":[{"location":"Candy World","type":0},{"location":"Cloud Tops","type":0},{"location":"Butterfly Forest","type":2},{"location":"Red Sky Cliff","type":2}],"filename":"Constellation World.png"},
+                    {"title":"Dark Warehouse","connections":[{"location":"Seaside Village","type":0},{"location":"Chaos Exhibition","type":0},{"location":"Rusted City","type":0},{"location":"Container Forest","type":0}],"filename":"Dark Warehouse.png"},
+                    {"title":"Container Forest","connections":[{"location":"Dark Warehouse","type":0}],"filename":"Container Forest.png"},
+                    {"title":"Crystal Caves","connections":[{"location":"Saturated Eyeball Zone","type":0},{"location":"Wilderness","type":0}],"filename":"Crystal Caves.png"},
+                    {"title":"Cotton Candy Haven","connections":[{"location":"Infinite Library","type":0},{"location":"Wooden Polycube Ruins","type":0},{"location":"Techno Condominium","type":2},{"location":"Flooded Dungeon","type":2}],"filename":"Cotton Candy Haven.png"},
+                    {"title":"Crimson Labyrinth","connections":[{"location":"Negative Space","type":0},{"location":"Ancient Crypt","type":0}],"filename":"Crimson Labyrinth.png"},
+                    {"title":"Dizzy Spirals World","connections":[{"location":"Art Gallery","type":0},{"location":"The Deciding Street","type":0},{"location":"The Hand Hub","type":0},{"location":"Dream Park","type":2}],"filename":"Dizzy Spirals World.png"},
+                    {"title":"Ecstasy World","connections":[{"location":"Sky Kingdom","type":0},{"location":"Pastel Blue House","type":0},{"location":"Intestines Maze","type":0}],"filename":"Ecstasy World.png"},
+                    {"title":"Dream Beach","connections":[{"location":"School","type":0},{"location":"Highway","type":0},{"location":"Jigsaw Puzzle World","type":2},{"location":"Lorn Tower","type":2}],"filename":"Dream Beach.png"},
+                    {"title":"Day & Night Towers","connections":[{"location":"Toy World","type":0},{"location":"Mini-Maze","type":0},{"location":"Red Brick Maze","type":0},{"location":"Simple Street","type":0},{"location":"Othello Board","type":0},{"location":"Chocolate World","type":2}],"filename":"Day & Night Towers.png"},
+                    {"title":"Developer Room","connections":[{"location":"Urotsuki's Room","type":0}],"filename":"Developer Room.png"},
+                    {"title":"Deserted Pier","connections":[{"location":"Mansion","type":0},{"location":"Wind Tunnel","type":0},{"location":"Deserted Town","type":0}],"filename":"Deserted Pier.png"},
+                    {"title":"Deserted Town","connections":[{"location":"Deserted Pier","type":0},{"location":"Town Maze","type":2},{"location":"Chaotic Buildings","type":0},{"location":"Abandoned Apartments","type":0},{"location":"Planetarium","type":2}],"filename":"Deserted Town.png"},
+                    {"title":"Depths","connections":[{"location":"Square Ruins","type":0}],"filename":"Depths.png"},
+                    {"title":"Downfall Garden","connections":[{"location":"Shield Owl World","type":0},{"location":"Highway","type":0},{"location":"Flesh Paths World","type":0},{"location":"RGB Passage","type":0},{"location":"Onyx Tile World","type":2},{"location":"Neon Highway","type":2}],"filename":"Downfall Garden.png"},
+                    {"title":"Dream Mexico","connections":[{"location":"Cyber Maze","type":0},{"location":"Halloween Zone","type":2}],"filename":"Dream Mexico.png"},
+                    {"title":"Dojo","connections":[{"location":"Theatre World","type":0},{"location":"Beetle Forest","type":0}],"filename":"Dojo.png"},
+                    {"title":"DNA Room","connections":[{"location":"Intestines Maze","type":0}],"filename":"DNA Room.png"},
+                    {"title":"Debug Room","connections":[{"location":"Urotsuki's Room","type":0}],"filename":"Debug Room.png"},
+                    {"title":"Dream Bank","connections":[{"location":"Matoran Keyboard","type":0}],"filename":"Dream Bank.png"},
+                    {"title":"Despair Road","connections":[{"location":"Matoran Keyboard","type":0},{"location":"Broken Faces Area","type":0}],"filename":"Despair Road.PNG"},
+                    {"title":"Doll House","connections":[{"location":"Tesla Garden","type":0},{"location":"Cat Cemetery","type":0}],"filename":"Doll House.png"},
+                    {"title":"Decrepit Dwellings","connections":[{"location":"Vintage Town","type":0}],"filename":"Decrepit Dwellings.png"},
+                    {"title":"Data Stream","connections":[{"location":"Symbolon","type":0},{"location":"Binary World","type":1}],"filename":"Data Stream.png"},
+                    {"title":"Dream Park","connections":[{"location":"Apartments","type":0},{"location":"Art Gallery","type":0},{"location":"Boogie Street","type":0},{"location":"Broken Faces Area","type":0},{"location":"Dizzy Spirals World","type":1},{"location":"Graveyard World","type":0},{"location":"Guardians' Temple","type":0},{"location":"Haniwa Temple","type":0},{"location":"Shadowy Caves","type":0},{"location":"Theatre World","type":1},{"location":"Tribe Settlement","type":0},{"location":"Guts World","type":1},{"location":"Scrambled Egg Zone","type":1},{"location":"Underground Passage","type":1}],"filename":"Dream Park.png"},
+                    {"title":"Floating Red Tiles World","connections":[{"location":"Farm World","type":0},{"location":"Broken Faces Area","type":0},{"location":"Teddy Bear Land","type":0}],"filename":"Floating Red Tiles World.png"},
+                    {"title":"Elvis Masada's Place","connections":[{"location":"Mushroom World","type":0},{"location":"Valentine Land","type":0},{"location":"Apartments","type":0},{"location":"Pastel Blue House","type":0},{"location":"Power Plant","type":0},{"location":"Butterfly Forest","type":2}],"filename":"Elvis Masada's Place.png"},
+                    {"title":"Farm World","connections":[{"location":"Rough Ash World","type":0},{"location":"Floating Red Tiles World","type":0},{"location":"Exhibition","type":0}],"filename":"Farm World.png"},
+                    {"title":"Exhibition","connections":[{"location":"Christmas World","type":0},{"location":"Farm World","type":0},{"location":"Netherworld","type":0},{"location":"Blue Forest","type":0},{"location":"Sandy Plains","type":0},{"location":"Cyber Maze","type":0}],"filename":"Exhibition.png"},
+                    {"title":"Fairy Tale Woods","connections":[{"location":"Scenic Outlook","type":0},{"location":"Pastel Blue House","type":0},{"location":"Broken Faces Area","type":0},{"location":"Jigsaw Puzzle World","type":0}],"filename":"Fairy Tale Woods.png"},
+                    {"title":"FC Basement","connections":[{"location":"Tribe Settlement","type":0},{"location":"Monochrome Feudal Japan","type":0},{"location":"Mini-Maze","type":0}],"filename":"FC Basement.png"},
+                    {"title":"Floating Stones World","connections":[{"location":"Grass World","type":0},{"location":"Dark Alleys","type":0},{"location":"Scorched Wasteland","type":0}],"filename":"Floating Stones World.png"},
+                    {"title":"Flesh Paths World","connections":[{"location":"Intestines Maze","type":0},{"location":"Broken Faces Area","type":1},{"location":"Sea of Clouds","type":0},{"location":"Downfall Garden","type":0},{"location":"Nostalgic House","type":1}],"filename":"Flesh Paths World.png"},
+                    {"title":"Fabric World","connections":[{"location":"Urotsuki's Dream Apartments","type":0},{"location":"Guts World","type":1}],"filename":"Fabric World.png"},
+                    {"title":"Eyeball Archives","connections":[{"location":"Library","type":0}],"filename":"Eyeball Archives.png"},
+                    {"title":"Flooded Baths","connections":[{"location":"Shield Owl World","type":0},{"location":"Atlantis","type":0},{"location":"Art Gallery","type":0},{"location":"Botanical Garden","type":2}],"filename":"Flooded Baths.png"},
+                    {"title":"False Shoal","connections":[{"location":"Sugar World","type":2}],"filename":"False Shoal.PNG"},
+                    {"title":"Escalator","connections":[{"location":"Gray Relic World","type":0},{"location":"City Limits","type":0}],"filename":"Escalator.png"},
+                    {"title":"Evergreen Woods","connections":[{"location":"Tan Desert","type":2},{"location":"Spirit Capital","type":0}],"filename":"Evergreen Woods.png"},
+                    {"title":"Extraterrestrial Cliffside","connections":[{"location":"Riverside Waste Facility","type":0},{"location":"Haunted Forest Town","type":1},{"location":"Underground Passage","type":2}],"filename":"Extraterrestrial Cliffside.png"},
+                    {"title":"Erratic Pillar Lands","connections":[{"location":"Ocean Subsurface","type":0},{"location":"Infinite Library","type":2}],"filename":"Erratic Pillar Lands.png"},
+                    {"title":"Emerald Cave","connections":[{"location":"Mountainous Badlands","type":0},{"location":"Pagoda","type":0}],"filename":"Emerald Cave.PNG"},
+                    {"title":"FC Caverns","connections":[{"location":"Techno Condominium","type":0},{"location":"Flooded Dungeon","type":0}],"filename":"FC Caverns.png"},
+                    {"title":"Flooded Dungeon","connections":[{"location":"FC Caverns","type":0},{"location":"Cotton Candy Haven","type":1},{"location":"Wooden Polycube Ruins","type":2}],"filename":"Flooded Dungeon.png"},
+                    {"title":"Flying Fish World","connections":[{"location":"Dark Museum","type":0},{"location":"Urban Street Area","type":0},{"location":"Square-Square World","type":0},{"location":"Spelling Room","type":2},{"location":"Chocolate World","type":2}],"filename":"Flying Fish World.png"},
+                    {"title":"Forest World","connections":[{"location":"The Nexus","type":0},{"location":"Underground TV Complex","type":0},{"location":"Chocolate World","type":0},{"location":"Mare Tranquillitatis","type":2}],"filename":"Forest World.png"},
+                    {"title":"Garden World","connections":[{"location":"The Nexus","type":0},{"location":"Hospital","type":0},{"location":"Snowy Apartments","type":0},{"location":"Blue Forest","type":0},{"location":"Purple World","type":2},{"location":"The Hand Hub","type":1}],"filename":"Garden World.png"},
+                    {"title":"Geometry World","connections":[{"location":"The Nexus","type":0},{"location":"Dark Museum","type":0},{"location":"Stone World","type":1},{"location":"Saturated Eyeball Zone","type":0},{"location":"Broken Faces Area","type":1},{"location":"Intestines Maze","type":1},{"location":"Cloud Tops","type":2}],"filename":"Geometry World.png"},
+                    {"title":"Forest Carnival","connections":[{"location":"Dark Forest","type":2},{"location":"Abandoned Chinatown","type":0},{"location":"Laboratory","type":1}],"filename":"Forest Carnival.png"},
+                    {"title":"Fountain World","connections":[{"location":"Boogie Street","type":0},{"location":"Hand Fields","type":0},{"location":"Butterfly Forest","type":2}],"filename":"Fountain World.png"},
+                    {"title":"Gallery Of Me","connections":[{"location":"Urotsuki's Room","type":1}],"filename":"Gallery Of Me.png"},
+                    {"title":"Forest Pier","connections":[{"location":"Cog Maze","type":2},{"location":"Abandoned Factory","type":1},{"location":"Hidden Shoal","type":0},{"location":"Urotsuki's Dream Apartments","type":2}],"filename":"Forest Pier.png"},
+                    {"title":"GALAXY Town","connections":[{"location":"Gray Road","type":0},{"location":"Cyber Maze","type":0},{"location":"Sugar World","type":0},{"location":"GALAXY Town B","type":2}],"filename":"GALAXY Town.png"},
+                    {"title":"French Street","connections":[{"location":"Gray Road","type":0},{"location":"Red Brick Maze","type":0},{"location":"The Baddies Bar","type":0}],"filename":"French Street.PNG"},
+                    {"title":"Florist","connections":[{"location":"Gray Road","type":0},{"location":"Cocktail Lounge","type":0}],"filename":"Florist.PNG"},
+                    {"title":"Galactic Park","connections":[{"location":"Theatre World","type":0},{"location":"Jade Sky Hamlet","type":0}],"filename":"Galactic Park.png"},
+                    {"title":"Graffiti City","connections":[{"location":"Neon City","type":0},{"location":"Tesla Garden","type":0},{"location":"Blue Cactus Islands","type":0},{"location":"Chalkboard Playground","type":0}],"filename":"Graffiti City.png"},
+                    {"title":"Ghost Town","connections":[{"location":"Chalkboard Playground","type":0},{"location":"Monochrome Mansion","type":0},{"location":"Misty Bridges","type":0}],"filename":"Ghost Town.png"},
+                    {"title":"Frigid Meadow","connections":[{"location":"Concrete World","type":0},{"location":"Psychedelic Stone Path","type":0},{"location":"Cliffside Woods","type":0}],"filename":"Frigid Meadow.png"},
+                    {"title":"Golden Pyramid Path","connections":[{"location":"Matoran Keyboard","type":0}],"filename":"Golden Pyramid Path.png"},
+                    {"title":"Fruit Cake World","connections":[{"location":"Neon Candle World","type":0},{"location":"Blue Orb World","type":0},{"location":"Chaos World","type":1}],"filename":"Fruit Cake World.png"},
+                    {"title":"Ghostly Inn","connections":[{"location":"Jumbotron Hub","type":0}],"filename":"Ghostly Inn.png"},
+                    {"title":"Floral Crossroads","connections":[{"location":"Jumbotron Hub","type":0},{"location":"Metallic Plate World","type":0}],"filename":"Floral Crossroads.png"},
+                    {"title":"Heart World","connections":[{"location":"The Nexus","type":0},{"location":"The Deciding Street","type":0},{"location":"Valentine Land","type":0}],"filename":"Heart World.png"},
+                    {"title":"Highway","connections":[{"location":"Purple World","type":0},{"location":"Downfall Garden","type":0},{"location":"Gray Road","type":0},{"location":"Neon Highway","type":1},{"location":"River Road","type":0},{"location":"RGB Passage","type":1},{"location":"City Limits","type":0},{"location":"Dream Beach","type":0},{"location":"TV Room","type":0},{"location":"Chemical Research Facility","type":0},{"location":"Black Building","type":2},{"location":"Chocolate World","type":2}],"filename":"Highway.png"},
+                    {"title":"Graveyard World","connections":[{"location":"The Nexus","type":0},{"location":"Hospital","type":0},{"location":"Red Lily Lake","type":0},{"location":"Dream Park","type":0}],"filename":"Graveyard World.png"},
+                    {"title":"Head Wasteland","connections":[{"location":"Red City","type":0},{"location":"Wilderness","type":0}],"filename":"Head Wasteland.jpg"},
+                    {"title":"Gray Road","connections":[{"location":"Red Streetlight World","type":0},{"location":"Dark Forest","type":0},{"location":"Boogie Street","type":0},{"location":"Train Tracks","type":0},{"location":"Grass World","type":0},{"location":"Highway","type":0},{"location":"French Street","type":0},{"location":"Florist","type":0},{"location":"GALAXY Town","type":0},{"location":"Techno Condominium","type":0},{"location":"Mini-Town","type":2},{"location":"Simple Street","type":2}],"filename":"Gray Road.png"},
+                    {"title":"Grass World","connections":[{"location":"Gray Road","type":0},{"location":"Warehouse","type":0},{"location":"Green Neon World","type":0},{"location":"Floating Stones World","type":0},{"location":"The Dream Planets","type":0}],"filename":"Grass World.png"},
+                    {"title":"Green Neon World","connections":[{"location":"Grass World","type":0},{"location":"Construction Frame Building","type":0},{"location":"Sea Lily World","type":0}],"filename":"Green Neon World.png"},
+                    {"title":"Haniwa Temple","connections":[{"location":"Sign World","type":0},{"location":"Dream Park","type":0}],"filename":"Haniwa Temple.png"},
+                    {"title":"Guts World","connections":[{"location":"Intestines Maze","type":0},{"location":"Visine World","type":0},{"location":"Fabric World","type":2}],"filename":"Guts World.png"},
+                    {"title":"Hidden Shoal","connections":[{"location":"Forest Pier","type":0},{"location":"Blue Cactus Islands","type":0},{"location":"Neon Sea","type":0}],"filename":"Hidden Shoal.png"},
+                    {"title":"Graffiti Maze","connections":[{"location":"Hospital","type":0},{"location":"Art Gallery","type":2}],"filename":"Graffiti Maze.png"},
+                    {"title":"Hand Fields","connections":[{"location":"Intestines Maze","type":0},{"location":"Vase World","type":0},{"location":"Fountain World","type":0}],"filename":"Hand Fields.PNG"},
+                    {"title":"Gray Relic World","connections":[{"location":"The Nexus","type":0},{"location":"Theatre World","type":0},{"location":"Escalator","type":0}],"filename":"Gray Relic World.png"},
+                    {"title":"Haunted Forest Town","connections":[{"location":"Candy Cane Fields","type":0},{"location":"Extraterrestrial Cliffside","type":0},{"location":"Celestial Garden","type":0}],"filename":"Haunted Forest Town.png"},
+                    {"title":"Head World","connections":[{"location":"High-rise Building","type":0}],"filename":"Head World.png"},
+                    {"title":"High-rise Building","connections":[{"location":"House Over the Rainbow","type":0},{"location":"Head World","type":0},{"location":"Chocolate World","type":1}],"filename":"High-rise Building.png"},
+                    {"title":"Green Tea Graveyard","connections":[{"location":"Chocolate World","type":0}],"filename":"Green Tea Graveyard.png"},
+                    {"title":"Guardians' Temple","connections":[{"location":"Dream Park","type":0},{"location":"Scrambled Egg Zone","type":2}],"filename":"Guardians' Temple.png"},
+                    {"title":"Intestines Maze","connections":[{"location":"Blood World","type":0},{"location":"Guts World","type":0},{"location":"Red City","type":0},{"location":"Hospital","type":0},{"location":"Netherworld","type":0},{"location":"Ecstasy World","type":0},{"location":"Geometry World","type":2},{"location":"Soldier Row","type":0},{"location":"Flesh Paths World","type":0},{"location":"Hand Fields","type":0},{"location":"DNA Room","type":0},{"location":"Simple Street","type":2}],"filename":"Intestines Maze.png"},
+                    {"title":"Japan Town","connections":[{"location":"Dark Museum","type":0},{"location":"Sewers","type":0},{"location":"Maiden Outlook","type":0},{"location":"Closet Pinwheel Path","type":0},{"location":"Spelling Room","type":2}],"filename":"Japan Town.png"},
+                    {"title":"Hospital","connections":[{"location":"Graveyard World","type":0},{"location":"Garden World","type":0},{"location":"Intestines Maze","type":0},{"location":"Graffiti Maze","type":0}],"filename":"Hospital.png"},
+                    {"title":"Hourglass Desert","connections":[{"location":"Window Room","type":2},{"location":"Dark Room","type":0},{"location":"Wilderness","type":0},{"location":"Ocean Floor","type":2}],"filename":"Hourglass Desert.png"},
+                    {"title":"Library","connections":[{"location":"The Nexus","type":0},{"location":"Maiden Outlook","type":0},{"location":"Character Plains","type":0},{"location": "Word World", "type": 0},{"location":"Eyeball Archives","type":0},{"location":"Apartments","type":1},{"location":"Infinite Library","type":1}],"filename":"Library.png"},
+                    {"title":"Jigsaw Puzzle World","connections":[{"location":"Fairy Tale Woods","type":0},{"location":"Underground TV Complex","type":0},{"location":"Daily Toy Box","type":0},{"location":"Dream Park","type":0},{"location":"Lorn Tower","type":1},{"location":"Dream Beach","type":1},{"location":"Chocolate World","type":2}],"filename":"Jigsaw Puzzle World.jpg"},
+                    {"title":"Laboratory","connections":[{"location":"Broken Faces Area","type":0},{"location":"Soldier Row","type":1},{"location":"Negative Space","type":0},{"location":"Mailbox","type":0},{"location":"Forest Carnival","type":2}],"filename":"Laboratory.png"},
+                    {"title":"Industrial Maze","connections":[{"location":"Mansion","type":0},{"location":"Overgrown City","type":0}],"filename":"Industrial Maze.png"},
+                    {"title":"Industrial Towers","connections":[{"location":"Burial Desert","type":2},{"location":"Chaos Exhibition","type":2}],"filename":"Industrial Towers.PNG"},
+                    {"title":"Jade Sky Hamlet","connections":[{"location":"Galactic Park","type":0}],"filename":"Jade Sky Hamlet.png"},
+                    {"title":"House Over the Rainbow","connections":[{"location":"Boogie Street","type":0},{"location":"High-rise Building","type":0}],"filename":"House Over the Rainbow.png"},
+                    {"title":"Ice Floe World","connections":[{"location":"Paradise","type":0},{"location":"Mangrove Forest","type":0}],"filename":"Ice Floe World.png"},
+                    {"title":"Lamp Passage","connections":[{"location":"Sea of Clouds","type":0},{"location":"Tan Desert","type":0}],"filename":"Lamp Passage.png"},
+                    {"title":"Icy Plateau","connections":[{"location":"Underground Passage","type":0},{"location":"Candy Cane Fields","type":0}],"filename":"Icy Plateau.png"},
+                    {"title":"Infinite Library","connections":[{"location":"Cotton Candy Haven","type":0},{"location":"Static Noise Hell","type":0},{"location":"Erratic Pillar Lands","type":1},{"location":"Library","type":2}],"filename":"Infinite Library.png"},
+                    {"title":"Indigo Pathway","connections":[{"location":"Mountainous Badlands","type":0},{"location":"Streetlight Garden","type":0}],"filename":"Indigo Pathway.PNG"},
+                    {"title":"Jumbotron Hub","connections":[{"location":"Rainbow Tiles Maze","type":0},{"location":"Ghostly Inn","type":0},{"location":"Floral Crossroads","type":0}],"filename":"Jumbotron Hub.png"},
+                    {"title":"Marijuana Goddess World","connections":[{"location":"The Nexus","type":0},{"location":"Dark Room","type":0},{"location":"Maiden Outlook","type":0}],"filename":"Marijuana Goddess World.png"},
+                    {"title":"Magnet Room","connections":[{"location":"Red Streetlight World","type":0},{"location":"Urotsuki's Dream Apartments","type":2},{"location":"Stone Maze","type":0},{"location":"Intestines Maze","type":0}],"filename":"Magnet Room.jpg"},
+                    {"title":"Mini-Maze","connections":[{"location":"Day & Night Towers","type":0},{"location":"Bathhouse","type":0},{"location":"FC Basement","type":0}],"filename":"Mini-Maze.png"},
+                    {"title":"Mini-Town","connections":[{"location":"Toy World","type":2},{"location":"Gray Road","type":1}],"filename":"Mini-Town.png"},
+                    {"title":"Mask Shop","connections":[{"location":"Monochrome Street","type":0},{"location":"Dream Bank","type":2}],"filename":"Mask Shop.jpg"},
+                    {"title":"Lorn Tower","connections":[{"location":"Jigsaw Puzzle World","type":2},{"location":"Dream Beach","type":1}],"filename":"Lorn Tower.png"},
+                    {"title":"Maiden Outlook","connections":[{"location":"Library","type":0},{"location":"Japan Town","type":0},{"location":"Marijuana Goddess World","type":0}],"filename":"Maiden Outlook.png"},
+                    {"title":"Mailbox","connections":[{"location":"Underground TV Complex","type":0},{"location":"Laboratory","type":0}],"filename":"Mailbox.png"},
+                    {"title":"Mirror Room","connections":[{"location":"Old Train Station B","type":1},{"location":"Urotsuki's Room","type":2},{"location":"Sofa Room","type":1}],"filename":"Mirror Room.jpg"},
+                    {"title":"Mansion","connections":[{"location":"Arc de Pillar World","type":0},{"location":"Deserted Pier","type":0},{"location":"Industrial Maze","type":0}],"filename":"Mansion.png"},
+                    {"title":"Maple Shrine","connections":[{"location":"The Hand Hub","type":0},{"location":"Shinto Shrine","type":0}],"filename":"Maple Shrine.PNG"},
+                    {"title":"Lotus Waters","connections":[{"location":"The Ceiling","type":0},{"location":"Seaside Village","type":0},{"location":"The Dream Planets","type":0}],"filename":"Lotus Waters.png"},
+                    {"title":"Mare Tranquillitatis","connections":[{"location":"Chaos Exhibition","type":2},{"location":"Forest World","type":1}],"filename":"Mare Tranquillitatis.PNG"},
+                    {"title":"Monkey Mansion","connections":[{"location":"Whipped Cream World","type":0},{"location":"Chess World","type":0},{"location":"Aquatic Cafe","type":0}],"filename":"Monkey Mansion.png"},
+                    {"title":"Monochromatic Abyss","connections":[{"location":"The Rooftops","type":0},{"location":"CMYK Tiles World","type":0}],"filename":"Monochromatic Abyss.png"},
+                    {"title":"Matoran Keyboard","connections":[{"location":"The Nexus","type":0},{"location":"Despair Road","type":0},{"location":"Wastewater Treatment Plant","type":0},{"location":"Dream Bank","type":0},{"location":"Rainbow Tiles Maze","type":0},{"location":"Simple Street","type":2}],"filename":"Matoran Keyboard.png"},
+                    {"title":"Misty Bridges","connections":[{"location":"Ghost Town","type":0},{"location":"Parasite Laboratory","type":0}],"filename":"Misty Bridges.png"},
+                    {"title":"Mangrove Forest","connections":[{"location":"Ice Floe World","type":0},{"location":"Scorched Wasteland","type":0}],"filename":"Mangrove Forest.png"},
+                    {"title":"Metallic Plate World","connections":[{"location":"Floral Crossroads","type":0}],"filename":"Metallic Plate World.png"},
+                    {"title":"Nail World","connections":[{"location":"Theatre World","type":0},{"location":"Warehouse","type":0},{"location":"Window Room","type":0},{"location":"Pencil World","type":0},{"location":"Cog Maze","type":2}],"filename":"Nail World.png"},
+                    {"title":"Monochrome Feudal Japan","connections":[{"location":"Art Gallery","type":0},{"location":"Sewers","type":0},{"location":"FC Basement","type":0}],"filename":"Monochrome Feudal Japan.png"},
+                    {"title":"Museum","connections":[{"location":"Dark Museum","type":2},{"location":"Concrete World","type":0}],"filename":"Museum.png"},
+                    {"title":"Mushroom World","connections":[{"location":"The Nexus","type":0},{"location":"Elvis Masada's Place","type":0},{"location":"Bug Maze","type":0},{"location":"White Fern World","type":0},{"location":"Pastel Blue House","type":0}],"filename":"Mushroom World.png"},
+                    {"title":"Monochrome Street","connections":[{"location":"Red Streetlight World","type":0},{"location":"Shinto Shrine","type":0},{"location":"Mask Shop","type":0},{"location":"The Docks","type":1}],"filename":"Monochrome Street.jpg"},
+                    {"title":"Never-Ending Hallway","connections":[{"location":"Bowling Zone","type":0},{"location":"Art Gallery","type":1}],"filename":"Never-Ending Hallway.png"},
+                    {"title":"Monochrome GB World","connections":[{"location":"Stone World","type":2},{"location":"Apartments","type":0},{"location":"Sunken City","type":0}],"filename":"Monochrome GB World.png"},
+                    {"title":"Netherworld","connections":[{"location":"The Deciding Street","type":2},{"location":"Exhibition","type":0},{"location":"Shinto Shrine","type":0},{"location":"Tatami Room","type":0},{"location":"Saturated Eyeball Zone","type":2},{"location":"Intestines Maze","type":0}],"filename":"Netherworld.png"},
+                    {"title":"Neon Highway","connections":[{"location":"Highway","type":2},{"location":"Downfall Garden","type":1}],"filename":"Neon Highway.png"},
+                    {"title":"Neon City","connections":[{"location":"Square-Square World","type":0},{"location":"Graffiti City","type":0},{"location":"Abandoned Factory","type":1}],"filename":"Neon City.png"},
+                    {"title":"Mosenite","connections":[{"location":"Bridged Swamp Islands","type":0},{"location":"Seaside Village","type":0},{"location":"The Ceiling","type":0}],"filename":"Mosenite.PNG"},
+                    {"title":"Nostalgic House","connections":[{"location":"Flesh Paths World","type":2}],"filename":"Nostalgic House.PNG"},
+                    {"title":"Neon Candle World","connections":[{"location":"Cloud Tops","type":0},{"location":"Chaos World","type":0},{"location":"Fruit Cake World","type":0}],"filename":"Neon Candle World.PNG"},
+                    {"title":"Mutant Pig Farm","connections":[{"location":"Aquatic Cafe","type":0},{"location":"Sea Lily World","type":0},{"location":"The Hand Hub","type":1}],"filename":"Mutant Pig Farm.png"},
+                    {"title":"Neon Sea","connections":[{"location":"Tesla Garden","type":2},{"location":"Hidden Shoal","type":0},{"location":"Square Ruins","type":6}],"filename":"Neon Sea.png"},
+                    {"title":"Nightmarish Wilds","connections":[{"location":"Christmas World","type":0}],"filename":"Nightmarish Wilds.png"},
+                    {"title":"Monochrome Mansion","connections":[{"location":"Ghost Town","type":0}],"filename":"Monochrome Mansion.png"},
+                    {"title":"Negative Space","connections":[{"location":"Laboratory","type":0},{"location":"Rocky Cavern","type":0},{"location":"Crimson Labyrinth","type":0}],"filename":"Negative Space.png"},
+                    {"title":"Mountainous Badlands","connections":[{"location":"Emerald Cave","type":0},{"location":"Indigo Pathway","type":0}],"filename":"Mountainous Badlands.PNG"},
+                    {"title":"Neon Caves","connections":[{"location":"Surgical Scissors World","type":0},{"location":"Static Labyrinth","type":0}],"filename":"Neon Caves.png"},
+                    {"title":"Onyx Tile World","connections":[{"location":"Purple World","type":2},{"location":"Downfall Garden","type":1}],"filename":"Onyx Tile World.png"},
+                    {"title":"Ocean Floor","connections":[{"location":"The Docks","type":0},{"location":"Hourglass Desert","type":1}],"filename":"Ocean Floor.png"},
+                    {"title":"Pastel Blue House","connections":[{"location":"Apartments","type":0},{"location":"Elvis Masada's Place","type":0},{"location":"Ecstasy World","type":0},{"location":"Realistic Beach","type":0},{"location":"Mushroom World","type":0},{"location":"Broken Faces Area","type":0},{"location":"Fairy Tale Woods","type":0},{"location":"Spelling Room","type":2}],"filename":"Pastel Blue House.png"},
+                    {"title":"Othello Board","connections":[{"location":"Day & Night Towers","type":0},{"location":"Shogi Board","type":0}],"filename":"Othello Board.png"},
+                    {"title":"Pillars World","connections":[{"location":"Chaotic Buildings","type":0}],"filename":"Pillars World.png"},
+                    {"title":"Old Train Station","connections":[{"location":"Complex","type":0},{"location":"Cosmic World","type":0}],"filename":"Old Train Station.png"},
+                    {"title":"Old Train Station B","connections":[{"location":"Mirror Room","type":2},{"location":"Rainbow Silhouette World","type":0}],"filename":"Old Train Station B.jpg"},
+                    {"title":"Overgrown City","connections":[{"location":"Industrial Maze","type":0},{"location":"Chaotic Buildings","type":0},{"location":"Victorian Drains","type":1}],"filename":"Overgrown City.png"},
+                    {"title":"Pencil World","connections":[{"location":"Nail World","type":0}],"filename":"Pencil World.png"},
+                    {"title":"Overgrown Gate","connections":[{"location":"Bottom Garden","type":0},{"location":"Tulip Lamp World","type":0}],"filename":"Overgrown Gate.png"},
+                    {"title":"Planetarium","connections":[{"location":"Abandoned Apartments","type":0},{"location":"Deserted Town","type":1}],"filename":"Planetarium.png"},
+                    {"title":"Polluted Swamp","connections":[{"location":"Underground Laboratory","type":0},{"location":"The Rooftops","type":0},{"location":"Symbolon","type":2}],"filename":"Polluted Swamp.png"},
+                    {"title":"Overgrown Condominium","connections":[{"location":"Whipped Cream World","type":0},{"location":"Sugar Road","type":0}],"filename":"Overgrown Condominium.png"},
+                    {"title":"Paradise","connections":[{"location":"Scorched Wasteland","type":2},{"location":"Ice Floe World","type":0}],"filename":"Paradise.png"},
+                    {"title":"Parasite Laboratory","connections":[{"location":"Misty Bridges","type":0}],"filename":"Parasite Laboratory.png"},
+                    {"title":"Ocean Subsurface","connections":[{"location":"Erratic Pillar Lands","type":0},{"location":"Aquatic Cube City","type":0}],"filename":"Ocean Subsurface.png"},
+                    {"title":"Oriental Lake","connections":[{"location":"Clay Statue World","type":0},{"location":"Pagoda","type":0}],"filename":"Oriental Lake.PNG"},
+                    {"title":"Pagoda","connections":[{"location":"Oriental Lake","type":0},{"location":"Emerald Cave","type":0}],"filename":"Pagoda.png"},
+                    {"title":"Ocean Storehouse","connections":[{"location":"City Limits","type":0},{"location":"Water Reclamation Facility","type":0}],"filename":"Ocean Storehouse.PNG"},
+                    {"title":"Red Streetlight World","connections":[{"location":"The Nexus","type":0},{"location":"Gray Road","type":0},{"location":"Red City","type":0},{"location":"Monochrome Street","type":0},{"location":"Magnet Room","type":0},{"location":"Bridged Swamp Islands","type":0},{"location":"Red Rock Caves","type":0},{"location":"Simple Street","type":2}],"filename":"Red Streetlight World.png"},
+                    {"title":"Power Plant","connections":[{"location":"Elvis Masada's Place","type":0},{"location":"Sign World","type":0},{"location":"White Fern World","type":1}],"filename":"Power Plant.png"},
+                    {"title":"Red City","connections":[{"location":"Red Streetlight World","type":0},{"location":"Intestines Maze","type":0},{"location":"Head Wasteland","type":0}],"filename":"Red City.PNG"},
+                    {"title":"Realistic Beach","connections":[{"location":"Atlantis","type":0},{"location":"Pastel Blue House","type":0},{"location":"The Docks","type":0},{"location":"Teleport Maze","type":0}],"filename":"Realistic Beach.png"},
+                    {"title":"Red Brick Maze","connections":[{"location":"Toy World","type":0},{"location":"French Street","type":0},{"location":"Art Gallery","type":1}],"filename":"Red Brick Maze.png"},
+                    {"title":"Radiant Ruins","connections":[{"location":"Wind Tunnel","type":0},{"location":"Bottom Garden","type":0}],"filename":"Radiant Ruins.png"},
+                    {"title":"Purple World","connections":[{"location":"The Nexus","type":0},{"location":"Highway","type":0},{"location":"Onyx Tile World","type":1},{"location":"Black Building","type":0},{"location":"Garden World","type":1},{"location":"The Hand Hub","type":1}],"filename":"Purple World.png"},
+                    {"title":"Rainbow Silhouette World","connections":[{"location":"Old Train Station B","type":0}],"filename":"Rainbow Silhouette World.png"},
+                    {"title":"Rapeseed Fields","connections":[{"location":"Bridged Swamp Islands","type":0},{"location":"Seaside Village","type":0}],"filename":"Rapeseed Fields.PNG"},
+                    {"title":"Red Lily Lake","connections":[{"location":"Graveyard World","type":0},{"location":"Candy World","type":0},{"location":"Cloud Floor","type":2},{"location":"Butterfly Forest","type":0},{"location":"Red Sky Cliff","type":2}],"filename":"Red Lily Lake.png"},
+                    {"title":"Red Rock Caves","connections":[{"location":"Red Streetlight World","type":0}],"filename":"Red Rock Caves.png"},
+                    {"title":"Red Sky Cliff","connections":[{"location":"Butterfly Forest","type":0},{"location":"Red Lily Lake","type":1},{"location":"Constellation World","type":1},{"location":"Fantasy Library","type":2}],"filename":"Red Sky Cliff.png"},
+                    {"title":"Rainy Docks","connections":[{"location":"The Rooftops","type":0}],"filename":"Rainy Docks.png"},
+                    {"title":"RGB Passage","connections":[{"location":"Highway","type":2},{"location":"Downfall Garden","type":0},{"location":"Botanical Garden","type":0}],"filename":"RGB Passage.png"},
+                    {"title":"Psychedelic Stone Path","connections":[{"location":"Warehouse","type":0},{"location":"Frigid Meadow","type":0},{"location":"Aquamarine Cave","type":0}],"filename":"Psychedelic Stone Path.PNG"},
+                    {"title":"Radiant Stones Pathway","connections":[{"location":"Ancient Crypt","type":0}],"filename":"Radiant Stones Pathway.png"},
+                    {"title":"Rainbow Tiles Maze","connections":[{"location":"Matoran Keyboard","type":0},{"location":"Tangerine Prairie","type":0},{"location":"Golden Pyramid Path","type":0},{"location":"Jumbotron Hub","type":0},{"location":"Clover Ponds","type":0},{"location":"Visine Velvet Corridors","type":0}],"filename":"Rainbow Tiles Maze.png"},
+                    {"title":"Sewers","connections":[{"location":"Japan Town","type":0},{"location":"Dark Room","type":0},{"location":"Rough Ash World","type":0},{"location":"Monochrome Feudal Japan","type":0}],"filename":"Sewers.png"},
+                    {"title":"Rough Ash World","connections":[{"location":"Sewers","type":0},{"location":"Farm World","type":0},{"location":"Broken City","type":0}],"filename":"Rough Ash World.png"},
+                    {"title":"Scenic Outlook","connections":[{"location":"Bug Maze","type":0},{"location":"Fairy Tale Woods","type":0}],"filename":"Scenic Outlook.png"},
+                    {"title":"School","connections":[{"location":"Apartments","type":0},{"location":"Dream Beach","type":0},{"location":"Blue Forest","type":0},{"location":"Teddy Bear Land","type":0},{"location":"Cloud Tops","type":2},{"location":"Simple Street","type":2}],"filename":"School.png"},
+                    {"title":"River Road","connections":[{"location":"Square-Square World","type":0},{"location":"Shield Owl World","type":2},{"location":"The Docks","type":0},{"location":"Christmas World","type":0},{"location":"Highway","type":0},{"location":"Smiling Trees World","type":0}],"filename":"River Road.png"},
+                    {"title":"Saturated Eyeball Zone","connections":[{"location":"Spelling Room","type":0},{"location":"Sky Kingdom","type":1},{"location":"Netherworld","type":1},{"location":"Geometry World","type":0},{"location":"Crystal Caves","type":0}],"filename":"Saturated Eyeball Zone.PNG"},
+                    {"title":"Sea of Clouds","connections":[{"location":"Flesh Paths World","type":0},{"location":"Whipped Cream World","type":0},{"location":"Sepia Clouds World","type":0},{"location":"Lamp Passage","type":0}],"filename":"Sea of Clouds.png"},
+                    {"title":"Rusted City","connections":[{"location":"Star Ocean","type":0},{"location":"Dark Warehouse","type":0},{"location":"Strange Plants World","type":0}],"filename":"Rusted City.png"},
+                    {"title":"Seaside Village","connections":[{"location":"Rapeseed Fields","type":0},{"location":"Mosenite","type":0},{"location":"Lotus Waters","type":0},{"location":"Dark Warehouse","type":0}],"filename":"Seaside Village.png"},
+                    {"title":"Rose Church","connections":[{"location":"Tulip Lamp World","type":0}],"filename":"Rose Church.png"},
+                    {"title":"Sepia Clouds World","connections":[{"location":"Sea of Clouds","type":0},{"location":"Spelling Room","type":0}],"filename":"Sepia Clouds World.jpg"},
+                    {"title":"Scrambled Egg Zone","connections":[{"location":"Blue Orb World","type":0},{"location":"Dream Park","type":2},{"location":"Guardians' Temple","type":1}],"filename":"Scrambled Egg Zone.png"},
+                    {"title":"Scorched Wasteland","connections":[{"location":"Floating Stones World","type":0},{"location":"Mangrove Forest","type":0},{"location":"Atlantis","type":2},{"location":"Paradise","type":1}],"filename":"Scorched Wasteland.png"},
+                    {"title":"Sea Lily World","connections":[{"location":"Mutant Pig Farm","type":0},{"location":"Green Neon World","type":0},{"location":"Cyber Maze","type":0}],"filename":"Sea Lily World.png"},
+                    {"title":"Riverside Waste Facility","connections":[{"location":"CMYK Tiles World","type":0},{"location":"Extraterrestrial Cliffside","type":0},{"location":"Undersea Temple","type":0}],"filename":"Riverside Waste Facility.png"},
+                    {"title":"Rocky Cavern","connections":[{"location":"Negative Space","type":0},{"location":"Clay Statue World","type":0}],"filename":"Rocky Cavern.png"},
+                    {"title":"Ruined Garden","connections":[{"location":"Silent Sewers","type":0},{"location":"Vintage Town","type":0},{"location":"Arc de Pillar World","type":0}],"filename":"Ruined Garden.png"},
+                    {"title":"Sandy Plains","connections":[{"location":"Aquamarine Cave","type":0},{"location":"Exhibition","type":0}],"filename":"Sandy Plains.PNG"},
+                    {"title":"Shadowy Caves","connections":[{"location":"Dream Park","type":0},{"location":"Stone World","type":0}],"filename":"Shadowy Caves.PNG"},
+                    {"title":"Scarlet Corridors","connections":[{"location":"Wastewater Treatment Plant","type":2}],"filename":"Scarlet Corridors.png"},
+                    {"title":"Sky Kingdom","connections":[{"location":"Art Gallery","type":0},{"location":"Apartments","type":0},{"location":"Ecstasy World","type":0},{"location":"Saturated Eyeball Zone","type":2}],"filename":"Sky Kingdom.png"},
+                    {"title":"Sign World","connections":[{"location":"Bug Maze","type":0},{"location":"Power Plant","type":0},{"location":"Teleport Maze","type":0},{"location":"Haniwa Temple","type":0},{"location":"Valentine Land","type":0}],"filename":"Sign World.png"},
+                    {"title":"Spelling Room","connections":[{"location":"Stone Maze","type":0},{"location":"Theatre World","type":0},{"location":"Sepia Clouds World","type":0},{"location":"Saturated Eyeball Zone","type":0},{"location":"Pastel Blue House","type":1},{"location":"Flying Fish World","type":1},{"location":"Japan Town","type":1},{"location":"Window Room","type":1},{"location":"Visine World","type":1}],"filename":"Spelling Room.jpg"},
+                    {"title":"Shinto Shrine","connections":[{"location":"Monochrome Street","type":0},{"location":"The Circus","type":0},{"location":"The Hand Hub","type":0},{"location":"Netherworld","type":0},{"location":"Maple Shrine","type":1}],"filename":"Shinto Shrine.png"},
+                    {"title":"Simple Street","connections":[{"location":"Urotsuki's Dream Apartments","type":0},{"location":"The Hand Hub","type":1},{"location":"Chocolate World","type":1},{"location":"Art Gallery","type":1},{"location":"Broken Faces Area","type":1},{"location":"Red Streetlight World","type":1},{"location":"Theatre World","type":1},{"location":"Gray Road","type":1},{"location":"School","type":1},{"location":"Cyber Maze","type":1},{"location":"Intestines Maze","type":1},{"location":"Matoran Keyboard","type":1}],"filename":"Simple Street.png"},
+                    {"title":"Snowy Pipe Organ","connections":[{"location":"Dark Room","type":0},{"location":"Atlantis","type":0},{"location":"Butterfly Forest","type":2}],"filename":"Snowy Pipe Organ.png"},
+                    {"title":"Space","connections":[{"location":"Tapir-San's Place","type":2},{"location":"Urban Street Area","type":1}],"filename":"Space.png"},
+                    {"title":"Soldier Row","connections":[{"location":"Laboratory","type":2},{"location":"Intestines Maze","type":0}],"filename":"Soldier Row.png"},
+                    {"title":"Square-Square World","connections":[{"location":"Theatre World","type":0},{"location":"Flying Fish World","type":0},{"location":"River Road","type":0},{"location":"Neon City","type":0}],"filename":"Square-Square World.png"},
+                    {"title":"Shield Owl World","connections":[{"location":"The Nexus","type":0},{"location":"Flooded Baths","type":0},{"location":"Downfall Garden","type":0},{"location":"River Road","type":1}],"filename":"Shield Owl World.png"},
+                    {"title":"Square Ruins","connections":[{"location":"Cosmic World","type":0},{"location":"Depths","type":0},{"location":"Neon Sea","type":7}],"filename":"Square Ruins.png"},
+                    {"title":"Star Ocean","connections":[{"location":"Atlantis","type":0},{"location":"Rusted City","type":0}],"filename":"Star Ocean.png"},
+                    {"title":"Shogi Board","connections":[{"location":"Circuit Board","type":2},{"location":"Othello Board","type":0}],"filename":"Shogi Board.png"},
+                    {"title":"Sofa Room","connections":[{"location":"Mirror Room","type":2}],"filename":"Sofa Room.png"},
+                    {"title":"Snowy Apartments","connections":[{"location":"Garden World","type":0},{"location":"Underground Garage","type":0}],"filename":"Snowy Apartments.png"},
+                    {"title":"Smiling Trees World","connections":[{"location":"Cyber Maze","type":2},{"location":"River Road","type":0}],"filename":"Smiling Trees World.jpg"},
+                    {"title":"Spirit Capital","connections":[{"location":"Evergreen Woods","type":0}],"filename":"Spirit Capital.png"},
+                    {"title":"Snowy Forest","connections":[{"location":"Dark Room","type":0},{"location":"Techno Condominium","type":0},{"location":"Alien Cellar","type":0},{"location":"Static Noise Hell","type":0}],"filename":"Snowy Forest.png"},
+                    {"title":"Silent Sewers","connections":[{"location":"TV Labyrinth","type":0},{"location":"Ruined Garden","type":0}],"filename":"Silent Sewers.png"},
+                    {"title":"Static Labyrinth","connections":[{"location":"Neon Caves","type":0}],"filename":"Static Labyrinth.png"},
+                    {"title":"The Baddies Bar","connections":[{"location":"Broken Faces Area","type":0},{"location":"Bowling Zone","type":1},{"location":"The Hand Hub","type":0},{"location":"Art Gallery","type":0},{"location":"French Street","type":0},{"location":"The Slums","type":0}],"filename":"The Baddies Bar.png"},
+                    {"title":"Teddy Bear Land","connections":[{"location":"Floating Red Tiles World","type":0},{"location":"Window Room","type":2},{"location":"The Docks","type":0},{"location":"School","type":0}],"filename":"Teddy Bear Land.png"},
+                    {"title":"Stone Maze","connections":[{"location":"Chocolate World","type":0},{"location":"Blood World","type":0},{"location":"Bowling Zone","type":0},{"location":"Spelling Room","type":0},{"location":"Urotsuki's Dream Apartments","type":0},{"location":"Magnet Room","type":0}],"filename":"Stone Maze.png"},
+                    {"title":"Tapir-San's Place","connections":[{"location":"Atlantis","type":0},{"location":"Space","type":1}],"filename":"Tapir-San's Place.png"},
+                    {"title":"Stone World","connections":[{"location":"Geometry World","type":2},{"location":"Monochrome GB World","type":1},{"location":"The Hand Hub","type":1},{"location":"Shadowy Caves","type":0}],"filename":"Stone World.png"},
+                    {"title":"Teleport Maze","connections":[{"location":"Sign World","type":0},{"location":"Realistic Beach","type":0}],"filename":"Teleport Maze.png"},
+                    {"title":"Sunken City","connections":[{"location":"Monochrome GB World","type":0},{"location":"Atlantis","type":1},{"location":"Buried City","type":0}],"filename":"Sunken City.png"},
+                    {"title":"Tatami Room","connections":[{"location":"Netherworld","type":0}],"filename":"Tatami Room.png"},
+                    {"title":"Sugar World","connections":[{"location":"GALAXY Town","type":0},{"location":"False Shoal","type":1},{"location":"Valentine Land","type":1}],"filename":"Sugar World.png"},
+                    {"title":"Symbolon","connections":[{"location":"Toy World","type":0},{"location":"Data Stream","type":0},{"location":"Polluted Swamp","type":1},{"location":"The Rooftops","type":0}],"filename":"Symbolon.png"},
+                    {"title":"Strange Plants World","connections":[{"location":"Rusted City","type":0},{"location":"Underground Laboratory","type":0},{"location":"Underground Passage","type":0}],"filename":"Strange Plants World.png"},
+                    {"title":"Tesla Garden","connections":[{"location":"Underground Laboratory","type":0},{"location":"Graffiti City","type":0},{"location":"Doll House","type":0},{"location":"TV Labyrinth","type":0},{"location":"Neon Sea","type":1}],"filename":"Tesla Garden.PNG"},
+                    {"title":"Tan Desert","connections":[{"location":"Lamp Passage","type":0},{"location":"Evergreen Woods","type":1}],"filename":"Tan Desert.png"},
+                    {"title":"Techno Condominium","connections":[{"location":"Snowy Forest","type":0},{"location":"FC Caverns","type":0},{"location":"Gray Road","type":0},{"location":"Art Gallery","type":0},{"location":"Cotton Candy Haven","type":1}],"filename":"Techno Condominium.png"},
+                    {"title":"Stone Towers","connections":[{"location":"Underground Passage","type":0}],"filename":"Stone Towers.png"},
+                    {"title":"Sugar Road","connections":[{"location":"Overgrown Condominium","type":0},{"location":"Blob Desert","type":0},{"location":"Chaos Exhibition","type":0}],"filename":"Sugar Road.png"},
+                    {"title":"Static Noise Hell","connections":[{"location":"Infinite Library","type":0},{"location":"Snowy Forest","type":0}],"filename":"Static Noise Hell.png"},
+                    {"title":"Streetlight Garden","connections":[{"location":"Indigo Pathway","type":0}],"filename":"Streetlight Garden.PNG"},
+                    {"title":"Tangerine Prairie","connections":[{"location":"Rainbow Tiles Maze","type":0}],"filename":"Tangerine Prairie.png"},
+                    {"title":"Surgical Scissors World","connections":[{"location":"Aquatic Cube City","type":0},{"location":"Neon Caves","type":0}],"filename":"Surgical Scissors World.png"},
+                    {"title":"The Docks","connections":[{"location":"Apartments","type":0},{"location":"Ocean Floor","type":0},{"location":"Realistic Beach","type":0},{"location":"Teddy Bear Land","type":0},{"location":"River Road","type":0}],"filename":"The Docks.png"},
+                    {"title":"The Hand Hub","connections":[{"location":"Christmas World","type":0},{"location":"Shinto Shrine","type":0},{"location":"Bug Maze","type":0},{"location":"Dizzy Spirals World","type":0},{"location":"Pastel Blue House","type":0},{"location":"Garden World","type":0},{"location":"The Baddies Bar","type":0},{"location":"Maple Shrine","type":0},{"location":"Stone World","type":2},{"location":"Simple Street","type":2},{"location":"Mutant Pig Farm","type":2},{"location":"Purple World","type":2}],"filename":"The Hand Hub.png"},
+                    {"title":"Theatre World","connections":[{"location":"Cutlery World","type":0},{"location":"Nail World","type":0},{"location":"Galactic Park","type":0},{"location":"Dojo","type":0},{"location":"Spelling Room","type":0},{"location":"Gray Relic World","type":0},{"location":"Simple Street","type":2},{"location":"Dream Park","type":2}],"filename":"Theatre World.png"},
+                    {"title":"The Deciding Street","connections":[{"location":"Heart World","type":0},{"location":"Dizzy Spirals World","type":0},{"location":"Netherworld","type":1}],"filename":"The Deciding Street.png"},
+                    {"title":"The Nexus","connections":[{"location":"Urotsuki's Room","type":0},{"location":"Purple World","type":0},{"location":"Red Streetlight World","type":0},{"location":"Library","type":0},{"location":"Marijuana Goddess World","type":0},{"location":"Urotsuki's Dream Apartments","type":0},{"location":"Forest World","type":0},{"location":"Garden World","type":0},{"location":"Mushroom World","type":0},{"location":"Heart World","type":0},{"location":"Geometry World","type":0},{"location":"Graveyard World","type":0},{"location":"Toy World","type":0},{"location":"Shield Owl World","type":0},{"location":"Gray Relic World","type":0},{"location":"Matoran Keyboard","type":0},{"location":"Trophy Room","type":0}],"filename":"The Nexus.png"},
+                    {"title":"Toy World","connections":[{"location":"The Nexus","type":0},{"location":"Day & Night Towers","type":0},{"location":"Red Brick Maze","type":0},{"location":"Symbolon","type":0},{"location":"Mini-Town","type":1},{"location":"Art Gallery","type":0}],"filename":"Toy World.png"},
+                    {"title":"Train Tracks","connections":[{"location":"Closet Pinwheel Path","type":0},{"location":"Gray Road","type":0},{"location":"Underwater Amusement Park","type":0}],"filename":"Train Tracks.png"},
+                    {"title":"The Invisible Maze","connections":[{"location":"Bowling Zone","type":0}],"filename":"The Invisible Maze.png"},
+                    {"title":"Tribe Settlement","connections":[{"location":"Dark Room","type":0},{"location":"FC Basement","type":0},{"location":"Dream Park","type":0}],"filename":"Tribe Settlement.png"},
+                    {"title":"The Circus","connections":[{"location":"Shinto Shrine","type":0}],"filename":"The Circus.png"},
+                    {"title":"Trophy Room","connections":[{"location":"Urotsuki's Dream Apartments","type":0},{"location":"The Nexus","type":0}],"filename":"Trophy Room.png"},
+                    {"title":"Transmission Tower World","connections":[{"location":"Chaotic Buildings","type":0},{"location":"Complex","type":0}],"filename":"Transmission Tower World.png"},
+                    {"title":"The Ceiling","connections":[{"location":"Mosenite","type":0},{"location":"Cultivated Lands","type":0},{"location":"Lotus Waters","type":0}],"filename":"The Ceiling.png"},
+                    {"title":"Tulip Lamp World","connections":[{"location":"Overgrown Gate","type":0},{"location":"Rose Church","type":0}],"filename":"Tulip Lamp World.png"},
+                    {"title":"Town Maze","connections":[{"location":"Black Building","type":0},{"location":"Deserted Town","type":1},{"location":"Bottom Garden","type":1}],"filename":"Town Maze.png"},
+                    {"title":"The Slums","connections":[{"location":"The Baddies Bar","type":0}],"filename":"The Slums.png"},
+                    {"title":"The Rooftops","connections":[{"location":"Polluted Swamp","type":0},{"location":"Rainy Docks","type":0},{"location":"Monochromatic Abyss","type":0},{"location":"Symbolon","type":0}],"filename":"The Rooftops.png"},
+                    {"title":"TV Labyrinth","connections":[{"location":"Construction Frame Building","type":0},{"location":"Cocktail Lounge","type":0},{"location":"Abandoned Factory","type":0},{"location":"Tesla Garden","type":0},{"location":"Silent Sewers","type":0}],"filename":"TV Labyrinth.png"},
+                    {"title":"The Dream Planets","connections":[{"location":"Grass World","type":0},{"location":"Lotus Waters","type":0}],"filename":"The Dream Planets.png"},
+                    {"title":"Visine World","connections":[{"location":"Art Gallery","type":0},{"location":"Guts World","type":0},{"location":"Spelling Room","type":2}],"filename":"Visine World.png"},
+                    {"title":"Underwater Amusement Park","connections":[{"location":"Atlantis","type":0},{"location":"Train Tracks","type":0}],"filename":"Underwater Amusement Park.png"},
+                    {"title":"Urotsuki's Dream Apartments","connections":[{"location":"The Nexus","type":0},{"location":"Fabric World","type":0},{"location":"Simple Street","type":0},{"location":"Trophy Room","type":0},{"location":"Aquatic Cube City","type":0},{"location":"Forest Pier","type":4},{"location":"Apartments","type":1}],"filename":"Urotsuki's Dream Apartments.png"},
+                    {"title":"Valentine Land","connections":[{"location":"Elvis Masada's Place","type":0},{"location":"Sign World","type":0},{"location":"Heart World","type":0},{"location":"Cyber Maze","type":0},{"location":"Sugar World","type":2}],"filename":"Valentine Land.png"},
+                    {"title":"Urban Street Area","connections":[{"location":"Flying Fish World","type":0},{"location":"Space","type":2}],"filename":"Urban Street Area.png"},
+                    {"title":"Warehouse","connections":[{"location":"Grass World","type":0},{"location":"Nail World","type":0},{"location":"Binary World","type":1},{"location":"Psychedelic Stone Path","type":0}],"filename":"Warehouse.jpg"},
+                    {"title":"Underground TV Complex","connections":[{"location":"Forest World","type":0},{"location":"Jigsaw Puzzle World","type":0},{"location":"Mailbox","type":0}],"filename":"Underground TV Complex.jpg"},
+                    {"title":"Urotsuki's Room","connections":[{"location":"The Nexus","type":0},{"location":"Mirror Room","type":1},{"location":"Developer Room","type":0},{"location":"Debug Room","type":0},{"location":"Urotsuki's Room","type":2}],"filename":"Urotsuki's Room.png"},
+                    {"title":"Victorian Drains","connections":[{"location":"Overgrown City","type":2},{"location":"Bioluminescent Cavern","type":0}],"filename":"Victorian Drains.png"},
+                    {"title":"Vase World","connections":[{"location":"Chaos World","type":0},{"location":"Hand Fields","type":0},{"location":"Burial Desert","type":0}],"filename":"Vase World.png"},
+                    {"title":"TV Room","connections":[{"location":"Highway","type":0}],"filename":"TV Room.png"},
+                    {"title":"Underground Laboratory","connections":[{"location":"Strange Plants World","type":0},{"location":"Chaos Exhibition","type":0},{"location":"Polluted Swamp","type":0},{"location":"Tesla Garden","type":0}],"filename":"Underground Laboratory.png"},
+                    {"title":"Underground Garage","connections":[{"location":"Apartments","type":0},{"location":"Snowy Apartments","type":0}],"filename":"Underground Garage.png"},
+                    {"title":"Undersea Temple","connections":[{"location":"Riverside Waste Facility","type":0}],"filename":"Undersea Temple.png"},
+                    {"title":"Underground Passage","connections":[{"location":"Strange Plants World","type":0},{"location":"Stone Towers","type":0},{"location":"Icy Plateau","type":0},{"location":"Extraterrestrial Cliffside","type":1},{"location":"Dream Park","type":2}],"filename":"Underground Passage.png"},
+                    {"title":"Vintage Town","connections":[{"location":"Ruined Garden","type":0},{"location":"Decrepit Dwellings","type":0}],"filename":"Vintage Town.png"},
+                    {"title":"Underground Lake","connections":[{"location":"Aquamarine Cave","type":0}],"filename":"Underground Lake.PNG"},
+                    {"title":"Volcanic Subterrain","connections":[{"location":"Chemical Research Facility","type":2}],"filename":"Volcanic Subterrain.png"},
+                    {"title":"Visine Velvet Corridors","connections":[{"location":"Rainbow Tiles Maze","type":0}],"filename":"Visine Velvet Corridors.png"},
+                    {"title":"Window Room","connections":[{"location":"Nail World","type":0},{"location":"Teddy Bear Land","type":1},{"location":"Hourglass Desert","type":1},{"location":"Spelling Room","type":2}],"filename":"Window Room.jpg"},
+                    {"title":"Wilderness","connections":[{"location":"Head Wasteland","type":0},{"location":"Hourglass Desert","type":0},{"location":"Crystal Caves","type":0}],"filename":"Wilderness.jpg"},
+                    {"title":"White Fern World","connections":[{"location":"Apartments","type":0},{"location":"Mushroom World","type":0},{"location":"Power Plant","type":2}],"filename":"White Fern World.png"},
+                    {"title":"Word World","connections":[{"location":"Library","type":0}],"filename":"Word World.jpg"},
+                    {"title":"Wind Tunnel","connections":[{"location":"Radiant Ruins","type":0},{"location":"Deserted Pier","type":0},{"location":"Abandoned Factory","type":2}],"filename":"Wind Tunnel.png"},
+                    {"title":"Whipped Cream World","connections":[{"location":"Butterfly Forest","type":0},{"location":"Sea of Clouds","type":0},{"location":"Monkey Mansion","type":0},{"location":"Overgrown Condominium","type":0}],"filename":"Whipped Cream World.PNG"},
+                    {"title":"Wastewater Treatment Plant","connections":[{"location":"Matoran Keyboard","type":0},{"location":"Scarlet Corridors","type":1}],"filename":"Wastewater Treatment Plant.PNG"},
+                    {"title":"Wooden Polycube Ruins","connections":[{"location":"Cotton Candy Haven","type":0},{"location":"Flooded Dungeon","type":1}],"filename":"Wooden Polycube Ruins.png"},
+                    {"title":"Water Reclamation Facility","connections":[{"location":"Ocean Storehouse","type":0}],"filename":"Water Reclamation Facility.png"}
+                ];
+
+                var worldDataByName = _.keyBy(worldData, function(w) {
+                    return w.title;
+                });
+
+                var worldNames = Object.keys(worldDataByName);
+
+                var maxDepth = 0;
+
+                const startLocation = "Urotsuki's Room";
+
+                const batchSize = 20;
+
+                function hueToRGB(h) {
+                    var s = 1, v = 1, r, g, b, i, f, p, q, t;
+                    i = Math.floor(h * 6);
+                    f = h * 6 - i;
+                    p = v * (1 - s);
+                    q = v * (1 - f * s);
+                    t = v * (1 - (1 - f) * s);
+                    switch (i % 6) {
+                        case 0: r = v, g = t, b = p; break;
+                        case 1: r = q, g = v, b = p; break;
+                        case 2: r = p, g = v, b = t; break;
+                        case 3: r = p, g = q, b = v; break;
+                        case 4: r = t, g = p, b = v; break;
+                        case 5: r = v, g = p, b = q; break;
+                    }
+                    return "rgb(" + Math.round(r * 255) + "," + Math.round(g * 255) + "," + Math.round(b * 255) + ")";
+                }
+
+                function populateWorldData() {
+                    $.ajax({
+                        dataType: "jsonp",
+                        url: "https://yume2kki.fandom.com/api.php?action=query&list=categorymembers&cmtitle=Category:Locations&cmlimit=500&format=json",
+                        crossDomain: true,
+                        success: function (data) {
+                            var worlds = data.query.categorymembers;
+                            populateWorldDataSub(worlds, 0, worlds.length <= batchSize);
+                        }
+                    });
+                }
+
+                function populateWorldDataSub(worlds, batchIndex, lastBatch) {
+                    var worldsKeyed = _.keyBy(worlds.slice(batchIndex * batchSize, Math.min((batchIndex + 1) * batchSize, worlds.length)),
+                        function(w) {
+                            return w.pageid;
+                        }
+                    );
+                    getWorldData(worldsKeyed, function (data) {
+                        for (var d in data)
+                            worldData.push(data[d]);
+                        if (lastBatch) {
+                            console.log(JSON.stringify(worldData));
+                        } else {
+                            populateWorldDataSub(worlds, ++batchIndex, (batchIndex + 1) * batchSize >= worlds.length);
+                        }
+                    });
+                }
+
+                function getWorldData(worlds, callback) {
+                    var pageIds = Object.keys(worlds);
+                    $.ajax({
+                        dataType: "jsonp",
+                        url: "https://yume2kki.fandom.com/api.php?action=query&pageids=" + pageIds.join("|") + "&prop=categories&cllimit=50&format=json",
+                        crossDomain: true,
+                        success: function (data) {
+                            var ret = [];
+                            console.log("https://yume2kki.fandom.com/api.php?action=query&pageids=" + pageIds.join("|") + "&prop=categories&cllimit=50&format=json")
+                            worlds = data.query.pages;
+                            var reqCount = 0;
+                            var reqTotal = pageIds.length;
+                            for (var p in pageIds) {
+                                var pageId = pageIds[p];
+                                var world = worlds[parseInt(pageId)];
+                                var categories = world.categories;
+                                var skip = false;
+                                if (world.title.indexOf("Board Thread") > -1 || world.title === "Dream Worlds")
+                                    skip = true;
+                                else if (categories) {
+                                    for (var c in categories) {
+                                        if (categories[c].title === "Category:Removed Content") {
+                                            skip = true;
+                                            break;
+                                        }
+                                    }
+                                } else {
+                                    skip = true;
+                                }
+                                if (skip) {
+                                    delete worlds[pageId];
+                                    if (reqCount === --reqTotal) {
+                                        callback(worlds);
+                                    }
+                                    continue;
+                                }
+                                delete world.pageid;
+                                delete world.categories;
+                                delete world.ns;
+                                (function(pageId, world) {
+                                    $.get("./getWorldInfo/" + world.title, function (data) {
+                                        console.log(pageId)
+                                        var worldInfo = JSON.parse(data);
+                                        world = $.extend(world, worldInfo);
+                                        worlds[pageId] = world;
+                                        if (++reqCount === reqTotal) {
+                                            callback(worlds);
+                                        }
+                                    })
+                                })(pageId, world);
+                            }
+                        }
+                    });
+                }
+
+                var deadConns = [];
+
+                var graph;
+
+                var highlightNode;
+
+                function calcDepth(worldDataByName, worldNames, depthMap, world, depth) {
+                    var currentWorld;
+                    if (depth > 0) {
+                        currentWorld = world;
+                    } else {
+                        currentWorld = worldDataByName[startLocation];
+                        currentWorld.depth = depthMap[currentWorld.title] = depth;
+                    }
+                    for (var c in currentWorld.connections) {
+                        var conn = currentWorld.connections[c];
+                        var w = conn.location;
+                        if (worldNames.indexOf(w) > -1) {
+                            if (conn.type >= 2)
+                                continue;
+                            var d = depthMap[w];
+                            if (d === -1 || d > depth + 1) {
+                                worldDataByName[w].depth = depthMap[w] = depth + 1;
+                                calcDepth(worldDataByName, worldNames, depthMap, worldDataByName[w], depth + 1);
+                            }
+                        } else {
+                            var dc = world.title + " -> " + w;
+                            if (deadConns.indexOf(dc) === -1) {
+                                console.log(dc);
+                                deadConns.push(dc);
+                            }
+                        }
+                    }
+                    return depth;
+                }
+
+                function initGraph() {
+                    var images = worldData
+                        .map(d => {
+                            const img = new Image();
+                            img.title = d.title;
+                            img.src = `./images/${d.filename}`;
+                            return img;
+                        });
+
+                    var links = [];
+                    for (var w in Object.keys(worldData)) {
+                        var world = worldData[w];
+                        var connections = world.connections;
+                        for (var c in connections) {
+                            var conn = connections[c];
+                            var connWorld = worldDataByName[conn.location];
+                            if (worldNames.indexOf(conn.location) > -1 && conn.type < 2) {
+                                if ((world.depth < connWorld.depth || (world.depth == connWorld.depth && world.id < connWorld.id))) {
+                                    links.push({
+                                        source: world.id,
+                                        target: connWorld.id
+                                    });
+                                }
+                            }
+                        }
+                    }
+
+                    console.log(links);
+                
+                    // Random connected graph
+                    const gData = {
+                        nodes: images.map((img, id) => ({ id, img })),
+                        links: links
+                    };
+
+                    var elem = document.getElementById('graph');
+                
+                    graph = ForceGraph()(elem)
+                        .graphData(gData)
+                        .dagMode('td')
+                        .dagLevelDistance(50)
+                        .nodeCanvasObject(({ id, img, x, y }, ctx) => {
+                            const width = 16, height = 12;
+                            ctx.drawImage(img, x - width / 2, y - height / 2, width, height);
+                            if (highlightNode == id) {
+                                ctx.strokeStyle = '#f00';
+                                ctx.lineWidth = 1;
+                                ctx.strokeRect(x - width / 2, y - height / 2, width, height);
+                            }
+                        })
+                        .linkWidth(link => highlightNode && (link.source.id === highlightNode || link.target.id === highlightNode) ? 2 : 1)
+                        .linkColor(link => {
+                            return highlightNode && (link.source.id === highlightNode || link.target.id === highlightNode) ? '#f00' : hueToRGB(0.6666 - ((worldData[link.source.id > -1 ? link.source.id : link.source].depth / (maxDepth - 1)) * 0.6666));
+                        })
+                        /*.linkCanvasObject((link, ctx) => {
+                            //ctx.setLineDash([5, 5]);
+                            if (highlightNode && (link.source.id === highlightNode || link.target.id === highlightNode)) {
+                                ctx.lineWidth = 2;
+                                ctx.strokeStyle = '#f00';
+                            } else {
+                                ctx.lineWidth = 1;
+                                ctx.strokeStyle = '#ccc';
+                            }
+                            ctx.moveTo(link.source.x, link.source.y);
+                            ctx.lineTo(link.target.x, link.target.y);
+
+                            ctx.stroke();
+                        })*/
+                        .onNodeHover(node => {
+                            elem.style.cursor = node ? 'pointer' : null;
+                        })
+                        .onNodeClick(node => {
+                            // Center/zoom on node
+                            highlightNode = node ? node.id : null;
+                            graph.centerAt(node.x, node.y, 1000);
+                            graph.zoom(8, 2000);
+                        });
+                }
+
+                function findPath(s, t) {
+                    var checkedSourceNodes = [s];
+                    var checkedTargetNodes = [t];
+
+                    var source = worldData[s];
+                    var target = worldData[t];
+
+                    var nextGenSourceWorlds = [source];
+                    var nextGenTargetWorlds = [target];
+
+                    var genIndex = 0;
+
+                    var matches;
+                    while (!(matches = $.grep(checkedSourceNodes, function(element) {
+                        return $.inArray(element, checkedTargetNodes) !== -1;
+                    })).length || genIndex++ > 5) {
+                        var sourceWorlds = nextGenSourceWorlds.slice(0);
+                        var targetWorlds = nextGenTargetWorlds.slice(0);
+                        nextGenSourceWorlds.length = 0;
+                        nextGenTargetWorlds.length = 0;
+                        for (var sw in sourceWorlds)
+                            traverseConns(checkedSourceNodes, checkedTargetNodes, nextGenSourceWorlds, worldData[sourceWorlds[sw]]);
+                        for (var tw in targetWorlds)
+                            traverseConns(checkedTargetNodes, checkedSourceNodes, nextGenTargetWorlds, worldData[targetWorld[tw]]);
+                    }
+                    console.log(matches, genIndex);
+                }
+
+                function traverseConns(checkedSourceNodes, checkedTargetNodes, nextGenWorlds, world) {
+                    var conns = world.connections;
+                    for (var c in conns) {
+                        if (worldDataByName.indexOf(conns[c].title) === -1)
+                            continue;
+                        var id = worldDataByName[conns[c].title].id;
+                        if (checkedSourceNodes.indexOf(id) === -1) {
+                            checkedSourceNodes.push(id);
+                            nextGenWorlds.push(id);
+                        }
+                    }
+                }
+
+                $(document).ready(function() {
+                    if (!worldData.length) {
+                        populateWorldData();
+                    } else {
+                        for (var d in Object.keys(worldData))
+                            worldData[d].id = parseInt(d);
+
+                        worldDataByName = _.keyBy(worldData, function(w) {
+                            return w.title;
+                        });
+
+                        worldNames = Object.keys(worldDataByName);
+
+                        var depthMap = {};
+
+                        for (var w in Object.keys(worldData)) {
+                            depthMap[worldData[w].title] = -1;
+                        }
+
+                        calcDepth(worldDataByName, worldNames, depthMap, null, 0);
+
+                        maxDepth = _.max(Object.values(depthMap));
+
+                        console.log(depthMap);
+
+                        initGraph();
+                    }
+                });
+            </script>
+        </div>
+    </body>
+</html>
