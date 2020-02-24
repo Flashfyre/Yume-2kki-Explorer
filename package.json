@@ -1,0 +1,28 @@
+{
+  "name": "yume-2kki-explorer",
+  "version": "0.1.0",
+  "description": "A visualization of maps in Yume 2kki that scrapes the wiki for data",
+  "main": "app.js",
+  "dependencies": {
+    "express": "^4.17.1",
+    "force-graph": "^1.24.0",
+    "fs": "^0.0.1-security",
+    "http": "^0.0.0",
+    "image-downloader": "^3.5.0",
+    "superagent": "^5.2.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Flashfyre/Yume-2kki-Explorer.git"
+  },
+  "author": "Samuel Harbord (FlashfyreDev)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Flashfyre/Yume-2kki-Explorer/issues"
+  },
+  "homepage": "https://github.com/Flashfyre/Yume-2kki-Explorer#readme"
+}
