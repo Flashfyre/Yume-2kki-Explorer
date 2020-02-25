@@ -9,7 +9,7 @@ app.use(express.static('public'))
 
 app.get('/', (req, res) => res.sendFile('index.html', { root: '.' }))
 
-app.get('/getWorldInfo/:worldName', function(req, res) {
+app.get('/world/:worldName', function(req, res) {
     (async function(){
         const response = await superagent.get('https://yume2kki.fandom.com/wiki/' + req.params.worldName);
         var worldName = req.params.worldName.replace(/\_/g, " ");
@@ -25,12 +25,12 @@ app.get('/getWorldInfo/:worldName', function(req, res) {
                 console.error(err)
             }
         }
-        res.send(JSON.stringify(
+        res.json(
             {
                 connections: getConnections(response.text),
                 filename: worldName + ext
             }
-        ));
+        );
     })();
 });
 

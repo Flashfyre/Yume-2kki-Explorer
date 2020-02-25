@@ -13,6 +13,8 @@
         </style>
         <!--<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>-->
         <script src="//unpkg.com/force-graph"></script>
+        <script src="//unpkg.com/d3-quadtree"></script>
+        <script src="//unpkg.com/d3-force"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.min.js"></script>
     </head>
@@ -474,7 +476,7 @@
                                 delete world.categories;
                                 delete world.ns;
                                 (function(pageId, world) {
-                                    $.get("./getWorldInfo/" + world.title, function (data) {
+                                    $.get("./world/" + world.title, function (data) {
                                         console.log(pageId)
                                         var worldInfo = JSON.parse(data);
                                         world = $.extend(world, worldInfo);
@@ -562,10 +564,11 @@
 
                     var elem = document.getElementById('graph');
                 
-                    graph = ForceGraph()(elem)
-                        .graphData(gData)
+                    graph = ForceGraph()(elem);
+                    graph
                         .dagMode('td')
                         .dagLevelDistance(50)
+                        .nodeRelSize(16)
                         .nodeCanvasObject(({ id, img, x, y }, ctx) => {
                             const width = 16, height = 12;
                             ctx.drawImage(img, x - width / 2, y - height / 2, width, height);
@@ -601,7 +604,21 @@
                             highlightNode = node ? node.id : null;
                             graph.centerAt(node.x, node.y, 1000);
                             graph.zoom(8, 2000);
-                        });
+                        })
+                        // Add collision and bounding box forces
+                        .d3Force('collide', d3.forceCollide(graph.nodeRelSize()))
+                        .d3Force('box', () => {
+                            const SQUARE_HALF_SIDE = graph.nodeRelSize() * 100 * 0.5;
+
+                            gData.nodes.forEach(node => {
+                                const x = node.x || 0, y = node.y || 0;
+
+                                // bounce on box walls
+                                if (Math.abs(x) > SQUARE_HALF_SIDE) { node.vx += 0.1 * (x > 0 ? -1 : 1); }
+                                if (Math.abs(y) > SQUARE_HALF_SIDE) { node.vy += 0.1 * (y > 0 ? -1 : 1); }
+                            });
+                        })
+                        .graphData(gData);
                 }
 
                 function findPath(s, t) {
