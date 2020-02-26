@@ -132,7 +132,7 @@
             </div>
             <div id="graph" class="graph"></div>
             <div class="footer">
-                Yume 2kki Explorer v0.2.2 by FlashfyreDev
+                Yume 2kki Explorer v0.2.3 by FlashfyreDev
             </div>
             <script>
                 var worldData = [
@@ -825,13 +825,33 @@
                                 return false;
                             var ret = $.inArray(id, checkedTargetIds) !== -1;
                             if (ret) {
+                                var skip = false;
+                                var matchPath = [s].concat(sourcePaths[id].slice(0, -1), targetPaths[id].reverse(), [t]);
+                                for (var p in matchPaths) {
+                                    for (var w = 1; w < matchPaths[p].length; w++) {
+                                        var linkId = `${matchPaths[p][w - 1]}_${matchPaths[p][w]}`;
+                                        for (var m = 1; m < matchPath.length; m++) {
+                                            var matchLinkId = `${matchPath[m - 1]}_${matchPath[m]}`;
+                                            if (linkId === matchLinkId) {
+                                                skip = true;
+                                                break;
+                                            }
+                                        }
+                                        if (skip)
+                                            break;
+                                    }
+                                    if (skip)
+                                        break;
+                                }
+                                if (skip)
+                                    return false;
                                 _.remove(nextGenSourceWorlds, function(w) {
                                     return w.id === id;
                                 });
                                 _.remove(nextGenTargetWorlds, function(w) {
                                     return w.id === id;
                                 });
-                                matchPaths.push([s].concat(sourcePaths[id].slice(0, -1), targetPaths[id].reverse(), [t]));
+                                matchPaths.push(matchPath);
                             }
                             return ret;
                         });
