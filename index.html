@@ -24,6 +24,7 @@
                 z-index: 10;
                 text-align: right;
                 margin: 10px;
+                margin-top: 20px;
                 width: calc(100% - 40px);
                 height: 64px;
                 background: url(/images/ui/containerbg.png);
@@ -132,7 +133,7 @@
             </div>
             <div id="graph" class="graph"></div>
             <div class="footer">
-                Yume 2kki Explorer v0.2.3 by FlashfyreDev
+                Yume 2kki Explorer v0.2.4 by FlashfyreDev
             </div>
             <script>
                 var worldData = [
@@ -640,34 +641,30 @@
                 }
 
                 function initGraph(paths) {
-                    var visibleWorldIds = paths ? _.uniq(_.flatten(paths)) : _.map(Object.keys(worldData), function(id) {
-                        return parseInt(id);
-                    });
 
-                    var images = (paths ? _.filter(worldData, function(w) {
-                            return visibleWorldIds.indexOf(w.id) > -1;
-                        }) : worldData)
-                        .map(d => {
-                            const img = new Image();
-                            img.id = d.id;
-                            img.title = d.title;
-                            img.src = `./images/worlds/${d.filename}`;
-                            return img;
-                        });
+                    var visibleWorldIds;
                     
                     var links = [];
 
                     var addedLinks = [];
 
                     if (paths) {
+                        visibleWorldIds = _.uniq(_.flatten(paths));
+
                         var pathScores = [];
                         var minPathDepth = paths[0].length;
-                        var maxPathDepth = paths[paths.length - 1].length;
-                        var maxPathScore = (paths.length - 1) + (3 * (maxPathDepth - minPathDepth));
+                        var maxPathDepth;
+                        var maxPathScore;
                         for (var p in paths) {
                             var path = paths[p];
+                            if (path.length > minPathDepth * 2) {
+                                paths = paths.slice(0, p);
+                                break;
+                            }
                             pathScores[p] = parseInt(p) + 3 * (path.length - minPathDepth);
                         }
+                        maxPathDepth = paths[paths.length - 1].length;
+                        maxPathScore = ((paths.length - 1) + (3 * (maxPathDepth - minPathDepth))) || 1;
                         for (var p in paths) {
                             var path = paths[p];
                             for (var w = 1; w < path.length; w++) {
@@ -685,6 +682,10 @@
                             }
                         }
                     } else {
+                        visibleWorldIds = _.map(Object.keys(worldData), function(id) {
+                            return parseInt(id);
+                        });
+
                         for (var w in visibleWorldIds) {
                             var world = worldData[visibleWorldIds[w]];
                             var connections = world.connections;
@@ -703,6 +704,21 @@
                             }
                         }
                     }
+
+                    var visibleWorldIds = paths ? _.uniq(_.flatten(paths)) : _.map(Object.keys(worldData), function(id) {
+                        return parseInt(id);
+                    });
+
+                    var images = (paths ? _.filter(worldData, function(w) {
+                            return visibleWorldIds.indexOf(w.id) > -1;
+                        }) : worldData)
+                        .map(d => {
+                            const img = new Image();
+                            img.id = d.id;
+                            img.title = d.title;
+                            img.src = `./images/worlds/${d.filename}`;
+                            return img;
+                        });
 
                     //console.log(links);
                 
@@ -801,32 +817,47 @@
                         for (var sw in sourceWorlds) {
                             var sourceWorld = sourceWorlds[sw];
                             var sourcePath = sourcePaths[sourceWorld.id];
-                            delete sourcePaths[sourceWorld.id];
-                            $.extend(sourcePaths, traverseConns(checkedSourceNodes, sourcePath, nextGenSourceWorlds, sourceWorld, true));
+                            //delete sourcePaths[sourceWorld.id];
+                            var sourceConns = traverseConns(checkedSourceNodes, sourcePath, nextGenSourceWorlds, sourceWorld, true);
+                            $.extend(sourcePaths, sourceConns);
                         }
                         for (var tw in targetWorlds) {
                             var targetWorld = targetWorlds[tw];
                             var targetPath = targetPaths[targetWorld.id];
-                            delete targetPaths[targetWorld.id];
-                            $.extend(targetPaths, traverseConns(checkedTargetNodes, targetPath, nextGenTargetWorlds, targetWorld, false));
+                            //delete targetPaths[targetWorld.id];
+                            var targetConns = traverseConns(checkedTargetNodes, targetPath, nextGenTargetWorlds, targetWorld, false);
+                            $.extend(targetPaths, targetConns);
                         }
                         
                         genIndex++;
 
-                        var checkedSourceIds = _.map(Object.keys(sourcePaths), function(id) {
+                        /*var checkedSourceIds = _.map(Object.keys(sourcePaths), function(id) {
                             return parseInt(id);
                         });
                         var checkedTargetIds = _.map(Object.keys(targetPaths), function(id) {
                             return parseInt(id);
-                        });;
+                        });;*/
 
-                        $.grep(checkedSourceIds, function(id) {
-                            if (matchPaths.length >= 5)
-                                return false;
-                            var ret = $.inArray(id, checkedTargetIds) !== -1;
+                        $.grep(checkedSourceNodes, function(id) {
+                            var ret = $.inArray(id, checkedTargetNodes) !== -1;
                             if (ret) {
                                 var skip = false;
-                                var matchPath = [s].concat(sourcePaths[id].slice(0, -1), targetPaths[id].reverse(), [t]);
+
+                                var sourcePath = [s].concat(sourcePaths[id]);
+                                var targetPath = [t].concat(targetPaths[id]);
+
+                                if (sourcePath[sourcePath.length - 1] === id && targetPath[targetPath.length - 1] === id) {
+                                    sourcePath = sourcePath.slice(0, -1);
+                                }
+
+                                var loopWorlds;
+                                while ((loopWorlds = _.intersectionWith(sourcePath, targetPath, _.isEqual)).length) {
+                                    //console.log("Loop found", worldData[loopWorlds[0]].title, JSON.stringify(_.map(sourcePath, function(p) { return worldData[p].title})), JSON.stringify(_.map(targetPath, function(p) { return worldData[p].title})));
+                                    sourcePath = sourcePath.slice(0, sourcePath.indexOf(loopWorlds[0]));
+                                    targetPath = targetPath.slice(0, targetPath.indexOf(loopWorlds[0]) + 1);
+                                    //console.log("Loop fixed", worldData[loopWorlds[0]].title, JSON.stringify(_.map(sourcePath, function(p) { return worldData[p].title})), JSON.stringify(_.map(targetPath, function(p) { return worldData[p].title})));
+                                }
+                                var matchPath = sourcePath.concat(targetPath.reverse());
                                 for (var p in matchPaths) {
                                     for (var w = 1; w < matchPaths[p].length; w++) {
                                         var linkId = `${matchPaths[p][w - 1]}_${matchPaths[p][w]}`;
@@ -862,6 +893,14 @@
                     var endTime = performance.now();
 
                     console.log("Found ", matchPaths.length, " matching paths in ", Math.round((endTime - startTime) * 10) / 10, "ms");
+
+                    if (!matchPaths.length)
+                        matchPaths = [ [ s ], [ t ] ];
+                    else {
+                        matchPaths = _.sortBy(matchPaths, [ 'length' ]);
+                        if (matchPaths.length > 5)
+                            matchPaths = matchPaths.slice(0, 5);
+                    }
 
                     return matchPaths;
                 }
@@ -916,7 +955,7 @@
                                 var endVal = $(".js--end-world").val();
                                 var startWorld = startVal && worldNames.indexOf(startVal) > -1 ? worldDataByName[startVal] : null;
                                 var endWorld = endVal && worldNames.indexOf(endVal) > -1 ? worldDataByName[endVal] : null;
-                                var matchPaths = startWorld && endWorld
+                                var matchPaths = startWorld && endWorld && startWorld != endWorld
                                     ? findPath(startWorld.id, endWorld.id)
                                     : null;
                                 initGraph(matchPaths);
