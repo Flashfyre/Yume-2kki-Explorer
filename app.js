@@ -18,7 +18,7 @@ app.get('/world/:worldName', function(req, res) {
             imageUrl = "https://vignette.wikia.nocookie.net" + imageUrl.slice(0, imageUrl.indexOf('"'));
             var ext = imageUrl.slice(imageUrl.lastIndexOf("."), imageUrl.indexOf("/", imageUrl.lastIndexOf(".")));
             try {
-                if (!fs.existsSync("./images/" + worldName + ext)) {
+                if (!fs.existsSync("./images/worlds/" + worldName + ext)) {
                     downloadImage(imageUrl, worldName + ext);
                 }
             } catch(err) {

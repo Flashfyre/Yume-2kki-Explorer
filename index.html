@@ -2,13 +2,105 @@
     <head>
         <link rel="shortcut icon" href="/favicon.ico">
         <style>
+            @font-face {
+                font-family: 'MS Gothic';
+                src: url('/fonts/MS Gothic.ttf');
+            }
+
             body {
+                font-family: 'MS Gothic';
                 margin: 0;
+                overflow: hidden;
                 background: #000000 url(https://img2.wikia.nocookie.net/__cb20140715140243/yume2kki/images/5/50/Wiki-background) top left repeat;
             }
 
             .content {
                 background: rgba(0,0,0,0.8);
+                padding-top: 0.1px;
+            }
+
+            .controls {
+                text-align: right;
+                margin: 10px;
+                width: calc(100% - 40px);
+                height: 64px;
+                background: url(/images/ui/containerbg.png);
+                border: 10px solid transparent;
+                border-image: url(/images/ui/border.png);
+                border-image-slice: 12;
+                border-image-repeat: repeat;
+            }
+
+            .graph {
+                height: calc(100% - 136px);
+            }
+
+            .footer {
+                height: 26px;
+                text-align: right;
+                font-family: 'MS Gothic';
+                font-size: 18px;
+                color: #ded9df;
+                margin: 8px;
+            }
+
+            label {
+                font-size: 18px;
+                color: #ded9df;
+                margin-left: 16px;
+            }
+
+            button {
+                margin: 8px;
+                padding: 4px;
+                font-family: 'MS Gothic';
+                font-size: 18px;
+                color: #ded9df;
+                border: 6px solid transparent;
+                border-image: url(/images/ui/border2.png) 4 round;
+                background-image: url(/images/ui/containerbg.png);
+            }
+
+            input[type='text'] {
+                margin: 8px;
+                padding: 4px;
+                font-family: 'MS Gothic';
+                font-size: 18px;
+                color: #ded9df;
+                border: 6px solid transparent;
+                border-image: url(/images/ui/border2.png) 4 round;
+                background-color: #403842;
+            }
+
+            .autocomplete-suggestions {
+                color: #ded9df;
+                border: 6px solid transparent;
+                border-image: url(/images/ui/border2.png) 4 round;
+                background: #403842;
+                overflow: auto;
+            }
+
+            .autocomplete-suggestion {
+                padding: 2px 5px;
+                white-space: nowrap;
+                overflow: hidden;
+            }
+
+            .autocomplete-selected {
+                background: #817084;
+            }
+            .autocomplete-suggestions strong {
+                font-weight: normal;
+                color: #ffea56;
+            }
+
+            .autocomplete-group {
+                padding: 2px 5px;
+            }
+
+            .autocomplete-group strong {
+                display: block;
+                border-bottom: 1px solid #000;
             }
         </style>
         <!--<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>-->
@@ -17,11 +109,25 @@
         <script src="//unpkg.com/d3-force"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.devbridge-autocomplete/1.4.10/jquery.autocomplete.min.js"></script>
     </head>
     <body>
         <div class="content">
-            <div id="graph"></div>
-
+            <div class="controls">
+                <label>
+                    Origin:
+                    <input name="startWorld" type="text" class="js--world-input js--start-world" />
+                </label>
+                <label>
+                    Destination:
+                    <input name="endWorld" type="text" class="js--world-input js--end-world" />
+                </label>
+                <button class="js--reset">Reset</button>
+            </div>
+            <div id="graph" class="graph"></div>
+            <div class="footer">
+                Yume 2kki Explorer v0.2 by FlashfyreDev
+            </div>
             <script>
                 var worldData = [
                     {"title":"Art Gallery","connections":[{"location":"Dizzy Spirals World","type":0},{"location":"Blue Forest","type":0},{"location":"Garden World","type":0},{"location":"The Baddies Bar","type":0},{"location":"Pastel Blue House","type":0},{"location":"Monochrome Feudal Japan","type":0},{"location":"Visine World","type":0},{"location":"Sky Kingdom","type":0},{"location":"Underwater Amusement Park","type":0},{"location":"Techno Condominium","type":0},{"location":"Cloud Tops","type":0},{"location":"Toy World","type":0},{"location":"Dream Park","type":0},{"location":"Dark Room","type":2},{"location":"Graffiti Maze","type":1},{"location":"Flooded Baths","type":0},{"location":"Never-Ending Hallway","type":2},{"location":"Simple Street","type":2}],"filename":"Art Gallery.png"},
@@ -497,7 +603,7 @@
 
                 var highlightNode;
 
-                function calcDepth(worldDataByName, worldNames, depthMap, world, depth) {
+                function calcDepth(depthMap, world, depth) {
                     var currentWorld;
                     if (depth > 0) {
                         currentWorld = world;
@@ -514,12 +620,12 @@
                             var d = depthMap[w];
                             if (d === -1 || d > depth + 1) {
                                 worldDataByName[w].depth = depthMap[w] = depth + 1;
-                                calcDepth(worldDataByName, worldNames, depthMap, worldDataByName[w], depth + 1);
+                                calcDepth(depthMap, worldDataByName[w], depth + 1);
                             }
                         } else {
                             var dc = world.title + " -> " + w;
                             if (deadConns.indexOf(dc) === -1) {
-                                console.log(dc);
+                                //console.log(dc);
                                 deadConns.push(dc);
                             }
                         }
@@ -527,38 +633,76 @@
                     return depth;
                 }
 
-                function initGraph() {
-                    var images = worldData
+                function initGraph(paths) {
+                    var visibleWorldIds = paths ? _.uniq(_.flatten(paths)) : _.map(Object.keys(worldData), function(id) {
+                        return parseInt(id);
+                    });
+
+                    var images = (paths ? _.filter(worldData, function(w) {
+                            return visibleWorldIds.indexOf(w.id) > -1;
+                        }) : worldData)
                         .map(d => {
                             const img = new Image();
+                            img.id = d.id;
                             img.title = d.title;
-                            img.src = `./images/${d.filename}`;
+                            img.src = `./images/worlds/${d.filename}`;
                             return img;
                         });
-
+                    
                     var links = [];
-                    for (var w in Object.keys(worldData)) {
-                        var world = worldData[w];
-                        var connections = world.connections;
-                        for (var c in connections) {
-                            var conn = connections[c];
-                            var connWorld = worldDataByName[conn.location];
-                            if (worldNames.indexOf(conn.location) > -1 && conn.type < 2) {
-                                if ((world.depth < connWorld.depth || (world.depth == connWorld.depth && world.id < connWorld.id))) {
+
+                    var addedLinks = [];
+
+                    if (paths) {
+                        var pathScores = [];
+                        var minPathDepth = paths[0].length;
+                        var maxPathDepth = paths[paths.length - 1].length;
+                        var maxPathScore = (paths.length - 1) + (3 * (maxPathDepth - minPathDepth));
+                        for (var p in paths) {
+                            var path = paths[p];
+                            pathScores[p] = parseInt(p) + 3 * (path.length - minPathDepth);
+                        }
+                        for (var p in paths) {
+                            var path = paths[p];
+                            for (var w = 1; w < path.length; w++) {
+                                var sourceId = path[w - 1];
+                                var targetId = path[w];
+                                var linkId = `${sourceId}_${targetId}`;
+                                if (addedLinks.indexOf(linkId) === -1) {
                                     links.push({
-                                        source: world.id,
-                                        target: connWorld.id
+                                        source: sourceId,
+                                        target: targetId,
+                                        defaultColor: hueToRGB(0.6666 - ((pathScores[p] / maxPathScore) * 0.6666))
                                     });
+                                    addedLinks.push(linkId);
+                                }
+                            }
+                        }
+                    } else {
+                        for (var w in visibleWorldIds) {
+                            var world = worldData[visibleWorldIds[w]];
+                            var connections = world.connections;
+                            for (var c in connections) {
+                                var conn = connections[c];
+                                if (worldNames.indexOf(conn.location) > -1 && conn.type < 2) {
+                                    var connWorld = worldDataByName[conn.location];
+                                    if (world.depth < connWorld.depth || (world.depth == connWorld.depth && world.id < connWorld.id)) {
+                                        links.push({
+                                            source: world.id,
+                                            target: connWorld.id,
+                                            defaultColor: hueToRGB(0.6666 - ((world.depth / (maxDepth - 1)) * 0.6666))
+                                        });
+                                    }
                                 }
                             }
                         }
                     }
 
-                    console.log(links);
+                    //console.log(links);
                 
                     // Random connected graph
                     const gData = {
-                        nodes: images.map((img, id) => ({ id, img })),
+                        nodes: images.map((img) => ({ id: parseInt(img.id), img })),
                         links: links
                     };
 
@@ -568,7 +712,7 @@
                     graph
                         .dagMode('td')
                         .dagLevelDistance(50)
-                        .nodeRelSize(16)
+                        .nodeRelSize(12)
                         .nodeCanvasObject(({ id, img, x, y }, ctx) => {
                             const width = 16, height = 12;
                             ctx.drawImage(img, x - width / 2, y - height / 2, width, height);
@@ -580,7 +724,7 @@
                         })
                         .linkWidth(link => highlightNode && (link.source.id === highlightNode || link.target.id === highlightNode) ? 2 : 1)
                         .linkColor(link => {
-                            return highlightNode && (link.source.id === highlightNode || link.target.id === highlightNode) ? '#f00' : hueToRGB(0.6666 - ((worldData[link.source.id > -1 ? link.source.id : link.source].depth / (maxDepth - 1)) * 0.6666));
+                            return highlightNode && (link.source.id === highlightNode || link.target.id === highlightNode) ? '#f00' : link.defaultColor;
                         })
                         /*.linkCanvasObject((link, ctx) => {
                             //ctx.setLineDash([5, 5]);
@@ -622,44 +766,96 @@
                 }
 
                 function findPath(s, t) {
+                    var startTime = performance.now();
+
                     var checkedSourceNodes = [s];
                     var checkedTargetNodes = [t];
 
                     var source = worldData[s];
                     var target = worldData[t];
 
+                    var matchPaths = [];
+
+                    var sourcePaths = {};
+                    var targetPaths = {};
+
                     var nextGenSourceWorlds = [source];
                     var nextGenTargetWorlds = [target];
 
                     var genIndex = 0;
 
-                    var matches;
-                    while (!(matches = $.grep(checkedSourceNodes, function(element) {
-                        return $.inArray(element, checkedTargetNodes) !== -1;
-                    })).length || genIndex++ > 5) {
+                    sourcePaths[s] = [];
+                    targetPaths[t] = [];
+                  
+                    while (genIndex <= 15) {
                         var sourceWorlds = nextGenSourceWorlds.slice(0);
                         var targetWorlds = nextGenTargetWorlds.slice(0);
-                        nextGenSourceWorlds.length = 0;
-                        nextGenTargetWorlds.length = 0;
-                        for (var sw in sourceWorlds)
-                            traverseConns(checkedSourceNodes, checkedTargetNodes, nextGenSourceWorlds, worldData[sourceWorlds[sw]]);
-                        for (var tw in targetWorlds)
-                            traverseConns(checkedTargetNodes, checkedSourceNodes, nextGenTargetWorlds, worldData[targetWorld[tw]]);
+                        nextGenSourceWorlds = [];
+                        nextGenTargetWorlds = [];
+                        for (var sw in sourceWorlds) {
+                            var sourceWorld = sourceWorlds[sw];
+                            var sourcePath = sourcePaths[sourceWorld.id];
+                            delete sourcePaths[sourceWorld.id];
+                            $.extend(sourcePaths, traverseConns(checkedSourceNodes, sourcePath, nextGenSourceWorlds, sourceWorld, true));
+                        }
+                        for (var tw in targetWorlds) {
+                            var targetWorld = targetWorlds[tw];
+                            var targetPath = targetPaths[targetWorld.id];
+                            delete targetPaths[targetWorld.id];
+                            $.extend(targetPaths, traverseConns(checkedTargetNodes, targetPath, nextGenTargetWorlds, targetWorld, false));
+                        }
+                        
+                        genIndex++;
+
+                        var checkedSourceIds = _.map(Object.keys(sourcePaths), function(id) {
+                            return parseInt(id);
+                        });
+                        var checkedTargetIds = _.map(Object.keys(targetPaths), function(id) {
+                            return parseInt(id);
+                        });;
+
+                        $.grep(checkedSourceIds, function(id) {
+                            if (matchPaths.length >= 5)
+                                return false;
+                            var ret = $.inArray(id, checkedTargetIds) !== -1;
+                            if (ret) {
+                                _.remove(nextGenSourceWorlds, function(w) {
+                                    return w.id === id;
+                                });
+                                _.remove(nextGenTargetWorlds, function(w) {
+                                    return w.id === id;
+                                });
+                                matchPaths.push([s].concat(sourcePaths[id].slice(0, -1), targetPaths[id].reverse(), [t]));
+                            }
+                            return ret;
+                        });
+                        if (matchPaths.length >= 3)
+                            break;
                     }
-                    console.log(matches, genIndex);
+
+                    var endTime = performance.now();
+
+                    console.log("Found ", matchPaths.length, " matching paths in ", Math.round((endTime - startTime) * 10) / 10, "ms");
+
+                    return matchPaths;
                 }
 
-                function traverseConns(checkedSourceNodes, checkedTargetNodes, nextGenWorlds, world) {
+                function traverseConns(checkedNodes, path, nextGenWorlds, world, isSource) {
+                    var ret = {};
                     var conns = world.connections;
                     for (var c in conns) {
-                        if (worldDataByName.indexOf(conns[c].title) === -1)
+                        if (worldNames.indexOf(conns[c].location) === -1 || conns[c].type >= 3 || conns[c].type === (isSource ? 2 : 1))
                             continue;
-                        var id = worldDataByName[conns[c].title].id;
-                        if (checkedSourceNodes.indexOf(id) === -1) {
-                            checkedSourceNodes.push(id);
-                            nextGenWorlds.push(id);
+                        var id = worldDataByName[conns[c].location].id;
+                        if (checkedNodes.indexOf(id) === -1) {
+                            var connPath = path.slice(0);
+                            connPath.push(id);
+                            ret[id] = connPath;
+                            checkedNodes.push(id);
+                            nextGenWorlds.push(worldData[id]);
                         }
                     }
+                    return ret;
                 }
 
                 $(document).ready(function() {
@@ -681,11 +877,30 @@
                             depthMap[worldData[w].title] = -1;
                         }
 
-                        calcDepth(worldDataByName, worldNames, depthMap, null, 0);
+                        calcDepth(depthMap, null, 0);
 
                         maxDepth = _.max(Object.values(depthMap));
 
                         console.log(depthMap);
+
+                        $(".js--world-input").autocomplete({
+                            lookup: worldNames,
+                            onSelect: function (option) {
+                                var startVal = $(".js--start-world").val();
+                                var endVal = $(".js--end-world").val();
+                                var startWorld = startVal && worldNames.indexOf(startVal) > -1 ? worldDataByName[startVal] : null;
+                                var endWorld = endVal && worldNames.indexOf(endVal) > -1 ? worldDataByName[endVal] : null;
+                                var matchPaths = startWorld && endWorld
+                                    ? findPath(startWorld.id, endWorld.id)
+                                    : null;
+                                initGraph(matchPaths);
+                            }
+                        });
+
+                        $(".js--reset").click(function() {
+                            $(".js--world-input").val("");
+                            initGraph();
+                        });
 
                         initGraph();
                     }
