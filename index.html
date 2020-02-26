@@ -10,8 +10,8 @@
             body {
                 font-family: 'MS Gothic';
                 margin: 0;
-                overflow: hidden;
                 background: #000000 url(https://img2.wikia.nocookie.net/__cb20140715140243/yume2kki/images/5/50/Wiki-background) top left repeat;
+                overflow: hidden;
             }
 
             .content {
@@ -20,6 +20,7 @@
             }
 
             .controls {
+                position: absolute;
                 text-align: right;
                 margin: 10px;
                 width: calc(100% - 40px);
@@ -32,16 +33,20 @@
             }
 
             .graph {
-                height: calc(100% - 136px);
+                width: 100%;
+                height: 100%;
             }
 
             .footer {
-                height: 26px;
+                position: absolute;
+                padding: 8px;
+                top: calc(100% - 36px);
                 text-align: right;
+                height: 26px;
+                width: calc(100% - 16px);
                 font-family: 'MS Gothic';
                 font-size: 18px;
                 color: #ded9df;
-                margin: 8px;
             }
 
             label {
@@ -126,7 +131,7 @@
             </div>
             <div id="graph" class="graph"></div>
             <div class="footer">
-                Yume 2kki Explorer v0.2 by FlashfyreDev
+                Yume 2kki Explorer v0.2.1 by FlashfyreDev
             </div>
             <script>
                 var worldData = [
