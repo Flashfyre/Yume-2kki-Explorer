@@ -68,7 +68,7 @@
                 background-image: url(/images/ui/containerbg.png);
             }
 
-            input[type='text'] {
+            input[type='text'], select {
                 margin: 8px;
                 padding: 4px;
                 font-family: 'MS Gothic';
@@ -121,6 +121,21 @@
     <body>
         <div class="content">
             <div class="controls">
+                <label>
+                    Display Mode:
+                    <select name="displayMode" class="js--display-mode">
+                        <option value="0" selected>Hierarchical (One-Way)</option>
+                        <option value="1">Free (Two-Way)</option>
+                    </select>
+                </label>
+                <label>
+                    Label Display:
+                    <select name="labelMode" class="js--label-mode">
+                        <option value="0">Never</option>
+                        <option value="1" selected>On Hover</option>
+                        <option value="2">Always</option>
+                    </select>
+                </label>
                 <label>
                     Origin:
                     <input name="startWorld" type="text" class="js--world-input js--start-world" />
@@ -502,6 +517,34 @@
 
                 const batchSize = 20;
 
+                function loadOrInitConfig() {
+                    if (!window.localStorage.hasOwnProperty("config")) {
+                        window.localStorage.setItem("config", JSON.stringify(config));
+                    } else {
+                        var savedConfig = JSON.parse(window.localStorage.getItem("config"));
+                        var configKeys = Object.keys(savedConfig);
+                        for (var c in configKeys) {
+                            var key = configKeys[c];
+                            if (config.hasOwnProperty(key)) {
+                                var value = savedConfig[key];
+                                config[key] = value;
+                                switch (key) {
+                                    case "displayMode":
+                                        $(".js--display-mode").val(value);
+                                        break;
+                                    case "labelMode":
+                                        $(".js--label-mode").val(value);
+                                        break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                function updateConfig() {
+                    window.localStorage.config = JSON.stringify(config);
+                }
+
                 function hueToRGB(h) {
                     var s = 1, v = 1, r, g, b, i, f, p, q, t;
                     i = Math.floor(h * 6);
@@ -608,7 +651,14 @@
 
                 var graph;
 
+                var nodes = [];
+
                 var highlightNode;
+
+                var config = {
+                    displayMode: 0,
+                    labelMode: 1
+                };
 
                 function calcDepth(depthMap, world, depth) {
                     var currentWorld;
@@ -654,6 +704,7 @@
                         var pathScores = [];
                         var minPathDepth = paths[0].length;
                         var maxPathDepth;
+                        var depthDiff;
                         var maxPathScore;
                         for (var p in paths) {
                             var path = paths[p];
@@ -664,7 +715,8 @@
                             pathScores[p] = parseInt(p) + 3 * (path.length - minPathDepth);
                         }
                         maxPathDepth = paths[paths.length - 1].length;
-                        maxPathScore = ((paths.length - 1) + (3 * (maxPathDepth - minPathDepth))) || 1;
+                        depthDiff = maxPathDepth - minPathDepth;
+                        maxPathScore = ((paths.length - 1) + (3 * depthDiff)) * (depthDiff > 0 ? 1 : 2) || 1;
                         for (var p in paths) {
                             var path = paths[p];
                             for (var w = 1; w < path.length; w++) {
@@ -693,7 +745,7 @@
                                 var conn = connections[c];
                                 if (worldNames.indexOf(conn.location) > -1 && conn.type < 2) {
                                     var connWorld = worldDataByName[conn.location];
-                                    if (world.depth < connWorld.depth || (world.depth == connWorld.depth && world.id < connWorld.id)) {
+                                    if (config.displayMode === 1 || world.depth < connWorld.depth || (world.depth == connWorld.depth && world.id < connWorld.id)) {
                                         links.push({
                                             source: world.id,
                                             target: connWorld.id,
@@ -705,11 +757,7 @@
                         }
                     }
 
-                    var visibleWorldIds = paths ? _.uniq(_.flatten(paths)) : _.map(Object.keys(worldData), function(id) {
-                        return parseInt(id);
-                    });
-
-                    var images = (paths ? _.filter(worldData, function(w) {
+                    let images = (paths ? _.filter(worldData, function(w) {
                             return visibleWorldIds.indexOf(w.id) > -1;
                         }) : worldData)
                         .map(d => {
@@ -722,22 +770,55 @@
 
                     //console.log(links);
                 
-                    // Random connected graph
-                    const gData = {
-                        nodes: images.map((img) => ({ id: parseInt(img.id), img })),
+                    let gData = {
+                        nodes: images.map((img) => ({ id: parseInt(img.id), img, showLabel: false })),
                         links: links
                     };
 
-                    var elem = document.getElementById('graph');
+                    let elem = document.getElementById('graph');
                 
                     graph = ForceGraph()(elem);
+                    if (config.displayMode === 0) {
+                        graph = graph
+                            .dagMode('td')
+                            .dagLevelDistance(50)
+                    }
                     graph
-                        .dagMode('td')
-                        .dagLevelDistance(50)
                         .nodeRelSize(12)
-                        .nodeCanvasObject(({ id, img, x, y }, ctx) => {
+                        .nodeCanvasObject(({ id, img, x, y, showLabel }, ctx) => {
                             const width = 16, height = 12;
                             ctx.drawImage(img, x - width / 2, y - height / 2, width, height);
+                            if (config.labelMode === 2 || (config.labelMode === 1 && showLabel)) {
+                                ctx.lineWidth = 0.25;
+                                ctx.strokeStyle = "#000000";
+                                ctx.fillStyle = "#ded9df";
+                                ctx.font = "2px 'MS Gothic'";
+                                var worldName = worldData[id].title;
+                                var textLines = worldName.split(" ");
+                                for (var l = 0; l < textLines.length; l++) {
+                                    if (ctx.measureText(textLines[l].width < 16)) {
+                                        var mergeIndex = 0;
+                                        for (var l2 = l + 1; l2 < textLines.length; l2++) {
+                                            var mergedLine = textLines.slice(l, l2 + 1).join(" ");
+                                            if (ctx.measureText(mergedLine).width < 16) {
+                                                mergeIndex = l2;
+                                            } else
+                                                break;
+                                        }
+                                        if (mergeIndex) {
+                                            textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
+                                        }
+                                    }
+                                }
+                                for (var l in textLines) {
+                                    var textLine = textLines[l];
+                                    var lineWidth = ctx.measureText(textLine).width;
+                                    var lineX = x - lineWidth / 2;
+                                    var lineY = (y + 0.5) - (textLines.length - 1) + l * 2;
+                                    ctx.strokeText(textLine, lineX, lineY);
+                                    ctx.fillText(textLine, lineX, lineY);
+                                }
+                            }
                             if (highlightNode == id) {
                                 ctx.strokeStyle = '#f00';
                                 ctx.lineWidth = 1;
@@ -762,12 +843,18 @@
 
                             ctx.stroke();
                         })*/
-                        .onNodeHover(node => {
+                        .onNodeHover((node, prevNode) => {
                             elem.style.cursor = node ? 'pointer' : null;
+                            if (config.labelMode === 1) {
+                                if (node)
+                                    node.showLabel = true;
+                                if (prevNode)
+                                    prevNode.showLabel = false;
+                            }
                         })
                         .onNodeClick(node => {
                             // Center/zoom on node
-                            highlightNode = node ? node.id : null;
+                            highlightNode = node && (!highlightNode || highlightNode !== node.id) ? node.id : null;
                             graph.centerAt(node.x, node.y, 1000);
                             graph.zoom(8, 2000);
                         })
@@ -785,6 +872,18 @@
                             });
                         })
                         .graphData(gData);
+                }
+
+                function reloadGraph() {
+                    var startVal = $(".js--start-world").val();
+                    var endVal = $(".js--end-world").val();
+                    var startWorld = startVal && worldNames.indexOf(startVal) > -1 ? worldDataByName[startVal] : null;
+                    var endWorld = endVal && worldNames.indexOf(endVal) > -1 ? worldDataByName[endVal] : null;
+                    var matchPaths = startWorld && endWorld && startWorld != endWorld
+                        ? findPath(startWorld.id, endWorld.id)
+                        : null;
+                    $(".js--display-mode").prop("disabled", matchPaths || false);
+                    initGraph(matchPaths)
                 }
 
                 function findPath(s, t) {
@@ -948,26 +1047,30 @@
 
                         console.log(depthMap);
 
+                        $(".js--display-mode").change(function() {
+                            config.displayMode = parseInt($(this).val());
+                            updateConfig();
+                            reloadGraph();
+                        });
+
+                        $(".js--label-mode").change(function() {
+                            config.labelMode = parseInt($(this).val());
+                            updateConfig();
+                        });
+
                         $(".js--world-input").autocomplete({
                             lookup: worldNames,
-                            onSelect: function (option) {
-                                var startVal = $(".js--start-world").val();
-                                var endVal = $(".js--end-world").val();
-                                var startWorld = startVal && worldNames.indexOf(startVal) > -1 ? worldDataByName[startVal] : null;
-                                var endWorld = endVal && worldNames.indexOf(endVal) > -1 ? worldDataByName[endVal] : null;
-                                var matchPaths = startWorld && endWorld && startWorld != endWorld
-                                    ? findPath(startWorld.id, endWorld.id)
-                                    : null;
-                                initGraph(matchPaths);
-                            }
+                            onSelect: reloadGraph
                         });
 
                         $(".js--reset").click(function() {
                             $(".js--world-input").val("");
-                            initGraph();
+                            reloadGraph();
                         });
 
-                        initGraph();
+                        loadOrInitConfig();
+
+                        reloadGraph();
                     }
                 });
             </script>
