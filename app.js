@@ -20,7 +20,7 @@ if (process.env.DATABASE_URL) {
         password: password,
         database: database
     });
-    console.log(host, user, password, database);
+    console.log(dbUrl);
 } else {
     const dbConfig = require("./config/db.config.js");
 
