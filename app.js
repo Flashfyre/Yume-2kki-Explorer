@@ -9,7 +9,7 @@ const mysql = require("mysql");
 
 var pool;
 if (process.env.DATABASE_URL) {
-    let dbUrl = process.env.DATABASE_URL;
+    let dbUrl = process.env.DATABASE_URL.slice(8);
     let user = dbUrl.slice(0, dbUrl.indexOf(":"));
     let password = dbUrl.slice(dbUrl.indexOf(":") + 1, dbUrl.indexOf("@"));
     let host = dbUrl.slice(dbUrl.indexOf("@") + 1, dbUrl.indexOf("/"));
@@ -20,7 +20,6 @@ if (process.env.DATABASE_URL) {
         password: password,
         database: database
     });
-    console.log(host, user, password, database);
 } else {
     const dbConfig = require("./config/db.config.js");
 
