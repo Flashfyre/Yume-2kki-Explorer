@@ -21,17 +21,25 @@
 
             .controls {
                 position: absolute;
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: flex-end;
                 z-index: 10;
                 text-align: right;
                 margin: 10px;
                 margin-top: 20px;
                 width: calc(100% - 40px);
-                height: 64px;
+                min-height: 64px;
                 background: url(/images/ui/containerbg.png);
                 border: 10px solid transparent;
                 border-image: url(/images/ui/border.png);
                 border-image-slice: 12;
                 border-image-repeat: repeat;
+            }
+
+            .control {
+                display: flex;
+                align-items: center;
             }
 
             .graph {
@@ -122,34 +130,36 @@
     <body>
         <div class="content">
             <div class="controls">
-                <label>
-                    Display Mode:
+                <div class="control">
+                    <label>Display Mode:</label>
                     <select name="displayMode" class="js--display-mode">
                         <option value="0" selected>Hierarchical (One-Way)</option>
                         <option value="1">Free (Two-Way)</option>
                     </select>
-                </label>
-                <label>
-                    Label Display:
+                </div>
+                <div class="control">
+                    <label>Label Display:</label>
                     <select name="labelMode" class="js--label-mode">
                         <option value="0">Never</option>
                         <option value="1" selected>On Hover</option>
                         <option value="2">Always</option>
                     </select>
-                </label>
-                <label>
-                    Origin:
+                </div>
+                <div class="control">
+                    <label>Origin:</label>
                     <input name="startWorld" type="text" class="js--world-input js--start-world" />
-                </label>
-                <label>
-                    Destination:
+                </div>
+                <div class="control">
+                    <label>Destination:</label>
                     <input name="endWorld" type="text" class="js--world-input js--end-world" />
-                </label>
-                <button class="js--reset">Reset</button>
+                </div>
+                <div class="control">
+                    <button class="js--reset">Reset</button>
+                </div>
             </div>
             <div id="graph" class="graph"></div>
             <div class="footer">
-                Yume 2kki Explorer v0.3.1 by FlashfyreDev
+                Yume 2kki Explorer v0.3.2 by FlashfyreDev
             </div>
             <script>
                 var worldData;
