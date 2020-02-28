@@ -6,6 +6,7 @@ const superagent = require('superagent');
 const fs = require('fs');
 const download = require('image-downloader');
 const mysql = require("mysql");
+const ConnType = require("./public/js/connType.js").ConnType;
 
 var pool;
 if (process.env.DATABASE_URL) {
@@ -84,7 +85,9 @@ function populateWorldData(callback) {
         let data = JSON.parse(res.text);
         let worlds = data.query.categorymembers;
         populateWorldDataSub(worldData, worlds, 0, worlds.length <= batchSize, function () {
-            updateWorldDepths(worldData, callback);
+            updateWorldDepths(worldData, function() {
+                deleteRemovedWorlds(callback);
+            });
         });
     });
 }
@@ -137,8 +140,8 @@ function populateWorldDataSub(worldData, worlds, batchIndex, lastBatch, callback
                 if (worldNames.indexOf(worldName) > -1) {
                     let world = newWorldsByName[worldName];
                     world.id = rows[r].id;
-                    delete newWorldsByName[worldName];
                 }
+                delete newWorldsByName[worldName];
             }
             let newWorldNames = Object.keys(newWorldsByName);
             if (newWorldNames.length) {
@@ -233,6 +236,7 @@ function getBaseWorldData(worlds, callback) {
 function updateConns(worldDataByName, callback) {
     let newConnsByKey = {};
     let existingConns = [];
+    let removedConnIds = [];
     let worldNames = Object.keys(worldDataByName);
     for (var w in worldDataByName) {
         let world = worldDataByName[w];
@@ -250,9 +254,13 @@ function updateConns(worldDataByName, callback) {
         if (err) throw err;
         for (var r in rows) {
             let key = `${rows[r].sourceId}_${rows[r].targetId}`;
-            let conn = newConnsByKey[key];
-            conn.id = rows[r].id;
-            existingConns.push(conn);
+            if (Object.keys(newConnsByKey).indexOf(key) > -1) {
+                let conn = newConnsByKey[key];
+                conn.id = rows[r].id;
+                existingConns.push(conn);
+            } else {
+                removedConnIds.push(rows[r].id);
+            }
             delete newConnsByKey[key];
         }
         let existingConnsByType = _.groupBy(existingConns, 'type');
@@ -281,10 +289,15 @@ function updateConns(worldDataByName, callback) {
                     for (var r in rows) {
                         newConnsByKey[newConnKeys[r]].id = rows[r].id;
                     }
-                    insertCallback();
+                    if (removedConnIds.length)
+                        deleteRemovedConns(removedConnIds, insertCallback);
+                    else
+                        insertCallback();
                 });
             });
-        } else
+        } else if (removedConnIds.length)
+            deleteRemovedConns(removedConnIds, insertCallback);
+        else
             insertCallback();
     });
 }
@@ -294,6 +307,7 @@ function updateConnsOfType(existingConnsByType, t, callback) {
     let type = existingConnTypes[t];
     let conns = existingConnsByType[type];
     var i = 0;
+    console.log("UPDATE TYPE=", type, "FOR", conns.length, "CONNS");
     var updateConnsQuery = `UPDATE conns SET type=${type} WHERE id IN (`
     for (var c in conns) {
         if (i++)
@@ -307,6 +321,21 @@ function updateConnsOfType(existingConnsByType, t, callback) {
             updateConnsOfType(existingConnsByType, t, callback);
         else
             callback();
+    });
+}
+
+function deleteRemovedConns(removedConnIds, callback) {
+    var i = 0;
+    var deleteConnsQuery = "DELETE FROM conns WHERE id IN (";
+    for (var c in removedConnIds) {
+        if (i++)
+            deleteConnsQuery += ", ";
+        deleteConnsQuery += removedConnIds[c];
+    }
+    deleteConnsQuery += ")";
+    pool.query(deleteConnsQuery, (err, _) => {
+        if (err) throw err;
+        callback();
     });
 }
 
@@ -348,7 +377,7 @@ function calcDepth(worldData, depthMap, world, depth) {
         let conn = currentWorld.connections[c];
         let w = conn.location;
         if (worldNames.indexOf(w) > -1) {
-            if (conn.type >= 2)
+            if (conn.type & ConnType.NO_ENTRY)
                 continue;
             let d = depthMap[w];
             if (d === -1 || d > depth + 1) {
@@ -381,6 +410,13 @@ function updateWorldsOfDepth(worldsByDepth, d, callback) {
             updateWorldsOfDepth(worldsByDepth, d, callback);
         else
             callback();
+    });
+}
+
+function deleteRemovedWorlds(callback) {
+    pool.query('DELETE w FROM worlds w WHERE NOT EXISTS(SELECT c.id FROM conns c WHERE w.id IN (c.sourceId, c.targetId))', (err, _) => {
+        if (err) console.log(err);
+        callback();
     });
 }
 
@@ -427,11 +463,20 @@ function getConnections(html) {
             var connType = 0;
             let areaText = areas[a];
             let urlIndex = areaText.indexOf("/wiki/") + 6;
-            if (areaText.indexOf("NoReturn") > -1) {
-                connType = 1;
-            } else if (areaText.indexOf("NoEntry") > -1) {
-                connType = 2;
-            }
+            if (areaText.indexOf("NoReturn") > -1)
+                connType |= ConnType.ONE_WAY;
+            else if (areaText.indexOf("NoEntry") > -1)
+                connType |= ConnType.NO_ENTRY;
+            if (areaText.indexOf("Unlock") > -1)
+                connType |= ConnType.UNLOCK;
+            else if (areaText.indexOf("Locked") > -1)
+                connType |= ConnType.LOCKED;
+            if (areaText.indexOf("DeadEnd") > -1)
+                connType |= ConnType.DEAD_END;
+            else if (areaText.indexOf("Return") > -1)
+                connType |= ConnType.ISOLATED;
+            if (areaText.indexOf("effect") > -1)
+                connType |= ConnType.EFFECT
             ret.push({
                 location: areaText.slice(urlIndex, areaText.indexOf('"', urlIndex)).replace(/%26/g, "&").replace(/%27/g, "'").replace(/\_/g, " ").replace(/#.*/, ""),
                 type: connType

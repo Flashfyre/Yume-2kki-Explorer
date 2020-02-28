@@ -117,6 +117,7 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.devbridge-autocomplete/1.4.10/jquery.autocomplete.min.js"></script>
+        <script src="/js/connType.js"></script>
     </head>
     <body>
         <div class="content">
@@ -148,7 +149,7 @@
             </div>
             <div id="graph" class="graph"></div>
             <div class="footer">
-                Yume 2kki Explorer v0.3.0 by FlashfyreDev
+                Yume 2kki Explorer v0.3.1 by FlashfyreDev
             </div>
             <script>
                 var worldData;
@@ -220,6 +221,12 @@
                     
                     let links = [];
 
+                    let oneWayLinks = [];
+
+                    var lastOneWayLinkKey;
+
+                    var dashOffset = 0;
+
                     let addedLinks = [];
 
                     if (paths) {
@@ -249,6 +256,7 @@
                                 let linkId = `${sourceId}_${targetId}`;
                                 if (addedLinks.indexOf(linkId) === -1) {
                                     links.push({
+                                        key: linkId,
                                         source: sourceId,
                                         target: targetId,
                                         defaultColor: hueToRGB(0.6666 - ((pathScores[p] / maxPathScore) * 0.6666))
@@ -269,18 +277,24 @@
                             let connections = world.connections;
                             for (var c in connections) {
                                 let conn = connections[c];
-                                if (conn.type < 2) {
-                                    let connWorld = worldData[conn.targetId];
-                                    if (config.displayMode === 1 || world.depth < connWorld.depth || (world.depth == connWorld.depth && world.id < connWorld.id)) {
-                                        links.push({
-                                            source: world.id,
-                                            target: connWorld.id,
-                                            defaultColor: hueToRGB(0.6666 - ((world.depth / (maxDepth - 1)) * 0.6666))
-                                        });
-                                    }
+                                if (conn.type & ConnType.NO_ENTRY)
+                                    continue;
+                                let connWorld = worldData[conn.targetId];
+                                if (config.displayMode === 1 || world.depth < connWorld.depth || (world.depth == connWorld.depth && world.id < connWorld.id)) {
+                                    let link = {
+                                        key: `${world.id}_${connWorld.id}`,
+                                        source: world.id,
+                                        target: connWorld.id,
+                                        defaultColor: hueToRGB(0.6666 - ((world.depth / (maxDepth - 1)) * 0.6666)),
+                                        highlight: conn.type & ConnType.ONE_WAY ? 'replace' : undefined
+                                    };
+                                    links.push(link);
+                                    if (conn.type & ConnType.ONE_WAY)
+                                        oneWayLinks.push(link);
                                 }
                             }
                         }
+                        oneWayLinks.length && (lastOneWayLinkKey = oneWayLinks[oneWayLinks.length - 1].key);
                     }
 
                     let images = (paths ? _.filter(worldData, function(w) {
@@ -293,8 +307,6 @@
                             img.src = `./images/worlds/${d.filename}`;
                             return img;
                         });
-
-                    //console.log(links);
                 
                     let gData = {
                         nodes: images.map((img) => ({ id: parseInt(img.id), img, showLabel: false })),
@@ -352,23 +364,22 @@
                             }
                         })
                         .linkWidth(link => selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1)
-                        .linkColor(link => {
-                            return selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : link.defaultColor;
-                        })
-                        /*.linkCanvasObject((link, ctx) => {
-                            //ctx.setLineDash([5, 5]);
-                            if (selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId)) {
-                                ctx.lineWidth = 2;
-                                ctx.strokeStyle = '#f00';
-                            } else {
-                                ctx.lineWidth = 1;
-                                ctx.strokeStyle = '#ccc';
-                            }
+                        .linkColor(link => selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : link.defaultColor)
+                        .linkCanvasObjectMode('highlight')
+                        .linkCanvasObject((link, ctx) => {
+                            var currentDashOffset = dashOffset;
+                            if (link.key === lastOneWayLinkKey)
+                                dashOffset = dashOffset < 9.9 ? dashOffset + 0.1 : 0;
+                            ctx.beginPath();
+                            ctx.setLineDash([5, 5]);
+                            ctx.lineDashOffset = currentDashOffset * -1;
+                            ctx.lineWidth = selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1;
+                            ctx.strokeStyle = selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : link.defaultColor;
                             ctx.moveTo(link.source.x, link.source.y);
                             ctx.lineTo(link.target.x, link.target.y);
-
                             ctx.stroke();
-                        })*/
+                            ctx.closePath();
+                        })
                         .onNodeHover((node, prevNode) => {
                             elem.style.cursor = node ? 'pointer' : null;
                             if (config.labelMode === 1) {
@@ -534,7 +545,8 @@
                     let ret = {};
                     let conns = world.connections;
                     for (var c in conns) {
-                        if (conns[c].type >= 3 || conns[c].type === (isSource ? 2 : 1))
+                        var connType = conns[c].type;
+                        if (connType & (isSource ? ConnType.NO_ENTRY : ConnType.ONE_WAY))
                             continue;
                         let id = worldData[conns[c].targetId].id;
                         if (checkedNodes.indexOf(id) === -1) {
