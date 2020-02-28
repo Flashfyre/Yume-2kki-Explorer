@@ -76,7 +76,7 @@
                 background-image: url(/images/ui/containerbg.png);
             }
 
-            input[type='text'], select {
+            input[type='text'], select, .slider {
                 margin: 8px;
                 padding: 4px;
                 font-family: 'MS Gothic';
@@ -85,6 +85,37 @@
                 border: 6px solid transparent;
                 border-image: url(/images/ui/border2.png) 4 round;
                 background-color: #403842;
+            }
+
+            .slider {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 128px;
+                height: 2px;
+                padding: 0 4px;
+                outline: none;
+            }
+
+            .slider::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 24px;
+                height: 38px;
+                border: 6px solid transparent;
+                border-image: url(/images/ui/border2.png) 4 round;
+                background-color: #403842;
+                cursor: pointer;
+            }
+
+            .slider::-moz-range-thumb {
+                width: 25px;
+                height: 25px;
+                width: 24px;
+                height: 38px;
+                border: 6px solid transparent;
+                border-image: url(/images/ui/border2.png) 4 round;
+                background-color: #403842;
+                cursor: pointer;
             }
 
             .autocomplete-suggestions {
@@ -159,37 +190,43 @@
             </div>
             <div id="graph" class="graph"></div>
             <div class="footer">
-                Yume 2kki Explorer v0.3.2 by FlashfyreDev
+                Yume 2kki Explorer v0.3.3 by FlashfyreDev
             </div>
             <script>
                 var worldData;
 
                 function loadOrInitConfig() {
-                    if (!window.localStorage.hasOwnProperty("config")) {
-                        window.localStorage.setItem("config", JSON.stringify(config));
-                    } else {
-                        let savedConfig = JSON.parse(window.localStorage.getItem("config"));
-                        let configKeys = Object.keys(savedConfig);
-                        for (var c in configKeys) {
-                            let key = configKeys[c];
-                            if (config.hasOwnProperty(key)) {
-                                let value = savedConfig[key];
-                                config[key] = value;
-                                switch (key) {
-                                    case "displayMode":
-                                        $(".js--display-mode").val(value);
-                                        break;
-                                    case "labelMode":
-                                        $(".js--label-mode").val(value);
-                                        break;
+                    try {
+                        if (!window.localStorage.hasOwnProperty("config")) {
+                            window.localStorage.setItem("config", JSON.stringify(config));
+                        } else {
+                            let savedConfig = JSON.parse(window.localStorage.getItem("config"));
+                            let configKeys = Object.keys(savedConfig);
+                            for (var c in configKeys) {
+                                let key = configKeys[c];
+                                if (config.hasOwnProperty(key)) {
+                                    let value = savedConfig[key];
+                                    config[key] = value;
+                                    switch (key) {
+                                        case "displayMode":
+                                            $(".js--display-mode").val(value);
+                                            break;
+                                        case "labelMode":
+                                            $(".js--label-mode").val(value);
+                                            break;
+                                    }
                                 }
                             }
                         }
+                    } catch (error) {
                     }
                 }
 
                 function updateConfig() {
-                    window.localStorage.config = JSON.stringify(config);
+                    try {
+                        window.localStorage.config = JSON.stringify(config);
+                    } catch (error) {
+                    }
                 }
 
                 function loadWorldData(update, callback) {
@@ -287,7 +324,7 @@
                             let connections = world.connections;
                             for (var c in connections) {
                                 let conn = connections[c];
-                                if (conn.type & ConnType.NO_ENTRY)
+                                if (conn.type & ConnType.NO_ENTRY || conn.type & ConnType.LOCKED)
                                     continue;
                                 let connWorld = worldData[conn.targetId];
                                 if (config.displayMode === 1 || world.depth < connWorld.depth || (world.depth == connWorld.depth && world.id < connWorld.id)) {
@@ -379,11 +416,11 @@
                         .linkCanvasObject((link, ctx) => {
                             var currentDashOffset = dashOffset;
                             if (link.key === lastOneWayLinkKey)
-                                dashOffset = dashOffset < 9.9 ? dashOffset + 0.1 : 0;
+                                dashOffset = dashOffset < 9.8 ? dashOffset + 0.2 : 0;
                             ctx.beginPath();
                             ctx.setLineDash([5, 5]);
                             ctx.lineDashOffset = currentDashOffset * -1;
-                            ctx.lineWidth = selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1;
+                            ctx.lineWidth = selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 0.5 : 0.25;
                             ctx.strokeStyle = selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : link.defaultColor;
                             ctx.moveTo(link.source.x, link.source.y);
                             ctx.lineTo(link.target.x, link.target.y);
@@ -408,7 +445,7 @@
                         // Add collision and bounding box forces
                         .d3Force('collide', d3.forceCollide(graph.nodeRelSize()))
                         .d3Force('box', () => {
-                            const SQUARE_HALF_SIDE = graph.nodeRelSize() * 100 * 0.5;
+                            const SQUARE_HALF_SIDE = graph.nodeRelSize() * 50;
 
                             gData.nodes.forEach(node => {
                                 const x = node.x || 0, y = node.y || 0;
