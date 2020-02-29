@@ -193,7 +193,7 @@
             </div>
             <div id="graph" class="graph"></div>
             <div class="footer">
-                Yume 2kki Explorer v0.4 by FlashfyreDev
+                Yume 2kki Explorer v0.4.1 by FlashfyreDev
             </div>
             <script>
                 var worldData;
@@ -368,7 +368,7 @@
                     _.each(worldData, function(w) {
                         worldScales[w.id] = 1 + (Math.round((w.size - minSize) / (maxSize - minSize) * 10 * (config.sizeDiff - 1)) / 10);
                     });
-                    
+
                     const radius = 12;
                 
                     let gData = {
@@ -633,7 +633,7 @@
                     let conns = world.connections;
                     for (var c in conns) {
                         var connType = conns[c].type;
-                        if (connType & (isSource ? ConnType.NO_ENTRY : ConnType.ONE_WAY))
+                        if (connType & (isSource ? ConnType.NO_ENTRY : ConnType.ONE_WAY) || connType & ConnType.DEAD_END || connType & ConnType.ISOLATED)
                             continue;
                         let id = worldData[conns[c].targetId].id;
                         if (checkedNodes.indexOf(id) === -1) {
