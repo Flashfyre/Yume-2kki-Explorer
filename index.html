@@ -149,14 +149,13 @@
                 border-bottom: 1px solid #000;
             }
         </style>
-        <!--<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>-->
-        <script src="//unpkg.com/force-graph"></script>
+        <script src="/js/force-graph-modded.js"></script>
         <script src="//unpkg.com/d3-quadtree"></script>
         <script src="//unpkg.com/d3-force"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.devbridge-autocomplete/1.4.10/jquery.autocomplete.min.js"></script>
-        <script src="/js/connType.js"></script>
+        <script src="/js/conn-type.js"></script>
     </head>
     <body>
         <div class="content">
@@ -177,6 +176,10 @@
                     </select>
                 </div>
                 <div class="control">
+                    <label>Size Difference:</label>
+                    <input type="range" min="1" max="10" value="1" step="0.5" class="js--size-diff slider" />
+                </div>
+                <div class="control">
                     <label>Origin:</label>
                     <input name="startWorld" type="text" class="js--world-input js--start-world" />
                 </div>
@@ -190,7 +193,7 @@
             </div>
             <div id="graph" class="graph"></div>
             <div class="footer">
-                Yume 2kki Explorer v0.3.3 by FlashfyreDev
+                Yume 2kki Explorer v0.4 by FlashfyreDev
             </div>
             <script>
                 var worldData;
@@ -213,6 +216,9 @@
                                             break;
                                         case "labelMode":
                                             $(".js--label-mode").val(value);
+                                            break;
+                                        case "sizeDiff":
+                                            $(".js--size-diff").val(value);
                                             break;
                                     }
                                 }
@@ -259,7 +265,8 @@
 
                 var config = {
                     displayMode: 0,
-                    labelMode: 1
+                    labelMode: 1,
+                    sizeDiff: 1
                 };
 
                 function initGraph(paths) {
@@ -324,7 +331,7 @@
                             let connections = world.connections;
                             for (var c in connections) {
                                 let conn = connections[c];
-                                if (conn.type & ConnType.NO_ENTRY || conn.type & ConnType.LOCKED)
+                                if (conn.type & ConnType.NO_ENTRY)
                                     continue;
                                 let connWorld = worldData[conn.targetId];
                                 if (config.displayMode === 1 || world.depth < connWorld.depth || (world.depth == connWorld.depth && world.id < connWorld.id)) {
@@ -332,8 +339,8 @@
                                         key: `${world.id}_${connWorld.id}`,
                                         source: world.id,
                                         target: connWorld.id,
-                                        defaultColor: hueToRGB(0.6666 - ((world.depth / (maxDepth - 1)) * 0.6666)),
-                                        highlight: conn.type & ConnType.ONE_WAY ? 'replace' : undefined
+                                        defaultColor: conn.type & ConnType.LOCKED || conn.type & ConnType.LOCKED_CONDITION ? '#444' : hueToRGB(0.6666 - ((world.depth / (maxDepth - 1)) * 0.6666)),
+                                        connTypeCheck: conn.type & ConnType.ONE_WAY ? 'replace' : undefined
                                     };
                                     links.push(link);
                                     if (conn.type & ConnType.ONE_WAY)
@@ -354,11 +361,29 @@
                             img.src = `./images/worlds/${d.filename}`;
                             return img;
                         });
+
+                    
+                    let worldScales = {};
+
+                    _.each(worldData, function(w) {
+                        worldScales[w.id] = 1 + (Math.round((w.size - minSize) / (maxSize - minSize) * 10 * (config.sizeDiff - 1)) / 10);
+                    });
+                    
+                    const radius = 12;
                 
                     let gData = {
-                        nodes: images.map((img) => ({ id: parseInt(img.id), img, showLabel: false })),
+                        nodes: images.map(function (img) {
+                            let ret = { id: parseInt(img.id), img, showLabel: false };
+                            ret.width = 16 * worldScales[ret.id];
+                            ret.height = 12 * worldScales[ret.id];
+                            return ret;
+                        }),
                         links: links
                     };
+
+                    var nodeDepths;
+
+                    var depthDistances;
 
                     let elem = document.getElementById('graph');
                 
@@ -366,26 +391,39 @@
                     if (config.displayMode === 0) {
                         graph = graph
                             .dagMode('td')
-                            .dagLevelDistance(50)
+                            .dagLevelDistance(24 + radius * (config.sizeDiff + 1))
+                            /*.dagLevelDistance(function (depth) {
+                                if (depthDistances)
+                                    return depthDistances[depth];
+                                 let dagDepths = graph.getDagDepths();
+                                 let nodeIds = Object.keys(dagDepths);
+                                 let getNodeDepth = (n) => dagDepths[n];
+                                 let nodeIdsByDepth = _.groupBy(nodeIds, getNodeDepth);
+                                 depthDistances = {};
+                                 let getNodeHeight = (n) => radius * Math.round(worldScales[n] * 10) / 10;
+                                 _.each(Object.keys(nodeIdsByDepth), d => depthDistances[d] = _.max(_.map(nodeIdsByDepth[d], getNodeHeight), getNodeHeight));
+                                 console.log(nodeIdsByDepth, depthDistances)
+                                 return depthDistances[depth];
+                            })*/;
                     }
                     graph
-                        .nodeRelSize(12)
                         .nodeCanvasObject(({ id, img, x, y, showLabel }, ctx) => {
-                            const width = 16, height = 12;
+                            const scale = worldScales[id];
+                            const width = 16 * scale, height = 12 * scale;
                             ctx.drawImage(img, x - width / 2, y - height / 2, width, height);
                             if (config.labelMode === 2 || (config.labelMode === 1 && showLabel)) {
-                                ctx.lineWidth = 0.25;
+                                ctx.lineWidth = 0.25 * scale;
                                 ctx.strokeStyle = "#000000";
                                 ctx.fillStyle = "#ded9df";
-                                ctx.font = "2px 'MS Gothic'";
+                                ctx.font = (2 * scale) + "px 'MS Gothic'";
                                 let worldName = worldData[id].title;
                                 let textLines = worldName.split(" ");
                                 for (var l = 0; l < textLines.length; l++) {
-                                    if (ctx.measureText(textLines[l].width < 16)) {
+                                    if (ctx.measureText(textLines[l].width < width)) {
                                         var mergeIndex = 0;
                                         for (var l2 = l + 1; l2 < textLines.length; l2++) {
                                             let mergedLine = textLines.slice(l, l2 + 1).join(" ");
-                                            if (ctx.measureText(mergedLine).width < 16) {
+                                            if (ctx.measureText(mergedLine).width < width) {
                                                 mergeIndex = l2;
                                             } else
                                                 break;
@@ -399,7 +437,7 @@
                                     let textLine = textLines[l];
                                     let lineWidth = ctx.measureText(textLine).width;
                                     let lineX = x - lineWidth / 2;
-                                    let lineY = (y + 0.5) - (textLines.length - 1) + l * 2;
+                                    let lineY = (y + 0.5 * scale) - (textLines.length - 1) + l * 2 * scale;
                                     ctx.strokeText(textLine, lineX, lineY);
                                     ctx.fillText(textLine, lineX, lineY);
                                 }
@@ -412,7 +450,7 @@
                         })
                         .linkWidth(link => selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1)
                         .linkColor(link => selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : link.defaultColor)
-                        .linkCanvasObjectMode('highlight')
+                        .linkCanvasObjectMode('connTypeCheck')
                         .linkCanvasObject((link, ctx) => {
                             var currentDashOffset = dashOffset;
                             if (link.key === lastOneWayLinkKey)
@@ -442,10 +480,12 @@
                             graph.centerAt(node.x, node.y, 1000);
                             graph.zoom(8, 2000);
                         })
+                        .cooldownTime(Infinity)
+                        // Deactivate existing forces
                         // Add collision and bounding box forces
-                        .d3Force('collide', d3.forceCollide(graph.nodeRelSize()))
+                        .d3Force('collide', d3.forceCollide((node) => radius * worldScales[node.id]))
                         .d3Force('box', () => {
-                            const SQUARE_HALF_SIDE = graph.nodeRelSize() * 50;
+                            const SQUARE_HALF_SIDE = radius * 50;
 
                             gData.nodes.forEach(node => {
                                 const x = node.x || 0, y = node.y || 0;
@@ -607,6 +647,8 @@
                     return ret;
                 }
 
+                var worldsByName, worldNames, minSize, maxSize, nodes;
+
                 $(document).ready(function () {
                     loadWorldData(false, function (data) {
                         worldData = data;
@@ -618,6 +660,11 @@
 
                         worldNames = Object.keys(worldsByName);
 
+                        let worldSizes = _.map(worldData, (w) => w.size);
+
+                        minSize = _.min(worldSizes);
+                        maxSize = _.max(worldSizes);
+
                         $(".js--display-mode").change(function() {
                             config.displayMode = parseInt($(this).val());
                             updateConfig();
@@ -627,6 +674,12 @@
                         $(".js--label-mode").change(function() {
                             config.labelMode = parseInt($(this).val());
                             updateConfig();
+                        });
+
+                        $(".js--size-diff").change(function() {
+                            config.sizeDiff = parseFloat($(this).val());
+                            updateConfig();
+                            reloadGraph();
                         });
 
                         $(".js--world-input").autocomplete({

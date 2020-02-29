@@ -1,6 +1,6 @@
 {
   "name": "yume-2kki-explorer",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "description": "A visualization of maps in Yume 2kki that scrapes the wiki for data",
   "main": "app.js",
   "dependencies": {
@@ -11,7 +11,8 @@
     "image-downloader": "^3.5.0",
     "lodash": "^4.17.15",
     "mysql": "^2.18.1",
-    "superagent": "^5.2.2"
+    "superagent": "^5.2.2",
+    "xml-js": "^1.6.11"
   },
   "devDependencies": {},
   "scripts": {
