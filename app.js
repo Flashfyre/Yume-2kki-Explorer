@@ -419,7 +419,7 @@ function calcDepth(worldData, depthMap, world, depth) {
         let conn = currentWorld.connections[c];
         let w = conn.location;
         if (worldNames.indexOf(w) > -1) {
-            if (conn.type & ConnType.NO_ENTRY || conn.type & ConnType.LOCKED || conn.type & ConnType.DEAD_END || conn.type & ConnType.ISOLATED)
+            if (conn.type & ConnType.NO_ENTRY || conn.type & ConnType.LOCKED || conn.type & ConnType.DEAD_END || conn.type & ConnType.ISOLATED || conn.type & ConnType.LOCKED_CONDITION)
                 continue;
             let d = depthMap[w];
             if (d === -1 || d > depth + 1) {
