@@ -193,22 +193,22 @@
             </div>
             <div id="graph" class="graph"></div>
             <div class="footer">
-                Yume 2kki Explorer v0.4.2 by FlashfyreDev
+                Yume 2kki Explorer v0.5 by FlashfyreDev
             </div>
             <script>
-                var worldData;
+                let worldData;
 
                 function loadOrInitConfig() {
                     try {
                         if (!window.localStorage.hasOwnProperty("config")) {
                             window.localStorage.setItem("config", JSON.stringify(config));
                         } else {
-                            let savedConfig = JSON.parse(window.localStorage.getItem("config"));
-                            let configKeys = Object.keys(savedConfig);
-                            for (var c in configKeys) {
-                                let key = configKeys[c];
+                            const savedConfig = JSON.parse(window.localStorage.getItem("config"));
+                            const configKeys = Object.keys(savedConfig);
+                            for (let c in configKeys) {
+                                const key = configKeys[c];
                                 if (config.hasOwnProperty(key)) {
-                                    let value = savedConfig[key];
+                                    const value = savedConfig[key];
                                     config[key] = value;
                                     switch (key) {
                                         case "displayMode":
@@ -242,7 +242,7 @@
                 }
 
                 function hueToRGB(h) {
-                    var s = 1, v = 1, r, g, b, i, f, p, q, t;
+                    let s = 1, v = 1, r, g, b, i, f, p, q, t;
                     i = Math.floor(h * 6);
                     f = h * 6 - i;
                     p = v * (1 - s);
@@ -259,11 +259,11 @@
                     return "rgb(" + Math.round(r * 255) + "," + Math.round(g * 255) + "," + Math.round(b * 255) + ")";
                 }
 
-                var graph;
+                let graph;
                 
-                var selectedWorldId;
+                let selectedWorldId;
 
-                var config = {
+                let config = {
                     displayMode: 0,
                     labelMode: 1,
                     sizeDiff: 1
@@ -271,43 +271,48 @@
 
                 function initGraph(paths) {
 
-                    var visibleWorldIds;
+                    let visibleWorldIds;
                     
-                    let links = [];
+                    const links = [];
 
-                    let oneWayLinks = [];
+                    const oneWayLinks = [];
 
-                    var lastOneWayLinkKey;
+                    let lastOneWayLinkKey;
 
-                    var dashOffset = 0;
+                    let dashOffset = 0;
 
-                    let addedLinks = [];
+                    const addedLinks = [];
 
                     if (paths) {
                         visibleWorldIds = _.uniq(_.flatten(paths));
 
-                        let pathScores = [];
-                        var minPathDepth = paths[0].length;
-                        var maxPathDepth;
-                        var depthDiff;
-                        var maxPathScore;
-                        for (var p in paths) {
-                            let path = paths[p];
-                            if (path.length > minPathDepth * 2) {
+                        const pathScores = [];
+                        let minPathDepth = paths[0].length - 2;
+                        let maxPathDepth;
+                        let depthDiff;
+                        let maxPathScore;
+                        console.log(minPathDepth, paths)
+                        for (let p in paths) {
+                            const path = paths[p];
+                            if (path.length - 2 > minPathDepth * 2) {
+                                let visibleWorldIdRemovalCandidates = _.uniq(_.flatten(paths.slice(p)));
                                 paths = paths.slice(0, p);
+                                let requiredWorldIds = _.uniq(_.flatten(paths));
+                                _.remove(visibleWorldIdRemovalCandidates, w => requiredWorldIds.indexOf(w) > -1);
+                                _.remove(visibleWorldIds, w => visibleWorldIdRemovalCandidates.indexOf(w) > -1);
                                 break;
                             }
-                            pathScores[p] = parseInt(p) + 3 * (path.length - minPathDepth);
+                            pathScores[p] = parseInt(p) + 3 * ((path.length - 2) - minPathDepth);
                         }
                         maxPathDepth = paths[paths.length - 1].length;
                         depthDiff = maxPathDepth - minPathDepth;
                         maxPathScore = ((paths.length - 1) + (3 * depthDiff)) * (depthDiff > 0 ? 1 : 2) || 1;
-                        for (var p in paths) {
-                            let path = paths[p];
-                            for (var w = 1; w < path.length; w++) {
-                                let sourceId = path[w - 1];
-                                let targetId = path[w];
-                                let linkId = `${sourceId}_${targetId}`;
+                        for (let p in paths) {
+                            const path = paths[p];
+                            for (let w = 1; w < path.length; w++) {
+                                const sourceId = path[w - 1];
+                                const targetId = path[w];
+                                const linkId = `${sourceId}_${targetId}`;
                                 if (addedLinks.indexOf(linkId) === -1) {
                                     links.push({
                                         key: linkId,
@@ -320,22 +325,20 @@
                             }
                         }
                     } else {
-                        visibleWorldIds = _.map(Object.keys(worldData), function(id) {
-                            return parseInt(id);
-                        });
+                        visibleWorldIds = Object.keys(worldData).map(id => parseInt(id));
 
-                        let maxDepth =  _.max(_.map(worldData, (w) => w.depth));
+                        const maxDepth =  _.max(worldData.map(w => w.depth));
 
-                        for (var w in visibleWorldIds) {
-                            let world = worldData[visibleWorldIds[w]];
-                            let connections = world.connections;
-                            for (var c in connections) {
-                                let conn = connections[c];
+                        for (let w in visibleWorldIds) {
+                            const world = worldData[visibleWorldIds[w]];
+                            const connections = world.connections;
+                            for (let c in connections) {
+                                const conn = connections[c];
                                 if (conn.type & ConnType.NO_ENTRY)
                                     continue;
-                                let connWorld = worldData[conn.targetId];
+                                const connWorld = worldData[conn.targetId];
                                 if (config.displayMode === 1 || world.depth < connWorld.depth || (world.depth == connWorld.depth && world.id < connWorld.id)) {
-                                    let link = {
+                                    const link = {
                                         key: `${world.id}_${connWorld.id}`,
                                         source: world.id,
                                         target: connWorld.id,
@@ -351,9 +354,7 @@
                         oneWayLinks.length && (lastOneWayLinkKey = oneWayLinks[oneWayLinks.length - 1].key);
                     }
 
-                    let images = (paths ? _.filter(worldData, function(w) {
-                            return visibleWorldIds.indexOf(w.id) > -1;
-                        }) : worldData)
+                    const images = (paths ? worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1) : worldData)
                         .map(d => {
                             const img = new Image();
                             img.id = d.id;
@@ -363,17 +364,17 @@
                         });
 
                     
-                    let worldScales = {};
+                    const worldScales = {};
 
-                    _.each(worldData, function(w) {
+                    _.each(worldData, w => {
                         worldScales[w.id] = 1 + (Math.round((w.size - minSize) / (maxSize - minSize) * 10 * (config.sizeDiff - 1)) / 10);
                     });
 
                     const radius = 12;
                 
-                    let gData = {
-                        nodes: images.map(function (img) {
-                            let ret = { id: parseInt(img.id), img, showLabel: false };
+                    const gData = {
+                        nodes: images.map(img => {
+                            const ret = { id: parseInt(img.id), img, showLabel: false };
                             ret.width = 16 * worldScales[ret.id];
                             ret.height = 12 * worldScales[ret.id];
                             return ret;
@@ -381,11 +382,11 @@
                         links: links
                     };
 
-                    var nodeDepths;
+                    let nodeDepths;
 
-                    var depthDistances;
+                    let depthDistances;
 
-                    let elem = document.getElementById('graph');
+                    const elem = document.getElementById('graph');
                 
                     graph = ForceGraph()(elem);
                     if (config.displayMode === 0) {
@@ -395,13 +396,13 @@
                             /*.dagLevelDistance(function (depth) {
                                 if (depthDistances)
                                     return depthDistances[depth];
-                                 let dagDepths = graph.getDagDepths();
-                                 let nodeIds = Object.keys(dagDepths);
-                                 let getNodeDepth = (n) => dagDepths[n];
-                                 let nodeIdsByDepth = _.groupBy(nodeIds, getNodeDepth);
+                                 const dagDepths = graph.getDagDepths();
+                                 const nodeIds = Object.keys(dagDepths);
+                                 const getNodeDepth = (n) => dagDepths[n];
+                                 const nodeIdsByDepth = _.groupBy(nodeIds, getNodeDepth);
                                  depthDistances = {};
-                                 let getNodeHeight = (n) => radius * Math.round(worldScales[n] * 10) / 10;
-                                 _.each(Object.keys(nodeIdsByDepth), d => depthDistances[d] = _.max(_.map(nodeIdsByDepth[d], getNodeHeight), getNodeHeight));
+                                 const getNodeHeight = (n) => radius * Math.round(worldScales[n] * 10) / 10;
+                                 _.each(Object.keys(nodeIdsByDepth), d => depthDistances[d] = _.max(nodeIdsByDepth[d].map(getNodeHeight), getNodeHeight));
                                  console.log(nodeIdsByDepth, depthDistances)
                                  return depthDistances[depth];
                             })*/;
@@ -416,13 +417,13 @@
                                 ctx.strokeStyle = "#000000";
                                 ctx.fillStyle = "#ded9df";
                                 ctx.font = (2 * scale) + "px 'MS Gothic'";
-                                let worldName = worldData[id].title;
+                                const worldName = worldData[id].title;
                                 let textLines = worldName.split(" ");
-                                for (var l = 0; l < textLines.length; l++) {
+                                for (let l = 0; l < textLines.length; l++) {
                                     if (ctx.measureText(textLines[l].width < width)) {
-                                        var mergeIndex = 0;
-                                        for (var l2 = l + 1; l2 < textLines.length; l2++) {
-                                            let mergedLine = textLines.slice(l, l2 + 1).join(" ");
+                                        let mergeIndex = 0;
+                                        for (let l2 = l + 1; l2 < textLines.length; l2++) {
+                                            const mergedLine = textLines.slice(l, l2 + 1).join(" ");
                                             if (ctx.measureText(mergedLine).width < width) {
                                                 mergeIndex = l2;
                                             } else
@@ -433,11 +434,11 @@
                                         }
                                     }
                                 }
-                                for (var l in textLines) {
-                                    let textLine = textLines[l];
-                                    let lineWidth = ctx.measureText(textLine).width;
-                                    let lineX = x - lineWidth / 2;
-                                    let lineY = (y + 0.5 * scale) - (textLines.length - 1) + l * 2 * scale;
+                                for (let l in textLines) {
+                                    const textLine = textLines[l];
+                                    const lineWidth = ctx.measureText(textLine).width;
+                                    const lineX = x - lineWidth / 2;
+                                    const lineY = (y + 0.5 * scale) - (textLines.length - 1) + l * 2 * scale;
                                     ctx.strokeText(textLine, lineX, lineY);
                                     ctx.fillText(textLine, lineX, lineY);
                                 }
@@ -452,7 +453,7 @@
                         .linkColor(link => selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : link.defaultColor)
                         .linkCanvasObjectMode('connTypeCheck')
                         .linkCanvasObject((link, ctx) => {
-                            var currentDashOffset = dashOffset;
+                            let currentDashOffset = dashOffset;
                             if (link.key === lastOneWayLinkKey)
                                 dashOffset = dashOffset < 9.8 ? dashOffset + 0.2 : 0;
                             ctx.beginPath();
@@ -478,7 +479,7 @@
                             // Center/zoom on node
                             selectedWorldId = node && (!selectedWorldId || selectedWorldId !== node.id) ? node.id : null;
                             graph.centerAt(node.x, node.y, 1000);
-                            graph.zoom(8, 2000);
+                            graph.zoom(8, 1000);
                         })
                         .cooldownTime(Infinity)
                         // Deactivate existing forces
@@ -499,93 +500,89 @@
                 }
 
                 function reloadGraph() {
-                    let startVal = $(".js--start-world").val();
-                    let endVal = $(".js--end-world").val();
-                    let startWorld = startVal && worldNames.indexOf(startVal) > -1 ? worldsByName[startVal] : null;
-                    let endWorld = endVal && worldNames.indexOf(endVal) > -1 ? worldsByName[endVal] : null;
-                    let matchPaths = startWorld && endWorld && startWorld != endWorld
-                        ? findPath(startWorld.id, endWorld.id)
+                    const startVal = $(".js--start-world").val();
+                    const endVal = $(".js--end-world").val();
+                    const startWorld = startVal && worldNames.indexOf(startVal) > -1 ? worldsByName[startVal] : null;
+                    const endWorld = endVal && worldNames.indexOf(endVal) > -1 ? worldsByName[endVal] : null;
+                    const matchPaths = startWorld && endWorld && startWorld != endWorld
+                        ? findPath(startWorld.id, endWorld.id, ConnType.DEAD_END | ConnType.ISOLATED)
                         : null;
                     $(".js--display-mode").prop("disabled", matchPaths || false);
                     initGraph(matchPaths)
                 }
 
-                function findPath(s, t) {
-                    let startTime = performance.now();
+                function findPath(s, t, ignoreTypeFlags) {
+                    const startTime = performance.now();
 
-                    let checkedSourceNodes = [s];
-                    let checkedTargetNodes = [t];
+                    const checkedSourceNodes = [s];
+                    const checkedTargetNodes = [t];
 
-                    let source = worldData[s];
-                    let target = worldData[t];
+                    const source = worldData[s];
+                    const target = worldData[t];
 
                     let matchPaths = [];
 
-                    var sourcePaths = {};
-                    var targetPaths = {};
+                    let sourcePaths = {};
+                    let targetPaths = {};
 
-                    var nextGenSourceWorlds = [source];
-                    var nextGenTargetWorlds = [target];
+                    let nextGenSourceWorlds = [source];
+                    let nextGenTargetWorlds = [target];
 
-                    var genIndex = 0;
+                    let genIndex = 0;
 
                     sourcePaths[s] = [];
                     targetPaths[t] = [];
                   
                     while (genIndex <= 15) {
-                        var sourceWorlds = nextGenSourceWorlds.slice(0);
-                        var targetWorlds = nextGenTargetWorlds.slice(0);
+                        let sourceWorlds = nextGenSourceWorlds.slice(0);
+                        let targetWorlds = nextGenTargetWorlds.slice(0);
                         nextGenSourceWorlds = [];
                         nextGenTargetWorlds = [];
-                        for (var sw in sourceWorlds) {
-                            let sourceWorld = sourceWorlds[sw];
-                            let sourcePath = sourcePaths[sourceWorld.id];
+                        for (let sw in sourceWorlds) {
+                            const sourceWorld = sourceWorlds[sw];
+                            const sourcePath = sourcePaths[sourceWorld.id];
                             //delete sourcePaths[sourceWorld.id];
-                            let sourceConns = traverseConns(checkedSourceNodes, sourcePath, nextGenSourceWorlds, sourceWorld, true);
+                            const sourceConns = traverseConns(checkedSourceNodes, sourcePath, nextGenSourceWorlds, sourceWorld, ignoreTypeFlags | ConnType.NO_ENTRY);
                             $.extend(sourcePaths, sourceConns);
                         }
-                        for (var tw in targetWorlds) {
-                            let targetWorld = targetWorlds[tw];
-                            let targetPath = targetPaths[targetWorld.id];
+                        for (let tw in targetWorlds) {
+                            const targetWorld = targetWorlds[tw];
+                            const targetPath = targetPaths[targetWorld.id];
                             //delete targetPaths[targetWorld.id];
-                            let targetConns = traverseConns(checkedTargetNodes, targetPath, nextGenTargetWorlds, targetWorld, false);
+                            const targetConns = traverseConns(checkedTargetNodes, targetPath, nextGenTargetWorlds, targetWorld, ignoreTypeFlags | ConnType.ONE_WAY);
                             $.extend(targetPaths, targetConns);
                         }
                         
                         genIndex++;
 
-                        /*var checkedSourceIds = _.map(Object.keys(sourcePaths), function(id) {
-                            return parseInt(id);
-                        });
-                        var checkedTargetIds = _.map(Object.keys(targetPaths), function(id) {
-                            return parseInt(id);
-                        });;*/
+                        /*let checkedSourceIds = Object.keys(sourcePaths).map(id => parseInt(id));
+                        let checkedTargetIds = Object.keys(targetPaths).map(id => parseInt(id));*/
 
                         $.grep(checkedSourceNodes, function(id) {
-                            let ret = $.inArray(id, checkedTargetNodes) !== -1;
+                            const ret = $.inArray(id, checkedTargetNodes) !== -1;
                             if (ret) {
-                                var skip = false;
+                                let skip = false;
 
-                                var sourcePath = [s].concat(sourcePaths[id]);
-                                var targetPath = [t].concat(targetPaths[id]);
+                                let sourcePath = [s].concat(sourcePaths[id]);
+                                let targetPath = [t].concat(targetPaths[id]);
 
                                 if (sourcePath[sourcePath.length - 1] === id && targetPath[targetPath.length - 1] === id) {
                                     sourcePath = sourcePath.slice(0, -1);
                                 }
 
-                                var loopWorlds;
+                                let loopWorlds;
                                 while ((loopWorlds = _.intersectionWith(sourcePath, targetPath, _.isEqual)).length) {
-                                    //console.log("Loop found", worldData[loopWorlds[0]].title, JSON.stringify(_.map(sourcePath, function(p) { return worldData[p].title})), JSON.stringify(_.map(targetPath, function(p) { return worldData[p].title})));
+                                    //console.log("Loop found", worldData[loopWorlds[0]].title, JSON.stringify(sourcePath.map(function(p) { return worldData[p].title})), JSON.stringify(targetPath.map(function(p) { return worldData[p].title})));
                                     sourcePath = sourcePath.slice(0, sourcePath.indexOf(loopWorlds[0]));
                                     targetPath = targetPath.slice(0, targetPath.indexOf(loopWorlds[0]) + 1);
-                                    //console.log("Loop fixed", worldData[loopWorlds[0]].title, JSON.stringify(_.map(sourcePath, function(p) { return worldData[p].title})), JSON.stringify(_.map(targetPath, function(p) { return worldData[p].title})));
+                                    //console.log("Loop fixed", worldData[loopWorlds[0]].title, JSON.stringify(sourcePath.map(function(p) { return worldData[p].title})), JSON.stringify(targetPath.map(function(p) { return worldData[p].title})));
                                 }
-                                let matchPath = sourcePath.concat(targetPath.reverse());
-                                for (var p in matchPaths) {
-                                    for (var w = 1; w < matchPaths[p].length; w++) {
-                                        let linkId = `${matchPaths[p][w - 1]}_${matchPaths[p][w]}`;
-                                        for (var m = 1; m < matchPath.length; m++) {
-                                            let matchLinkId = `${matchPath[m - 1]}_${matchPath[m]}`;
+                                const matchPath = sourcePath.concat(targetPath.reverse());
+                                for (let p in matchPaths) {
+                                    for (let w = 1; w < matchPaths[p].length; w++) {
+                                        const linkId = `${matchPaths[p][w - 1]}_${matchPaths[p][w]}`;
+                                        for (let m = 1; m < matchPath.length; m++) {
+                                            const matchLinkId = `${matchPath[m - 1]}_${matchPath[m]}`;
                                             if (linkId === matchLinkId) {
                                                 skip = true;
                                                 break;
@@ -599,27 +596,34 @@
                                 }
                                 if (skip)
                                     return false;
-                                _.remove(nextGenSourceWorlds, function(w) {
+                                _.remove(nextGenSourceWorlds, w => {
                                     return w.id === id;
                                 });
-                                _.remove(nextGenTargetWorlds, function(w) {
+                                _.remove(nextGenTargetWorlds, w => {
                                     return w.id === id;
                                 });
                                 matchPaths.push(matchPath);
                             }
                             return ret;
                         });
-                        if (matchPaths.length >= 3)
-                            break;
                     }
 
-                    var endTime = performance.now();
+                    const endTime = performance.now();
 
-                    console.log("Found ", matchPaths.length, " matching paths in ", Math.round((endTime - startTime) * 10) / 10, "ms");
+                    console.log("Found", matchPaths.length, "matching path(s) in", Math.round((endTime - startTime) * 10) / 10, "ms");
 
-                    if (!matchPaths.length)
-                        matchPaths = [ [ s ], [ t ] ];
-                    else {
+                    console.log(matchPaths)
+
+                    if (!matchPaths.length) {
+                        if (ignoreTypeFlags & ConnType.DEAD_END)
+                            ignoreTypeFlags ^= ConnType.DEAD_END | ConnType.ISOLATED;
+                        else
+                            ignoreTypeFlags = 0;
+                        if (ignoreTypeFlags)
+                            return findPath(s, t, ignoreTypeFlags);
+                        else
+                            matchPaths = [ [ s ], [ t ] ];
+                    } else {
                         matchPaths = _.sortBy(matchPaths, [ 'length' ]);
                         if (matchPaths.length > 5)
                             matchPaths = matchPaths.slice(0, 5);
@@ -628,16 +632,16 @@
                     return matchPaths;
                 }
 
-                function traverseConns(checkedNodes, path, nextGenWorlds, world, isSource) {
-                    let ret = {};
-                    let conns = world.connections;
-                    for (var c in conns) {
-                        var connType = conns[c].type;
-                        if (connType & (isSource ? ConnType.NO_ENTRY : ConnType.ONE_WAY) || connType & ConnType.DEAD_END || connType & ConnType.ISOLATED)
+                function traverseConns(checkedNodes, path, nextGenWorlds, world, ignoreTypeFlags) {
+                    const ret = {};
+                    const conns = world.connections;
+                    for (let c in conns) {
+                        let connType = conns[c].type;
+                        if (connType & ignoreTypeFlags)
                             continue;
-                        let id = worldData[conns[c].targetId].id;
+                        const id = worldData[conns[c].targetId].id;
                         if (checkedNodes.indexOf(id) === -1) {
-                            let connPath = path.slice(0);
+                            const connPath = path.slice(0);
                             connPath.push(id);
                             ret[id] = connPath;
                             checkedNodes.push(id);
@@ -647,20 +651,20 @@
                     return ret;
                 }
 
-                var worldsByName, worldNames, minSize, maxSize, nodes;
+                let worldsByName, worldNames, minSize, maxSize, nodes;
 
                 $(document).ready(function () {
                     loadWorldData(false, function (data) {
                         worldData = data;
 
-                        for (var d in Object.keys(worldData))
+                        for (let d in Object.keys(worldData))
                             worldData[d].id = parseInt(d);
 
                         worldsByName = _.keyBy(worldData, w => w.title);
 
                         worldNames = Object.keys(worldsByName);
 
-                        let worldSizes = _.map(worldData, (w) => w.size);
+                        const worldSizes = worldData.map(w => w.size);
 
                         minSize = _.min(worldSizes);
                         maxSize = _.max(worldSizes);
