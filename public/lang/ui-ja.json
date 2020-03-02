@@ -1,0 +1,35 @@
+{
+    "lang": {
+        "name": "言語",
+        "values": {
+            "english": "英語",
+            "japanese": "日本語"
+        }
+    },
+    "displayMode": {
+        "name": "ディスプレイモード",
+        "values": {
+            "hierarchical": "階層（一方通行）",
+            "free": "自由（双方向）"
+        }
+    },
+    "labelMode": {
+        "name": "ラベル表示",
+        "values": {
+            "never": "なし",
+            "hover": "マウスオーバー ",
+            "always": "いつも"
+        }
+    },
+    "sizeDiff": {
+        "name": "サイズ差"
+    },
+    "origin": {
+        "name": "原点"
+    },
+    "destination": {
+        "name": "行先"
+    },
+    "reset": "リセット",
+    "footer": "ゆめ２っきエクスプローラver{VERSION} by FlashfyreDev"
+}

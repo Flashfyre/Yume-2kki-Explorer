@@ -155,46 +155,52 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.devbridge-autocomplete/1.4.10/jquery.autocomplete.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-localize/0.1.0/jquery.localize.min.js"></script>
         <script src="/js/conn-type.js"></script>
     </head>
     <body>
         <div class="content">
             <div class="controls">
                 <div class="control">
-                    <label>Display Mode:</label>
+                    <label data-localize="lang.name">Language:</label>
+                    <select name="language" class="js--lang">
+                        <option data-localize="lang.values.english" value="en" selected>English</option>
+                        <option data-localize="lang.values.japanese" value="ja">Japanese</option>
+                    </select>
+                </div>
+                <div class="control">
+                    <label data-localize="displayMode.name">Display Mode:</label>
                     <select name="displayMode" class="js--display-mode">
-                        <option value="0" selected>Hierarchical (One-Way)</option>
-                        <option value="1">Free (Two-Way)</option>
+                        <option data-localize="displayMode.values.hierarchical" value="0" selected>Hierarchical (One-Way)</option>
+                        <option data-localize="displayMode.values.free" value="1">Free (Two-Way)</option>
                     </select>
                 </div>
                 <div class="control">
-                    <label>Label Display:</label>
+                    <label data-localize="labelMode.name">Label Display:</label>
                     <select name="labelMode" class="js--label-mode">
-                        <option value="0">Never</option>
-                        <option value="1" selected>On Hover</option>
-                        <option value="2">Always</option>
+                        <option data-localize="labelMode.values.never" value="0">Never</option>
+                        <option data-localize="labelMode.values.hover" value="1" selected>On Hover</option>
+                        <option data-localize="labelMode.values.always" value="2">Always</option>
                     </select>
                 </div>
                 <div class="control">
-                    <label>Size Difference:</label>
+                    <label data-localize="sizeDiff.name">Size Difference:</label>
                     <input type="range" min="1" max="10" value="1" step="0.5" class="js--size-diff slider" />
                 </div>
                 <div class="control">
-                    <label>Origin:</label>
+                    <label data-localize="origin.name">Origin:</label>
                     <input name="startWorld" type="text" class="js--world-input js--start-world" />
                 </div>
                 <div class="control">
-                    <label>Destination:</label>
+                    <label data-localize="destination.name">Destination:</label>
                     <input name="endWorld" type="text" class="js--world-input js--end-world" />
                 </div>
                 <div class="control">
-                    <button class="js--reset">Reset</button>
+                    <button data-localize="reset" class="js--reset">Reset</button>
                 </div>
             </div>
             <div id="graph" class="graph"></div>
-            <div class="footer">
-                Yume 2kki Explorer v0.5 by FlashfyreDev
-            </div>
+            <div data-localize="footer" class="footer"></div>
             <script>
                 let worldData;
 
@@ -211,6 +217,9 @@
                                     const value = savedConfig[key];
                                     config[key] = value;
                                     switch (key) {
+                                        case "lang":
+                                            $(".js--lang").val(value);
+                                            break;
                                         case "displayMode":
                                             $(".js--display-mode").val(value);
                                             break;
@@ -264,6 +273,7 @@
                 let selectedWorldId;
 
                 let config = {
+                    lang: "en",
                     displayMode: 0,
                     labelMode: 1,
                     sizeDiff: 1
@@ -358,7 +368,7 @@
                         .map(d => {
                             const img = new Image();
                             img.id = d.id;
-                            img.title = d.title;
+                            img.title = config.lang === "en" || !d.titleJP ? d.title : d.titleJP;
                             img.src = `./images/worlds/${d.filename}`;
                             return img;
                         });
@@ -417,7 +427,8 @@
                                 ctx.strokeStyle = "#000000";
                                 ctx.fillStyle = "#ded9df";
                                 ctx.font = (2 * scale) + "px 'MS Gothic'";
-                                const worldName = worldData[id].title;
+                                const world = worldData[id];
+                                const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
                                 let textLines = worldName.split(" ");
                                 for (let l = 0; l < textLines.length; l++) {
                                     if (ctx.measureText(textLines[l].width < width)) {
@@ -651,6 +662,36 @@
                     return ret;
                 }
 
+                function initLocalization() {
+                    const isEn = config.lang === "en";
+
+                    $("[data-localize]").localize("ui", {
+                        language: config.lang,
+                        pathPrefix: "/lang",
+                        callback: function (data, defaultCallback) {
+                            data.footer = data.footer.replace("{VERSION}", "0.6.0");
+                            defaultCallback(data);
+                        }
+                    });
+
+                    $(".js--world-input").each(function() {
+                        const val = $(this).val();
+                        if (val && worldNames.indexOf(val) > -1) {
+                            const world = worldsByName[worldNames[worldNames.indexOf(val)]];
+                            $(this).val(isEn || !world.titleJP ? world.title : world.titleJP);
+                        }
+                    });
+
+                    worldsByName = isEn ? _.keyBy(worldData, w => w.title) : _.keyBy(worldData, w => w.titleJP || w.title);
+
+                    worldNames = Object.keys(worldsByName);
+
+                    $(".js--world-input").autocomplete("destroy").autocomplete({
+                        lookup: worldNames,
+                        onSelect: reloadGraph
+                    });
+                }
+
                 let worldsByName, worldNames, minSize, maxSize, nodes;
 
                 $(document).ready(function () {
@@ -660,14 +701,17 @@
                         for (let d in Object.keys(worldData))
                             worldData[d].id = parseInt(d);
 
-                        worldsByName = _.keyBy(worldData, w => w.title);
-
-                        worldNames = Object.keys(worldsByName);
-
-                        const worldSizes = worldData.map(w => w.size);
+                        const worldSizes = worldData.map(w => w.size); 
 
                         minSize = _.min(worldSizes);
                         maxSize = _.max(worldSizes);
+
+                        $(".js--lang").change(function() {
+                            config.lang = $(this).val();
+                            updateConfig();
+                            initLocalization();
+                            reloadGraph();
+                        });
 
                         $(".js--display-mode").change(function() {
                             config.displayMode = parseInt($(this).val());
@@ -686,17 +730,14 @@
                             reloadGraph();
                         });
 
-                        $(".js--world-input").autocomplete({
-                            lookup: worldNames,
-                            onSelect: reloadGraph
-                        });
-
                         $(".js--reset").click(function() {
                             $(".js--world-input").val("");
                             reloadGraph();
                         });
 
                         loadOrInitConfig();
+
+                        initLocalization();
 
                         reloadGraph();
                     });

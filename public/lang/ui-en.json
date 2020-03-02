@@ -1,0 +1,35 @@
+{
+    "lang": {
+        "name": "Language:",
+        "values": {
+            "english": "English",
+            "japanese": "Japanese"
+        }
+    },
+    "displayMode": {
+        "name": "Display Mode:",
+        "values": {
+            "hierarchical": "Hierarchical (One-Way)",
+            "free": "Free (Two-Way)"
+        }
+    },
+    "labelMode": {
+        "name": "Label Display:",
+        "values": {
+            "never": "Never",
+            "hover": "On Hover",
+            "always": "Always"
+        }
+    },
+    "sizeDiff": {
+        "name": "Size Difference:"
+    },
+    "origin": {
+        "name": "Origin:"
+    },
+    "destination": {
+        "name": "Destination:"
+    },
+    "reset": "Reset",
+    "footer": "Yume 2kki Explorer v{VERSION} by FlashfyreDev"
+}

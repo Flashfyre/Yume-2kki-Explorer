@@ -49,6 +49,7 @@ function initDb(pool) {
             `CREATE TABLE IF NOT EXISTS worlds (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 title VARCHAR(255) NOT NULL,
+                titleJP VARCHAR(255) NULL,
                 depth INT NOT NULL,
                 filename VARCHAR(255) NOT NULL
             )`).then(() => queryAsPromise(pool,
@@ -134,12 +135,13 @@ app.get('/worlds', function(req, res) {
 function getWorldData(pool) {
     return new Promise((resolve, reject) => {
         const worldDataById = {};
-        pool.query('SELECT id, title, depth, filename FROM worlds', (err, rows) => {
+        pool.query('SELECT id, title, titleJP, depth, filename FROM worlds', (err, rows) => {
             if (err) return reject(err);
             for (let r in rows) {
                 const row = rows[r];
                 worldDataById[row.id] = {
                     title: row.title,
+                    titleJP: row.titleJP,
                     depth: row.depth,
                     filename: row.filename,
                     connections: []
@@ -200,29 +202,41 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex) {
         const worldsKeyed = _.keyBy(worlds.slice(batchIndex * batchSize, Math.min((batchIndex + 1) * batchSize, worlds.length)), w => w.pageid);
         getBaseWorldData(worldsKeyed).then(data => {
             const newWorldsByName = _.keyBy(Object.values(data), (w) => w.title);
+            const updatedWorlds = [];
             const worldNames = Object.keys(newWorldsByName);
             for (let d in data)
                 worldData.push(data[d]);
-            pool.query('SELECT id, title FROM worlds', (err, rows) => {
+            pool.query('SELECT id, title, titleJP FROM worlds', (err, rows) => {
                 if (err) return reject(err);
                 for (let r in rows) {
                     const worldName = rows[r].title;
                     if (worldNames.indexOf(worldName) > -1) {
                         const world = newWorldsByName[worldName];
                         world.id = rows[r].id;
+                        if (rows[r].titleJP !== world.titleJP)
+                            updatedWorlds.push(world);
                     }
                     delete newWorldsByName[worldName];
                 }
+                const insertCallback = function() {
+                    if (updatedWorlds.length) {
+                        const updateWorlds = [];
+                        for (let w in updatedWorlds)
+                            updateWorlds.push(updateWorldInfo(pool, updatedWorlds[w]).catch(err => console.error(err)));
+                        Promise.allSettled().finally(() => resolve());
+                    } else
+                        resolve();
+                };
                 const newWorldNames = Object.keys(newWorldsByName);
                 if (newWorldNames.length) {
                     let i = 0;
-                    let worldsQuery = "INSERT INTO worlds (title, depth, filename) VALUES "
+                    let worldsQuery = "INSERT INTO worlds (title, titleJP, depth, filename) VALUES "
                     for (const w in newWorldsByName) {
                         const newWorld = newWorldsByName[w];
                         if (i++) {
                             worldsQuery += ", ";
                         }
-                        worldsQuery += `('${newWorld.title.replace("'", "''")}', 0, '${newWorld.filename.replace("'", "''")}')`;
+                        worldsQuery += `('${newWorld.title.replace("'", "''")}', '${newWorld.titleJP}', 0, '${newWorld.filename.replace("'", "''")}')`;
                     }
                     pool.query(worldsQuery, (error, res) => {
                         if (error) return reject(err);
@@ -233,11 +247,11 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex) {
                             for (let r in rows) {
                                 newWorldsByName[newWorldNames[r]].id = rows[r].id;
                             }
-                            resolve();
+                            insertCallback();
                         });
                     });
                 } else
-                    resolve();
+                    insertCallback();
             });
         }).catch(err => reject(err));
     });
@@ -293,6 +307,15 @@ function getWorldBaseWorldData(worlds, pageId) {
             worlds[pageId] = world;
             resolve();
         }).catch(err => reject(err));
+    });
+}
+
+function updateWorldInfo(pool, world) {
+    return new Promise((resolve, reject) => {
+        pool.query(`UPDATE worlds SET titleJP='${world.titleJP}' WHERE id=${world.id}`, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
     });
 }
 
@@ -551,9 +574,9 @@ function processMaps(pool, worldId, mapIds) {
     return new Promise(resolve => {
         const processMapOfIds = [];
         for (let m in mapIds) {
-            processMapOfIds.push(processMap(pool, worldId, mapIds[m]));
+            processMapOfIds.push(processMap(pool, worldId, mapIds[m]).catch(err => console.error(err)));
         }
-        Promise.allSettled(processMapOfIds).catch(err => console.error(err)).finally(() => resolve());
+        Promise.allSettled(processMapOfIds).finally(() => resolve());
     });
 }
 
@@ -615,6 +638,7 @@ function getWorldInfo(worldName) {
                 console.error(err)
             }
             resolve({
+                titleJP: getTitleJP(res.text),
                 connections: getConnections(res.text),
                 mapIds: getMapIds(res.text).filter(id => !isNaN(id) && id.length === 4),
                 filename: worldName + ext
@@ -634,6 +658,13 @@ function downloadImage(imageUrl, filename) {
             console.log('Saved to', filename);
         })
         .catch((err) => console.error(err));
+}
+
+function getTitleJP(html) {
+    if (html.indexOf("<b>Original Name(s)</b>") === -1)
+        return null;
+    html = html.slice(html.indexOf("<b>Original Name(s)</b>"), html.indexOf("<b>Effects</b>"));
+    return html.slice(html.indexOf("<p>") + 3, html.indexOf("<br />"));
 }
 
 function getConnections(html) {
