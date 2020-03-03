@@ -328,6 +328,8 @@
                         maxPathDepth = paths[paths.length - 1].length;
                         depthDiff = maxPathDepth - minPathDepth;
                         maxPathScore = ((paths.length - 1) + (3 * depthDiff)) * (depthDiff > 0 ? 1 : 2) || 1;
+                        if (paths.length === 1 && paths[0][0].connType & ConnType.INACCESSIBLE)
+                            pathScores[0] = maxPathScore;
                         for (let p in paths) {
                             const path = paths[p];
                             for (let w = 1; w < path.length; w++) {
@@ -339,13 +341,13 @@
                                         key: linkId,
                                         source: sourceId,
                                         target: targetId,
-                                        connType: path[w].connType,
+                                        connType: path[w - 1].connType,
                                         defaultColor: hueToRGB(0.6666 - ((pathScores[p] / maxPathScore) * 0.6666)),
-                                        connTypeCheck: path[w].connType ? 'replace' : undefined
+                                        connTypeCheck: path[w - 1].connType ? 'replace' : undefined
                                     };
                                     links.push(link);
                                     addedLinks.push(linkId);
-                                    if (path[w].connType & ConnType.ONE_WAY)
+                                    if (path[w - 1].connType & ConnType.ONE_WAY)
                                         oneWayLinks.push(link);
                                 }
                             }
@@ -389,7 +391,6 @@
                             img.src = `./images/worlds/${d.filename}`;
                             return img;
                         });
-
                     
                     const worldScales = {};
 
@@ -496,9 +497,8 @@
                                     ctx.setLineDash([5, 5]);
                                     ctx.lineDashOffset = currentDashOffset * -1;
                                     emojis.push("➜");
-                                } else if (connType & ConnType.NO_ENTRY) {
+                                } else if (connType & ConnType.NO_ENTRY)
                                     emojis.push("⛔");
-                                }
                                 if (connType & ConnType.LOCKED)
                                     emojis.push("🔒")
                                 else if (connType & ConnType.UNLOCK)
@@ -513,6 +513,8 @@
                                     emojis.push("✨");
                                 if (connType & ConnType.CHANCE)
                                     emojis.push("🍀");
+                                if (connType & ConnType.INACCESSIBLE)
+                                    emojis.push("🚫");
                             }
                             let sourceX = link.source.x;
                             let sourceY = link.source.y;
@@ -632,7 +634,7 @@
                     const startWorld = startVal && worldNames.indexOf(startVal) > -1 ? worldsByName[startVal] : null;
                     const endWorld = endVal && worldNames.indexOf(endVal) > -1 ? worldsByName[endVal] : null;
                     const matchPaths = startWorld && endWorld && startWorld != endWorld
-                        ? findPath(startWorld.id, endWorld.id, ConnType.DEAD_END | ConnType.ISOLATED)
+                        ? findPath(startWorld.id, endWorld.id, ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED)
                         : null;
                     $(".js--display-mode").prop("disabled", matchPaths || false);
                     initGraph(matchPaths)
@@ -662,7 +664,7 @@
                     sourcePaths[s] = [{ id: s, connType: null }];
                     targetPaths[t] = [{ id: t, connType: null }];
                   
-                    while (genIndex <= 15) {
+                    while (genIndex <= 20) {
                         let sourceWorlds = nextGenSourceWorlds.slice(0);
                         let targetWorlds = nextGenTargetWorlds.slice(0);
                         nextGenSourceWorlds = [];
@@ -671,14 +673,14 @@
                             const sourceWorld = sourceWorlds[sw];
                             const sourcePath = sourcePaths[sourceWorld.id];
                             //delete sourcePaths[sourceWorld.id];
-                            const sourceConns = traverseConns(checkedSourceNodes, sourcePath, nextGenSourceWorlds, sourceWorld, ignoreTypeFlags | ConnType.NO_ENTRY);
+                            const sourceConns = traverseConns(checkedSourceNodes, sourcePath, nextGenSourceWorlds, sourceWorld, ignoreTypeFlags, true);
                             $.extend(sourcePaths, sourceConns);
                         }
                         for (let tw in targetWorlds) {
                             const targetWorld = targetWorlds[tw];
                             const targetPath = targetPaths[targetWorld.id];
                             //delete targetPaths[targetWorld.id];
-                            const targetConns = traverseConns(checkedTargetNodes, targetPath, nextGenTargetWorlds, targetWorld, ignoreTypeFlags | ConnType.ONE_WAY);
+                            const targetConns = traverseConns(checkedTargetNodes, targetPath, nextGenTargetWorlds, targetWorld, ignoreTypeFlags, false);
                             $.extend(targetPaths, targetConns);
                         }
                         
@@ -730,7 +732,7 @@
                                 _.remove(nextGenTargetWorlds, w => w.id === id);
                                 matchPaths.push(matchPath);
                             }
-                            return true;
+                            return ret;
                         });
                     }
 
@@ -742,14 +744,23 @@
 
                     if (!matchPaths.length) {
                         if (ignoreTypeFlags & ConnType.DEAD_END)
-                            ignoreTypeFlags ^= ConnType.DEAD_END | ConnType.ISOLATED;
+                            ignoreTypeFlags ^= (ConnType.DEAD_END | ConnType.ISOLATED);
                         else
                             ignoreTypeFlags = 0;
                         if (ignoreTypeFlags)
                             return findPath(s, t, ignoreTypeFlags);
-                        else
-                            matchPaths = [ [ s ], [ t ] ];
+                        else {
+                            matchPaths = [ [ { id: s, connType: ConnType.INACCESSIBLE }, { id: t, connType: null } ] ];
+                            return matchPaths;
+                        }
                     } else {
+                        if ((!(ignoreTypeFlags & ConnType.LOCKED) && _.every(matchPaths, mp => mp.filter(p => p.connType && p.connType & (ConnType.LOCKED | ConnType.LOCKED_CONDITION).length)))) {
+                            const additionalPaths = findPath(s, t, (ignoreTypeFlags = ignoreTypeFlags | ConnType.LOCKED | ConnType.LOCKED_CONDITION));
+                            if (additionalPaths.length && !(additionalPaths[0][0].connType & ConnType.INACCESSIBLE)) {
+                                for (let ap in additionalPaths)
+                                    matchPaths.push(additionalPaths[ap]);
+                            }
+                        }
                         matchPaths = _.sortBy(matchPaths, [ 'length' ]);
                         if (matchPaths.length > 5)
                             matchPaths = matchPaths.slice(0, 5);
@@ -758,24 +769,29 @@
                     return matchPaths;
                 }
 
-                function traverseConns(checkedNodes, path, nextGenWorlds, world, ignoreTypeFlags) {
+                function traverseConns(checkedNodes, path, nextGenWorlds, world, ignoreTypeFlags, isSource) {
                     const ret = {};
                     const conns = world.connections;
                     for (let c in conns) {
                         let connType = conns[c].type;
-                        if (connType & ignoreTypeFlags)
+                        if (isSource && connType & ignoreTypeFlags)
                             continue;
                         const connWorld = worldData[conns[c].targetId];
                         const id = connWorld.id;
                         if (checkedNodes.indexOf(id) === -1) {
                             // If checking from target
-                            if (ignoreTypeFlags & ConnType.ONE_WAY) {
+                            if (isSource) {
+                                path[path.length - 1].connType = connType;
+                                connType = null;
+                            } else {
                                 const reverseConn = connWorld.connections.filter(c => c.targetId === world.id);
                                 let reverseConnType = 0;
                                 if (reverseConn.length)
                                     reverseConnType = reverseConn[0].type;
                                 else {
-                                    if (connType & ConnType.NO_ENTRY)
+                                    if (connType & ConnType.ONE_WAY)
+                                        reverseConnType |= ConnType.DEAD_END;
+                                    else if (connType & ConnType.NO_ENTRY)
                                         reverseConnType |= ConnType.ONE_WAY;
                                     if (connType & ConnType.LOCKED)
                                         reverseConnType |= ConnType.UNLOCK;
@@ -783,13 +799,12 @@
                                         reverseConnType |= ConnType.LOCKED;
                                     if (connType & ConnType.DEAD_END)
                                         reverseConnType |= ConnType.ISOLATED;
-                                    else if (connType & ConnType.ONE_WAY)
+                                    else if (connType & ConnType.ISOLATED)
                                         reverseConnType |= ConnType.DEAD_END;
                                 }
                                 connType = reverseConnType;
-                            } else {
-                                path[path.length - 1].connType = connType;
-                                connType = null;
+                                if (connType & ignoreTypeFlags)
+                                    continue;
                             }
                             const connPath = path.slice(0);
                             connPath.push({
@@ -811,7 +826,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "0.7.0");
+                            data.footer = data.footer.replace("{VERSION}", "0.7.1");
                             defaultCallback(data);
                         }
                     });

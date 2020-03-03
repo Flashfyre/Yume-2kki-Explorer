@@ -7,7 +7,8 @@ const ConnType = {
     ISOLATED: 32,
     EFFECT: 64,
     CHANCE: 128,
-    LOCKED_CONDITION: 256
+    LOCKED_CONDITION: 256,
+    INACCESSIBLE: 512
 };
 
 if (typeof exports === "object")
