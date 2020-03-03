@@ -10,6 +10,8 @@
         "name": "Display Mode:",
         "values": {
             "hierarchical": "Hierarchical (One-Way)",
+            "radialIn": "Inward (One-Way)",
+            "radialOut": "Outward (One-Way)",
             "free": "Free (Two-Way)"
         }
     },

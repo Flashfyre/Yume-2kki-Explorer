@@ -10,6 +10,8 @@
         "name": "ディスプレイモード",
         "values": {
             "hierarchical": "階層（一方通行）",
+            "radialIn": "内向き（一方通行）",
+            "radialOut": "外向き（一方通行）",
             "free": "自由（双方向）"
         }
     },

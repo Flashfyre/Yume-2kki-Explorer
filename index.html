@@ -172,7 +172,9 @@
                     <label data-localize="displayMode.name">Display Mode:</label>
                     <select name="displayMode" class="js--display-mode">
                         <option data-localize="displayMode.values.hierarchical" value="0" selected>Hierarchical (One-Way)</option>
-                        <option data-localize="displayMode.values.free" value="1">Free (Two-Way)</option>
+                        <option data-localize="displayMode.values.radialIn" value="1">Inward (One-Way)</option>
+                        <option data-localize="displayMode.values.radialOut" value="2">Outward (One-Way)</option>
+                        <option data-localize="displayMode.values.free" value="3">Free (Two-Way)</option>
                     </select>
                 </div>
                 <div class="control">
@@ -365,7 +367,7 @@
                                 if (conn.type & ConnType.NO_ENTRY)
                                     continue;
                                 const connWorld = worldData[conn.targetId];
-                                if (config.displayMode === 1 || world.depth < connWorld.depth || (world.depth == connWorld.depth && world.id < connWorld.id)) {
+                                if (config.displayMode >= 3 || world.depth < connWorld.depth || (world.depth == connWorld.depth && world.id < connWorld.id)) {
                                     const link = {
                                         key: `${world.id}_${connWorld.id}`,
                                         source: world.id,
@@ -417,9 +419,9 @@
                     const elem = document.getElementById('graph');
                 
                     graph = ForceGraph()(elem);
-                    if (config.displayMode === 0) {
+                    if (config.displayMode < 3) {
                         graph = graph
-                            .dagMode('td')
+                            .dagMode(config.displayMode === 0 ? 'td' : config.displayMode === 1 ? 'radialin' : 'radialout')
                             .dagLevelDistance(24 + radius * (config.sizeDiff + 1))
                             /*.dagLevelDistance(function (depth) {
                                 if (depthDistances)

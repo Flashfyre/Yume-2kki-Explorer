@@ -661,10 +661,10 @@ function downloadImage(imageUrl, filename) {
 }
 
 function getTitleJP(html) {
-    if (html.indexOf("<b>Original Name(s)</b>") === -1)
+    const jpNameIndex = html.indexOf("data-jp-name=\"");
+    if (jpNameIndex === -1)
         return null;
-    html = html.slice(html.indexOf("<b>Original Name(s)</b>"), html.indexOf("<b>Effects</b>"));
-    return html.slice(html.indexOf("<p>") + 3, html.indexOf("<br />") > -1 ? html.indexOf("<br />") : html.indexOf("</p>"));
+    return html.slice(jpNameIndex + 14, html.indexOf("\"", jpNameIndex + 14));
 }
 
 function getConnections(html) {
