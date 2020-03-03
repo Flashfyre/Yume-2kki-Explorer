@@ -250,6 +250,19 @@
                     });
                 }
 
+                CanvasRenderingContext2D.prototype.roundRect = function (x, y, width, height, radius) {
+                    if (width < 2 * radius) radius = width / 2;
+                    if (height < 2 * radius) radius = height / 2;
+                    this.beginPath();
+                    this.moveTo(x + radius, y);
+                    this.arcTo(x + width, y, x + width, y + height, radius);
+                    this.arcTo(x + width, y + height, x, y + height, radius);
+                    this.arcTo(x, y + height, x, y, radius);
+                    this.arcTo(x, y, x + width, y, radius);
+                    this.closePath();
+                    return this;
+                }
+
                 function hueToRGB(h) {
                     let s = 1, v = 1, r, g, b, i, f, p, q, t;
                     i = Math.floor(h * 6);
@@ -294,25 +307,23 @@
                     const addedLinks = [];
 
                     if (paths) {
-                        visibleWorldIds = _.uniq(_.flatten(paths));
-
+                        visibleWorldIds = _.uniq(_.flatten(paths).map(p => p.id));
                         const pathScores = [];
                         let minPathDepth = paths[0].length - 2;
                         let maxPathDepth;
                         let depthDiff;
                         let maxPathScore;
-                        console.log(minPathDepth, paths)
-                        for (let p in paths) {
-                            const path = paths[p];
+                        for (let pi in paths) {
+                            const path = paths[pi];
                             if (path.length - 2 > minPathDepth * 2) {
-                                let visibleWorldIdRemovalCandidates = _.uniq(_.flatten(paths.slice(p)));
-                                paths = paths.slice(0, p);
-                                let requiredWorldIds = _.uniq(_.flatten(paths));
+                                let visibleWorldIdRemovalCandidates = _.uniq(_.flatten(paths.slice(pi)).map(p => p.id));
+                                paths = paths.slice(0, pi);
+                                let requiredWorldIds = _.uniq(_.flatten(paths).map(p => p.id));
                                 _.remove(visibleWorldIdRemovalCandidates, w => requiredWorldIds.indexOf(w) > -1);
                                 _.remove(visibleWorldIds, w => visibleWorldIdRemovalCandidates.indexOf(w) > -1);
                                 break;
                             }
-                            pathScores[p] = parseInt(p) + 3 * ((path.length - 2) - minPathDepth);
+                            pathScores[pi] = parseInt(pi) + 3 * ((path.length - 2) - minPathDepth);
                         }
                         maxPathDepth = paths[paths.length - 1].length;
                         depthDiff = maxPathDepth - minPathDepth;
@@ -320,17 +331,22 @@
                         for (let p in paths) {
                             const path = paths[p];
                             for (let w = 1; w < path.length; w++) {
-                                const sourceId = path[w - 1];
-                                const targetId = path[w];
+                                const sourceId = path[w - 1].id;
+                                const targetId = path[w].id;
                                 const linkId = `${sourceId}_${targetId}`;
                                 if (addedLinks.indexOf(linkId) === -1) {
-                                    links.push({
+                                    const link = {
                                         key: linkId,
                                         source: sourceId,
                                         target: targetId,
-                                        defaultColor: hueToRGB(0.6666 - ((pathScores[p] / maxPathScore) * 0.6666))
-                                    });
+                                        connType: path[w].connType,
+                                        defaultColor: hueToRGB(0.6666 - ((pathScores[p] / maxPathScore) * 0.6666)),
+                                        connTypeCheck: path[w].connType ? 'replace' : undefined
+                                    };
+                                    links.push(link);
                                     addedLinks.push(linkId);
+                                    if (path[w].connType & ConnType.ONE_WAY)
+                                        oneWayLinks.push(link);
                                 }
                             }
                         }
@@ -352,8 +368,9 @@
                                         key: `${world.id}_${connWorld.id}`,
                                         source: world.id,
                                         target: connWorld.id,
-                                        defaultColor: conn.type & ConnType.LOCKED || conn.type & ConnType.LOCKED_CONDITION ? '#444' : hueToRGB(0.6666 - ((world.depth / (maxDepth - 1)) * 0.6666)),
-                                        connTypeCheck: conn.type & ConnType.ONE_WAY ? 'replace' : undefined
+                                        connType: conn.type,
+                                        defaultColor: hueToRGB(0.6666 - ((world.depth / (maxDepth - 1)) * 0.6666)),
+                                        connTypeCheck: conn.type ? 'replace' : undefined
                                     };
                                     links.push(link);
                                     if (conn.type & ConnType.ONE_WAY)
@@ -463,19 +480,118 @@
                         .linkWidth(link => selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1)
                         .linkColor(link => selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : link.defaultColor)
                         .linkCanvasObjectMode('connTypeCheck')
-                        .linkCanvasObject((link, ctx) => {
-                            let currentDashOffset = dashOffset;
-                            if (link.key === lastOneWayLinkKey)
-                                dashOffset = dashOffset < 9.8 ? dashOffset + 0.2 : 0;
+                        .linkCanvasObject((link, ctx, globalScale) => {
+                            const sourceScale = worldScales[link.source.id || link.source];
+                            const targetScale = worldScales[link.target.id || link.target];
+                            const connType = link.connType;
                             ctx.beginPath();
-                            ctx.setLineDash([5, 5]);
-                            ctx.lineDashOffset = currentDashOffset * -1;
-                            ctx.lineWidth = selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 0.5 : 0.25;
+                            ctx.lineWidth = (selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1) / globalScale;
                             ctx.strokeStyle = selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : link.defaultColor;
-                            ctx.moveTo(link.source.x, link.source.y);
-                            ctx.lineTo(link.target.x, link.target.y);
+                            const emojis = [];
+                            if (connType) {
+                                if (connType & ConnType.ONE_WAY)  {
+                                    let currentDashOffset = dashOffset;
+                                    if (link.key === lastOneWayLinkKey)
+                                        dashOffset = dashOffset < 9.8 ? dashOffset + 0.2 : 0;
+                                    ctx.setLineDash([5, 5]);
+                                    ctx.lineDashOffset = currentDashOffset * -1;
+                                    emojis.push("➜");
+                                } else if (connType & ConnType.NO_ENTRY) {
+                                    emojis.push("⛔");
+                                }
+                                if (connType & ConnType.LOCKED)
+                                    emojis.push("🔒")
+                                else if (connType & ConnType.UNLOCK)
+                                    emojis.push("🔑");
+                                else if (connType & ConnType.LOCKED_CONDITION)
+                                    emojis.push("🔐");
+                                if (connType & ConnType.DEAD_END)
+                                    emojis.push("🚩");
+                                else if (connType & ConnType.ISOLATED)
+                                    emojis.push("↩️");
+                                if (connType & ConnType.EFFECT)
+                                    emojis.push("✨");
+                                if (connType & ConnType.CHANCE)
+                                    emojis.push("🍀");
+                            }
+                            let sourceX = link.source.x;
+                            let sourceY = link.source.y;
+                            let targetX = link.target.x;
+                            let targetY = link.target.y;
+                            let tempSourceX = sourceX;
+                            let tempSourceY = sourceY;
+                            let tempTargetX = targetX;
+                            let tempTargetY = targetY;
+                            const isX = Math.abs(targetX - sourceX) >= Math.abs(targetY - sourceY);
+                            ctx.moveTo(sourceX, sourceY);
+                            ctx.lineTo(targetX, targetY);
+                            if (isX) {
+                                const addSourceCoord = (sourceX < targetX ? 8 : -8) * sourceScale;
+                                const addTargetCoord = (targetX < sourceX ? 8 : -8) * targetScale;
+                                sourceX += addSourceCoord;
+                                sourceY = sourceY + (tempTargetY - tempSourceY)/(tempTargetX - tempSourceX) * addSourceCoord;
+                                targetX += addTargetCoord;
+                                targetY = targetY + (tempSourceY - tempTargetY)/(tempSourceX - tempTargetX) * addTargetCoord;
+                            } else {
+                                const addSourceCoord = (sourceY < targetY ? 6 : -6) * sourceScale;
+                                const addTargetCoord = (targetY < sourceY ? 6 : -6) * targetScale;
+                                sourceY += addSourceCoord;
+                                sourceX = sourceX + (tempTargetX - tempSourceX)/(tempTargetY - tempSourceY) * addSourceCoord;
+                                targetY += addTargetCoord;
+                                targetX = targetX + (tempSourceX - tempTargetX)/(tempSourceY - tempTargetY) * addTargetCoord;
+                            }
                             ctx.stroke();
                             ctx.closePath();
+                            if (emojis.length) {
+                                ctx.imageSmoothingEnabled = false;
+                                ctx.fillStyle = "#fff";
+                                ctx.font = (globalScale < 24 ? 6 : 6 * (24 / globalScale)) + "px 'MS Gothic'";
+                                const scale = globalScale < 24 ? 1 : 24 / globalScale;
+                                const textBaseX = (sourceX * 1.5 + targetX * 0.5) / 2;
+                                const textBaseY = (sourceY * 1.5 + targetY * 0.5) / 2;
+                                for (let e = 0; e < emojis.length; e++) {
+                                    const emoji = emojis[e];
+                                    let textX, textY;
+                                    const addCoord = 8 * ((emojis.length * -0.5) + e + 0.5);
+                                    if (isX) {
+                                        textX = (textBaseX + addCoord) - 3.5 * scale;
+                                        textY = textBaseY + (targetY - sourceY)/(targetX - sourceX) * addCoord;
+                                    } else {
+                                        textY = textBaseY + addCoord;
+                                        textX = (textBaseX + (targetX - sourceX)/(targetY - sourceY) * addCoord) - 3.5 * scale;
+                                    }
+                                    if (e === 0 && connType & ConnType.ONE_WAY) {
+                                        ctx.beginPath();
+                                        ctx.setLineDash([0, 0]);
+                                        if (sourceX >= targetX) {
+                                            ctx.save();
+                                            ctx.scale(-1, 1);
+                                            textX += 7 * scale;
+                                            ctx.strokeStyle = "#000";
+                                            ctx.lineWidth = 0.2 * scale;
+                                            ctx.roundRect(-textX - 0.25 * scale, textY - 5.5 * scale, 6.5 * scale, 6.5 * scale, 0.5 * scale);
+                                            ctx.fill();
+                                            ctx.stroke();
+                                            ctx.fillStyle = "#000";
+                                            ctx.fillText(emoji, -textX, textY);
+                                            ctx.fillStyle = "#fff";
+                                            ctx.restore();
+                                        } else {
+                                            ctx.strokeStyle = "#000";
+                                            ctx.lineWidth = 0.2 * scale;
+                                            ctx.roundRect(textX - 0.25 * scale, textY - 5.5 * scale, 6.5 * scale, 6.5 * scale, 0.5 * scale);
+                                            ctx.fill();
+                                            ctx.stroke();
+                                            ctx.fillStyle = "#000";
+                                            ctx.fillText(emoji, textX, textY);
+                                            ctx.fillStyle = "#fff";
+                                        }
+                                        ctx.closePath();
+                                    } else
+                                        ctx.fillText(emoji, textX, textY);
+                                }
+                            }
+                            
                         })
                         .onNodeHover((node, prevNode) => {
                             elem.style.cursor = node ? 'pointer' : null;
@@ -522,6 +638,8 @@
                     initGraph(matchPaths)
                 }
 
+                let mult = 1;
+
                 function findPath(s, t, ignoreTypeFlags) {
                     const startTime = performance.now();
 
@@ -541,8 +659,8 @@
 
                     let genIndex = 0;
 
-                    sourcePaths[s] = [];
-                    targetPaths[t] = [];
+                    sourcePaths[s] = [{ id: s, connType: null }];
+                    targetPaths[t] = [{ id: t, connType: null }];
                   
                     while (genIndex <= 15) {
                         let sourceWorlds = nextGenSourceWorlds.slice(0);
@@ -569,31 +687,32 @@
                         /*let checkedSourceIds = Object.keys(sourcePaths).map(id => parseInt(id));
                         let checkedTargetIds = Object.keys(targetPaths).map(id => parseInt(id));*/
 
-                        $.grep(checkedSourceNodes, function(id) {
+                        $.grep(checkedSourceNodes, id => {
                             const ret = $.inArray(id, checkedTargetNodes) !== -1;
                             if (ret) {
                                 let skip = false;
 
-                                let sourcePath = [s].concat(sourcePaths[id]);
-                                let targetPath = [t].concat(targetPaths[id]);
+                                let sourcePath = _.cloneDeep(sourcePaths[id]);
+                                let targetPath = _.cloneDeep(targetPaths[id]);
 
-                                if (sourcePath[sourcePath.length - 1] === id && targetPath[targetPath.length - 1] === id) {
+                                if (sourcePath[sourcePath.length - 1].id === id && targetPath[targetPath.length - 1].id === id) {
                                     sourcePath = sourcePath.slice(0, -1);
                                 }
 
-                                let loopWorlds;
-                                while ((loopWorlds = _.intersectionWith(sourcePath, targetPath, _.isEqual)).length) {
-                                    //console.log("Loop found", worldData[loopWorlds[0]].title, JSON.stringify(sourcePath.map(function(p) { return worldData[p].title})), JSON.stringify(targetPath.map(function(p) { return worldData[p].title})));
-                                    sourcePath = sourcePath.slice(0, sourcePath.indexOf(loopWorlds[0]));
-                                    targetPath = targetPath.slice(0, targetPath.indexOf(loopWorlds[0]) + 1);
-                                    //console.log("Loop fixed", worldData[loopWorlds[0]].title, JSON.stringify(sourcePath.map(function(p) { return worldData[p].title})), JSON.stringify(targetPath.map(function(p) { return worldData[p].title})));
+                                let loopWorldIds, sourcePathIds, targetPathIds;
+                                while ((loopWorldIds = _.intersectionWith((sourcePathIds = sourcePath.map(sp => sp.id)), (targetPathIds = targetPath.map(tp => tp.id)), _.isEqual)).length) {
+                                    //console.log("Loop found", worldData[loopWorldIds[0]].title, JSON.stringify(sourcePath.map(function(p) { return worldData[p].title})), JSON.stringify(targetPath.map(function(p) { return worldData[p].title})));
+                                    sourcePath = sourcePath.slice(0, sourcePathIds.indexOf(loopWorldIds[0]));
+                                    targetPath = targetPath.slice(0, targetPathIds.indexOf(loopWorldIds[0]) + 1);
+                                    //console.log("Loop fixed", worldData[loopWorldIds[0]].title, JSON.stringify(sourcePath.map(function(p) { return worldData[p].title})), JSON.stringify(targetPath.map(function(p) { return worldData[p].title})));
                                 }
+                                
                                 const matchPath = sourcePath.concat(targetPath.reverse());
                                 for (let p in matchPaths) {
                                     for (let w = 1; w < matchPaths[p].length; w++) {
-                                        const linkId = `${matchPaths[p][w - 1]}_${matchPaths[p][w]}`;
+                                        const linkId = `${matchPaths[p][w - 1].id}_${matchPaths[p][w].id}`;
                                         for (let m = 1; m < matchPath.length; m++) {
-                                            const matchLinkId = `${matchPath[m - 1]}_${matchPath[m]}`;
+                                            const matchLinkId = `${matchPath[m - 1].id}_${matchPath[m].id}`;
                                             if (linkId === matchLinkId) {
                                                 skip = true;
                                                 break;
@@ -607,15 +726,11 @@
                                 }
                                 if (skip)
                                     return false;
-                                _.remove(nextGenSourceWorlds, w => {
-                                    return w.id === id;
-                                });
-                                _.remove(nextGenTargetWorlds, w => {
-                                    return w.id === id;
-                                });
+                                _.remove(nextGenSourceWorlds, w => w.id === id);
+                                _.remove(nextGenTargetWorlds, w => w.id === id);
                                 matchPaths.push(matchPath);
                             }
-                            return ret;
+                            return true;
                         });
                     }
 
@@ -650,10 +765,37 @@
                         let connType = conns[c].type;
                         if (connType & ignoreTypeFlags)
                             continue;
-                        const id = worldData[conns[c].targetId].id;
+                        const connWorld = worldData[conns[c].targetId];
+                        const id = connWorld.id;
                         if (checkedNodes.indexOf(id) === -1) {
+                            // If checking from target
+                            if (ignoreTypeFlags & ConnType.ONE_WAY) {
+                                const reverseConn = connWorld.connections.filter(c => c.targetId === world.id);
+                                let reverseConnType = 0;
+                                if (reverseConn.length)
+                                    reverseConnType = reverseConn[0].type;
+                                else {
+                                    if (connType & ConnType.NO_ENTRY)
+                                        reverseConnType |= ConnType.ONE_WAY;
+                                    if (connType & ConnType.LOCKED)
+                                        reverseConnType |= ConnType.UNLOCK;
+                                    else if (connType & ConnType.UNLOCK)
+                                        reverseConnType |= ConnType.LOCKED;
+                                    if (connType & ConnType.DEAD_END)
+                                        reverseConnType |= ConnType.ISOLATED;
+                                    else if (connType & ConnType.ONE_WAY)
+                                        reverseConnType |= ConnType.DEAD_END;
+                                }
+                                connType = reverseConnType;
+                            } else {
+                                path[path.length - 1].connType = connType;
+                                connType = null;
+                            }
                             const connPath = path.slice(0);
-                            connPath.push(id);
+                            connPath.push({
+                                id: id,
+                                connType: connType
+                            });
                             ret[id] = connPath;
                             checkedNodes.push(id);
                             nextGenWorlds.push(worldData[id]);
@@ -669,7 +811,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "0.6.0");
+                            data.footer = data.footer.replace("{VERSION}", "0.7.0");
                             defaultCallback(data);
                         }
                     });
