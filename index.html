@@ -639,6 +639,8 @@
                         ? findPath(startWorld.id, endWorld.id, ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED)
                         : null;
                     $(".js--display-mode").prop("disabled", matchPaths || false);
+                    if (graph)
+                        graph._destructor();
                     initGraph(matchPaths)
                 }
 
@@ -828,7 +830,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "0.7.2");
+                            data.footer = data.footer.replace("{VERSION}", "0.7.3");
                             defaultCallback(data);
                         }
                     });
