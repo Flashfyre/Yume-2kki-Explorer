@@ -20,6 +20,7 @@
         "values": {
             "never": "なし",
             "hover": "マウスオーバー ",
+            "select": "セレクト",
             "always": "いつも"
         }
     },
