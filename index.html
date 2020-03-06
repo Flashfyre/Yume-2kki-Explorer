@@ -510,9 +510,9 @@
                                 ctx.font = (2 * scale) + "px 'MS Gothic'";
                                 const world = worldData[id];
                                 const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
-                                let textLines = worldName.replace(/：/g, "： ").split(" ");
+                                let textLines = worldName.split(" ");
                                 for (let l = 0; l < textLines.length; l++) {
-                                    if (ctx.measureText(textLines[l].width < width)) {
+                                    if (ctx.measureText(textLines[l]).width < width) {
                                         let mergeIndex = 0;
                                         for (let l2 = l + 1; l2 < textLines.length; l2++) {
                                             const mergedLine = textLines.slice(l, l2 + 1).join(" ");
@@ -524,7 +524,8 @@
                                         if (mergeIndex) {
                                             textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
                                         }
-                                    }
+                                    } else if (textLines[l].indexOf("：") > -1)
+                                        textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
                                 }
                                 for (let l in textLines) {
                                     const textLine = textLines[l];
@@ -900,7 +901,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "0.7.4");
+                            data.footer = data.footer.replace("{VERSION}", "0.8.0");
                             defaultCallback(data);
                         }
                     });
@@ -940,6 +941,11 @@
                         updateControlsContainerHeight();
                         $(window).resize(updateControlsContainerHeight);
                     }
+
+                    $(window).blur(function() {
+                        isShift = false;
+                        isCtrl = false;
+                    });
 
                     loadWorldData(false, function (data) {
                         worldData = data;
