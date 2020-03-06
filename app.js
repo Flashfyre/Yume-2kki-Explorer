@@ -52,8 +52,8 @@ function initDb(pool) {
                 lastFullUpdate DATETIME NULL
             )`).then(() => queryAsPromise(pool,
             `INSERT INTO updates (lastUpdate, lastFullUpdate)
-                SELECT null, null
-                WHERE NOT EXISTS (SELECT * FROM updates)`
+                SELECT null, null FROM updates
+                WHERE id NOT IN (SELECT id FROM updates)`
             )).then(() => queryAsPromise(pool,
             `CREATE TABLE IF NOT EXISTS worlds (
                 id INT AUTO_INCREMENT PRIMARY KEY,
