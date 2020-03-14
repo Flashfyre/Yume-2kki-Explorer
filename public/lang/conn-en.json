@@ -1,0 +1,42 @@
+{
+    "1": {
+        "name": "One-Way",
+        "description": "Does not connect back to this area"
+    },
+    "2": {
+        "name": "No Entry",
+        "description": "Cannot be entered from this area"
+    },
+    "4": {
+        "name": "Unlock",
+        "description": "Unlocks access to this area from the opposite entrance"
+    },
+    "8": {
+        "name": "Locked",
+        "description": "Unlockable from the opposite entrance"
+    },
+    "16": {
+        "name": "Dead End",
+        "description": "Leads to an isolated section of the opposite side"
+    },
+    "32": {
+        "name": "Isolated",
+        "description": "Isolated location only accessible from the opposite side"
+    },
+    "64": {
+        "name": "Effect",
+        "description": "Can be accessed with the following effect(s): {0}"
+    },
+    "128": {
+        "name": "Chance",
+        "description": "{0} chance"
+    },
+    "256": {
+        "name": "Conditional",
+        "description": "Unlocked with the following condition: {0}"
+    },
+    "512": {
+        "name": "Inaccessible",
+        "description": ""
+    }
+}

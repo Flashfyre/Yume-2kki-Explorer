@@ -9,10 +9,18 @@
     "displayMode": {
         "name": "ディスプレイモード",
         "values": {
-            "hierarchical": "階層（一方通行）",
-            "radialIn": "内向き（一方通行）",
-            "radialOut": "外向き（一方通行）",
-            "free": "自由（双方向）"
+            "vertical": "垂直",
+            "horizontal": "水平",
+            "radialIn": "内向き",
+            "radialOut": "外向き",
+            "free": "自由"
+        }
+    },
+    "connMode": {
+        "name": "接続モード",
+        "values": {
+            "oneWay": "一方通行",
+            "twoWay": "双方向"
         }
     },
     "labelMode": {
@@ -26,6 +34,9 @@
     },
     "sizeDiff": {
         "name": "サイズ差"
+    },
+    "stackSize": {
+        "name": "スタック限界"
     },
     "origin": {
         "name": "原点"

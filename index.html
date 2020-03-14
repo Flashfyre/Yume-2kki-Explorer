@@ -183,10 +183,18 @@
                     <div class="control">
                         <label data-localize="displayMode.name">Display Mode:</label>
                         <select name="displayMode" class="js--display-mode">
-                            <option data-localize="displayMode.values.hierarchical" value="0" selected>Hierarchical (One-Way)</option>
-                            <option data-localize="displayMode.values.radialIn" value="1">Inward (One-Way)</option>
-                            <option data-localize="displayMode.values.radialOut" value="2">Outward (One-Way)</option>
-                            <option data-localize="displayMode.values.free" value="3">Free (Two-Way)</option>
+                            <option data-localize="displayMode.values.vertical" value="0" selected>Vertical</option>
+                            <option data-localize="displayMode.values.horizontal" value="1">Horizontal</option>
+                            <option data-localize="displayMode.values.radialIn" value="2">Inward</option>
+                            <option data-localize="displayMode.values.radialOut" value="3">Outward</option>
+                            <option data-localize="displayMode.values.free" value="4">Free</option>
+                        </select>
+                    </div>
+                    <div class="control">
+                        <label data-localize="connMode.name">Connection Mode:</label>
+                        <select name="connMode" class="js--conn-mode">
+                            <option data-localize="connMode.values.oneWay" value="0" selected>One-Way)/option>
+                            <option data-localize="connMode.values.twoWay" value="1">Two-Way</option>
                         </select>
                     </div>
                     <div class="control">
@@ -201,6 +209,10 @@
                     <div class="control">
                         <label data-localize="sizeDiff.name">Size Difference:</label>
                         <input type="range" min="1" max="10" value="1" step="0.5" class="js--size-diff slider" />
+                    </div>
+                    <div class="control js--stack-size--container">
+                        <label data-localize="stackSize.name">Stack Threshold:</label>
+                        <input type="range" min="5" max="100" value="20" step="1" class="js--stack-size slider" />
                     </div>
                     <div class="control">
                         <label data-localize="origin.name">Origin:</label>
@@ -264,15 +276,96 @@
                 CanvasRenderingContext2D.prototype.roundRect = function (x, y, width, height, radius) {
                     if (width < 2 * radius) radius = width / 2;
                     if (height < 2 * radius) radius = height / 2;
-                    this.beginPath();
                     this.moveTo(x + radius, y);
                     this.arcTo(x + width, y, x + width, y + height, radius);
                     this.arcTo(x + width, y + height, x, y + height, radius);
                     this.arcTo(x, y + height, x, y, radius);
                     this.arcTo(x, y, x + width, y, radius);
-                    this.closePath();
                     return this;
-                }
+                };
+
+                CanvasRenderingContext2D.prototype.emoji = function (x, y, scale, emoji) {
+                    this.beginPath();
+                    
+                    switch (emoji) {
+                        case "⛔":
+                        case "🚫":
+                            this.arc(x + 3.125 * scale, y - 2.1 * scale, 3.3 * scale, 0, 2 * Math.PI);
+                            break;
+                        case "🔒":
+                        case "🔐":
+                            const isCondition = emoji === "🔐";
+                            this.roundRect(x - 0.21 * scale, y - 2.45 * scale, 5.4 * scale, 3.7 * scale, 0.5 * scale);
+                            if (isCondition)
+                                this.arc(x + 4.875 * scale, y - 3 * scale, 1.6 * scale, 0, 2 * Math.PI);
+                            this.moveTo(x + 0.175 * scale, y - 2.445 * scale);
+                            this.arc(x + 2.5 * scale, y - 3.1 * scale, 2.325 * scale, Math.PI, 0);
+                            this.lineTo(x + 4.825 * scale, y - 2.445 * scale);
+                            if (isCondition) {
+                                this.moveTo(x + 5.65 * scale, y - 1.5825 * scale);
+                                this.lineTo(x + 5.65 * scale, y + 0.525 * scale);
+                                this.lineTo(x + 4.85 * scale, y + 1.2375 * scale);
+                                this.lineTo(x + 4.85 * scale, y - 1.5825 * scale);
+                            }
+                            break;
+                        case "🔑":
+                            this.moveTo(x + 3.75 * scale, y - 2.9 * scale);
+                            this.lineTo(x + 6.5 * scale, y - 0.15 * scale);
+                            this.lineTo(x + 6.5 * scale, y + 1.2 * scale);
+                            this.lineTo(x + 4.85 * scale, y + 1.2 * scale);
+                            this.lineTo(x + 4.85 * scale, y + 0.6 * scale);
+                            this.lineTo(x + 4.15 * scale, y + 0.6 * scale);
+                            this.lineTo(x + 4.15 * scale, y);
+                            this.lineTo(x + 3.5 * scale, y);
+                            this.lineTo(x + 3.5 * scale, y - 0.6 * scale);
+                            this.lineTo(x + 3.1 * scale, y - 0.6 * scale);
+                            this.lineTo(x + 2.4 * scale, y - 1.4 * scale);
+                            this.arc(x + 1.85 * scale, y - 3.35 * scale, 2.1 * scale, 0.4 * Math.PI, 2.4 * Math.PI)
+                            break;
+                        case "🚩":
+                            this.moveTo(x - 0.05 * scale, y + 1.25 * scale);
+                            this.lineTo(x - 0.05 * scale, y - 4.25 * scale);
+                            this.arc(x + 0.475 * scale, y - 4.75 * scale, 0.725 * scale, 0.75 * Math.PI, 2.05 * Math.PI);
+                            this.lineTo(x + 5.9 * scale, y - 3.1 * scale);
+                            this.arc(x + 5.675 * scale, y - 2.775 * scale, 0.375 * scale, 1.5 * Math.PI, 0.4 * Math.PI);
+                            this.lineTo(x + 1 * scale, y - 0.8 * scale);
+                            this.lineTo(x + 1 * scale, y + 1.25 * scale);
+                            break;
+                        case "↩️":
+                            this.rect(x - 0.2 * scale, y - 5.425 * scale, 6.675 * scale, 6.675 * scale);
+                            break;
+                        case "✨":
+                            this.moveTo(x + 1.5 * scale, y - 2.64 * scale);
+                            this.bezierCurveTo(x + 3.6 * scale, y - 2.15 * scale, x + 3.35 * scale, y - 4.7 * scale, x + 3.35 * scale, y - 4.7 * scale);
+                            this.arc(x + 3.85 * scale, y - 4.8 * scale, 0.5 * scale, Math.PI, 2 * Math.PI);
+                            this.bezierCurveTo(x + 4.05 * scale, y - 2.25 * scale, x + 6 * scale, y - 2.5 * scale, x + 6 * scale, y - 2.5 * scale);
+                            this.arc(x + 6 * scale, y - 2 * scale, 0.5 * scale, 1.5 * Math.PI, 0.5 * Math.PI);
+                            this.bezierCurveTo(x + 4.05 * scale, y - 1.75 * scale, x + 4.35 * scale, y + 0.7 * scale, x + 4.35 * scale, y + 0.7 * scale);
+                            this.arc(x + 3.85 * scale, y + 0.8 * scale, 0.5 * scale, 0, Math.PI);
+                            this.bezierCurveTo(x + 3.6 * scale, y - 1.75 * scale, x + 1.5 * scale, y - 1.5 * scale, x + 1.5 * scale, y - 1.5 * scale);
+                            this.roundRect(x - 0.2 * scale, y - 3.35 * scale, 2.65 * scale, scale, 0.5 * scale);
+                            this.roundRect(x + 0.6 * scale, y - 4.4 * scale, 1.05 * scale, 3.1 * scale, 0.5 * scale);
+                            this.rect(x + 2.6 * scale, y - 1.2 * scale, 0.4 * scale, 0.4 * scale);
+                            this.roundRect(x + 0.85 * scale, y - 0.85 * scale, 2.65 * scale, scale, 0.5 * scale);
+                            this.roundRect(x + 1.65 * scale, y - 1.9 * scale, 1.05 * scale, 3.1 * scale, 0.5 * scale);
+                            break;
+                        case "🍀":
+                            this.arc(x + 1 * scale, y - 3.325 * scale, 1.1 * scale, 0, 2 * Math.PI);
+                            this.arc(x + 2.125 * scale, y - 4.4 * scale, 1.1 * scale, 0, 2 * Math.PI);
+                            this.arc(x + 4.1 * scale, y - 4.4 * scale, 1.1 * scale, 0, 2 * Math.PI);
+                            this.arc(x + 5.225 * scale, y - 3.325 * scale, 1.1 * scale, 0, 2 * Math.PI);
+                            this.arc(x + 0.875 * scale, y - 1.375 * scale, 1.1 * scale, 0, 2 * Math.PI);
+                            this.arc(x + 1.975 * scale, y - 0.275 * scale, 1.1 * scale, 0, 2 * Math.PI);
+                            this.arc(x + 3.125 * scale, y + 0.7 * scale, 0.575 * scale, 0, 2 * Math.PI);
+                            this.arc(x + 5.375 * scale, y - 1.375 * scale, 1.1 * scale, 0, 2 * Math.PI);
+                            this.arc(x + 4.225 * scale, y - 0.275 * scale, 1.1 * scale, 0, 2 * Math.PI);
+                            this.lineTo(x + 3.5 * scale, y + 0.85 * scale);
+                            this.lineTo(x + 2 * scale, y + 0.85 * scale);
+                            this.rect(x + 1.5 * scale, y - 3.5 * scale, 3.25 * scale, 4 * scale);
+                            break;
+                    }
+                    this.closePath();
+                };
 
                 function hueToRGB(h) {
                     let s = 1, v = 1, r, g, b, i, f, p, q, t;
@@ -312,12 +405,20 @@
                                             break;
                                         case "displayMode":
                                             $(".js--display-mode").val(value);
+                                            if (parseInt(value) >= 2)
+                                                $(".js--stack-size--container").css("display", "none");
+                                            break;
+                                        case "connMode":
+                                            $(".js--conn-mode").val(value);
                                             break;
                                         case "labelMode":
                                             $(".js--label-mode").val(value);
                                             break;
                                         case "sizeDiff":
                                             $(".js--size-diff").val(value);
+                                            break;
+                                        case "stackSize":
+                                            $(".js--stack-size").val(value);
                                             break;
                                     }
                                 }
@@ -335,7 +436,7 @@
                 }
 
                 function updateControlsContainerHeight() {
-                    $(".controls--container").css("height", ($(".controls").outerHeight() + 64) + "px");
+                    $(".controls--container").css("height", $(".controls").outerHeight() + "px");
                 }
 
                 function loadWorldData(update, callback) {
@@ -348,14 +449,20 @@
                 
                 let selectedWorldId;
 
+                let localizedConns;
+                
+                let effectsJP;
+
                 let config = {
                     lang: "en",
                     displayMode: 0,
+                    connMode: 0,
                     labelMode: 1,
-                    sizeDiff: 1
+                    sizeDiff: 1,
+                    stackSize: 20
                 };
 
-                function initGraph(paths) {
+                function initGraph(displayMode, paths) {
 
                     let visibleWorldIds;
                     
@@ -368,6 +475,14 @@
                     let dashOffset = 0;
 
                     const addedLinks = [];
+
+                    const worldScales = {};
+
+                    const dagIgnore = {};
+
+                    _.each(worldData, w => {
+                        worldScales[w.id] = 1 + (Math.round((w.size - minSize) / (maxSize - minSize) * 10 * (config.sizeDiff - 1)) / 10);
+                    });
 
                     if (paths) {
                         visibleWorldIds = _.uniq(_.flatten(paths).map(p => p.id));
@@ -400,11 +515,17 @@
                                 const targetId = path[w].id;
                                 const linkId = `${sourceId}_${targetId}`;
                                 if (addedLinks.indexOf(linkId) === -1) {
+                                    dagIgnore[sourceId] = [];
                                     const link = {
                                         key: linkId,
                                         source: sourceId,
                                         target: targetId,
+                                        sourceScale: worldScales[sourceId],
+                                        targetScale: worldScales[targetId],
                                         connType: path[w - 1].connType,
+                                        typeParams: path[w - 1].typeParams,
+                                        icons: [],
+                                        hidden: false,
                                         defaultColor: hueToRGB(0.6666 - ((pathScores[p] / maxPathScore) * 0.6666)),
                                         connTypeCheck: path[w - 1].connType ? 'replace' : undefined
                                     };
@@ -423,28 +544,68 @@
                         for (let w in visibleWorldIds) {
                             const world = worldData[visibleWorldIds[w]];
                             const connections = world.connections;
+                            const dagIgnoreIds = dagIgnore[world.id] = [];
                             for (let c in connections) {
                                 const conn = connections[c];
-                                if (conn.type & ConnType.NO_ENTRY)
-                                    continue;
                                 const connWorld = worldData[conn.targetId];
-                                if (config.displayMode >= 3 || world.depth < connWorld.depth || (world.depth == connWorld.depth && world.id < connWorld.id)) {
-                                    const link = {
-                                        key: `${world.id}_${connWorld.id}`,
-                                        source: world.id,
-                                        target: connWorld.id,
-                                        connType: conn.type,
-                                        defaultColor: hueToRGB(0.6666 - ((world.depth / (maxDepth - 1)) * 0.6666)),
-                                        connTypeCheck: conn.type ? 'replace' : undefined
-                                    };
-                                    links.push(link);
-                                    if (conn.type & ConnType.ONE_WAY)
-                                        oneWayLinks.push(link);
+                                let hidden = false;
+                                if (conn.type & ConnType.NO_ENTRY)
+                                    hidden = true;
+                                else if (world.depth >= connWorld.depth) {
+                                    const sameDepth = world.depth === connWorld.depth;
+                                    const reverseConn = connWorld.connections.filter(c => c.targetId === world.id);
+                                    hidden = (!sameDepth && !reverseConn.length) || (reverseConn.length && !(reverseConn[0].type & ConnType.NO_ENTRY) && (!sameDepth || (!(conn.type & ConnType.ONE_WAY) && world.id > connWorld.id)));
+                                    dagIgnoreIds.push(connWorld.id);
                                 }
+                                if (hidden)
+                                    dagIgnoreIds.push(connWorld.id);
+                                const link = {
+                                    key: `${world.id}_${connWorld.id}`,
+                                    source: world.id,
+                                    target: connWorld.id,
+                                    sourceScale: worldScales[world.id],
+                                    targetScale: worldScales[connWorld.id],
+                                    connType: conn.type,
+                                    typeParams: conn.typeParams,
+                                    icons: [],
+                                    hidden: hidden,
+                                    defaultColor: hueToRGB(0.6666 - ((world.depth / (maxDepth - 1)) * 0.6666)),
+                                    connTypeCheck: conn.type ? hidden ? 'after' : 'replace' : undefined
+                                };
+                                links.push(link);
+                                if (!hidden && conn.type & ConnType.ONE_WAY)
+                                    oneWayLinks.push(link);
                             }
                         }
-                        oneWayLinks.length && (lastOneWayLinkKey = oneWayLinks[oneWayLinks.length - 1].key);
                     }
+                    oneWayLinks.length && (lastOneWayLinkKey = oneWayLinks[oneWayLinks.length - 1].key);
+
+                    links.forEach(l => {
+                        const icons = l.icons;
+                        const connType = l.connType;
+                        if (connType & ConnType.INACCESSIBLE)
+                            icons.push(getConnTypeIcon(ConnType.INACCESSIBLE));
+                        else {
+                            if (connType & ConnType.ONE_WAY)
+                                icons.push(getConnTypeIcon(ConnType.ONE_WAY));
+                            else if (connType & ConnType.NO_ENTRY)
+                                icons.push(getConnTypeIcon(ConnType.NO_ENTRY));
+                            if (connType & ConnType.UNLOCK)
+                                icons.push(getConnTypeIcon(ConnType.UNLOCK));
+                            else if (connType & ConnType.LOCKED)
+                                icons.push(getConnTypeIcon(ConnType.LOCKED));
+                            else if (connType & ConnType.LOCKED_CONDITION)
+                                icons.push(getConnTypeIcon(ConnType.LOCKED_CONDITION, l.typeParams[ConnType.LOCKED_CONDITION]));
+                            if (connType & ConnType.DEAD_END)
+                                icons.push(getConnTypeIcon(ConnType.DEAD_END));
+                            else if (connType & ConnType.ISOLATED)
+                                icons.push(getConnTypeIcon(ConnType.ISOLATED));
+                            if (connType & ConnType.EFFECT)
+                                icons.push(getConnTypeIcon(ConnType.EFFECT, l.typeParams[ConnType.EFFECT]));
+                            if (connType & ConnType.CHANCE)
+                                icons.push(getConnTypeIcon(ConnType.CHANCE, l.typeParams[ConnType.CHANCE]));
+                        }
+                    });
 
                     const images = (paths ? worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1) : worldData)
                         .map(d => {
@@ -454,20 +615,18 @@
                             img.src = `./images/worlds/${d.filename}`;
                             return img;
                         });
-                    
-                    const worldScales = {};
-
-                    _.each(worldData, w => {
-                        worldScales[w.id] = 1 + (Math.round((w.size - minSize) / (maxSize - minSize) * 10 * (config.sizeDiff - 1)) / 10);
-                    });
 
                     const radius = 12;
                 
                     const gData = {
                         nodes: images.map(img => {
-                            const ret = { id: parseInt(img.id), img, isHover: false };
-                            ret.width = 16 * worldScales[ret.id];
-                            ret.height = 12 * worldScales[ret.id];
+                            const id = parseInt(img.id);
+                            const scale = worldScales[id];
+                            const ret = { id: id, img, isHover: false, scale: scale };
+                            ret.globalDepth = worldData[id].depth;
+                            ret.dagIgnore = dagIgnore[id];
+                            ret.width = 16 * scale;
+                            ret.height = 12 * scale;
                             return ret;
                         }),
                         links: links
@@ -480,31 +639,17 @@
                     const elem = document.getElementById('graph');
                 
                     graph = ForceGraph()(elem);
-                    if (config.displayMode < 3) {
+                    if (displayMode < 4) {
                         graph = graph
-                            .dagMode(config.displayMode === 0 ? 'td' : config.displayMode === 1 ? 'radialin' : 'radialout')
-                            .dagLevelDistance(24 + radius * (config.sizeDiff + 1))
-                            /*.dagLevelDistance(function (depth) {
-                                if (depthDistances)
-                                    return depthDistances[depth];
-                                 const dagDepths = graph.getDagDepths();
-                                 const nodeIds = Object.keys(dagDepths);
-                                 const getNodeDepth = (n) => dagDepths[n];
-                                 const nodeIdsByDepth = _.groupBy(nodeIds, getNodeDepth);
-                                 depthDistances = {};
-                                 const getNodeHeight = (n) => radius * Math.round(worldScales[n] * 10) / 10;
-                                 _.each(Object.keys(nodeIdsByDepth), d => depthDistances[d] = _.max(nodeIdsByDepth[d].map(getNodeHeight), getNodeHeight));
-                                 console.log(nodeIdsByDepth, depthDistances)
-                                 return depthDistances[depth];
-                            })*/;
+                            .dagMode(displayMode === 0 ? 'td' : displayMode === 1 ? 'lr' : displayMode === 2 ? 'radialin' : 'radialout')
+                            .dagLevelDistance(12);
                     }
                     graph
-                        .nodeCanvasObject(({ id, img, x, y, isHover }, ctx) => {
-                            const scale = worldScales[id];
-                            const width = 16 * scale, height = 12 * scale;
-                            ctx.drawImage(img, x - width / 2, y - height / 2, width, height);
+                        .nodeCanvasObject(({ id, img, x, y, scale, width, height, isHover }, ctx, globalScale) => {
+                            ctx.imageSmoothingEnabled = false;
+                            ctx.drawImage(img, 0, 0, img.width, img.height, x - width / 2, y - height / 2, width, height);
                             if (config.labelMode === 3 || (config.labelMode === 1 && isHover) || (config.labelMode === 2 && id === selectedWorldId)) {
-                                ctx.lineWidth = 0.25 * scale;
+                                ctx.lineWidth = 0.25;
                                 ctx.strokeStyle = "#000000";
                                 ctx.fillStyle = "#ded9df";
                                 ctx.font = (2 * scale) + "px 'MS Gothic'";
@@ -538,129 +683,47 @@
                             }
                             if (selectedWorldId == id) {
                                 ctx.strokeStyle = '#f00';
-                                ctx.lineWidth = 1;
+                                ctx.lineWidth = 1 / globalScale;
                                 ctx.strokeRect(x - width / 2, y - height / 2, width, height);
                             }
                             if (isHover && (isShift || isCtrl)) {
                                 ctx.fillText("🔗", x + (width / 2) - 3.5, y - (height / 2) + 2.5);
                             }
                         })
+                        .nodeVal(node => node.height)
+                        .nodesPerStack(config.stackSize)
                         .linkWidth(link => selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1)
-                        .linkColor(link => selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : link.defaultColor)
+                        .linkColor(link => link.hidden ? 'transparent' : selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : link.defaultColor)
                         .linkCanvasObjectMode('connTypeCheck')
                         .linkCanvasObject((link, ctx, globalScale) => {
-                            const sourceScale = worldScales[link.source.id || link.source];
-                            const targetScale = worldScales[link.target.id || link.target];
+                            const hidden = link.hidden;
+                            if (hidden && config.connMode === 0)
+                                return;
                             const connType = link.connType;
-                            ctx.beginPath();
-                            ctx.lineWidth = (selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1) / globalScale;
-                            ctx.strokeStyle = selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : link.defaultColor;
-                            const emojis = [];
-                            if (connType) {
-                                if (connType & ConnType.ONE_WAY)  {
+                            if (!hidden) {
+                                ctx.beginPath();
+                                ctx.lineWidth = (selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1) / globalScale;
+                                ctx.strokeStyle = selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : link.defaultColor;
+                                if (connType && connType & ConnType.ONE_WAY) {
                                     let currentDashOffset = dashOffset;
                                     if (link.key === lastOneWayLinkKey)
                                         dashOffset = dashOffset < 9.8 ? dashOffset + 0.2 : 0;
                                     ctx.setLineDash([5, 5]);
                                     ctx.lineDashOffset = currentDashOffset * -1;
-                                    emojis.push("➜");
-                                } else if (connType & ConnType.NO_ENTRY)
-                                    emojis.push("⛔");
-                                if (connType & ConnType.LOCKED)
-                                    emojis.push("🔒")
-                                else if (connType & ConnType.UNLOCK)
-                                    emojis.push("🔑");
-                                else if (connType & ConnType.LOCKED_CONDITION)
-                                    emojis.push("🔐");
-                                if (connType & ConnType.DEAD_END)
-                                    emojis.push("🚩");
-                                else if (connType & ConnType.ISOLATED)
-                                    emojis.push("↩️");
-                                if (connType & ConnType.EFFECT)
-                                    emojis.push("✨");
-                                if (connType & ConnType.CHANCE)
-                                    emojis.push("🍀");
-                                if (connType & ConnType.INACCESSIBLE)
-                                    emojis.push("🚫");
-                            }
-                            let sourceX = link.source.x;
-                            let sourceY = link.source.y;
-                            let targetX = link.target.x;
-                            let targetY = link.target.y;
-                            let tempSourceX = sourceX;
-                            let tempSourceY = sourceY;
-                            let tempTargetX = targetX;
-                            let tempTargetY = targetY;
-                            const isX = Math.abs(targetX - sourceX) >= Math.abs(targetY - sourceY);
-                            ctx.moveTo(sourceX, sourceY);
-                            ctx.lineTo(targetX, targetY);
-                            if (isX) {
-                                const addSourceCoord = (sourceX < targetX ? 8 : -8) * sourceScale;
-                                const addTargetCoord = (targetX < sourceX ? 8 : -8) * targetScale;
-                                sourceX += addSourceCoord;
-                                sourceY = sourceY + (tempTargetY - tempSourceY)/(tempTargetX - tempSourceX) * addSourceCoord;
-                                targetX += addTargetCoord;
-                                targetY = targetY + (tempSourceY - tempTargetY)/(tempSourceX - tempTargetX) * addTargetCoord;
-                            } else {
-                                const addSourceCoord = (sourceY < targetY ? 6 : -6) * sourceScale;
-                                const addTargetCoord = (targetY < sourceY ? 6 : -6) * targetScale;
-                                sourceY += addSourceCoord;
-                                sourceX = sourceX + (tempTargetX - tempSourceX)/(tempTargetY - tempSourceY) * addSourceCoord;
-                                targetY += addTargetCoord;
-                                targetX = targetX + (tempSourceX - tempTargetX)/(tempSourceY - tempTargetY) * addTargetCoord;
-                            }
-                            ctx.stroke();
-                            ctx.closePath();
-                            if (emojis.length) {
-                                ctx.imageSmoothingEnabled = false;
-                                ctx.fillStyle = "#fff";
-                                ctx.font = (globalScale < 24 ? 6 : 6 * (24 / globalScale)) + "px 'MS Gothic'";
-                                const scale = globalScale < 24 ? 1 : 24 / globalScale;
-                                const textBaseX = (sourceX * 1.5 + targetX * 0.5) / 2;
-                                const textBaseY = (sourceY * 1.5 + targetY * 0.5) / 2;
-                                for (let e = 0; e < emojis.length; e++) {
-                                    const emoji = emojis[e];
-                                    let textX, textY;
-                                    const addCoord = 8 * ((emojis.length * -0.5) + e + 0.5);
-                                    if (isX) {
-                                        textX = (textBaseX + addCoord) - 3.5 * scale;
-                                        textY = textBaseY + (targetY - sourceY)/(targetX - sourceX) * addCoord;
-                                    } else {
-                                        textY = textBaseY + addCoord;
-                                        textX = (textBaseX + (targetX - sourceX)/(targetY - sourceY) * addCoord) - 3.5 * scale;
-                                    }
-                                    if (e === 0 && connType & ConnType.ONE_WAY) {
-                                        ctx.beginPath();
-                                        ctx.setLineDash([0, 0]);
-                                        if (sourceX >= targetX) {
-                                            ctx.save();
-                                            ctx.scale(-1, 1);
-                                            textX += 7 * scale;
-                                            ctx.strokeStyle = "#000";
-                                            ctx.lineWidth = 0.2 * scale;
-                                            ctx.roundRect(-textX - 0.25 * scale, textY - 5.5 * scale, 6.5 * scale, 6.5 * scale, 0.5 * scale);
-                                            ctx.fill();
-                                            ctx.stroke();
-                                            ctx.fillStyle = "#000";
-                                            ctx.fillText(emoji, -textX, textY);
-                                            ctx.fillStyle = "#fff";
-                                            ctx.restore();
-                                        } else {
-                                            ctx.strokeStyle = "#000";
-                                            ctx.lineWidth = 0.2 * scale;
-                                            ctx.roundRect(textX - 0.25 * scale, textY - 5.5 * scale, 6.5 * scale, 6.5 * scale, 0.5 * scale);
-                                            ctx.fill();
-                                            ctx.stroke();
-                                            ctx.fillStyle = "#000";
-                                            ctx.fillText(emoji, textX, textY);
-                                            ctx.fillStyle = "#fff";
-                                        }
-                                        ctx.closePath();
-                                    } else
-                                        ctx.fillText(emoji, textX, textY);
                                 }
                             }
-                            
+                            const sourceX = link.source.x;
+                            const sourceY = link.source.y;
+                            const targetX = link.target.x;
+                            const targetY = link.target.y;
+                            if (!hidden) {
+                                ctx.moveTo(sourceX, sourceY);
+                                ctx.lineTo(targetX, targetY);
+                                ctx.stroke();
+                                ctx.closePath();
+                            }
+                            if (link.icons.length)
+                                drawLinkIcons(link, ctx, globalScale);
                         })
                         .onNodeHover((node, prevNode) => {
                             elem.style.cursor = node ? 'pointer' : null;
@@ -683,6 +746,9 @@
                                 graph.zoom(8, 1000);
                             }
                         })
+                        .iconLabel(icon => {
+                            return icon.text;   
+                        })
                         .cooldownTime(Infinity)
                         // Deactivate existing forces
                         // Add collision and bounding box forces
@@ -701,6 +767,177 @@
                         .graphData(gData);
                 }
 
+                function getConnTypeIcon(connType, typeParams) {
+                    const localizedConn = localizedConns[connType];
+                    const char = getConnTypeChar(connType);
+                    const name = localizedConn.name;
+                    let description = localizedConn.description;
+                    if (description) {
+                        switch (connType) {
+                            case ConnType.EFFECT:
+                                description = typeParams && ((config.lang === 'en' && typeParams.params) || (config.lang !== 'en' && typeParams.paramsJP))
+                                    ? description.replace('{0}', config.lang === 'en' ? typeParams.params : typeParams.paramsJP)
+                                    : null;
+                                break;
+                            case ConnType.CHANCE:
+                                description = typeParams && typeParams.params
+                                    ? description.replace('{0}', config.lang === 'en' ? typeParams.params : typeParams.params.replace('%', '％'))
+                                    : '';
+                                break;
+                            case ConnType.LOCKED_CONDITION:
+                                description = typeParams && ((config.lang === 'en' && typeParams.params) || (config.lang !== 'en' && typeParams.paramsJP))
+                                    ? description.replace('{0}', config.lang === 'en' ? typeParams.params : typeParams.paramsJP)
+                                    : '';
+                                break;
+                        }
+                    }
+                    return {
+                        char: char,
+                        text: name + (description ? (config.lang === 'en' ? ' - ' : '：') + description : '')
+                    };
+                }
+
+                function getConnTypeChar(connType) {
+                    let char;
+                    switch (connType) {
+                        case ConnType.ONE_WAY:
+                            char = "➜";
+                            break;
+                        case ConnType.NO_ENTRY:
+                            char = "⛔";
+                            break;
+                        case ConnType.UNLOCK:
+                            char = "🔑";
+                            break;
+                        case ConnType.LOCKED:
+                            char = "🔒";
+                            break;
+                        case ConnType.DEAD_END:
+                            char = "🚩";
+                            break;
+                        case ConnType.ISOLATED:
+                            char = "↩️";
+                            break;
+                        case ConnType.EFFECT:
+                            char = "✨";
+                            break;
+                        case ConnType.CHANCE:
+                            char = "🍀";
+                            break;
+                        case ConnType.LOCKED_CONDITION:
+                            char = "🔐";
+                            break;
+                        case ConnType.INACCESSIBLE:
+                            char = "🚫";
+                            break;
+                    }
+                    return char;
+                }
+
+                function drawLinkIcons(link, ctx, globalScale) {
+                    const sourceScale = link.sourceScale;
+                    const targetScale = link.targetScale;
+                    const connType = link.connType;
+                    const icons = link.icons;
+                    let sourceX = link.source.x;
+                    let sourceY = link.source.y;
+                    let targetX = link.target.x;
+                    let targetY = link.target.y;
+                    let tempSourceX = sourceX;
+                    let tempSourceY = sourceY;
+                    let tempTargetX = targetX;
+                    let tempTargetY = targetY;
+                    /*ctx.save();
+                    ctx.beginPath();
+                    var style = ctx.strokeStyle;
+                    var lwidth = ctx.lineWidth;
+                    ctx.strokeStyle = "rgba(255, 0, 0, 1)";
+                    ctx.lineWidth = 0.1;*/
+                    let gapSize;
+                    const scale = globalScale < 24 ? 1 : 24 / globalScale;
+                    const isX = Math.abs(targetX - sourceX) >= Math.abs(targetY - sourceY);
+                    if (isX) {
+                        const addSourceCoord = (sourceX < targetX ? 8 : -8) * sourceScale;
+                        const addTargetCoord = (targetX < sourceX ? 8 : -8) * targetScale;
+                        sourceX += addSourceCoord;
+                        sourceY = sourceY + (tempTargetY - tempSourceY)/(tempTargetX - tempSourceX) * addSourceCoord;
+                        targetX += addTargetCoord;
+                        targetY = targetY + (tempSourceY - tempTargetY)/(tempSourceX - tempTargetX) * addTargetCoord;
+                        gapSize = Math.max(Math.min(((sourceX < targetX ? targetX - sourceX : sourceX - targetX) - 16 * scale) / icons.length - 1, 8 * scale), 0);
+                    } else {
+                        const addSourceCoord = (sourceY < targetY ? 6 : -6) * sourceScale;
+                        const addTargetCoord = (targetY < sourceY ? 6 : -6) * targetScale;
+                        sourceY += addSourceCoord;
+                        sourceX = sourceX + (tempTargetX - tempSourceX)/(tempTargetY - tempSourceY) * addSourceCoord;
+                        targetY += addTargetCoord;
+                        targetX = targetX + (tempSourceX - tempTargetX)/(tempSourceY - tempTargetY) * addTargetCoord;
+                        gapSize = Math.max(Math.min(((sourceY < targetY ? targetY - sourceY : sourceY - targetY) - 16 * scale) / icons.length - 1, 8 * scale), 0);
+                    }
+                    /*ctx.arc(sourceX, sourceY, 0.3, 0, 2 * Math.PI)
+                    ctx.stroke();
+                    ctx.closePath();
+                    ctx.beginPath();
+                    ctx.strokeStyle = "rgba(0, 0, 255, 1)";
+                    ctx.arc(targetX, targetY, 0.3, 0, 2 * Math.PI)
+                    ctx.stroke();
+                    ctx.closePath();
+                    ctx.restore();
+                    ctx.strokeStyle = style;
+                    ctx.lineWidth = lwidth;*/
+                    ctx.fillStyle = "#fff";
+                    ctx.font = (scale * 6) + "px 'MS Gothic'";
+                    const textBaseX = (sourceX * 1.5 + targetX * 0.5) / 2;
+                    const textBaseY = (sourceY * 1.5 + targetY * 0.5) / 2;
+                    for (let e = 0; e < icons.length; e++) {
+                        const emoji = icons[e].char;
+                        let textX, textY;
+                        const addCoord = gapSize * ((icons.length * -0.5) + e + 0.5); //e * gapSize;
+                        if (isX) {
+                            textX = (textBaseX + addCoord) - 3.5 * scale;
+                            textY = textBaseY + (targetY - sourceY)/(targetX - sourceX) * addCoord;
+                        } else {
+                            textY = textBaseY + addCoord;
+                            textX = (textBaseX + (targetX - sourceX)/(targetY - sourceY) * addCoord) - 3.5 * scale;
+                        }
+                        /*if (isX) {
+                            textX = ((sourceX + 8 * scale) + addCoord) - 3.5 * scale;
+                            textY = sourceY + (targetY - sourceY)/(targetX - sourceX) * addCoord;
+                        } else {
+                            textY = ((sourceY + 8 * scale) + addCoord)
+                            textX = (sourceX + (targetX - sourceX)/(targetY - sourceY) * addCoord) - 3.5 * scale;;
+                        }*/
+                        if (e === 0 && connType & ConnType.ONE_WAY) {
+                            ctx.beginPath();
+                            ctx.setLineDash([0, 0]);
+                            if (sourceX >= targetX) {
+                                ctx.save();
+                                ctx.scale(-1, 1);
+                                textX += 7 * scale;
+                                ctx.strokeStyle = "#000";
+                                ctx.lineWidth = 0.2 * scale;
+                                ctx.roundRect(-textX - 0.25 * scale, textY - 5.5 * scale, 6.5 * scale, 6.5 * scale, 0.5 * scale);
+                                ctx.fill();
+                                ctx.stroke();
+                                ctx.fillStyle = "#000";
+                                ctx.fillText(emoji, -textX, textY);
+                                ctx.fillStyle = "#fff";
+                                ctx.restore();
+                            } else {
+                                ctx.strokeStyle = "#000";
+                                ctx.lineWidth = 0.2 * scale;
+                                ctx.roundRect(textX - 0.25 * scale, textY - 5.5 * scale, 6.5 * scale, 6.5 * scale, 0.5 * scale);
+                                ctx.fill();
+                                ctx.stroke();
+                                ctx.fillStyle = "#000";
+                                ctx.fillText(emoji, textX, textY);
+                                ctx.fillStyle = "#fff";
+                            }
+                            ctx.closePath();
+                        } else
+                            ctx.fillText(emoji, textX, textY);
+                    }
+                }
+
                 function reloadGraph() {
                     const startVal = $(".js--start-world").val();
                     const endVal = $(".js--end-world").val();
@@ -709,10 +946,9 @@
                     const matchPaths = startWorld && endWorld && startWorld != endWorld
                         ? findPath(startWorld.id, endWorld.id, ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED)
                         : null;
-                    $(".js--display-mode").prop("disabled", matchPaths || false);
                     if (graph)
                         graph._destructor();
-                    initGraph(matchPaths)
+                    initGraph(config.displayMode, matchPaths)
                 }
 
                 let mult = 1;
@@ -815,8 +1051,6 @@
 
                     console.log("Found", matchPaths.length, "matching path(s) in", Math.round((endTime - startTime) * 10) / 10, "ms");
 
-                    console.log(matchPaths)
-
                     if (!matchPaths.length) {
                         if (ignoreTypeFlags & ConnType.DEAD_END)
                             ignoreTypeFlags ^= (ConnType.DEAD_END | ConnType.ISOLATED);
@@ -894,6 +1128,33 @@
                     return ret;
                 }
 
+                function findConnectionAnomalies() {
+                    const connData = {};
+                    worldData.forEach(w => {
+                        connData[w.id] = [];
+                        worldData[w.id].connections.map(c => worldData[c.targetId]).forEach(c => {
+                            connData[w.id].push(c.id);
+                        });
+                    }); 
+                    Object.keys(connData).forEach(id => {
+                        let connIds = connData[id].slice(0);
+                        connIds.forEach(c => {
+                            const index = connData[c].indexOf(parseInt(id));
+                            if (index > -1) {
+                                connData[id].splice(connData[id].indexOf(c), 1);
+                                connData[c].splice(index, 1);
+                            }
+                        });
+                    });
+                    Object.keys(connData).forEach(id => {
+                        if (connData[id].length) {
+                            connData[id].forEach(c => {
+                                console.log(worldData[c].title, "is missing a connection to", worldData[id].title);
+                            });
+                        }
+                    });
+                }
+
                 function initLocalization() {
                     const isEn = config.lang === "en";
 
@@ -901,10 +1162,29 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "0.8.1");
+                            data.footer = data.footer.replace("{VERSION}", "1.0.0");
+                            localizedConns = data.conn;
                             defaultCallback(data);
                         }
                     });
+
+                    $.localize("conn", {
+                        language: config.lang,
+                        pathPrefix: "/lang",
+                        callback: function (data) {
+                            localizedConns = data;
+                        }
+                    });
+
+                    if (!effectsJP) {
+                        $.localize("effect", {
+                            language: 'ja',
+                            pathPrefix: "/lang",
+                            callback: function (data) {
+                                effectsJP = data;
+                            }
+                        });
+                    }
 
                     $(".js--world-input").each(function() {
                         const val = $(this).val();
@@ -950,14 +1230,6 @@
                     loadWorldData(false, function (data) {
                         worldData = data;
 
-                        for (let d in Object.keys(worldData))
-                            worldData[d].id = parseInt(d);
-
-                        const worldSizes = worldData.map(w => w.size); 
-
-                        minSize = _.min(worldSizes);
-                        maxSize = _.max(worldSizes);
-
                         $(".js--lang").change(function() {
                             config.lang = $(this).val();
                             updateConfig();
@@ -969,6 +1241,12 @@
                             config.displayMode = parseInt($(this).val());
                             updateConfig();
                             reloadGraph();
+                            $(".js--stack-size--container").css("display", config.displayMode < 2 ? "flex" : "none");
+                        });
+
+                        $(".js--conn-mode").change(function() {
+                            config.connMode = parseInt($(this).val());
+                            updateConfig();
                         });
 
                         $(".js--label-mode").change(function() {
@@ -982,6 +1260,12 @@
                             reloadGraph();
                         });
 
+                        $(".js--stack-size").change(function() {
+                            config.stackSize = parseInt($(this).val());
+                            updateConfig();
+                            reloadGraph();
+                        });
+
                         $(".js--reset").click(function() {
                             $(".js--world-input").val("");
                             reloadGraph();
@@ -990,6 +1274,23 @@
                         loadOrInitConfig();
 
                         initLocalization();
+
+                        for (let d in Object.keys(worldData)) {
+                            const world = worldData[d];
+                            world.id = parseInt(d);
+                            world.connections.forEach(conn => {
+                                const effectParams = conn.typeParams[ConnType.EFFECT];
+                                if (effectParams) {
+                                    effectParams.paramsJP = effectParams.params.split(',').map(e => effectsJP[e]).join('」か「');
+                                    effectParams.params = effectParams.params.replace(/,/g, ', ');
+                                }
+                            });
+                        }
+
+                        const worldSizes = worldData.map(w => w.size); 
+
+                        minSize = _.min(worldSizes);
+                        maxSize = _.max(worldSizes);
 
                         reloadGraph();
                     });

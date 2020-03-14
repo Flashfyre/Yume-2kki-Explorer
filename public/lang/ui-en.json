@@ -9,10 +9,18 @@
     "displayMode": {
         "name": "Display Mode:",
         "values": {
-            "hierarchical": "Hierarchical (One-Way)",
-            "radialIn": "Inward (One-Way)",
-            "radialOut": "Outward (One-Way)",
-            "free": "Free (Two-Way)"
+            "vertical": "Vertical",
+            "horizontal": "Horizontal",
+            "radialIn": "Inward",
+            "radialOut": "Outward",
+            "free": "Free"
+        }
+    },
+    "connMode": {
+        "name": "Connection Mode:",
+        "values": {
+            "oneWay": "One-Way",
+            "twoWay": "Two-Way"
         }
     },
     "labelMode": {
@@ -26,6 +34,9 @@
     },
     "sizeDiff": {
         "name": "Size Difference:"
+    },
+    "stackSize": {
+        "name": "Stack Threshold:"
     },
     "origin": {
         "name": "Origin:"

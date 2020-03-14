@@ -74,6 +74,16 @@ function initDb(pool) {
                     FOREIGN KEY (targetId) 
                     REFERENCES worlds (id)
             )`)).then(() => queryAsPromise(pool,
+            `CREATE TABLE IF NOT EXISTS conn_type_params (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                connId INT NOT NULL,
+                type SMALLINT NOT NULL,
+                params VARCHAR(1000) NOT NULL,
+                paramsJP VARCHAR(1000) NULL,
+                FOREIGN KEY (connId)
+                    REFERENCES conns (id)
+                    ON DELETE CASCADE
+            )`)).then(() => queryAsPromise(pool,
             `CREATE TABLE IF NOT EXISTS maps (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 worldId INT NOT NULL,
@@ -166,22 +176,36 @@ function getWorldData(pool, preserveIds) {
                     worldData[d].id = parseInt(d);
             }
                 
-            pool.query('SELECT sourceId, targetId, type FROM conns', (err, rows) => {
+            pool.query('SELECT id, sourceId, targetId, type FROM conns', (err, rows) => {
                 if (err) return reject(err);
+                const connsById = {};
                 for (let r in rows) {
                     const row = rows[r];
-                    worldDataById[row.sourceId].connections.push({
+                    const conn = {
                         targetId: worldDataById[row.targetId].id,
-                        type: row.type
-                    });
+                        type: row.type,
+                        typeParams: {}
+                    };
+                    connsById[row.id] = conn;
+                    worldDataById[row.sourceId].connections.push(conn);
                 }
-                pool.query('SELECT w.id, ROUND(SUM((m.width * m.height) / mwm.worldCount)) AS size FROM maps m JOIN worlds w ON w.id = m.worldId JOIN (SELECT mw.mapId, COUNT(DISTINCT mw.worldId) worldCount FROM maps mw GROUP BY mw.mapId) mwm ON mwm.mapId = m.mapId WHERE m.special = 0 IS NOT NULL GROUP BY w.id', (err, rows) => {
+                pool.query('SELECT connId, type, params, paramsJP FROM conn_type_params', (err, rows) => {
                     if (err) return reject(err);
                     for (let r in rows) {
                         const row = rows[r];
-                        worldDataById[row.id].size = row.size;
+                        connsById[row.connId].typeParams[row.type] = {
+                            params: row.params,
+                            paramsJP: row.paramsJP
+                        };
                     }
-                    resolve(worldData);
+                    pool.query('SELECT w.id, ROUND(SUM((m.width * m.height) / mwm.worldCount)) AS size FROM maps m JOIN worlds w ON w.id = m.worldId JOIN (SELECT mw.mapId, COUNT(DISTINCT mw.worldId) worldCount FROM maps mw GROUP BY mw.mapId) mwm ON mwm.mapId = m.mapId WHERE m.special = 0 IS NOT NULL GROUP BY w.id', (err, rows) => {
+                        if (err) return reject(err);
+                        for (let r in rows) {
+                            const row = rows[r];
+                            worldDataById[row.id].size = row.size;
+                        }
+                        resolve(worldData);
+                    });
                 });
             });
         });
@@ -256,9 +280,11 @@ function populateWorldData(pool, worldData, updatedWorldNames) {
             Promise.all(batches).then(() => {
                 const worldDataByName = _.keyBy(worldData, (w) => w.title);
                 updateConns(pool, worldDataByName).then(() => {
-                    updateWorldDepths(pool, worldData).then(() => {
-                        deleteRemovedWorlds(pool);
-                        resolve(worldData);
+                    updateConnTypeParams(pool, worldData).then(() => {
+                        updateWorldDepths(pool, worldData).then(() => {
+                            deleteRemovedWorlds(pool);
+                            resolve(worldData);
+                        }).catch(err => reject(err));
                     }).catch(err => reject(err));
                 }).catch(err => reject(err));
             }).catch(err => reject(err));
@@ -318,7 +344,7 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                         if (i++) {
                             worldsQuery += ", ";
                         }
-                        worldsQuery += `('${newWorld.title.replace("'", "''")}', '${newWorld.titleJP}', 0, '${newWorld.filename.replace("'", "''")}')`;
+                        worldsQuery += `('${newWorld.title.replace(/'/g, "''")}', '${newWorld.titleJP}', 0, '${newWorld.filename.replace(/'/g, "''")}')`;
                     }
                     pool.query(worldsQuery, (error, res) => {
                         if (error) return reject(err);
@@ -507,6 +533,91 @@ function deleteRemovedConns(pool, removedConnIds) {
     });
 }
 
+function updateConnTypeParams(pool, worldData) {
+    const newConnTypeParams = {};
+    worldData.map(w => w.connections).flat().forEach(c => {
+        newConnTypeParams[c.id] = c.typeParams;
+    });
+    const updatedConnTypeParams = [];
+    const removedConnTypeParamIds = [];
+    return new Promise((resolve, reject) => {
+        pool.query('SELECT id, connId, type, params, paramsJP FROM conn_type_params', (err, rows) => {
+            if (err) return reject(err);
+            for (let r in rows) {
+                const row = rows[r];
+                if (newConnTypeParams[row.connId][row.type]) {
+                    const newConnTypeParam = newConnTypeParams[row.connId][row.type];
+                    if (newConnTypeParam.params !== row.params || (newConnTypeParam.paramsJP && newConnTypeParam.paramsJP !== row.paramsJP)) {
+                        const updatedConnTypeParam = _.cloneDeep(newConnTypeParam);
+                        updatedConnTypeParam.connId = row.connId;
+                        updatedConnTypeParam.type = row.type;
+                        updatedConnTypeParams.push(updatedConnTypeParam);
+                    }
+                } else {
+                    removedConnTypeParamIds.push(row.id);
+                }
+                delete newConnTypeParams[row.connId][row.type];
+            }
+            const connTypeParamsCallback = function () {
+                if (updatedConnTypeParams.length) {
+                    const updateExistingConnTypeParams = [];
+                    for (let p in updatedConnTypeParams)
+                        updateExistingConnTypeParams.push(updateConnTypeParam(pool, updatedConnTypeParams[p]));
+                    Promise.all(updateExistingConnTypeParams).then(() => resolve()).catch(err => reject(err));
+                } else
+                    resolve();
+            };
+            let i = 0;
+            let connTypeParamsQuery = "INSERT INTO conn_type_params (connId, type, params, paramsJP) VALUES ";
+            for (let c in newConnTypeParams) {
+                const connConnTypeParams = newConnTypeParams[c];
+                for (let t in connConnTypeParams) {
+                    const connTypeParam = connConnTypeParams[t];
+                    const params = `'${connTypeParam.params.replace(/'/g, "''")}'`;
+                    const paramsJP = connTypeParam.paramsJP ? `'${connTypeParam.paramsJP.replace(/'/g, "''")}'` : "NULL";
+                    if (i++)
+                        connTypeParamsQuery += ", ";
+                    connTypeParamsQuery += `(${c}, ${t}, ${params}, ${paramsJP})`;
+                }
+            }
+            if (i > 0) {
+                pool.query(connTypeParamsQuery, (err, _) => {
+                    if (err) return reject(err);
+                    connTypeParamsCallback();
+                });
+            } else
+                connTypeParamsCallback();
+            if (removedConnTypeParamIds.length)
+                deleteRemovedConnTypeParams(pool, removedConnTypeParamIds);
+        });
+    });
+}
+
+function updateConnTypeParam(pool, connTypeParam) {
+    return new Promise((resolve, reject) => {
+        const params = `'${connTypeParam.params.replace(/'/g, "''")}'`;
+        const paramsJP = connTypeParam.paramsJP ? `'${connTypeParam.paramsJP.replace(/'/g, "''")}'` : "NULL";
+        pool.query(`UPDATE conn_type_params SET params=${params}, paramsJP=${paramsJP} WHERE connId=${connTypeParam.connId} AND type=${connTypeParam.type}`, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+}
+
+function deleteRemovedConnTypeParams(pool, removedConnTypeParamIds) {
+    let i = 0;
+    let deleteConnTypeParamsQuery = "DELETE FROM conn_type_params WHERE id IN (";
+    for (let c in removedConnTypeParamIds) {
+        if (i++)
+            deleteConnTypeParamsQuery += ", ";
+        deleteConnTypeParamsQuery += removedConnTypeParamIds[c];
+    }
+    deleteConnTypeParamsQuery += ")";
+    pool.query(deleteConnTypeParamsQuery, (err, _) => {
+        if (err) return console.error(err);
+    });
+}
+
 function updateWorldDepths(pool, worldData) {
     return new Promise((resolve, reject) => {
         const depthMap = {};
@@ -683,7 +794,7 @@ function processMap(pool, worldId, mapId) {
                 try {
                     json = JSON.parse(xmlJs.xml2json(data, {compact: true, spaces: 4}));
                 } catch (error) {
-                    console.log(error, worldId, mapId);
+                    console.error(error, worldId, mapId);
                     return resolve();
                 }
                 const map = json.LMU.Map;
@@ -761,6 +872,7 @@ function getConnections(html) {
             let connType = 0;
             const areaText = areas[a];
             const urlIndex = areaText.indexOf("/wiki/") + 6;
+            let params = {};
             if (areaText.indexOf(">NoReturn<") > -1)
                 connType |= ConnType.ONE_WAY;
             else if (areaText.indexOf(">NoEntry<") > -1)
@@ -769,19 +881,52 @@ function getConnections(html) {
                 connType |= ConnType.UNLOCK;
             else if (areaText.indexOf(">Locked<") > -1)
                 connType |= ConnType.LOCKED;
-                else if (areaText.indexOf(">LockedCondition<") > -1)
+            else if (areaText.indexOf(">LockedCondition<") > -1) {
                 connType |= ConnType.LOCKED_CONDITION;
+                if (areaText.indexOf("data-lock-params=\"") > -1) {
+                    const paramsIndex = areaText.indexOf("data-lock-params=\"") + 18;
+                    let paramsText = areaText.slice(paramsIndex, areaText.indexOf("\"", paramsIndex));
+                    if (paramsText === "&#123;&#123;&#123;3}}}")
+                        paramsText = "";
+                    else {
+                        paramsText = paramsText.replace(/^Requires (to )?/, "").replace(/.$/, "");
+                        paramsText = paramsText.substring(0, 1).toUpperCase() + paramsText.slice(1);
+                    }
+                    if (paramsText) {
+                        params[ConnType.LOCKED_CONDITION] = { params: paramsText };
+                        if (areaText.indexOf("data-lock-params-jp=\"") > -1) {
+                            const paramsJPIndex = areaText.indexOf("data-lock-params-jp=\"") + 21;
+                            params[ConnType.LOCKED_CONDITION].paramsJP = areaText.slice(paramsJPIndex, areaText.indexOf("\"", paramsJPIndex));
+                        }
+                    }
+                }
+            }
             if (areaText.indexOf(">DeadEnd<") > -1)
                 connType |= ConnType.DEAD_END;
             else if (areaText.indexOf(">Return<") > -1)
                 connType |= ConnType.ISOLATED;
-            if (areaText.indexOf("effect") > -1)
+            if (areaText.indexOf("effect") > -1) {
                 connType |= ConnType.EFFECT;
-            if (areaText.indexOf(">Chance<") > -1)
+                if (areaText.indexOf("data-effect-params=\"") > -1) {
+                    const paramsIndex = areaText.indexOf("data-effect-params=\"") + 20;
+                    params[ConnType.EFFECT] = { params: areaText.slice(paramsIndex, areaText.indexOf("\"", paramsIndex)).replace(/<br ?\/>|(?:,|;)(?: ?(?:and|or) )?| (?:and|or) /g, ",") };
+                }
+            }
+            if (areaText.indexOf(">Chance<") > -1) {
                 connType |= ConnType.CHANCE;
+                if (areaText.indexOf("data-chance-params=\"") > -1) {
+                    const paramsIndex = areaText.indexOf("data-chance-params=\"") + 20;
+                    let paramsText = areaText.slice(paramsIndex, areaText.indexOf("\"", paramsIndex));
+                    if (paramsText.indexOf("%") > -1)
+                        paramsText = paramsText.slice(0, paramsText.indexOf("%"));
+                    if (!isNaN(paramsText) && parseFloat(paramsText) > 0)
+                        params[ConnType.CHANCE] = { params: paramsText + "%" };
+                }
+            }
             ret.push({
                 location: areaText.slice(urlIndex, areaText.indexOf('"', urlIndex)).replace(/%26/g, "&").replace(/%27/g, "'").replace(/\_/g, " ").replace(/#.*/, ""),
-                type: connType
+                type: connType,
+                typeParams: params
             });
         }
     }

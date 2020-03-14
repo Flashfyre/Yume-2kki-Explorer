@@ -10852,7 +10852,7 @@
         if (currentDepth > node.depth) {
           // Don't unnecessarily revisit chunks of the graph
           node.depth = currentDepth;
-          traverse(node.out, [].concat(_toConsumableArray(nodeStack), [node]));
+          traverse(node.out.filter(n => node.data.dagIgnore.indexOf(n.data.id) === -1), [].concat(_toConsumableArray(nodeStack), [node]));
         }
       }
     }
@@ -10890,6 +10890,10 @@
       },
       nodeVal: {
         "default": 'val',
+        triggerUpdate: false
+      },
+      nodesPerStack: {
+        "default": 20,
         triggerUpdate: false
       },
       nodeColor: {
@@ -10976,6 +10980,10 @@
         triggerUpdate: false
       },
       linkDirectionalParticleColor: {
+        triggerUpdate: false
+      },
+      iconColor: {
+        "default": 'color',
         triggerUpdate: false
       },
       globalScale: {
@@ -11090,12 +11098,9 @@
 
         function paintNodes() {
           var getVisibility = accessorFn(state.nodeVisibility);
-          var getVal = accessorFn(state.nodeVal);
           var getColor = accessorFn(state.nodeColor);
           var getNodeCanvasObjectMode = accessorFn(state.nodeCanvasObjectMode);
-          var ctx = state.ctx; // Draw wider nodes by 1px on shadow canvas for more precise hovering (due to boundary anti-aliasing)
-
-          var padAmount = state.isShadow / state.globalScale;
+          var ctx = state.ctx;
           var visibleNodes = state.graphData.nodes.filter(getVisibility);
           ctx.save();
           visibleNodes.forEach(function (node) {
@@ -11112,6 +11117,7 @@
             } // Draw wider nodes by 1px on shadow canvas for more precise hovering (due to boundary anti-aliasing)
 
             //var r = Math.sqrt(Math.max(0, getVal(node) || 1)) * state.nodeRelSize + padAmount;
+           
             var w = accessorFn(state.nodeWidth)(node);
             var h = accessorFn(state.nodeHeight)(node);
 
@@ -11160,7 +11166,6 @@
             beforeCustomLinks = beforeCustomLinks.concat(replaceCustomLinks);
           } // Custom link before paints
 
-
           ctx.save();
           beforeCustomLinks.forEach(function (link) {
             return state.linkCanvasObject(link, ctx, state.globalScale);
@@ -11203,13 +11208,94 @@
               ctx.stroke();
             });
           });
-          ctx.restore(); // Custom link after paints
+          ctx.restore();
 
+          // Custom link after paints
           ctx.save();
           afterCustomLinks.forEach(function (link) {
             return state.linkCanvasObject(link, ctx, state.globalScale);
           });
           ctx.restore(); //
+
+          if (state.isShadow) {
+            const getIconColor = accessorFn(state.iconColor);
+            ctx.save();
+            visibleLinks.forEach(function (link) {
+              if (!link.hidden && link.icons.length) {
+                const icons = link.icons;
+                const sourceScale = link.sourceScale;
+                const targetScale = link.targetScale;
+                const scale = state.globalScale < 24 ? 1 : 24 / state.globalScale;
+                let sourceX = link.source.x;
+                let sourceY = link.source.y;
+                let targetX = link.target.x;
+                let targetY = link.target.y;
+                let tempSourceX = sourceX;
+                let tempSourceY = sourceY;
+                let tempTargetX = targetX;
+                let tempTargetY = targetY;
+                let gapSize;
+                const isX = Math.abs(targetX - sourceX) >= Math.abs(targetY - sourceY);
+                if (isX) {
+                  const addSourceCoord = (sourceX < targetX ? 8 : -8) * sourceScale;
+                  const addTargetCoord = (targetX < sourceX ? 8 : -8) * targetScale;
+                  sourceX += addSourceCoord;
+                  sourceY = sourceY + (tempTargetY - tempSourceY)/(tempTargetX - tempSourceX) * addSourceCoord;
+                  targetX += addTargetCoord;
+                  targetY = targetY + (tempSourceY - tempTargetY)/(tempSourceX - tempTargetX) * addTargetCoord;
+                  gapSize = Math.max(Math.min(((sourceX < targetX ? targetX - sourceX : sourceX - targetX) - 16 * scale) / icons.length - 1, 8 * scale), 0);
+                } else {
+                  const addSourceCoord = (sourceY < targetY ? 6 : -6) * sourceScale;
+                  const addTargetCoord = (targetY < sourceY ? 6 : -6) * targetScale;
+                  sourceY += addSourceCoord;
+                  sourceX = sourceX + (tempTargetX - tempSourceX)/(tempTargetY - tempSourceY) * addSourceCoord;
+                  targetY += addTargetCoord;
+                  targetX = targetX + (tempSourceX - tempTargetX)/(tempSourceY - tempTargetY) * addTargetCoord;
+                  gapSize = Math.max(Math.min(((sourceY < targetY ? targetY - sourceY : sourceY - targetY) - 16 * scale) / icons.length - 1, 8 * scale), 0);
+                }
+                const iconBaseX = (sourceX * 1.5 + targetX * 0.5) / 2;
+                const iconBaseY = (sourceY * 1.5 + targetY * 0.5) / 2;
+
+                for (let e = 0; e < icons.length; e++) {
+                  const icon = icons[e];
+                  const iconColor = getIconColor(icon);//"rgba(255, 0, 0, 0.5)";
+                  ctx.fillStyle = iconColor;
+                  let iconX, iconY;
+                  const addCoord = gapSize * ((icons.length * -0.5) + e + 0.5);
+                  if (isX) {
+                      iconX = iconBaseX + addCoord;
+                      iconY = iconBaseY + (targetY - sourceY)/(targetX - sourceX) * addCoord;
+                  } else {
+                      iconY = iconBaseY + addCoord;
+                      iconX = iconBaseX + (targetX - sourceX)/(targetY - sourceY) * addCoord;
+                  }
+                  if (e === 0 && link.connType & 1) {
+                      iconX -= 3.5 * scale;
+                      if (sourceX >= targetX) {
+                          ctx.save();
+                          ctx.scale(-1, 1);
+                          iconX += 7 * scale;
+                          ctx.beginPath();
+                          ctx.roundRect(-iconX - 0.25 * scale, iconY - 5.5 * scale, 6.5 * scale, 6.5 * scale, 0.5 * scale);
+                          ctx.closePath();
+                          ctx.fill();
+                          ctx.restore();
+                      } else {
+                          ctx.beginPath();
+                          ctx.roundRect(iconX - 0.25 * scale, iconY - 5.5 * scale, 6.5 * scale, 6.5 * scale, 0.5 * scale);
+                          ctx.closePath();
+                          ctx.fill();
+                      }
+                  } else {
+                    iconX -= 2.5 * scale;
+                    ctx.emoji(iconX, iconY, scale, icon.char);
+                    ctx.fill();
+                  }
+                }
+              }
+            });
+            ctx.restore();
+          }
 
           function calcLinkControlPoints(link) {
             var curvature = getCurvature(link);
@@ -11431,20 +11517,56 @@
         }).links(state.graphData.links);
       } // setup dag force constraints
 
-
+      var getVal = accessorFn(state.nodeVal);
+      var nodesPerStack = state.nodesPerStack;
       var nodeDepths = state.dagMode && getDagDepths(state.graphData, function (node) {
         return node[state.nodeId];
       });
+      var depthCounts;
+      var depthStackCounts;
+      var depthYOffsets;
+      if (nodeDepths) {
+        depthCounts = {};
+        depthStackCounts = {};
+        depthYOffsets = {};
+        Object.values(nodeDepths).forEach(d => {
+          if (!depthCounts[d])
+            depthCounts[d] = 0;
+          depthCounts[d]++;
+        });
+        Object.keys(depthCounts).forEach(d => {
+          var depthCount = depthCounts[d];
+          if (depthCount < nodesPerStack)
+            depthStackCounts[d] = 1;
+          else {
+            var count = Math.ceil(depthCount / nodesPerStack);
+            depthStackCounts[d] = count;
+            depthYOffsets[d] = (count - 1) / -2;
+          }
+        });
+      }
       var maxDepth = Math.max.apply(Math, _toConsumableArray(Object.values(nodeDepths || [])));
       var dagLevelDistance = state.dagLevelDistance || state.graphData.nodes.length / (maxDepth || 1) * DAG_LEVEL_NODE_RATIO * (['radialin', 'radialout'].indexOf(state.dagMode) !== -1 ? 0.7 : 1); // Fix nodes to x,y for dag mode
 
       if (state.dagMode) {
+        var depthDistances = {};
+        var depthMaxNodeVals = {};
+        var dagOffset;
         var getFFn = function getFFn(fix, invert) {
           return function (node) {
-            return !fix ? undefined : (nodeDepths[node[state.nodeId]] - maxDepth / 2) * dagLevelDistance * (invert ? -1 : 1);
+            var nodeDepth = nodeDepths[node[state.nodeId]];
+            var depthStackCount = depthStackCounts[nodeDepth];
+            var yOffset = depthStackCount === 1 ? 0 : (depthYOffsets[nodeDepth] * depthMaxNodeVals[nodeDepth]);
+            if (fix && depthStackCount > 1)
+              depthYOffsets[nodeDepth] += depthYOffsets[nodeDepth] < (depthStackCounts[nodeDepth] / 2) - 1 ? 1 : (depthStackCount * -1) + 1;
+            return !fix ? undefined : (depthDistances[nodeDepth] + dagOffset) * (invert ? -1 : 1) + yOffset;
           };
         };
-
+        Object.keys(depthCounts).forEach(d => {
+          depthMaxNodeVals[d] = _.max(state.graphData.nodes.filter(node => nodeDepths[node[state.nodeId]] == d).map(node => getVal(node)));
+          depthDistances[d] = (d > 0 ? depthDistances[d - 1] : 0) + depthMaxNodeVals[d] * (depthStackCounts[d] + 0.5) + dagLevelDistance;
+        });
+        dagOffset = depthDistances[maxDepth] / -2;
         var fxFn = getFFn(['lr', 'rl'].indexOf(state.dagMode) !== -1, state.dagMode === 'rl');
         var fyFn = getFFn(['td', 'bu'].indexOf(state.dagMode) !== -1, state.dagMode === 'bu');
         state.graphData.nodes.forEach(function (node) {
@@ -11514,7 +11636,7 @@
 
   var bindFG = linkKapsule('forceGraph', CanvasForceGraph);
   var bindBoth = linkKapsule(['forceGraph', 'shadowGraph'], CanvasForceGraph);
-  var linkedProps = Object.assign.apply(Object, _toConsumableArray(['nodeColor', 'nodeAutoColorBy', 'nodeCanvasObject', 'nodeCanvasObjectMode', 'linkColor', 'linkAutoColorBy', 'linkWidth', 'linkCanvasObject', 'linkCanvasObjectMode', 'linkDirectionalArrowLength', 'linkDirectionalArrowColor', 'linkDirectionalArrowRelPos', 'linkDirectionalParticles', 'linkDirectionalParticleSpeed', 'linkDirectionalParticleWidth', 'linkDirectionalParticleColor', 'dagMode', 'dagLevelDistance', 'd3AlphaDecay', 'd3VelocityDecay', 'warmupTicks', 'cooldownTicks', 'cooldownTime', 'onEngineTick', 'onEngineStop'].map(function (p) {
+  var linkedProps = Object.assign.apply(Object, _toConsumableArray(['nodeColor', 'nodeAutoColorBy', 'nodeCanvasObject', 'nodeCanvasObjectMode', 'linkColor', 'linkAutoColorBy', 'linkWidth', 'linkCanvasObject', 'linkCanvasObjectMode', 'linkDirectionalArrowLength', 'linkDirectionalArrowColor', 'linkDirectionalArrowRelPos', 'linkDirectionalParticles', 'linkDirectionalParticleSpeed', 'linkDirectionalParticleWidth', 'linkDirectionalParticleColor', 'nodesPerStack', 'dagMode', 'dagLevelDistance', 'd3AlphaDecay', 'd3VelocityDecay', 'warmupTicks', 'cooldownTicks', 'cooldownTime', 'onEngineTick', 'onEngineStop'].map(function (p) {
     return _defineProperty({}, p, bindFG.linkProp(p));
   })).concat(_toConsumableArray(['nodeRelSize', 'nodeId', 'nodeVal', 'nodeVisibility', 'linkSource', 'linkTarget', 'linkVisibility', 'linkCurvature'].map(function (p) {
     return _defineProperty({}, p, bindBoth.linkProp(p));
@@ -11602,6 +11724,9 @@
           }, {
             type: 'Link',
             objs: d.links
+          },
+          { type: 'Icon',
+            objs: d.links.map(l => l.icons).flat()
           }].forEach(hexIndex);
           state.forceGraph.graphData(d);
           state.shadowGraph.graphData(d);
@@ -11635,6 +11760,10 @@
         triggerUpdate: false
       },
       linkLabel: {
+        "default": 'name',
+        triggerUpdate: false
+      },
+      iconLabel: {
         "default": 'name',
         triggerUpdate: false
       },
@@ -11685,6 +11814,17 @@
       },
       onLinkHover: {
         "default": function _default() {},
+        triggerUpdate: false
+      },
+      onIconHover: {
+        "default": function _default() {},
+        triggerUpdate: false
+      },
+      onIconClick: {
+        "default": function _default() {},
+        triggerUpdate: false
+      },
+      onIconRightClick: {
         triggerUpdate: false
       },
       onBackgroundClick: {
@@ -11820,7 +11960,7 @@
       return {
         lastSetZoom: 1,
         forceGraph: new CanvasForceGraph(),
-        shadowGraph: new CanvasForceGraph().cooldownTicks(0).nodeColor('__indexColor').linkColor('__indexColor').isShadow(true),
+        shadowGraph: new CanvasForceGraph().cooldownTicks(0).nodeColor('__indexColor').linkColor('__indexColor').iconColor('__indexColor').isShadow(true),
         colorTracker: new _default() // indexed objects for rgb lookup
 
       };

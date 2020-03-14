@@ -108,4 +108,4 @@ dist
 config/db.config.js
 
 # Converted LMU files
-maps/out/
+maps/out/*.emu
