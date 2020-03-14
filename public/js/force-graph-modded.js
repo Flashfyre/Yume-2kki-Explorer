@@ -11547,8 +11547,9 @@
       }
       var maxDepth = Math.max.apply(Math, _toConsumableArray(Object.values(nodeDepths || [])));
       var dagLevelDistance = state.dagLevelDistance || state.graphData.nodes.length / (maxDepth || 1) * DAG_LEVEL_NODE_RATIO * (['radialin', 'radialout'].indexOf(state.dagMode) !== -1 ? 0.7 : 1); // Fix nodes to x,y for dag mode
+      var isDagRadial = state.dagMode && ['radialin', 'radialout'].indexOf(state.dagMode) !== -1;
 
-      if (state.dagMode) {
+      if (state.dagMode && !isDagRadial) {
         var depthDistances = {};
         var depthMaxNodeVals = {};
         var dagOffset;
@@ -11574,9 +11575,7 @@
           node.fy = fyFn(node);
         });
       } // Use radial force for radial dags
-
-
-      state.forceLayout.force('dagRadial', ['radialin', 'radialout'].indexOf(state.dagMode) !== -1 ? d3ForceRadial(function (node) {
+      state.forceLayout.force('dagRadial', isDagRadial ? d3ForceRadial(function (node) {
         var nodeDepth = nodeDepths[node[state.nodeId]];
         return (state.dagMode === 'radialin' ? maxDepth - nodeDepth : nodeDepth) * dagLevelDistance;
       }).strength(1) : null);

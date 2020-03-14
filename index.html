@@ -642,14 +642,14 @@
                     if (displayMode < 4) {
                         graph = graph
                             .dagMode(displayMode === 0 ? 'td' : displayMode === 1 ? 'lr' : displayMode === 2 ? 'radialin' : 'radialout')
-                            .dagLevelDistance(12);
+                            .dagLevelDistance(displayMode < 2 ? 12 : 24 + radius * (config.sizeDiff + 1));
                     }
                     graph
                         .nodeCanvasObject(({ id, img, x, y, scale, width, height, isHover }, ctx, globalScale) => {
                             ctx.imageSmoothingEnabled = false;
                             ctx.drawImage(img, 0, 0, img.width, img.height, x - width / 2, y - height / 2, width, height);
                             if (config.labelMode === 3 || (config.labelMode === 1 && isHover) || (config.labelMode === 2 && id === selectedWorldId)) {
-                                ctx.lineWidth = 0.25;
+                                ctx.lineWidth = 0.25 * scale;
                                 ctx.strokeStyle = "#000000";
                                 ctx.fillStyle = "#ded9df";
                                 ctx.font = (2 * scale) + "px 'MS Gothic'";
@@ -691,6 +691,7 @@
                             }
                         })
                         .nodeVal(node => node.height)
+                        .nodeLabel(node => node.img.title)
                         .nodesPerStack(config.stackSize)
                         .linkWidth(link => selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1)
                         .linkColor(link => link.hidden ? 'transparent' : selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : link.defaultColor)
@@ -1162,7 +1163,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "1.0.0");
+                            data.footer = data.footer.replace("{VERSION}", "1.0.1");
                             localizedConns = data.conn;
                             defaultCallback(data);
                         }
