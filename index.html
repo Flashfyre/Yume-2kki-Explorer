@@ -1084,6 +1084,7 @@
                     const conns = world.connections;
                     for (let c in conns) {
                         let connType = conns[c].type;
+                        const typeParams = conns[c].typeParams;
                         if (isSource && connType & ignoreTypeFlags)
                             continue;
                         const connWorld = worldData[conns[c].targetId];
@@ -1092,7 +1093,7 @@
                             // If checking from target
                             if (isSource) {
                                 path[path.length - 1].connType = connType;
-                                path[path.length - 1].typeParams = conns[c].typeParams;
+                                path[path.length - 1].typeParams = typeParams;
                                 connType = null;
                             } else {
                                 const reverseConn = connWorld.connections.filter(c => c.targetId === world.id);
@@ -1120,7 +1121,8 @@
                             const connPath = path.slice(0);
                             connPath.push({
                                 id: id,
-                                connType: connType
+                                connType: connType,
+                                typeParams: typeParams
                             });
                             ret[id] = connPath;
                             checkedNodes.push(id);
