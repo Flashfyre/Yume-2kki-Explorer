@@ -6,6 +6,50 @@
             "japanese": "Japanese"
         }
     },
+    "uiTheme": {
+        "name": "UI Theme:",
+        "values": {
+            "Default_Custom": "Default (Custom)",
+            "Default": "Default",
+            "Default_2": "Default 2",
+            "Default_3": "Default 3",
+            "Default_4": "Default 4",
+            "Default_5": "Default 5",
+            "Developer_Room": "Developer Room",
+            "Glitch_Ending": "Bleak Future",
+            "Glitch_Ending_2": "Bleak Future 2",
+            "Hidden_Shoal": "Hidden Shoal",
+            "Forest_Pier": "Forest Pier",
+            "Planetarium": "Planetarium",
+            "Industrial_Maze": "Factory Garden",
+            "Rose_Church": "Rose Church",
+            "Bioluminescent_Cavern": "Bioluminescent Cavern",
+            "Depths": "Depths",
+            "Depths_2": "Depths 2",
+            "Guts_World": "Guts World",
+            "Maple_Shrine": "Maple Shrine",
+            "Pencil_World": "Pencil World",
+            "Chocolate_World": "Chocolate World",
+            "Blue_Cactus_Islands": "Blue Cactus Islands",
+            "Stone_Towers": "Stone Towers",
+            "Constellation_World": "Star Building",
+            "Blob_Desert": "Blob Desert",
+            "Matoran_Keyboard": "Matoran Keyboard",
+            "Saturated_Eyeball_Zone": "Saturated Eyeball Zone"
+        }
+    },
+    "fontStyle": {
+        "name": "Font Style:",
+        "values": {
+            "style1": "Style 1",
+            "style2": "Style 2",
+            "style3": "Style 3",
+            "style4": "Style 4",
+            "style5": "Style 5",
+            "style6": "Style 6",
+            "style7": "Style 7"
+        }
+    },
     "displayMode": {
         "name": "Display Mode:",
         "values": {

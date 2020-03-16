@@ -10,8 +10,17 @@
             body {
                 font-family: 'MS Gothic';
                 margin: 0;
-                background: #000000 url(https://img2.wikia.nocookie.net/__cb20140715140243/yume2kki/images/5/50/Wiki-background) top left repeat;
+                background: url(https://img2.wikia.nocookie.net/__cb20140715140243/yume2kki/images/5/50/Wiki-background) top left repeat;
+                background-blend-mode: screen;
                 overflow: hidden;
+            }
+
+            .noselect {
+                -webkit-touch-callout: none;
+                -webkit-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
             }
 
             .content {
@@ -23,6 +32,7 @@
                 position: absolute;
                 width: 100%;
                 z-index: 10;
+                pointer-events: none;
             }
 
             .controls {
@@ -32,24 +42,51 @@
                 justify-content: flex-end;
                 text-align: right;
                 margin: 10px;
-                margin-top: 20px;
+                margin-top: 10px;
                 width: calc(100% - 40px);
                 min-height: 64px;
-                background: url(/images/ui/containerbg.png);
                 border: 10px solid transparent;
-                border-image: url(/images/ui/border.png);
-                border-image-slice: 12;
-                border-image-repeat: repeat;
+            }
+
+            .controls-top {
+                z-index: 10;
+            }
+
+            .controls-bottom {
                 pointer-events: none;
             }
 
-            .controls.visible {
+            .controls-bottom.visible {
                 pointer-events: all !important;
+            }
+
+            .controls--container--tab {
+                position: absolute;
+                width: 128px;
+                z-index: 5;
+                top: calc(100% - 36px);
+            }
+
+            .controls--container--tab__button {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                width: 100%;
+                height: 16px;
+                padding: 6px 0 24px 0;
+                font-family: 'MS Gothic';
+                font-size: 18px;
+                border: none;
+                border-top-left-radius: 8px;
+                border-top-right-radius: 8px;
+                background-image: none;
+                background-color: rgba(255, 255, 255, 0.25);
             }
 
             .control {
                 display: flex;
                 align-items: center;
+                padding: 8px;
             }
 
             .graph {
@@ -60,30 +97,28 @@
             .footer {
                 position: absolute;
                 padding: 8px;
+                padding-left: 4px;
                 top: calc(100% - 36px);
                 text-align: right;
                 height: 26px;
                 width: calc(100% - 16px);
                 font-family: 'MS Gothic';
                 font-size: 18px;
-                color: #ded9df;
             }
 
             label {
                 font-size: 18px;
-                color: #ded9df;
                 margin-left: 16px;
+                font-weight: bold;
             }
 
             button {
                 margin: 8px;
                 padding: 4px;
+                cursor: pointer;
                 font-family: 'MS Gothic';
                 font-size: 18px;
-                color: #ded9df;
                 border: 6px solid transparent;
-                border-image: url(/images/ui/border2.png) 4 round;
-                background-image: url(/images/ui/containerbg.png);
             }
 
             input[type='text'], select, .slider {
@@ -91,10 +126,7 @@
                 padding: 4px;
                 font-family: 'MS Gothic';
                 font-size: 18px;
-                color: #ded9df;
                 border: 6px solid transparent;
-                border-image: url(/images/ui/border2.png) 4 round;
-                background-color: #403842;
             }
 
             .slider {
@@ -112,8 +144,6 @@
                 width: 24px;
                 height: 38px;
                 border: 6px solid transparent;
-                border-image: url(/images/ui/border2.png) 4 round;
-                background-color: #403842;
                 cursor: pointer;
             }
 
@@ -123,16 +153,11 @@
                 width: 24px;
                 height: 38px;
                 border: 6px solid transparent;
-                border-image: url(/images/ui/border2.png) 4 round;
-                background-color: #403842;
                 cursor: pointer;
             }
 
             .autocomplete-suggestions {
-                color: #ded9df;
                 border: 6px solid transparent;
-                border-image: url(/images/ui/border2.png) 4 round;
-                background: #403842;
                 overflow: auto;
             }
 
@@ -142,12 +167,8 @@
                 overflow: hidden;
             }
 
-            .autocomplete-selected {
-                background: #817084;
-            }
             .autocomplete-suggestions strong {
                 font-weight: normal;
-                color: #ffea56;
             }
 
             .autocomplete-group {
@@ -157,6 +178,70 @@
             .autocomplete-group strong {
                 display: block;
                 border-bottom: 1px solid #000;
+            }
+        </style>
+        <style class="js--theme-styles">
+            body {
+                background-color: #000000; /*base*/
+            }
+
+            .controls {
+                background: url(/images/ui/Default_Custom/containerbg.png);
+                border-image: url(/images/ui/Default_Custom/border.png);
+                border-image-slice: 12;
+                border-image-repeat: repeat;
+            }
+
+            .controls--container--tab__button {
+                color: #ded9df; /*base*/
+            }
+
+            .footer {
+                color: #ded9df; /*base*/
+            }
+
+            label {
+                background-image: url(/images/ui/Default_Custom/font1.png);
+                -webkit-background-clip: text;
+	            -webkit-text-fill-color: transparent;
+                background-clip: text;
+                background-size: 18px;
+            }
+
+            button {
+                color: #ded9df; /*base*/
+                border-image: url(/images/ui/Default_Custom/border.png) 8 round;
+                background-image: url(/images/ui/Default_Custom/containerbg.png);
+            }
+
+            input[type='text'], select, .slider {
+                color: #ded9df; /*base*/
+                border-image: url(/images/ui/Default_Custom/border.png) 8 round;
+                background-color: #403842; /*base*/
+            }
+
+            .slider::-webkit-slider-thumb {
+                border-image: url(/images/ui/Default_Custom/border.png) 8 round;
+                background-color: #403842; /*base*/
+            }
+
+            .slider::-moz-range-thumb {
+                border-image: url(/images/ui/Default_Custom/border.png) 8 round;
+                background-color: #403842; /*base*/
+            }
+
+            .autocomplete-suggestions {
+                color: #ded9df; /*base*/
+                border-image: url(/images/ui/Default_Custom/border.png) 8 round;
+                background: #403842; /*base*/
+            }
+
+            .autocomplete-selected {
+                background-color: #817084; /*alt*/
+            }
+            
+            .autocomplete-suggestions strong {
+                color: #ffea56; /*alt*/
             }
         </style>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css" />
@@ -171,17 +256,47 @@
     </head>
     <body>
         <div class="content">
-            <div class="controls--container">
-                <div class="controls" style="opacity: 0;">
+            <div class="controls controls-top">
+                <div class="control">
+                    <label data-localize="origin.name" class="noselect">Origin:</label>
+                    <input name="startWorld" type="text" class="js--world-input js--start-world" />
+                    <label data-localize="destination.name" class="noselect">Destination:</label>
+                    <input name="endWorld" type="text" class="js--world-input js--end-world" />
+                    <button data-localize="reset" class="js--reset noselect">Reset</button>
+                </div>
+            </div>
+            <div id="graph" class="graph"></div>
+            <div class="controls--container--tab">
+                <button class="controls--container--tab__button noselect">▲</button>
+            </div>
+            <div class="controls--container controls-bottom--container">
+                <div class="controls controls-bottom" style="opacity: 0;">
                     <div class="control">
-                        <label data-localize="lang.name">Language:</label>
+                        <label data-localize="lang.name" class="noselect">Language:</label>
                         <select name="language" class="js--lang">
                             <option data-localize="lang.values.english" value="en" selected>English</option>
                             <option data-localize="lang.values.japanese" value="ja">Japanese</option>
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="displayMode.name">Display Mode:</label>
+                        <label data-localize="uiTheme.name" class="noselect">UI Theme:</label>
+                        <select name="uiTheme" class="js--ui-theme">
+                        </select>
+                    </div>
+                    <div class="control">
+                        <label data-localize="fontStyle.name" class="noselect">Font Style:</label>
+                        <select name="fontStyle" class="js--font-style">
+                            <option data-localize="fontStyle.values.style1" value="0">Style 1</option>
+                            <option data-localize="fontStyle.values.style2" value="1">Style 2</option>
+                            <option data-localize="fontStyle.values.style3" value="2">Style 3</option>
+                            <option data-localize="fontStyle.values.style4" value="3">Style 4</option>
+                            <option data-localize="fontStyle.values.style5" value="4">Style 5</option>
+                            <option data-localize="fontStyle.values.style6" value="5">Style 6</option>
+                            <option data-localize="fontStyle.values.style7" value="6">Style 7</option>
+                        </select>
+                    </div>
+                    <div class="control">
+                        <label data-localize="displayMode.name" class="noselect">Display Mode:</label>
                         <select name="displayMode" class="js--display-mode">
                             <option data-localize="displayMode.values.vertical" value="0" selected>Vertical</option>
                             <option data-localize="displayMode.values.horizontal" value="1">Horizontal</option>
@@ -191,14 +306,14 @@
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="connMode.name">Connection Mode:</label>
+                        <label data-localize="connMode.name" class="noselect">Connection Mode:</label>
                         <select name="connMode" class="js--conn-mode">
                             <option data-localize="connMode.values.oneWay" value="0" selected>One-Way)/option>
                             <option data-localize="connMode.values.twoWay" value="1">Two-Way</option>
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="labelMode.name">Label Display:</label>
+                        <label data-localize="labelMode.name" class="noselect">Label Display:</label>
                         <select name="labelMode" class="js--label-mode">
                             <option data-localize="labelMode.values.never" value="0">Never</option>
                             <option data-localize="labelMode.values.hover" value="1" selected>On Hover</option>
@@ -207,27 +322,17 @@
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="sizeDiff.name">Size Difference:</label>
+                        <label data-localize="sizeDiff.name" class="noselect">Size Difference:</label>
                         <input type="range" min="1" max="10" value="1" step="0.5" class="js--size-diff slider" />
                     </div>
                     <div class="control js--stack-size--container">
-                        <label data-localize="stackSize.name">Stack Threshold:</label>
+                        <label data-localize="stackSize.name" class="noselect">Stack Threshold:</label>
                         <input type="range" min="5" max="100" value="20" step="1" class="js--stack-size slider" />
-                    </div>
-                    <div class="control">
-                        <label data-localize="origin.name">Origin:</label>
-                        <input name="startWorld" type="text" class="js--world-input js--start-world" />
-                        <label data-localize="destination.name">Destination:</label>
-                        <input name="endWorld" type="text" class="js--world-input js--end-world" />
-                        <button data-localize="reset" class="js--reset">Reset</button>
                     </div>
                 </div>
             </div>
-            <div id="graph" class="graph"></div>
-            <div data-localize="footer" class="footer"></div>
+            <div data-localize="footer" class="footer noselect"></div>
             <script>
-                const isMobile = (function(a){if(/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i.test(a)||/1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(a.substr(0,4))) check = true;})(navigator.userAgent||navigator.vendor||window.opera);
-                
                 $(document).keydown(function (event) {
                     if (event.which === 16)
                         isShift = true;
@@ -385,6 +490,45 @@
                     return "rgb(" + Math.round(r * 255) + "," + Math.round(g * 255) + "," + Math.round(b * 255) + ")";
                 }
 
+                function getFontColor(fontStyle, callback) {
+                    const uiTheme = config.uiTheme;
+                    if (!uiThemeFontColors[uiTheme]) {
+                        uiThemeFontColors[uiTheme] = {};
+                    }
+                    let pixel = uiThemeFontColors[uiTheme][fontStyle];
+                    if (pixel)
+                        return callback("rgba(" + pixel[0] + ", " + pixel[1] + ", " + pixel[2] + ", 1)");
+                    const img = new Image();
+                    img.onload = function () {
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+                        context.drawImage(img, 0, 0);
+                        pixel = context.getImageData(0, 8, 1, 1).data;
+                        callback("rgba(" + pixel[0] + ", " + pixel[1] + ", " + pixel[2] + ", 1)");
+                        uiThemeFontColors[uiTheme][fontStyle] = [ pixel[0], pixel[1], pixel[2] ];
+                        canvas.remove();
+                    };
+                    img.src = "./images/ui/" + config.uiTheme + "/font" + (fontStyle + 1) + ".png";
+                }
+
+                function getBaseBgColor(uiTheme, callback) {
+                    const img = new Image();
+                    img.onload = function () {
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+                        context.drawImage(img, 0, 0);
+                        const pixel = context.getImageData(0, 0, 1, 1).data;
+                        const pixel2 = context.getImageData(4, 4, 1, 1).data;
+                        const pixel3 = context.getImageData(8, 8, 1, 1).data;
+                        const r = Math.round((pixel[0] + pixel2[0] + pixel3[0]) / 3);
+                        const g = Math.round((pixel[1] + pixel2[1] + pixel3[1]) / 3);
+                        const b = Math.round((pixel[2] + pixel2[2] + pixel3[2]) / 3);
+                        callback("rgba(" + r + ", " + g + ", " + b + ", 1)");
+                        canvas.remove();
+                    };
+                    img.src = "./images/ui/" + uiTheme + "/containerbg.png";
+                }
+
                 let worldData;
 
                 function loadOrInitConfig() {
@@ -402,6 +546,12 @@
                                     switch (key) {
                                         case "lang":
                                             $(".js--lang").val(value);
+                                            break;
+                                        case "uiTheme":
+                                            $(".js--ui-theme").val(value);
+                                            break;
+                                        case "fontStyle":
+                                            $(".js--font-style").val(value);
                                             break;
                                         case "displayMode":
                                             $(".js--display-mode").val(value);
@@ -435,8 +585,10 @@
                     }
                 }
 
-                function updateControlsContainerHeight() {
-                    $(".controls--container").css("height", $(".controls").outerHeight() + "px");
+                function updateControlsContainer() {
+                    const controlsHeight = $(".controls-bottom").outerHeight();
+                    $(".controls--container").css({ "height": controlsHeight + "px", "margin-top": "-" + (controlsHeight + 20) + "px" });
+                    $(".controls--container--tab").css({ "height": controlsHeight + "px", "left": "calc(50% - " + (($(".controls--container--tab").outerWidth() - 16) / 2) + "px)" });
                 }
 
                 function loadWorldData(update, callback) {
@@ -453,8 +605,12 @@
                 
                 let effectsJP;
 
+                let uiThemeFontColors = {};
+
                 let config = {
                     lang: "en",
+                    uiTheme: "Default_Custom",
+                    fontStyle: 0,
                     displayMode: 0,
                     connMode: 0,
                     labelMode: 1,
@@ -1159,15 +1315,22 @@
                     });
                 }
 
-                function initLocalization() {
+                function initLocalization(isInitial) {
                     const isEn = config.lang === "en";
 
                     $("[data-localize]").localize("ui", {
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "1.0.2");
+                            data.footer = data.footer.replace("{VERSION}", "1.1.0");
                             localizedConns = data.conn;
+                            if (isInitial) {
+                                Object.keys(data.uiTheme.values).forEach(t => {
+                                    $(".js--ui-theme").append('<option data-localize="uiTheme.values.' + t + '" value="' + t + '">' + data.uiTheme.values[t] + '</option>');
+                                });
+                                $(".js--ui-theme").val(config.uiTheme).change();
+                            }
+                            updateControlsContainer();
                             defaultCallback(data);
                         }
                     });
@@ -1180,7 +1343,7 @@
                         }
                     });
 
-                    if (!effectsJP) {
+                    if (isInitial) {
                         $.localize("effect", {
                             language: 'ja',
                             pathPrefix: "/lang",
@@ -1211,22 +1374,21 @@
                 let worldsByName, worldNames, minSize, maxSize, nodes;
 
                 $(document).ready(function () {
-                    if (isMobile) {
-                        $(".controls").addClass("visible").css("opacity", 1);
-                    } else {
-                        $(".controls--container").mouseenter(function () {
-                            $(".controls").addClass("visible").css("opacity", 1).animateCss("fadeInDown", 250);
-                        }).mouseleave(function () {
-                            $(".controls").removeClass("visible").animateCss("fadeOutUp", 250, function () {
+                    $(".controls--container--tab__button").click(function() {
+                        if ($(".controls-bottom").hasClass("visible")) {
+                            $(".controls-bottom").removeClass("visible").animateCss("slideOutDown", 250, function () {
                                 if (!$(this).hasClass("visible"))
                                     $(this).css("opacity", 0);
                             });
-                        });
-                        updateControlsContainerHeight();
-                        $(window).resize(updateControlsContainerHeight);
-                    }
+                            $(".controls--container--tab, .footer").css("margin-top", "0px").animateCss("slideInDown", 300);
+                        } else {
+                            $(".controls-bottom").addClass("visible").css("opacity", 1).animateCss("slideInUp", 250);
+                            $(".controls--container--tab, .footer").css("margin-top", "-" + ($(".controls-bottom").outerHeight() + 8) + "px").animateCss("slideInUp", 250);
+                        }
+                    });
 
-                    $(window).blur(function() {
+                    updateControlsContainer();
+                    $(window).resize(updateControlsContainer).blur(function() {
                         isShift = false;
                         isCtrl = false;
                     });
@@ -1239,6 +1401,30 @@
                             updateConfig();
                             initLocalization();
                             reloadGraph();
+                        });
+
+                        $(".js--ui-theme").change(function() {
+                            config.uiTheme = $(this).val();
+                            const themeStyles = $(".js--theme-styles")[0];
+                            getBaseBgColor(config.uiTheme || (config.uiTheme = "Default_Custom"), function (color) {
+                                themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/[a-zA-Z0-9\_]+\/(containerbg|border(?:2)?|font\d)\.png\)/g, "url(/images/ui/" + config.uiTheme + "/$1.png)")
+                                    .replace(/background-color:( *)[^;]*;( *)\/\*base\*\//g, "background-color:$1" + color + ";$2/*base*/");
+                                $(".js--font-style").change();
+                                updateConfig();
+                            });
+                        });
+
+                        $(".js--font-style").change(function() {
+                            config.fontStyle = parseInt($(this).val());
+                            const themeStyles = $(".js--theme-styles")[0];
+                            getFontColor(config.fontStyle, function (baseColor) {
+                                getFontColor(config.fontStyle !== 4 ? 4 : 0, function (altColor) {
+                                    themeStyles.textContent = themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/([a-zA-Z0-9\_]+)\/font\d\.png\)/g, "url(/images/ui/$1/font" + (config.fontStyle + 1) + ".png)")
+                                        .replace(/([^\-])color:( *)[^;]*;( *)\/\*base\*\//g, "$1color:$2" + baseColor + ";$3/*base*/")
+                                        .replace(/([^\-])color:( *)[^;]*;( *)\/\*alt\*\//g, "$1color:$2" + altColor + ";$3/*alt*/");
+                                    updateConfig();
+                                });
+                            });
                         });
 
                         $(".js--display-mode").change(function() {
@@ -1277,7 +1463,7 @@
 
                         loadOrInitConfig();
 
-                        initLocalization();
+                        initLocalization(true);
 
                         for (let d in Object.keys(worldData)) {
                             const world = worldData[d];

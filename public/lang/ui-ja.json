@@ -6,6 +6,50 @@
             "japanese": "日本語"
         }
     },
+    "uiTheme": {
+        "name": "メニュータイプ",
+        "values": {
+            "Default_Custom": "デフォルト（カスタム）",
+            "Default": "デフォルト",
+            "Default_2": "デフォルト２",
+            "Default_3": "デフォルト３",
+            "Default_4": "デフォルト４",
+            "Default_5": "デフォルト５",
+            "Developer_Room": "製作者の部屋",
+            "Glitch_Ending": "似非エンディング",
+            "Glitch_Ending_2": "似非エンディング２",
+            "Hidden_Shoal": "浅瀬",
+            "Forest_Pier": "桟橋の森",
+            "Planetarium": "星洞",
+            "Industrial_Maze": "蒸気工場",
+            "Rose_Church": "光と水面：教会",
+            "Bioluminescent_Cavern": "夜花草",
+            "Depths": "みなぞこ",
+            "Depths_2": "すいそう",
+            "Guts_World": "コンクリートマンション",
+            "Maple_Shrine": "楓神社",
+            "Pencil_World": "白い樹",
+            "Chocolate_World": "チョコレートの通路",
+            "Blue_Cactus_Islands": "青仙人掌島",
+            "Stone_Towers": "地底通路",
+            "Constellation_World": "星営鉄道",
+            "Blob_Desert": "荒野",
+            "Matoran_Keyboard": "立椅子館",
+            "Saturated_Eyeball_Zone": "彩愛蝶"
+        }
+    },
+    "fontStyle": {
+        "name": "フォントスタイル",
+        "values": {
+            "style1": "スタイル１",
+            "style2": "スタイル２",
+            "style3": "スタイル３",
+            "style4": "スタイル４",
+            "style5": "スタイル５",
+            "style6": "スタイル６",
+            "style7": "スタイル７"
+        }
+    },
     "displayMode": {
         "name": "ディスプレイモード",
         "values": {
