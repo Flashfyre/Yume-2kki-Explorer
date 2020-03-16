@@ -193,11 +193,11 @@
             }
 
             .controls--container--tab__button {
-                color: #ded9df; /*base*/
+                color: rgba(216, 216, 216, 1); /*base*/
             }
 
             .footer {
-                color: #ded9df; /*base*/
+                color: rgba(216, 216, 216, 1); /*base*/
             }
 
             label {
@@ -209,39 +209,39 @@
             }
 
             button {
-                color: #ded9df; /*base*/
+                color: rgba(216, 216, 216, 1); /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
                 background-image: url(/images/ui/Default_Custom/containerbg.png);
             }
 
             input[type='text'], select, .slider {
-                color: #ded9df; /*base*/
+                color: rgba(216, 216, 216, 1); /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
-                background-color: #403842; /*base*/
+                background-color: rgba(45, 17, 23, 1); /*base*/
             }
 
             .slider::-webkit-slider-thumb {
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
-                background-color: #403842; /*base*/
+                background-color: rgba(45, 17, 23, 1); /*base*/
             }
 
             .slider::-moz-range-thumb {
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
-                background-color: #403842; /*base*/
+                background-color: rgba(45, 17, 23, 1); /*base*/
             }
 
             .autocomplete-suggestions {
-                color: #ded9df; /*base*/
+                color: rgba(216, 216, 216, 1); /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
-                background: #403842; /*base*/
+                background-color: rgba(45, 17, 23, 1); /*base*/
             }
 
             .autocomplete-selected {
-                background-color: #817084; /*alt*/
+                background-color: rgba(93, 65, 71, 1); /*alt*/
             }
             
             .autocomplete-suggestions strong {
-                color: #ffea56; /*alt*/
+                color: rgba(255, 255, 157, 1); /*alt*/
             }
         </style>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css" />
@@ -492,9 +492,8 @@
 
                 function getFontColor(fontStyle, callback) {
                     const uiTheme = config.uiTheme;
-                    if (!uiThemeFontColors[uiTheme]) {
+                    if (!uiThemeFontColors[uiTheme])
                         uiThemeFontColors[uiTheme] = {};
-                    }
                     let pixel = uiThemeFontColors[uiTheme][fontStyle];
                     if (pixel)
                         return callback("rgba(" + pixel[0] + ", " + pixel[1] + ", " + pixel[2] + ", 1)");
@@ -504,8 +503,8 @@
                         const context = canvas.getContext('2d');
                         context.drawImage(img, 0, 0);
                         pixel = context.getImageData(0, 8, 1, 1).data;
-                        callback("rgba(" + pixel[0] + ", " + pixel[1] + ", " + pixel[2] + ", 1)");
                         uiThemeFontColors[uiTheme][fontStyle] = [ pixel[0], pixel[1], pixel[2] ];
+                        callback("rgba(" + pixel[0] + ", " + pixel[1] + ", " + pixel[2] + ", 1)");
                         canvas.remove();
                     };
                     img.src = "./images/ui/" + config.uiTheme + "/font" + (fontStyle + 1) + ".png";
@@ -513,16 +512,20 @@
 
                 function getBaseBgColor(uiTheme, callback) {
                     const img = new Image();
+                    let pixel = uiThemeBgColors[uiTheme];
+                    if (pixel)
+                        return callback("rgba(" + pixel[0] + ", " + pixel[1] + ", " + pixel[2] + ", 1)");
                     img.onload = function () {
                         const canvas = document.createElement('canvas');
                         const context = canvas.getContext('2d');
                         context.drawImage(img, 0, 0);
-                        const pixel = context.getImageData(0, 0, 1, 1).data;
+                        pixel = context.getImageData(0, 0, 1, 1).data;
                         const pixel2 = context.getImageData(4, 4, 1, 1).data;
                         const pixel3 = context.getImageData(8, 8, 1, 1).data;
                         const r = Math.round((pixel[0] + pixel2[0] + pixel3[0]) / 3);
                         const g = Math.round((pixel[1] + pixel2[1] + pixel3[1]) / 3);
                         const b = Math.round((pixel[2] + pixel2[2] + pixel3[2]) / 3);
+                        uiThemeBgColors[uiTheme] = [ r, g, b ];
                         callback("rgba(" + r + ", " + g + ", " + b + ", 1)");
                         canvas.remove();
                     };
@@ -604,6 +607,8 @@
                 let localizedConns;
                 
                 let effectsJP;
+
+                let uiThemeBgColors = {};
 
                 let uiThemeFontColors = {};
 
@@ -807,7 +812,7 @@
                             if (config.labelMode === 3 || (config.labelMode === 1 && isHover) || (config.labelMode === 2 && id === selectedWorldId)) {
                                 ctx.lineWidth = 0.25 * scale;
                                 ctx.strokeStyle = "#000000";
-                                ctx.fillStyle = "#ded9df";
+                                ctx.fillStyle = "rgba(216, 216, 216, 1)";
                                 ctx.font = (2 * scale) + "px 'MS Gothic'";
                                 const world = worldData[id];
                                 const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
@@ -1322,7 +1327,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "1.1.0");
+                            data.footer = data.footer.replace("{VERSION}", "1.1.1");
                             localizedConns = data.conn;
                             if (isInitial) {
                                 Object.keys(data.uiTheme.values).forEach(t => {
@@ -1374,6 +1379,7 @@
                 let worldsByName, worldNames, minSize, maxSize, nodes;
 
                 $(document).ready(function () {
+                    updateControlsContainer();
                     $(".controls--container--tab__button").click(function() {
                         if ($(".controls-bottom").hasClass("visible")) {
                             $(".controls-bottom").removeClass("visible").animateCss("slideOutDown", 250, function () {
@@ -1407,8 +1413,11 @@
                             config.uiTheme = $(this).val();
                             const themeStyles = $(".js--theme-styles")[0];
                             getBaseBgColor(config.uiTheme || (config.uiTheme = "Default_Custom"), function (color) {
+                                var bgColorPixel = uiThemeBgColors[config.uiTheme];
+                                var altColor = "rgba(" + Math.min(bgColorPixel[0] + 48, 255) + ", " + Math.min(bgColorPixel[1] + 48, 255) + ", " + Math.min(bgColorPixel[2] + 48, 255) + ", 1)";
                                 themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/[a-zA-Z0-9\_]+\/(containerbg|border(?:2)?|font\d)\.png\)/g, "url(/images/ui/" + config.uiTheme + "/$1.png)")
-                                    .replace(/background-color:( *)[^;]*;( *)\/\*base\*\//g, "background-color:$1" + color + ";$2/*base*/");
+                                    .replace(/background-color:( *)[^;]*;( *)\/\*base\*\//g, "background-color:$1" + color + ";$2/*base*/")
+                                    .replace(/background-color:( *)[^;]*;( *)\/\*alt\*\//g, "background-color:$1" + altColor + ";$2/*alt*/");
                                 $(".js--font-style").change();
                                 updateConfig();
                             });
