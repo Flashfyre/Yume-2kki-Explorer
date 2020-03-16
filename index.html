@@ -1379,8 +1379,8 @@
                 let worldsByName, worldNames, minSize, maxSize, nodes;
 
                 $(document).ready(function () {
-                    updateControlsContainer();
                     $(".controls--container--tab__button").click(function() {
+                        updateControlsContainer();
                         if ($(".controls-bottom").hasClass("visible")) {
                             $(".controls-bottom").removeClass("visible").animateCss("slideOutDown", 250, function () {
                                 if (!$(this).hasClass("visible"))
