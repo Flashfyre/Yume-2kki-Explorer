@@ -241,9 +241,8 @@ function checkUpdateWorldData(pool) {
                                     .catch(err => reject(err));
                             }).catch(err => reject(err));
                         });
-                    } else {
+                    } else
                         resolve();
-                    }
                 });
             }
         });

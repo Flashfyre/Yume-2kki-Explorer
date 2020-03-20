@@ -695,7 +695,6 @@
                                         icons: [],
                                         hidden: false,
                                         defaultColor: hueToRGBA(hue, 1),
-                                        defaultColorFade: hueToRGBA(hue, 0.25),
                                         connTypeCheck: path[w - 1].connType ? 'replace' : undefined
                                     };
                                     links.push(link);
@@ -740,7 +739,6 @@
                                     icons: [],
                                     hidden: hidden,
                                     defaultColor: hueToRGBA(hue, 1),
-                                    defaultColorFade: hueToRGBA(hue, 0.25),
                                     connTypeCheck: conn.type ? hidden ? 'after' : 'replace' : undefined
                                 };
                                 links.push(link);
@@ -873,9 +871,10 @@
                         .nodeLabel(node => node.img.title)
                         .nodesPerStack(config.stackSize)
                         .linkWidth(link => selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1)
-                        .linkColor(link => link.hidden ? 'transparent' : selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : !searchWorldIds.length || (searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1) ? link.defaultColor : link.defaultColorFade)
+                        .linkColor(link => link.hidden ? 'transparent' : selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : link.defaultColor)
                         .linkCanvasObjectMode('connTypeCheck')
                         .linkCanvasObject((link, ctx, globalScale) => {
+                            ctx.globalAlpha = !searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1 ? 1 : 0.25;
                             const hidden = link.hidden;
                             if (hidden && config.connMode === 0)
                                 return;
@@ -1341,7 +1340,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "1.2.0");
+                            data.footer = data.footer.replace("{VERSION}", "1.2.1");
                             localizedConns = data.conn;
                             if (isInitial) {
                                 Object.keys(data.uiTheme.values).forEach(t => {
