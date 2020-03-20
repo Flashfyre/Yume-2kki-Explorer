@@ -35,6 +35,11 @@
             "Constellation_World": "星営鉄道",
             "Blob_Desert": "荒野",
             "Matoran_Keyboard": "立椅子館",
+            "Abandoned_Factory": "廃工場",
+            "Polluted_Swamp": "機密",
+            "Snowy_Village": "冬の村",
+            "Decrepit_Dwellings": "集合住宅",
+            "Verdant_Promenade": "森林公園",
             "Saturated_Eyeball_Zone": "彩愛蝶"
         }
     },
@@ -81,6 +86,9 @@
     },
     "stackSize": {
         "name": "スタック限界"
+    },
+    "search": {
+        "name": "検索"
     },
     "origin": {
         "name": "原点"

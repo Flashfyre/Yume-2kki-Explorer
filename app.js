@@ -136,18 +136,12 @@ app.get('/worlds', function(req, res) {
             pool.end();
         };
         if (req.query.hasOwnProperty("update") && req.query.update) {
-            pool.query("UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()", (err) => {
-                if (err) console.error(err);
-                populateWorldData(pool).then(worldData => {
-                    if (worldData.length)
-                        updateMaps(pool, worldData).then(() => {
-                            console.log(worldData);
-                            getWorldData(pool).then(callback);
-                        }).catch(err => console.error(err));
-                    else
-                        getWorldData(pool).then(callback).catch(err => console.error(err));
+            populateWorldData(pool).then(() => getWorldData(pool).then(() => {
+                pool.query("UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()", (err) => {
+                    if (err) console.error(err);
+                    callback();
                 });
-            });
+            }).catch(err => console.error(err))).catch(err => console.error(err));
         } else {
             checkUpdateWorldData(pool).then(() => getWorldData(pool).then(wd => callback(wd)).catch(err => console.error(err))).catch(err => console.error(err));
         }
@@ -204,7 +198,18 @@ function getWorldData(pool, preserveIds) {
                             const row = rows[r];
                             worldDataById[row.id].size = row.size;
                         }
-                        resolve(worldData);
+                        const missingMapWorlds = worldData.filter(w => !w.size);
+                        if (missingMapWorlds.length) {
+                            pool.query('SELECT ROUND(AVG(width)) * ROUND(AVG(height)) size FROM maps', (err, rows) => {
+                                if (err) return reject(err);
+                                const avgSize = rows[0].size;
+                                missingMapWorlds.forEach(w => {
+                                    w.size = avgSize;
+                                });
+                                resolve(worldData);
+                            });
+                        } else
+                            resolve(worldData);
                     });
                 });
             });
@@ -214,22 +219,32 @@ function getWorldData(pool, preserveIds) {
 
 function checkUpdateWorldData(pool) {
     return new Promise((resolve, reject) => {
-        pool.query("SELECT lastUpdate FROM updates WHERE DATE_ADD(lastUpdate, INTERVAL 1 HOUR) < NOW()", (err, rows) => {
+        pool.query("SELECT lastFullUpdate FROM updates WHERE DATE_ADD(lastFullUpdate, INTERVAL 1 WEEK) < NOW()", (err, rows) => {
             if (err) return reject(err);
             if (rows.length) {
-                getWorldData(pool, true).then(worldData => {
-                    getUpdatedWorldNames(worldData.map(w => w.title), rows[0].lastUpdate)
-                        .then(updatedWorldNames => populateWorldData(pool, worldData, updatedWorldNames)
-                            .then(() => {
-                                pool.query("UPDATE updates SET lastUpdate=NOW()", err => {
-                                    if (err) return reject(err);
-                                    resolve();
-                                });
-                            }).catch(err => reject(err)))
-                        .catch(err => reject(err));
-                }).catch(err => reject(err));
+                pool.query("UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()", (err) => {
+                    populateWorldData(pool).then(() => {
+                        if (err) console.error(err);
+                        resolve();
+                    }).catch(err => reject(err));
+                });
             } else {
-                resolve();
+                pool.query("SELECT lastUpdate FROM updates WHERE DATE_ADD(lastUpdate, INTERVAL 1 HOUR) < NOW()", (err, rows) => {
+                    if (err) return reject(err);
+                    if (rows.length) {
+                        pool.query("UPDATE updates SET lastUpdate=NOW()", err => {
+                            if (err) return reject(err);
+                            getWorldData(pool, true).then(worldData => {
+                                getUpdatedWorldNames(worldData.map(w => w.title), rows[0].lastUpdate)
+                                    .then(updatedWorldNames => populateWorldData(pool, worldData, updatedWorldNames)
+                                        .then(() => resolve()).catch(err => reject(err)))
+                                    .catch(err => reject(err));
+                            }).catch(err => reject(err));
+                        });
+                    } else {
+                        resolve();
+                    }
+                });
             }
         });
     });
@@ -264,9 +279,9 @@ function populateRecentChanges(recentChanges, lastUpdate) {
 } 
 
 function populateWorldData(pool, worldData, updatedWorldNames) {
-    if (!worldData) {
+    if (!worldData)
         worldData = [];
-    }
+    const newWorldNames = [];
     return new Promise((resolve, reject) => {
         superagent.get('https://yume2kki.fandom.com/api.php')
             .query({ action: 'query', list: 'categorymembers', cmtitle: 'Category:Locations', cmlimit: 500, format: 'json' })
@@ -276,25 +291,50 @@ function populateWorldData(pool, worldData, updatedWorldNames) {
             const worlds = data.query.categorymembers;
             const batches = [];
             for (let b = 0; b * batchSize < worlds.length; b++)
-                batches.push(populateWorldDataSub(pool, worldData, worlds, b, updatedWorldNames));
+                batches.push(populateWorldDataSub(pool, worldData, worlds, b, updatedWorldNames, newWorldNames));
             Promise.all(batches).then(() => {
                 const worldDataByName = _.keyBy(worldData, (w) => w.title);
-                updateConns(pool, worldDataByName).then(() => {
-                    updateConnTypeParams(pool, worldData).then(() => {
-                        updateWorldDepths(pool, worldData).then(() => {
-                            deleteRemovedWorlds(pool);
-                            resolve(worldData);
+                const callback = function (updatedWorldData) {
+                    updateConns(pool, worldDataByName).then(() => {
+                        updateConnTypeParams(pool, worldData).then(() => {
+                            updateWorldDepths(pool, worldData).then(() => {
+                                deleteRemovedWorlds(pool);
+                                updateMaps(pool, updatedWorldData).then(() => {
+                                    resolve(worldData);
+                                });
+                            }).catch(err => reject(err));
                         }).catch(err => reject(err));
                     }).catch(err => reject(err));
-                }).catch(err => reject(err));
+                };
+                if (newWorldNames.length) {
+                    const newWorldBatches = [];
+                    const newWorldConnWorldNames = [];
+                    for (let w in newWorldNames) {
+                        const newWorld = worldDataByName[newWorldNames[w]];
+                        const newWorldConns = newWorld.connections;
+                        for (let c in newWorldConns) {
+                            const newWorldConnTargetName = newWorldConns[c].location;
+                            if (updatedWorldNames.indexOf(newWorldConnTargetName) === -1 && newWorldConnWorldNames.indexOf(newWorldConnTargetName) === -1)
+                                newWorldConnWorldNames.push(newWorldConnTargetName);
+                        }
+                    }
+                    for (let b = 0; b * batchSize < worlds.length; b++)
+                        newWorldBatches.push(populateWorldDataSub(pool, worldData, worlds, b, newWorldConnWorldNames, []));
+                    Promise.all(newWorldBatches).then(() => {
+                        const allUpdatedWorldNames = updatedWorldNames.concat(newWorldConnWorldNames);
+                        callback(worldData.filter(w => allUpdatedWorldNames.indexOf(w.title) > -1));
+                    }).catch(err => reject(err));
+                } else
+                    callback(updatedWorldNames ? worldData.filter(w => updatedWorldNames.indexOf(w.title) > -1) : worldData);
             }).catch(err => reject(err));
         });
     });
 }
 
-function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldNames) {
+function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldNames, updatedNewWorldNames) {
+    const existingWorldNames = worldData.map(w => w.title);
     return new Promise((resolve, reject) => {
-        const worldsKeyed = _.keyBy(worlds.slice(batchIndex * batchSize, Math.min((batchIndex + 1) * batchSize, worlds.length)).filter(w => !updatedWorldNames || updatedWorldNames.indexOf(w.title) > -1), w => w.pageid);
+        const worldsKeyed = _.keyBy(worlds.slice(batchIndex * batchSize, Math.min((batchIndex + 1) * batchSize, worlds.length)).filter(w => !updatedWorldNames || (updatedWorldNames.indexOf(w.title) > -1) || existingWorldNames.indexOf(w.title) === -1), w => w.pageid);
         if (!Object.keys(worldsKeyed).length)
             return resolve();
         getBaseWorldData(worldsKeyed).then(data => {
@@ -304,9 +344,12 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
             const worldNames = Object.keys(newWorldsByName);
             for (let d in data) {
                 const world = data[d];
-                if (!updatedWorldNames || !worldData.filter(w => world.title === w.title).length)
+                let newWorld;
+                if (!updatedWorldNames || (newWorld = existingWorldNames.indexOf(world.title) === -1)) {
                     worldData.push(world);
-                else {
+                    if (newWorld)
+                        updatedNewWorldNames.push(world.title);
+                } else {
                     const existingWorld = worldDataByName[world.title];
                     existingWorld.titleJP = world.titleJP;
                     existingWorld.connections = world.connections;
@@ -341,10 +384,11 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                     let worldsQuery = "INSERT INTO worlds (title, titleJP, depth, filename) VALUES "
                     for (const w in newWorldsByName) {
                         const newWorld = newWorldsByName[w];
-                        if (i++) {
+                        if (i++)
                             worldsQuery += ", ";
-                        }
-                        worldsQuery += `('${newWorld.title.replace(/'/g, "''")}', '${newWorld.titleJP}', 0, '${newWorld.filename.replace(/'/g, "''")}')`;
+                        const title = newWorld.title.replace(/'/g, "''");
+                        const titleJPValue = newWorld.titleJP ? `'${newWorld.titleJP}'` : "NULL";
+                        worldsQuery += `('${title}', ${titleJPValue}, 0, '${newWorld.filename.replace(/'/g, "''")}')`;
                     }
                     pool.query(worldsQuery, (error, res) => {
                         if (error) return reject(err);
@@ -352,9 +396,8 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                         const worldRowIdsQuery = `SELECT r.id FROM (SELECT id FROM worlds ORDER BY id DESC LIMIT ${insertedRows}) r ORDER BY 1`;
                         pool.query(worldRowIdsQuery, (err, rows) => {
                             if (err) return reject(err);
-                            for (let r in rows) {
+                            for (let r in rows)
                                 newWorldsByName[newWorldNames[r]].id = rows[r].id;
-                            }
                             insertCallback();
                         });
                     });
@@ -400,9 +443,8 @@ function getWorldBaseWorldData(worlds, pageId) {
                     break;
                 }
             }
-        } else {
+        } else
             skip = true;
-        }
         if (skip) {
             delete worlds[pageId];
             return reject(`World ${world.title} was removed`);
@@ -454,9 +496,8 @@ function updateConns(pool, worldDataByName) {
                     const conn = newConnsByKey[key];
                     conn.id = rows[r].id;
                     existingConns.push(conn);
-                } else {
+                } else
                     removedConnIds.push(rows[r].id);
-                }
                 delete newConnsByKey[key];
             }
             const existingConnsByType = _.groupBy(existingConns, 'type');
@@ -475,6 +516,7 @@ function updateConns(pool, worldDataByName) {
             if (removedConnIds.length)
                 deleteRemovedConns(pool, removedConnIds);
             const newConnKeys = Object.keys(newConnsByKey);
+            
             if (newConnKeys.length) {
                 let i = 0;
                 let connsQuery = "INSERT INTO conns (sourceId, targetId, type) VALUES "
@@ -622,9 +664,8 @@ function updateWorldDepths(pool, worldData) {
     return new Promise((resolve, reject) => {
         const depthMap = {};
 
-        for (let w in worldData) {
+        for (let w in worldData)
             depthMap[worldData[w].title] = -1;
-        }
 
         const worldDataById = _.keyBy(worldData, w => w.id);
         const worldDataByName = _.keyBy(worldData, w => w.title);
@@ -637,17 +678,19 @@ function updateWorldDepths(pool, worldData) {
             w.connections.filter(c => worldNames.indexOf(c.location) > -1).forEach(c => {
                 let sourceWorld = worldDataByName[c.location];
                 let ignoreTypeFlags = defaultPathIgnoreConnTypeFlags;
-                do {
-                    if (ignoreTypeFlags & ConnType.LOCKED)
-                        ignoreTypeFlags ^= ConnType.LOCKED | ConnType.LOCKED_CONDITION;
-                    else if (ignoreTypeFlags & ConnType.DEAD_END)
-                        ignoreTypeFlags ^= ConnType.DEAD_END | ConnType.ISOLATED;
-                    else if (ignoreTypeFlags & ConnType.NO_ENTRY)
-                        ignoreTypeFlags ^= ConnType.NO_ENTRY;
-                    else
-                        break;
-                    calcDepth(worldData, worldDataById, depthMap, sourceWorld, sourceWorld.depth, ignoreTypeFlags, w.title);
-                } while (depthMap[w.title] === -1);
+                if (sourceWorld.depth !== undefined) {
+                    do {
+                        if (ignoreTypeFlags & ConnType.LOCKED)
+                            ignoreTypeFlags ^= ConnType.LOCKED | ConnType.LOCKED_CONDITION;
+                        else if (ignoreTypeFlags & ConnType.DEAD_END)
+                            ignoreTypeFlags ^= ConnType.DEAD_END | ConnType.ISOLATED;
+                        else if (ignoreTypeFlags & ConnType.NO_ENTRY)
+                            ignoreTypeFlags ^= ConnType.NO_ENTRY;
+                        else
+                            break;
+                        calcDepth(worldData, worldDataById, depthMap, sourceWorld, sourceWorld.depth, ignoreTypeFlags, w.title);
+                    } while (depthMap[w.title] === -1);
+                }
             });
         });
 
@@ -675,9 +718,9 @@ function calcDepth(worldData, worldDataById, depthMap, world, depth, ignoreTypeF
     const worldDataByName = _.keyBy(worldData, w => w.title);
     const worldNames = Object.keys(worldDataByName);
     let currentWorld;
-    if (depth > 0) {
+    if (depth > 0)
         currentWorld = world;
-    } else {
+    else {
         currentWorld = worldDataByName[startLocation];
         currentWorld.depth = depthMap[currentWorld.title] = depth;
     }

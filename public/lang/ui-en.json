@@ -35,6 +35,11 @@
             "Constellation_World": "Star Building",
             "Blob_Desert": "Blob Desert",
             "Matoran_Keyboard": "Matoran Keyboard",
+            "Abandoned_Factory": "Abandoned Factory",
+            "Polluted_Swamp": "Polluted Swamp",
+            "Snowy_Village": "Snowy Village",
+            "Decrepit_Dwellings": "Decrepit Dwellings",
+            "Verdant_Promenade": "Verdant Promenade",
             "Saturated_Eyeball_Zone": "Saturated Eyeball Zone"
         }
     },
@@ -81,6 +86,9 @@
     },
     "stackSize": {
         "name": "Stack Threshold:"
+    },
+    "search": {
+        "name": "Search:"
     },
     "origin": {
         "name": "Origin:"

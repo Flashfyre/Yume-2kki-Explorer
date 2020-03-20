@@ -258,6 +258,10 @@
         <div class="content">
             <div class="controls controls-top">
                 <div class="control">
+                    <label data-localize="search.name" class="noselect">Search:</label>
+                    <input name="searchWorld" type="text" class="js--world-input js--search-world" />
+                </div>
+                <div class="control">
                     <label data-localize="origin.name" class="noselect">Origin:</label>
                     <input name="startWorld" type="text" class="js--world-input js--start-world" />
                     <label data-localize="destination.name" class="noselect">Destination:</label>
@@ -472,7 +476,7 @@
                     this.closePath();
                 };
 
-                function hueToRGB(h) {
+                function hueToRGBA(h, a) {
                     let s = 1, v = 1, r, g, b, i, f, p, q, t;
                     i = Math.floor(h * 6);
                     f = h * 6 - i;
@@ -487,7 +491,7 @@
                         case 4: r = t, g = p, b = v; break;
                         case 5: r = v, g = p, b = q; break;
                     }
-                    return "rgb(" + Math.round(r * 255) + "," + Math.round(g * 255) + "," + Math.round(b * 255) + ")";
+                    return "rgba(" + Math.round(r * 255) + "," + Math.round(g * 255) + "," + Math.round(b * 255) + "," + a + ")";
                 }
 
                 function getFontColor(fontStyle, callback) {
@@ -602,7 +606,9 @@
 
                 let graph;
                 
-                let selectedWorldId;
+                let selectedWorldId, selectedWorldZoomCheck;
+
+                let searchWorldIds = [];
 
                 let localizedConns;
                 
@@ -675,6 +681,7 @@
                                 const sourceId = path[w - 1].id;
                                 const targetId = path[w].id;
                                 const linkId = `${sourceId}_${targetId}`;
+                                const hue = 0.6666 - ((pathScores[p] / maxPathScore) * 0.6666);
                                 if (addedLinks.indexOf(linkId) === -1) {
                                     dagIgnore[sourceId] = [];
                                     const link = {
@@ -687,7 +694,8 @@
                                         typeParams: path[w - 1].typeParams,
                                         icons: [],
                                         hidden: false,
-                                        defaultColor: hueToRGB(0.6666 - ((pathScores[p] / maxPathScore) * 0.6666)),
+                                        defaultColor: hueToRGBA(hue, 1),
+                                        defaultColorFade: hueToRGBA(hue, 0.25),
                                         connTypeCheck: path[w - 1].connType ? 'replace' : undefined
                                     };
                                     links.push(link);
@@ -720,6 +728,7 @@
                                 }
                                 if (hidden)
                                     dagIgnoreIds.push(connWorld.id);
+                                const hue = 0.6666 - ((world.depth / (maxDepth - 1)) * 0.6666);
                                 const link = {
                                     key: `${world.id}_${connWorld.id}`,
                                     source: world.id,
@@ -730,7 +739,8 @@
                                     typeParams: conn.typeParams,
                                     icons: [],
                                     hidden: hidden,
-                                    defaultColor: hueToRGB(0.6666 - ((world.depth / (maxDepth - 1)) * 0.6666)),
+                                    defaultColor: hueToRGBA(hue, 1),
+                                    defaultColorFade: hueToRGBA(hue, 0.25),
                                     connTypeCheck: conn.type ? hidden ? 'after' : 'replace' : undefined
                                 };
                                 links.push(link);
@@ -777,19 +787,21 @@
                             return img;
                         });
 
+                    const nodes = images.map(img => {
+                        const id = parseInt(img.id);
+                        const scale = worldScales[id];
+                        const ret = { id: id, img, isHover: false, scale: scale };
+                        ret.globalDepth = worldData[id].depth;
+                        ret.dagIgnore = dagIgnore[id];
+                        ret.width = 16 * scale;
+                        ret.height = 12 * scale;
+                        return ret;
+                    });
+
                     const radius = 12;
                 
                     const gData = {
-                        nodes: images.map(img => {
-                            const id = parseInt(img.id);
-                            const scale = worldScales[id];
-                            const ret = { id: id, img, isHover: false, scale: scale };
-                            ret.globalDepth = worldData[id].depth;
-                            ret.dagIgnore = dagIgnore[id];
-                            ret.width = 16 * scale;
-                            ret.height = 12 * scale;
-                            return ret;
-                        }),
+                        nodes: nodes,
                         links: links
                     };
 
@@ -807,6 +819,7 @@
                     }
                     graph
                         .nodeCanvasObject(({ id, img, x, y, scale, width, height, isHover }, ctx, globalScale) => {
+                            ctx.globalAlpha = !searchWorldIds.length || searchWorldIds.indexOf(id) > -1 ? 1 : 0.25;
                             ctx.imageSmoothingEnabled = false;
                             ctx.drawImage(img, 0, 0, img.width, img.height, x - width / 2, y - height / 2, width, height);
                             if (config.labelMode === 3 || (config.labelMode === 1 && isHover) || (config.labelMode === 2 && id === selectedWorldId)) {
@@ -846,6 +859,11 @@
                                 ctx.strokeStyle = '#f00';
                                 ctx.lineWidth = 1 / globalScale;
                                 ctx.strokeRect(x - width / 2, y - height / 2, width, height);
+                                if (selectedWorldZoomCheck) {
+                                    selectedWorldZoomCheck = false;
+                                    graph.centerAt(x, y, 1000);
+                                    graph.zoom(8, 1000);
+                                }
                             }
                             if (isHover && (isShift || isCtrl)) {
                                 ctx.fillText("🔗", x + (width / 2) - 3.5, y - (height / 2) + 2.5);
@@ -855,7 +873,7 @@
                         .nodeLabel(node => node.img.title)
                         .nodesPerStack(config.stackSize)
                         .linkWidth(link => selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1)
-                        .linkColor(link => link.hidden ? 'transparent' : selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : link.defaultColor)
+                        .linkColor(link => link.hidden ? 'transparent' : selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : !searchWorldIds.length || (searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1) ? link.defaultColor : link.defaultColorFade)
                         .linkCanvasObjectMode('connTypeCheck')
                         .linkCanvasObject((link, ctx, globalScale) => {
                             const hidden = link.hidden;
@@ -902,15 +920,11 @@
                                     : ('https://wikiwiki.jp/yume2kki-t/' + (world.titleJP.indexOf("：") > -1 ? world.titleJP.slice(0, world.titleJP.indexOf("：")) : world.titleJP)),
                                     "_blank", isShift ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
                             } else {
-                                // Center/zoom on node
                                 selectedWorldId = node && (!selectedWorldId || selectedWorldId !== node.id) ? node.id : null;
-                                graph.centerAt(node.x, node.y, 1000);
-                                graph.zoom(8, 1000);
+                                selectedWorldZoomCheck = true;
                             }
                         })
-                        .iconLabel(icon => {
-                            return icon.text;   
-                        })
+                        .iconLabel(icon => icon.text)
                         .cooldownTime(Infinity)
                         // Deactivate existing forces
                         // Add collision and bounding box forces
@@ -1327,7 +1341,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "1.1.1");
+                            data.footer = data.footer.replace("{VERSION}", "1.2.0");
                             localizedConns = data.conn;
                             if (isInitial) {
                                 Object.keys(data.uiTheme.values).forEach(t => {
@@ -1370,13 +1384,32 @@
 
                     worldNames = Object.keys(worldsByName);
 
-                    $(".js--world-input").autocomplete("destroy").autocomplete({
-                        lookup: worldNames,
-                        onSelect: reloadGraph
+                    $(".js--world-input").each(function () {
+                        $(this).autocomplete("destroy");
+                        if (!$(this).is(".js--search-world")) {
+                            $(this).autocomplete({
+                                lookup: worldNames,
+                                onSelect: reloadGraph
+                            });
+                        } else {
+                            $(this).autocomplete({
+                                lookup: worldNames,
+                                onSearchComplete: function (query, searchWorlds) {
+                                    searchWorldIds = searchWorlds.length && (!selectedWorldId || (searchWorlds.length > 1 || searchWorlds.filter(w => w.value !== worldData[selectedWorldId].title).length)) ? searchWorlds.map(w => worldsByName[w.value].id) : [];
+                                },
+                                onSelect: function (selectedWorld) {
+                                    selectedWorldId = worldsByName[selectedWorld.value].id;
+                                    selectedWorldZoomCheck = true;
+                                },
+                                onHide: function () {
+                                    searchWorldIds = [];
+                                }
+                            });
+                        }
                     });
                 }
 
-                let worldsByName, worldNames, minSize, maxSize, nodes;
+                let worldsByName, worldNames, minSize, maxSize;
 
                 $(document).ready(function () {
                     $(".controls--container--tab__button").click(function() {
