@@ -695,6 +695,7 @@
                                         icons: [],
                                         hidden: false,
                                         defaultColor: hueToRGBA(hue, 1),
+                                        defaultColorFade: hueToRGBA(hue, 0.1),
                                         connTypeCheck: path[w - 1].connType ? 'replace' : undefined
                                     };
                                     links.push(link);
@@ -740,6 +741,7 @@
                                     icons: [],
                                     hidden: hidden,
                                     defaultColor: hueToRGBA(hue, 1),
+                                    defaultColorFade: hueToRGBA(hue, 0.1),
                                     connTypeCheck: conn.type ? hidden ? 'after' : 'replace' : undefined
                                 };
                                 links.push(link);
@@ -818,7 +820,7 @@
                     }
                     graph
                         .nodeCanvasObject(({ id, img, x, y, scale, width, height, isHover }, ctx, globalScale) => {
-                            ctx.globalAlpha = !searchWorldIds.length || searchWorldIds.indexOf(id) > -1 ? 1 : 0.25;
+                            ctx.globalAlpha = !searchWorldIds.length || searchWorldIds.indexOf(id) > -1 ? 1 : 0.1;
                             ctx.imageSmoothingEnabled = false;
                             ctx.drawImage(img, 0, 0, img.width, img.height, x - width / 2, y - height / 2, width, height);
                             if (config.labelMode === 3 || (config.labelMode === 1 && isHover) || (config.labelMode === 2 && id === selectedWorldId)) {
@@ -867,23 +869,25 @@
                             if (isHover && (isShift || isCtrl)) {
                                 ctx.fillText("🔗", x + (width / 2) - 3.5, y - (height / 2) + 2.5);
                             }
+                            ctx.globalAlpha = 1;
                         })
                         .nodeVal(node => node.height)
                         .nodeLabel(node => node.img.title)
                         .nodesPerStack(config.stackSize)
                         .linkWidth(link => selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1)
-                        .linkColor(link => link.hidden ? 'transparent' : selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : link.defaultColor)
+                        .linkColor(link => link.hidden ? 'transparent' : selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' :
+                            !searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1 ? link.defaultColor : link.defaultColorFade)
                         .linkCanvasObjectMode('connTypeCheck')
                         .linkCanvasObject((link, ctx, globalScale) => {
-                            ctx.globalAlpha = !searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1 ? 1 : 0.25;
                             const hidden = link.hidden;
                             if (hidden && config.connMode === 0)
                                 return;
                             const connType = link.connType;
+                            const fade = searchWorldIds.length && searchWorldIds.indexOf(link.source.id) === -1 && searchWorldIds.indexOf(link.target.id) === -1;
                             if (!hidden) {
                                 ctx.beginPath();
                                 ctx.lineWidth = (selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1) / globalScale;
-                                ctx.strokeStyle = selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : link.defaultColor;
+                                ctx.strokeStyle = selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : !fade ? link.defaultColor : link.defaultColorFade;
                                 if (connType && connType & ConnType.ONE_WAY) {
                                     let currentDashOffset = dashOffset;
                                     if (link.key === lastOneWayLinkKey)
@@ -902,8 +906,12 @@
                                 ctx.stroke();
                                 ctx.closePath();
                             }
-                            if (link.icons.length)
+                            if (link.icons.length) {
+                                if (fade)
+                                    ctx.globalAlpha = 0.1;
                                 drawLinkIcons(link, ctx, globalScale);
+                                ctx.globalAlpha = 1;
+                            }
                         })
                         .onNodeHover((node, prevNode) => {
                             elem.style.cursor = node ? 'pointer' : null;
@@ -1341,7 +1349,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "1.2.2");
+                            data.footer = data.footer.replace("{VERSION}", "1.2.3");
                             localizedConns = data.conn;
                             if (isInitial) {
                                 Object.keys(data.uiTheme.values).forEach(t => {
