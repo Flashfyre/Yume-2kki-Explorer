@@ -107,5 +107,8 @@ dist
 .vscode-test
 config/db.config.js
 
+# World images
+public/images/worlds/
+
 # Converted LMU files
 maps/out/*.emu

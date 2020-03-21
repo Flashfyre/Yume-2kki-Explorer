@@ -723,7 +723,8 @@
                                     const sameDepth = world.depth === connWorld.depth;
                                     const reverseConn = connWorld.connections.filter(c => c.targetId === world.id);
                                     hidden = (!sameDepth && !reverseConn.length) || (reverseConn.length && !(reverseConn[0].type & ConnType.NO_ENTRY) && (!sameDepth || (!(conn.type & ConnType.ONE_WAY) && world.id > connWorld.id)));
-                                    dagIgnoreIds.push(connWorld.id);
+                                    if (!hidden)
+                                        dagIgnoreIds.push(connWorld.id);
                                 }
                                 if (hidden)
                                     dagIgnoreIds.push(connWorld.id);
@@ -781,7 +782,7 @@
                             const img = new Image();
                             img.id = d.id;
                             img.title = config.lang === "en" || !d.titleJP ? d.title : d.titleJP;
-                            img.src = `./images/worlds/${d.filename}`;
+                            img.src = d.filename;
                             return img;
                         });
 
@@ -1276,7 +1277,7 @@
                                     reverseConnType = reverseConn[0].type;
                                 else {
                                     if (connType & ConnType.ONE_WAY)
-                                        reverseConnType |= ConnType.DEAD_END;
+                                        reverseConnType |= ConnType.NO_ENTRY;
                                     else if (connType & ConnType.NO_ENTRY)
                                         reverseConnType |= ConnType.ONE_WAY;
                                     if (connType & ConnType.LOCKED)
@@ -1340,7 +1341,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "1.2.1");
+                            data.footer = data.footer.replace("{VERSION}", "1.2.2");
                             localizedConns = data.conn;
                             if (isInitial) {
                                 Object.keys(data.uiTheme.values).forEach(t => {

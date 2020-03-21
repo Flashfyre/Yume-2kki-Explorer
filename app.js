@@ -9,13 +9,14 @@ const xmlJs = require('xml-js');
 const download = require('image-downloader');
 const mysql = require("mysql");
 const ConnType = require("./public/js/conn-type.js").ConnType;
+const isRemote = Boolean(process.env.DATABASE_URL);
 const defaultPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION;
 
 let dbInitialized = false;
 
 function initConnPool() {
     let ret;
-    if (process.env.DATABASE_URL) {
+    if (isRemote) {
         const dbUrl = process.env.DATABASE_URL.slice(process.env.DATABASE_URL.indexOf("mysql://") + 8);
         const user = dbUrl.slice(0, dbUrl.indexOf(":"));
         const password = dbUrl.slice(dbUrl.indexOf(":") + 1, dbUrl.indexOf("@"));
@@ -166,8 +167,11 @@ function getWorldData(pool, preserveIds) {
             }
             const worldData = Object.values(worldDataById);
             if (!preserveIds) {
-                for (let d in worldData)
+                for (let d in worldData) {
                     worldData[d].id = parseInt(d);
+                    if (!isRemote)
+                        worldData[d].filename = `./images/worlds/${worldData[d].filename}`;
+                }
             }
                 
             pool.query('SELECT id, sourceId, targetId, type FROM conns', (err, rows) => {
@@ -356,14 +360,14 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                     existingWorld.filename = world.filename;
                 }
             }
-            pool.query('SELECT id, title, titleJP FROM worlds', (err, rows) => {
+            pool.query('SELECT id, title, titleJP, filename FROM worlds', (err, rows) => {
                 if (err) return reject(err);
                 for (let r in rows) {
                     const worldName = rows[r].title;
                     if (worldNames.indexOf(worldName) > -1) {
                         const world = newWorldsByName[worldName];
                         world.id = rows[r].id;
-                        if (rows[r].titleJP !== world.titleJP)
+                        if (rows[r].titleJP !== world.titleJP || rows[r].filename !== world.filename)
                             updatedWorlds.push(world);
                     }
                     delete newWorldsByName[worldName];
@@ -461,7 +465,7 @@ function getWorldBaseWorldData(worlds, pageId) {
 
 function updateWorldInfo(pool, world) {
     return new Promise((resolve, reject) => {
-        pool.query(`UPDATE worlds SET titleJP='${world.titleJP}' WHERE id=${world.id}`, (err, _) => {
+        pool.query(`UPDATE worlds SET titleJP='${world.titleJP}', filename='${world.filename.replace(/'/g, "''")}' WHERE id=${world.id}`, (err, _) => {
             if (err) return reject(err);
             resolve();
         });
@@ -683,8 +687,6 @@ function updateWorldDepths(pool, worldData) {
                             ignoreTypeFlags ^= ConnType.LOCKED | ConnType.LOCKED_CONDITION;
                         else if (ignoreTypeFlags & ConnType.DEAD_END)
                             ignoreTypeFlags ^= ConnType.DEAD_END | ConnType.ISOLATED;
-                        else if (ignoreTypeFlags & ConnType.NO_ENTRY)
-                            ignoreTypeFlags ^= ConnType.NO_ENTRY;
                         else
                             break;
                         calcDepth(worldData, worldDataById, depthMap, sourceWorld, sourceWorld.depth, ignoreTypeFlags, w.title);
@@ -868,18 +870,24 @@ function getWorldInfo(worldName) {
             let imageUrl = res.text.split(';"> <a href="https://vignette.wikia.nocookie.net')[1];
             imageUrl = "https://vignette.wikia.nocookie.net" + imageUrl.slice(0, imageUrl.indexOf('"'));
             const ext = imageUrl.slice(imageUrl.lastIndexOf("."), imageUrl.indexOf("/", imageUrl.lastIndexOf(".")));
-            try {
-                if (!fs.existsSync("./public/images/worlds/" + worldName + ext)) {
-                    downloadImage(imageUrl, worldName + ext);
+            let filename;
+            if (isRemote)
+                filename = imageUrl.slice(0, imageUrl.indexOf("/", imageUrl.lastIndexOf(".")));
+            else {
+                filename = worldName + ext;
+                try {
+                    if (!fs.existsSync("./public/images/worlds/" + filename))
+                        downloadImage(imageUrl, filename);
+                } catch (err) {
+                    console.error(err)
                 }
-            } catch (err) {
-                console.error(err)
+                
             }
             resolve({
                 titleJP: getTitleJP(res.text),
                 connections: getConnections(res.text),
                 mapIds: getMapIds(res.text).filter(id => !isNaN(id) && id.length === 4),
-                filename: worldName + ext
+                filename: filename
             });
         });
     });
