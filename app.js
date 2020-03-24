@@ -1,11 +1,9 @@
 const express = require('express');
 const app = express();
 const port = process.env.PORT || 5000;
-const { exec } = require("child_process");
 const _ = require('lodash');
 const superagent = require('superagent');
 const fs = require('fs');
-const xmlJs = require('xml-js');
 const download = require('image-downloader');
 const mysql = require("mysql");
 const ConnType = require("./public/js/conn-type.js").ConnType;
@@ -87,13 +85,19 @@ function initDb(pool) {
             )`)).then(() => queryAsPromise(pool,
             `CREATE TABLE IF NOT EXISTS maps (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                worldId INT NOT NULL,
                 mapId CHAR(4) NOT NULL,
                 width INT NOT NULL,
-                height INT NOT NULL,
-                special BIT NOT NULL,
+                height INT NOT NULL
+            )`)).then(() => queryAsPromise(pool,
+            `CREATE TABLE IF NOT EXISTS world_maps (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                worldId INT NOT NULL,
+                mapId INT NOT NULL,
                 FOREIGN KEY (worldId)
                     REFERENCES worlds (id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (mapId)
+                    REFERENCES maps (id)
                     ON DELETE CASCADE
             )`)).then(() => {
                 dbInitialized = true;
@@ -137,14 +141,16 @@ app.get('/worlds', function(req, res) {
             pool.end();
         };
         if (req.query.hasOwnProperty("update") && req.query.update) {
-            populateWorldData(pool).then(() => getWorldData(pool).then(() => {
-                pool.query("UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()", (err) => {
-                    if (err) console.error(err);
-                    callback();
-                });
+            populateWorldData(pool).then(() => getWorldData(pool, true).then(worldData => {
+                updateMapData(pool, worldData).then(() => {
+                    pool.query("UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()", (err) => {
+                        if (err) console.error(err);
+                        getWorldData(pool).then(wd => callback(wd)).catch(err => console.error(err));
+                    });
+                }).catch(err => console.error(err));
             }).catch(err => console.error(err))).catch(err => console.error(err));
         } else {
-            checkUpdateWorldData(pool).then(() => getWorldData(pool).then(wd => callback(wd)).catch(err => console.error(err))).catch(err => console.error(err));
+            checkUpdateData(pool).then(() => getWorldData(pool).then(wd => callback(wd)).catch(err => console.error(err))).catch(err => console.error(err));
         }
     }).catch(err => console.error(err));
 });
@@ -196,7 +202,7 @@ function getWorldData(pool, preserveIds) {
                             paramsJP: row.paramsJP
                         };
                     }
-                    pool.query('SELECT w.id, ROUND(SUM((m.width * m.height) / mwm.worldCount)) AS size FROM maps m JOIN worlds w ON w.id = m.worldId JOIN (SELECT mw.mapId, COUNT(DISTINCT mw.worldId) worldCount FROM maps mw GROUP BY mw.mapId) mwm ON mwm.mapId = m.mapId WHERE m.special = 0 IS NOT NULL GROUP BY w.id', (err, rows) => {
+                    pool.query('SELECT w.id, ROUND(SUM((m.width * m.height) / mwm.worldCount)) AS size FROM world_maps wm JOIN worlds w ON w.id = wm.worldId JOIN maps m ON m.id = wm.mapId JOIN (SELECT mw.mapId, COUNT(DISTINCT mw.worldId) worldCount FROM world_maps mw GROUP BY mw.mapId) mwm ON mwm.mapId = m.id GROUP BY w.id', (err, rows) => {
                         if (err) return reject(err);
                         for (let r in rows) {
                             const row = rows[r];
@@ -221,15 +227,17 @@ function getWorldData(pool, preserveIds) {
     });
 }
 
-function checkUpdateWorldData(pool) {
+function checkUpdateData(pool) {
     return new Promise((resolve, reject) => {
         pool.query("SELECT lastFullUpdate FROM updates WHERE DATE_ADD(lastFullUpdate, INTERVAL 1 WEEK) < NOW()", (err, rows) => {
             if (err) return reject(err);
             if (rows.length) {
                 pool.query("UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()", (err) => {
-                    populateWorldData(pool).then(() => {
+                    populateWorldData(pool).then(worldData => {
                         if (err) console.error(err);
-                        resolve();
+                        updateMapData(pool, worldData).then(() => {
+                            resolve();
+                        }).catch(err => reject(err));
                     }).catch(err => reject(err));
                 });
             } else {
@@ -241,7 +249,9 @@ function checkUpdateWorldData(pool) {
                             getWorldData(pool, true).then(worldData => {
                                 getUpdatedWorldNames(worldData.map(w => w.title), rows[0].lastUpdate)
                                     .then(updatedWorldNames => populateWorldData(pool, worldData, updatedWorldNames)
-                                        .then(() => resolve()).catch(err => reject(err)))
+                                        .then(worldData => {
+                                            checkUpdateMapData(pool, worldData, rows[0].lastUpdate).then(() => resolve()).catch(err => reject(err));
+                                        }).catch(err => reject(err)))
                                     .catch(err => reject(err));
                             }).catch(err => reject(err));
                         });
@@ -273,13 +283,37 @@ function populateRecentChanges(recentChanges, lastUpdate) {
                 if (!changes.length || changes.length < 500)
                     resolve();
                 else {
-                    let lastDate = new Date(changes[changes.length - 1].timestamp);
+                    const lastDate = new Date(changes[changes.length - 1].timestamp);
                     lastDate.setTime(lastDate.getTime() + 1000);
                     populateRecentChanges(recentChanges, lastDate).then(() => resolve()).catch(err => reject(err));
                 }
             });
     });
-} 
+}
+
+function checkUpdateMapData(pool, worldData, lastUpdate) {
+    return new Promise((resolve, reject) => {
+        superagent.get('https://yume2kki.fandom.com/api.php')
+            .query({ action: 'query', titles: 'Map IDs', prop: 'revisions', format: 'json' })
+            .end((err, res) => {
+                if (err) return reject(err);
+                const data = JSON.parse(res.text);
+                const pages = data.query.pages;
+                const pageIds = Object.keys(pages);
+                if (pageIds.length) {
+                    const revisions = pages[pageIds[0]].revisions;
+                    if (revisions.length) {
+                        const revDate = new Date(revisions[0].timestamp);
+                        if (lastUpdate < revDate) {
+                            updateMapData(pool, worldData).then(() => resolve()).catch(err => reject(err));
+                            return;
+                        }
+                    }
+                }
+                resolve();
+            });
+    });
+}
 
 function populateWorldData(pool, worldData, updatedWorldNames) {
     if (!worldData)
@@ -296,15 +330,13 @@ function populateWorldData(pool, worldData, updatedWorldNames) {
             for (let b = 0; b * batchSize < worlds.length; b++)
                 batches.push(populateWorldDataSub(pool, worldData, worlds, b, updatedWorldNames, newWorldNames));
             Promise.all(batches).then(() => {
-                const worldDataByName = _.keyBy(worldData, (w) => w.title);
+                const worldDataByName = _.keyBy(worldData, w => w.title);
                 const callback = function (updatedWorldData) {
                     updateConns(pool, worldDataByName).then(() => {
                         updateConnTypeParams(pool, worldData).then(() => {
                             updateWorldDepths(pool, worldData).then(() => {
                                 deleteRemovedWorlds(pool);
-                                updateMaps(pool, updatedWorldData).then(() => {
-                                    resolve(worldData);
-                                });
+                                resolve(worldData);
                             }).catch(err => reject(err));
                         }).catch(err => reject(err));
                     }).catch(err => reject(err));
@@ -356,7 +388,6 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                     const existingWorld = worldDataByName[world.title];
                     existingWorld.titleJP = world.titleJP;
                     existingWorld.connections = world.connections;
-                    existingWorld.mapIds = world.mapIds;
                     existingWorld.filename = world.filename;
                 }
             }
@@ -377,7 +408,7 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                         const updateWorlds = [];
                         for (let w in updatedWorlds)
                             updateWorlds.push(updateWorldInfo(pool, updatedWorlds[w]).catch(err => console.error(err)));
-                        Promise.allSettled().finally(() => resolve());
+                        Promise.allSettled(updateWorlds).finally(() => resolve());
                     } else
                         resolve();
                 };
@@ -425,16 +456,16 @@ function getBaseWorldData(worlds) {
             const getWorldsBaseWorldData = [];
             for (let p in pageIds) {
                 const pageId = parseInt(pageIds[p]);
-                getWorldsBaseWorldData.push(getWorldBaseWorldData(worlds, pageId));
+                getWorldsBaseWorldData.push(getWorldBaseWorldData(worlds, pageId).catch(err => { }));
             }
-            Promise.allSettled(getWorldsBaseWorldData).then(() => resolve(worlds));
+            Promise.allSettled(getWorldsBaseWorldData).finally(() => resolve(worlds));
         });
     });
 }
 
 function getWorldBaseWorldData(worlds, pageId) {
     return new Promise((resolve, reject) => {
-        const world = worlds[parseInt(pageId)];
+        let world = worlds[parseInt(pageId)];
         const categories = world.categories;
         let skip = false;
         if (world.title.indexOf("Board Thread") > -1 || world.title === "Dream Worlds")
@@ -510,9 +541,9 @@ function updateConns(pool, worldDataByName) {
                     let updateConns = [];
                     for (let t in existingConnTypes) {
                         const type = existingConnTypes[t];
-                        updateConns.push(updateConnsOfType(pool, type, existingConnsByType[type]));
+                        updateConns.push(updateConnsOfType(pool, type, existingConnsByType[type]).catch(err => console.error(err)));
                     }
-                    Promise.allSettled(updateConns).then(() => resolve()).catch(err => reject(err));
+                    Promise.allSettled(updateConns).finally(() => resolve());
                 } else
                     resolve();
             };
@@ -737,10 +768,10 @@ function calcDepth(worldData, worldDataById, depthMap, world, depth, ignoreTypeF
                 if (!targetWorldName)
                     calcDepth(worldData, worldDataById, depthMap, worldDataByName[w], depth + 1, defaultPathIgnoreConnTypeFlags);
             }
-        } else if (!targetWorldName) {
+        }/* else if (!targetWorldName) {
             const dc = currentWorld.title + " -> " + w;
             console.log("DEAD CONNECTION: ", dc);
-        }
+        }*/
     }
     return depth;
 }
@@ -768,96 +799,180 @@ function deleteRemovedWorlds(pool) {
     });
 }
 
-function updateMaps(pool, worldData) {
+function updateMapData(pool, worldData) {
     return new Promise((resolve, reject) => {
-        const updateMapsOfWorlds = [];
-        for (let w in worldData) {
-            const world = worldData[w];
-            if (world.mapIds)
-                updateMapsOfWorlds.push(updateMapsOfWorld(pool, world));
-        }
-        Promise.all(updateMapsOfWorlds).then(() => resolve()).catch(err => reject(err));
-    });
-}
-
-function updateMapsOfWorld(pool, world) {
-    return new Promise((resolve, reject) => {
-        const newMapIds = [];
-        const existingMapIds = [];
-        const removedIds = [];
-        const mapIds = world.mapIds;
-        pool.query(`SELECT id, mapId FROM maps WHERE worldId = ${world.id}`, (err, rows) => {
-            if (err) return reject(err);
-            for (let r in rows) {
-                if (mapIds.indexOf(rows[r].mapId) > -1) {
-                    existingMapIds.push(rows[r].mapId);
-                } else {
-                    removedIds.push(rows[r].id);
+        getMapData(pool, worldData).then(mapData => {
+            updateMaps(pool, mapData).then(() => {
+                const mapsByMapId = _.keyBy(mapData, m => m.mapId);
+                const newWorldMapsByKey = {};
+                const existingWorldMaps = [];
+                const removedWorldMapIds = [];
+                for (let w in worldData) {
+                    const world = worldData[w];
+                    for (let m in world.mapIds) {
+                        const mapId = world.mapIds[m];
+                        const map = mapsByMapId[mapId];
+                        const key = `${world.id}_${map.id}`;
+                        newWorldMapsByKey[key] = {
+                            worldId: world.id,
+                            mapId: map.id
+                        };
+                    }
                 }
-            }
-            mapIds.map(id => {
-                if (existingMapIds.indexOf(id) === -1) {
-                    newMapIds.push(id);
-                }
-            });
-            if (newMapIds.length)
-                processMaps(pool, world.id, newMapIds).then(() => resolve()).catch(err => reject(err));
-            else
-                resolve();
-            if (removedIds.length)
-                deleteRemovedMaps(pool, removedIds);
-        });
-    });
-}
-
-function processMaps(pool, worldId, mapIds) {
-    return new Promise(resolve => {
-        const processMapOfIds = [];
-        for (let m in mapIds) {
-            processMapOfIds.push(processMap(pool, worldId, mapIds[m]).catch(err => console.error(err)));
-        }
-        Promise.allSettled(processMapOfIds).finally(() => resolve());
-    });
-}
-
-function processMap(pool, worldId, mapId) {
-    return new Promise((resolve, reject) => {
-        exec(`..\\..\\tools\\lcf2xml.exe ../in/Map${mapId}.lmu`, {
-            cwd: './maps/out/'
-        }, (err) => {
-            if (err) return reject(err);
-            const insertMapCallback = function (width, height) {
-                pool.query(`INSERT INTO maps (worldId, mapId, width, height, special) VALUES (${worldId}, '${mapId}', ${width}, ${height}, 0)`, (err, _) => {
+                pool.query('SELECT id, worldId, mapId FROM world_maps', (err, rows) => {
                     if (err) return reject(err);
-                    resolve();
+                    for (let r in rows) {
+                        const key = `${rows[r].worldId}_${rows[r].mapId}`;
+                        if (Object.keys(newWorldMapsByKey).indexOf(key) > -1) {
+                            const worldMap = newWorldMapsByKey[key];
+                            worldMap.id = rows[r].id;
+                            existingWorldMaps.push(worldMap);
+                        } else
+                            removedWorldMapIds.push(rows[r].id);
+                        delete newWorldMapsByKey[key];
+                    }
+
+                    if (removedWorldMapIds.length)
+                        deleteRemovedWorldMaps(pool, removedWorldMapIds);
+                    const newWorldMapKeys = Object.keys(newWorldMapsByKey);
+                    
+                    if (newWorldMapKeys.length) {
+                        let i = 0;
+                        let worldMapsQuery = "INSERT INTO world_maps (worldId, mapId) VALUES "
+                        for (let m in newWorldMapsByKey) {
+                            const worldMap = newWorldMapsByKey[m];
+                            if (i++)
+                                worldMapsQuery += ", ";
+                            worldMapsQuery += `(${worldMap.worldId}, ${worldMap.mapId})`;
+                        }
+                        pool.query(worldMapsQuery, (err, res) => {
+                            if (err) return reject(err);
+                            const insertedRows = res.affectedRows;
+                            const worldMapRowIdsQuery = `SELECT r.id FROM (SELECT id FROM world_maps ORDER BY id DESC LIMIT ${insertedRows}) r ORDER BY 1`;
+                            pool.query(worldMapRowIdsQuery, (err, rows) => {
+                                if (err) return reject(err);
+                                for (let r in rows)
+                                    newWorldMapsByKey[newWorldMapKeys[r]].id = rows[r].id;
+                                resolve();
+                            });
+                        });
+                    } else
+                        resolve();
                 });
-            };
-            fs.readFile(`./maps/out/Map${mapId}.emu`, function(err, data) {
-                if (err) return reject(err);
-                let json;
-                try {
-                    json = JSON.parse(xmlJs.xml2json(data, {compact: true, spaces: 4}));
-                } catch (error) {
-                    console.error(error, worldId, mapId);
-                    return resolve();
-                }
-                const map = json.LMU.Map;
-                insertMapCallback(parseInt(map.width._text), parseInt(map.height._text));
+            }).catch(err => reject(err));
+        }).catch(err => reject(err));
+    });
+}
+
+function getMapData(pool, worldData) {
+    return new Promise((resolve, reject) => {
+        superagent.get('https://yume2kki.fandom.com/wiki/Map_IDs', function (err, res) {
+            if (err) return reject(err);
+            worldData.forEach(w => w.mapIds = []);
+            const worldDataByName = _.keyBy(worldData, w => w.title);
+            const mapIdTablesHtml = res.text.slice(res.text.indexOf('<table '), res.text.lastIndexOf('</table>'));
+            const rawMapData = mapIdTablesHtml.split('<td>#').slice(1).map(t => {
+                const ret = t.split('</td><td>').slice(0, 6);
+                ret[5] = ret[5].slice(0, ret[5].indexOf('</td>'));
+                return ret;
             });
+            const mapData = [];
+            rawMapData.forEach(m => {
+                if (m[3].indexOf('Accessible') > -1) {
+                    const map = {};
+                    map.mapId = m[0].slice(0, 4);
+                    m[2].split('<br />').map(w => {
+                        const worldNameStartIndex = w.indexOf('<a href="/wiki/') + 15;
+                        if (worldNameStartIndex > -1) {
+                            const worldNameEndIndex = w.indexOf('"', worldNameStartIndex);
+                            const worldName = w.slice(worldNameStartIndex, worldNameEndIndex).replace(/%26/g, "&").replace(/%27/g, "'").replace(/\_/g, " ").replace(/#.*/, "");
+                            if (worldDataByName[worldName])
+                                worldDataByName[worldName].mapIds.push(map.mapId);
+                        }
+                    });
+                    map.width = parseInt(m[4]);
+                    map.height = parseInt(m[5]);
+                    mapData.push(map);
+                }
+            });
+            resolve(mapData);
         });
     });
 }
 
-function deleteRemovedMaps(pool, removedMapIds) {
+function updateMaps(pool, mapData) {
+    return new Promise((resolve, reject) => {
+        pool.query('SELECT id, mapId, width, height FROM maps', (err, rows) => {
+            if (err) return reject(err);
+            const mapDataByMapId = _.keyBy(mapData, m => m.mapId);
+            const newMapsByMapId = _.keyBy(mapData, m => m.mapId);
+            const mapIds = Object.keys(mapDataByMapId);
+            const updatedMaps = [];
+            for (let r in rows) {
+                const mapId = rows[r].mapId;
+                if (mapIds.indexOf(mapId) > -1) {
+                    const map = mapDataByMapId[mapId];
+                    map.id = rows[r].id;
+                    if (rows[r].width !== map.width || rows[r].height !== map.height)
+                        updatedMaps.push(map);
+                }
+                delete newMapsByMapId[mapId];
+            }
+            const insertCallback = function() {
+                if (updatedMaps.length) {
+                    const updateMaps = [];
+                    for (let m in updatedMaps)
+                        updateMaps.push(updateMap(pool, updatedMaps[m]).catch(err => console.error(err)));
+                    Promise.allSettled(updateMaps).finally(() => resolve());
+                } else
+                    resolve();
+            };
+            const newMapIds = Object.keys(newMapsByMapId);
+            if (newMapIds.length) {
+                let i = 0;
+                let mapsQuery = "INSERT INTO maps (mapId, width, height) VALUES "
+                for (let m in newMapsByMapId) {
+                    const newMap = newMapsByMapId[m];
+                    if (i++)
+                        mapsQuery += ", ";
+                    mapsQuery += `('${newMap.mapId}', ${newMap.width}, ${newMap.height})`;
+                }
+                pool.query(mapsQuery, (err, res) => {
+                    if (err) return reject(err);
+                    const insertedRows = res.affectedRows;
+                    const mapRowIdsQuery = `SELECT r.id FROM (SELECT id FROM maps ORDER BY id DESC LIMIT ${insertedRows}) r ORDER BY 1`;
+                    pool.query(mapRowIdsQuery, (err, rows) => {
+                        if (err) return reject(err);
+                        for (let r in rows)
+                            newMapsByMapId[newMapIds[r]].id = rows[r].id;
+                        insertCallback();
+                    });
+                });
+            } else
+                insertCallback();
+        });
+    });
+}
+
+function updateMap(pool, map) {
+    return new Promise((resolve, reject) => {
+        pool.query(`UPDATE maps SET width=${map.width}, height=${map.height} WHERE id=${map.id}`, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+}
+
+function deleteRemovedWorldMaps(pool, removedWorldMapIds) {
     let i = 0;
-    let deleteMapsQuery = "DELETE FROM maps WHERE id IN (";
-    for (let m in removedMapIds) {
+    let deleteWorldMapsQuery = "DELETE FROM world_maps WHERE id IN (";
+    for (let m in removedWorldMapIds) {
         if (i++)
-            deleteMapsQuery += ", ";
-        deleteMapsQuery += removedMapIds[m];
+            deleteWorldMapsQuery += ", ";
+        deleteWorldMapsQuery += removedWorldMapIds[m];
     }
-    deleteMapsQuery += ")";
-    pool.query(deleteMapsQuery, (err, _) => {
+    deleteWorldMapsQuery += ")";
+    pool.query(deleteWorldMapsQuery, (err, _) => {
         if (err) return console.log(err);
     });
 }
@@ -886,7 +1001,6 @@ function getWorldInfo(worldName) {
             resolve({
                 titleJP: getTitleJP(res.text),
                 connections: getConnections(res.text),
-                mapIds: getMapIds(res.text).filter(id => !isNaN(id) && id.length === 4),
                 filename: filename
             });
         });
@@ -981,11 +1095,6 @@ function getConnections(html) {
         }
     }
     return ret;
-}
-
-function getMapIds(html) {
-    html = html.slice(html.indexOf("<b>Map ID</b>"), html.indexOf("<b>Author</b>"));
-    return html.slice(html.indexOf("<p>") + 3, html.indexOf("</p>")).trim().split(", ");
 }
 
 app.listen(port, () => console.log(`2kki app listening on port ${port}!`))
