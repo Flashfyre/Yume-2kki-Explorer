@@ -89,6 +89,26 @@
                 padding: 8px;
             }
 
+            .loading-container {
+                width: 100%;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .loading-container .loading-container__text {
+                font-size: xx-large;
+                margin-left: 12px;
+            }
+
+            .loading-container img {
+                -ms-interpolation-mode: nearest-neighbor;
+                image-rendering: pixelated;
+                height: 25%;
+            }
+
             .graph {
                 width: 100%;
                 height: 100%;
@@ -196,17 +216,19 @@
                 color: rgba(216, 216, 216, 1); /*base*/
             }
 
-            .footer {
-                color: rgba(216, 216, 216, 1); /*base*/
-            }
-
-            label {
+            label, .loading-container .loading-container__text {
                 background-image: url(/images/ui/Default_Custom/font1.png);
                 -webkit-background-clip: text;
 	            -webkit-text-fill-color: transparent;
                 background-clip: text;
                 background-size: 18px;
             }
+
+            .footer {
+                color: rgba(216, 216, 216, 1); /*base*/
+            }
+
+            
 
             button {
                 color: rgba(216, 216, 216, 1); /*base*/
@@ -269,7 +291,13 @@
                     <button data-localize="reset" class="js--reset noselect">Reset</button>
                 </div>
             </div>
-            <div id="graph" class="graph"></div>
+            <div id="graph" class="graph">
+                <div class="loading-container">
+                    <span class="loading-container__text loading-container__text--loading"><span data-localize="loading.label" class="loading-container__text__main">Loading</span><span data-localize="loading.space" class="loading-container__text__append">   </span></span>
+                    <span class="loading-container__text loading-container__text--error" data-localize="loading.error" style="display: none;"></span>
+                    <img src="images/urowalk.gif" />
+                </div>
+            </div>
             <div class="controls--container--tab">
                 <button class="controls--container--tab__button noselect">▲</button>
             </div>
@@ -598,10 +626,8 @@
                     $(".controls--container--tab").css({ "height": controlsHeight + "px", "left": "calc(50% - " + (($(".controls--container--tab").outerWidth() - 16) / 2) + "px)" });
                 }
 
-                function loadWorldData(update, callback) {
-                    $.get("/worlds" + (update ? "?update=true" : ""), function (data) {
-                        callback(data);
-                    });
+                function loadWorldData(update, success, fail) {
+                    $.get("/worlds" + (update ? "?update=true" : ""), success).fail(fail);
                 }
 
                 let graph;
@@ -1349,7 +1375,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "1.3.0");
+                            data.footer = data.footer.replace("{VERSION}", "1.3.1");
                             localizedConns = data.conn;
                             if (isInitial) {
                                 Object.keys(data.uiTheme.values).forEach(t => {
@@ -1420,6 +1446,17 @@
                 let worldsByName, worldNames, minSize, maxSize;
 
                 $(document).ready(function () {
+                    let loadingFrameCount = 0;
+                    const loadingTimer = window.setInterval(function () {
+                        let loadingTextAppend = "";
+                        const loadingTextAppendChar = config.lang === "en" ? "." : "．";
+                        const loadingTextSpaceChar = config.lang === "en" ? " " : "　";
+                        for (var i = 0; i < 3; i++)
+                            loadingTextAppend += i < loadingFrameCount ? loadingTextAppendChar : loadingTextSpaceChar;
+                        $(".loading-container__text__append").text(loadingTextAppend);
+                        loadingFrameCount += loadingFrameCount < 3 ? 1 : -3;
+                    }, 300);
+                    
                     $(".controls--container--tab__button").click(function() {
                         updateControlsContainer();
                         if ($(".controls-bottom").hasClass("visible")) {
@@ -1439,81 +1476,86 @@
                         isShift = false;
                         isCtrl = false;
                     });
-
-                    loadWorldData(false, function (data) {
-                        worldData = data;
-
-                        $(".js--lang").change(function() {
-                            config.lang = $(this).val();
-                            updateConfig();
-                            initLocalization();
+                    
+                    $(".js--lang").change(function() {
+                        config.lang = $(this).val();
+                        updateConfig();
+                        initLocalization();
+                        if (worldData)
                             reloadGraph();
-                        });
+                    });
 
-                        $(".js--ui-theme").change(function() {
-                            config.uiTheme = $(this).val();
-                            const themeStyles = $(".js--theme-styles")[0];
-                            getBaseBgColor(config.uiTheme || (config.uiTheme = "Default_Custom"), function (color) {
-                                var bgColorPixel = uiThemeBgColors[config.uiTheme];
-                                var altColor = "rgba(" + Math.min(bgColorPixel[0] + 48, 255) + ", " + Math.min(bgColorPixel[1] + 48, 255) + ", " + Math.min(bgColorPixel[2] + 48, 255) + ", 1)";
-                                themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/[a-zA-Z0-9\_]+\/(containerbg|border(?:2)?|font\d)\.png\)/g, "url(/images/ui/" + config.uiTheme + "/$1.png)")
-                                    .replace(/background-color:( *)[^;]*;( *)\/\*base\*\//g, "background-color:$1" + color + ";$2/*base*/")
-                                    .replace(/background-color:( *)[^;]*;( *)\/\*alt\*\//g, "background-color:$1" + altColor + ";$2/*alt*/");
-                                $(".js--font-style").change();
+                    $(".js--ui-theme").change(function() {
+                        config.uiTheme = $(this).val();
+                        const themeStyles = $(".js--theme-styles")[0];
+                        getBaseBgColor(config.uiTheme || (config.uiTheme = "Default_Custom"), function (color) {
+                            var bgColorPixel = uiThemeBgColors[config.uiTheme];
+                            var altColor = "rgba(" + Math.min(bgColorPixel[0] + 48, 255) + ", " + Math.min(bgColorPixel[1] + 48, 255) + ", " + Math.min(bgColorPixel[2] + 48, 255) + ", 1)";
+                            themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/[a-zA-Z0-9\_]+\/(containerbg|border(?:2)?|font\d)\.png\)/g, "url(/images/ui/" + config.uiTheme + "/$1.png)")
+                                .replace(/background-color:( *)[^;]*;( *)\/\*base\*\//g, "background-color:$1" + color + ";$2/*base*/")
+                                .replace(/background-color:( *)[^;]*;( *)\/\*alt\*\//g, "background-color:$1" + altColor + ";$2/*alt*/");
+                            $(".js--font-style").change();
+                            updateConfig();
+                        });
+                    });
+
+                    $(".js--font-style").change(function() {
+                        config.fontStyle = parseInt($(this).val());
+                        const themeStyles = $(".js--theme-styles")[0];
+                        getFontColor(config.fontStyle, function (baseColor) {
+                            getFontColor(config.fontStyle !== 4 ? 4 : 0, function (altColor) {
+                                themeStyles.textContent = themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/([a-zA-Z0-9\_]+)\/font\d\.png\)/g, "url(/images/ui/$1/font" + (config.fontStyle + 1) + ".png)")
+                                    .replace(/([^\-])color:( *)[^;]*;( *)\/\*base\*\//g, "$1color:$2" + baseColor + ";$3/*base*/")
+                                    .replace(/([^\-])color:( *)[^;]*;( *)\/\*alt\*\//g, "$1color:$2" + altColor + ";$3/*alt*/");
                                 updateConfig();
                             });
                         });
+                    });
 
-                        $(".js--font-style").change(function() {
-                            config.fontStyle = parseInt($(this).val());
-                            const themeStyles = $(".js--theme-styles")[0];
-                            getFontColor(config.fontStyle, function (baseColor) {
-                                getFontColor(config.fontStyle !== 4 ? 4 : 0, function (altColor) {
-                                    themeStyles.textContent = themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/([a-zA-Z0-9\_]+)\/font\d\.png\)/g, "url(/images/ui/$1/font" + (config.fontStyle + 1) + ".png)")
-                                        .replace(/([^\-])color:( *)[^;]*;( *)\/\*base\*\//g, "$1color:$2" + baseColor + ";$3/*base*/")
-                                        .replace(/([^\-])color:( *)[^;]*;( *)\/\*alt\*\//g, "$1color:$2" + altColor + ";$3/*alt*/");
-                                    updateConfig();
-                                });
-                            });
-                        });
-
-                        $(".js--display-mode").change(function() {
-                            config.displayMode = parseInt($(this).val());
-                            updateConfig();
+                    $(".js--display-mode").change(function() {
+                        config.displayMode = parseInt($(this).val());
+                        updateConfig();
+                        if (worldData)
                             reloadGraph();
-                            $(".js--stack-size--container").css("display", config.displayMode < 2 ? "flex" : "none");
-                        });
+                        $(".js--stack-size--container").css("display", config.displayMode < 2 ? "flex" : "none");
+                    });
 
-                        $(".js--conn-mode").change(function() {
-                            config.connMode = parseInt($(this).val());
-                            updateConfig();
-                        });
+                    $(".js--conn-mode").change(function() {
+                        config.connMode = parseInt($(this).val());
+                        updateConfig();
+                    });
 
-                        $(".js--label-mode").change(function() {
-                            config.labelMode = parseInt($(this).val());
-                            updateConfig();
-                        });
+                    $(".js--label-mode").change(function() {
+                        config.labelMode = parseInt($(this).val());
+                        updateConfig();
+                    });
 
-                        $(".js--size-diff").change(function() {
-                            config.sizeDiff = parseFloat($(this).val());
-                            updateConfig();
+                    $(".js--size-diff").change(function() {
+                        config.sizeDiff = parseFloat($(this).val());
+                        updateConfig();
+                        if (worldData)
                             reloadGraph();
-                        });
+                    });
 
-                        $(".js--stack-size").change(function() {
-                            config.stackSize = parseInt($(this).val());
-                            updateConfig();
+                    $(".js--stack-size").change(function() {
+                        config.stackSize = parseInt($(this).val());
+                        updateConfig();
+                        if (worldData)
                             reloadGraph();
-                        });
+                    });
 
-                        $(".js--reset").click(function() {
-                            $(".js--world-input").val("");
+                    $(".js--reset").click(function() {
+                        $(".js--world-input").val("");
+                        if (worldData)
                             reloadGraph();
-                        });
+                    });
 
-                        loadOrInitConfig();
+                    loadOrInitConfig();
 
-                        initLocalization(true);
+                    initLocalization(true);
+
+                    loadWorldData(false, function (data) {
+                        worldData = data;
 
                         for (let d in Object.keys(worldData)) {
                             const world = worldData[d];
@@ -1532,7 +1574,14 @@
                         minSize = _.min(worldSizes);
                         maxSize = _.max(worldSizes);
 
+                        window.clearInterval(loadingTimer);
+
                         reloadGraph();
+                    }, function () {
+                        window.clearInterval(loadingTimer);
+                        $(".loading-container .loading-container__text--loading").hide();
+                        $(".loading-container .loading-container__text--error").show();
+                        $(".loading-container img").attr("src", "images/urofaint.gif");
                     });
                 });
             </script>

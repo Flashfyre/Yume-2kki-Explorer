@@ -1,4 +1,9 @@
 {
+    "loading": {
+        "label": "Loading",
+        "space": "   ",
+        "error": "An error occurred: please try again later."
+    },
     "lang": {
         "name": "Language:",
         "values": {
