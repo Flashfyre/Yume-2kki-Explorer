@@ -714,7 +714,7 @@ function updateWorldDepths(pool, worldData) {
                 let ignoreTypeFlags = defaultPathIgnoreConnTypeFlags;
                 if (sourceWorld.depth !== undefined) {
                     do {
-                        if (ignoreTypeFlags & ConnType.LOCKED)
+                        if (ignoreTypeFlags & ConnType.LOCKED || ignoreTypeFlags & ConnType.LOCKED_CONDITION)
                             ignoreTypeFlags ^= ConnType.LOCKED | ConnType.LOCKED_CONDITION;
                         else if (ignoreTypeFlags & ConnType.DEAD_END)
                             ignoreTypeFlags ^= ConnType.DEAD_END | ConnType.ISOLATED;
