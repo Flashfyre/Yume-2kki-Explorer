@@ -1375,7 +1375,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "1.3.1");
+                            data.footer = data.footer.replace("{VERSION}", "1.3.2");
                             localizedConns = data.conn;
                             if (isInitial) {
                                 Object.keys(data.uiTheme.values).forEach(t => {
@@ -1568,6 +1568,8 @@
                                 }
                             });
                         }
+
+                        initLocalization();
 
                         const worldSizes = worldData.map(w => w.size); 
 
