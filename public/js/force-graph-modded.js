@@ -10880,6 +10880,10 @@
         }
       },
       dagLevelDistance: {},
+      connMode: {
+        "default": 0,
+        triggerUpdate: false
+      },
       nodeRelSize: {
         "default": 4,
         triggerUpdate: false
@@ -11219,9 +11223,10 @@
 
           if (state.isShadow) {
             const getIconColor = accessorFn(state.iconColor);
+            const connMode = accessorFn(state.connMode)();
             ctx.save();
             visibleLinks.forEach(function (link) {
-              if (!link.hidden && link.icons.length) {
+              if ((!link.hidden || connMode) && link.icons.length) {
                 const icons = link.icons;
                 const sourceScale = link.sourceScale;
                 const targetScale = link.targetScale;
@@ -11637,7 +11642,7 @@
   var bindBoth = linkKapsule(['forceGraph', 'shadowGraph'], CanvasForceGraph);
   var linkedProps = Object.assign.apply(Object, _toConsumableArray(['nodeColor', 'nodeAutoColorBy', 'nodeCanvasObject', 'nodeCanvasObjectMode', 'linkColor', 'linkAutoColorBy', 'linkWidth', 'linkCanvasObject', 'linkCanvasObjectMode', 'linkDirectionalArrowLength', 'linkDirectionalArrowColor', 'linkDirectionalArrowRelPos', 'linkDirectionalParticles', 'linkDirectionalParticleSpeed', 'linkDirectionalParticleWidth', 'linkDirectionalParticleColor', 'nodesPerStack', 'dagMode', 'dagLevelDistance', 'd3AlphaDecay', 'd3VelocityDecay', 'warmupTicks', 'cooldownTicks', 'cooldownTime', 'onEngineTick', 'onEngineStop'].map(function (p) {
     return _defineProperty({}, p, bindFG.linkProp(p));
-  })).concat(_toConsumableArray(['nodeRelSize', 'nodeId', 'nodeVal', 'nodeVisibility', 'linkSource', 'linkTarget', 'linkVisibility', 'linkCurvature'].map(function (p) {
+  })).concat(_toConsumableArray(['nodeRelSize', 'nodeId', 'nodeVal', 'nodeVisibility', 'connMode', 'linkSource', 'linkTarget', 'linkVisibility', 'linkCurvature'].map(function (p) {
     return _defineProperty({}, p, bindBoth.linkProp(p));
   }))));
   var linkedMethods = Object.assign.apply(Object, _toConsumableArray(['d3Force', 'd3ReheatSimulation', 'emitParticle', 'getDagDepths'].map(function (p) {

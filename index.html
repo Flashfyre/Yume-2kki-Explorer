@@ -897,6 +897,7 @@
                             }
                             ctx.globalAlpha = 1;
                         })
+                        .connMode(() => config.connMode)
                         .nodeVal(node => node.height)
                         .nodeLabel(node => node.img.title)
                         .nodesPerStack(config.stackSize)
@@ -1375,7 +1376,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "1.3.3");
+                            data.footer = data.footer.replace("{VERSION}", "1.3.4");
                             localizedConns = data.conn;
                             if (isInitial) {
                                 Object.keys(data.uiTheme.values).forEach(t => {
