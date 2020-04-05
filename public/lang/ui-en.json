@@ -102,5 +102,11 @@
         "name": "Destination:"
     },
     "reset": "Reset",
+    "contextMenu": {
+        "items": {
+            "start": "Set as Origin",
+            "end": "Set as Destination"
+        }
+    },
     "footer": "Yume 2kki Explorer v{VERSION} by FlashfyreDev"
 }

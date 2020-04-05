@@ -102,5 +102,11 @@
         "name": "行先"
     },
     "reset": "リセット",
+    "contextMenu": {
+        "items": {
+            "start": "原点として設定",
+            "end": "行先として設定"
+        }
+    },
     "footer": "ゆめ２っきエクスプローラver{VERSION} by FlashfyreDev"
 }

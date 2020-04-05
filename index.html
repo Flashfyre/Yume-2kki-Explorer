@@ -199,6 +199,15 @@
                 display: block;
                 border-bottom: 1px solid #000;
             }
+
+            .context-menu-list {
+                border: 0 !important;
+                padding: 0 !important;
+            }
+
+            .context-menu-item {
+                border: 6px solid transparent;
+            }
         </style>
         <style class="js--theme-styles">
             body {
@@ -227,8 +236,6 @@
             .footer {
                 color: rgba(216, 216, 216, 1); /*base*/
             }
-
-            
 
             button {
                 color: rgba(216, 216, 216, 1); /*base*/
@@ -265,8 +272,20 @@
             .autocomplete-suggestions strong {
                 color: rgba(255, 255, 157, 1); /*alt*/
             }
+
+            .context-menu-item {
+                color: rgba(216, 216, 216, 1) !important; /*base*/
+                border-image: url(/images/ui/Default_Custom/border.png) 8 round !important;
+                background-color: rgba(45, 17, 23, 1) !important; /*base*/
+                background-image: url(/images/ui/Default_Custom/containerbg.png) !important;
+            }
+
+            .context-menu-item.context-menu-hover {
+                color: rgba(255, 255, 157, 1) !important; /*alt*/
+            }
         </style>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.9.0/jquery.contextMenu.min.css" />
         <script src="/js/force-graph-modded.js"></script>
         <script src="//unpkg.com/d3-quadtree"></script>
         <script src="//unpkg.com/d3-force"></script>
@@ -274,6 +293,8 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.devbridge-autocomplete/1.4.10/jquery.autocomplete.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-localize/0.1.0/jquery.localize.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.9.0/jquery.contextMenu.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.9.0/jquery.ui.position.min.js"></script>
         <script src="/js/conn-type.js"></script>
     </head>
     <body>
@@ -620,10 +641,12 @@
                     }
                 }
 
-                function updateControlsContainer() {
+                function updateControlsContainer(updateTabMargin) {
                     const controlsHeight = $(".controls-bottom").outerHeight();
                     $(".controls--container").css({ "height": controlsHeight + "px", "margin-top": "-" + (controlsHeight + 20) + "px" });
                     $(".controls--container--tab").css({ "height": controlsHeight + "px", "left": "calc(50% - " + (($(".controls--container--tab").outerWidth() - 16) / 2) + "px)" });
+                    if (updateTabMargin && $(".controls-bottom").hasClass("visible"))
+                        $(".controls--container--tab, .footer").css("margin-top", "-" + (controlsHeight + 8) + "px");
                 }
 
                 function loadWorldData(update, success, fail) {
@@ -632,7 +655,7 @@
 
                 let graph;
                 
-                let selectedWorldId, selectedWorldZoomCheck;
+                let contextWorldId, selectedWorldId, selectedWorldZoomCheck;
 
                 let searchWorldIds = [];
 
@@ -846,7 +869,7 @@
                     }
                     graph
                         .nodeCanvasObject(({ id, img, x, y, scale, width, height, isHover }, ctx, globalScale) => {
-                            ctx.globalAlpha = !searchWorldIds.length || searchWorldIds.indexOf(id) > -1 ? 1 : 0.1;
+                            ctx.globalAlpha = (!selectedWorldId || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1) ? 1 : selectedWorldId && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length ? 0.5 : 0.1;
                             ctx.imageSmoothingEnabled = false;
                             ctx.drawImage(img, 0, 0, img.width, img.height, x - width / 2, y - height / 2, width, height);
                             if (config.labelMode === 3 || (config.labelMode === 1 && isHover) || (config.labelMode === 2 && id === selectedWorldId)) {
@@ -882,7 +905,7 @@
                                     ctx.fillText(textLine, lineX, lineY);
                                 }
                             }
-                            if (selectedWorldId == id) {
+                            if (selectedWorldId === id) {
                                 ctx.strokeStyle = '#f00';
                                 ctx.lineWidth = 1 / globalScale;
                                 ctx.strokeRect(x - width / 2, y - height / 2, width, height);
@@ -903,14 +926,15 @@
                         .nodesPerStack(config.stackSize)
                         .linkWidth(link => selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1)
                         .linkColor(link => link.hidden ? 'transparent' : selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' :
-                            !searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1 ? link.defaultColor : link.defaultColorFade)
+                            (!selectedWorldId || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)
+                            ? link.defaultColor : link.defaultColorFade)
                         .linkCanvasObjectMode('connTypeCheck')
                         .linkCanvasObject((link, ctx, globalScale) => {
                             const hidden = link.hidden;
                             if (hidden && config.connMode === 0)
                                 return;
                             const connType = link.connType;
-                            const fade = searchWorldIds.length && searchWorldIds.indexOf(link.source.id) === -1 && searchWorldIds.indexOf(link.target.id) === -1;
+                            const fade = (selectedWorldId && link.source.id !== selectedWorldId && link.target.id !== selectedWorldId) || (searchWorldIds.length && searchWorldIds.indexOf(link.source.id) === -1 && searchWorldIds.indexOf(link.target.id) === -1);
                             if (!hidden) {
                                 ctx.beginPath();
                                 ctx.lineWidth = (selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1) / globalScale;
@@ -948,16 +972,29 @@
                                 prevNode.isHover = false;
                         })
                         .onNodeClick(node => {
+                            const world = worldData[node.id];
                             if (isCtrl || isShift) {
-                                const world = worldData[node.id];
-                                window.open(config.lang === "en" || !world.titleJP
+                                window.open(config.lang === 'en' || !world.titleJP
                                     ? 'https://yume2kki.fandom.com/wiki/' + world.title
                                     : ('https://wikiwiki.jp/yume2kki-t/' + (world.titleJP.indexOf("：") > -1 ? world.titleJP.slice(0, world.titleJP.indexOf("：")) : world.titleJP)),
                                     "_blank", isShift ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
                             } else {
-                                selectedWorldId = node && (!selectedWorldId || selectedWorldId !== node.id) ? node.id : null;
+                                if (node && (!selectedWorldId || selectedWorldId !== node.id)) {
+                                    $(".js--search-world").val(config.lang === 'en' ? world.title : world.titleJP);
+                                    selectedWorldId = node.id;
+                                } else {
+                                    $(".js--search-world").val("");
+                                    selectedWorldId = null;
+                                }
                                 selectedWorldZoomCheck = true;
                             }
+                        })
+                        .onNodeRightClick((node, ev) => {
+                            contextWorldId = node.id;
+                            $(".graph canvas").contextMenu({
+                                x: ev.x,
+                                y: ev.y
+                            });
                         })
                         .iconLabel(icon => icon.text)
                         .cooldownTime(Infinity)
@@ -1376,8 +1413,9 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "1.3.4");
+                            data.footer = data.footer.replace("{VERSION}", "1.4.0");
                             localizedConns = data.conn;
+                            initContextMenu(data.contextMenu);
                             if (isInitial) {
                                 Object.keys(data.uiTheme.values).forEach(t => {
                                     $(".js--ui-theme").append('<option data-localize="uiTheme.values.' + t + '" value="' + t + '">' + data.uiTheme.values[t] + '</option>');
@@ -1429,8 +1467,11 @@
                         } else {
                             $(this).autocomplete({
                                 lookup: worldNames,
+                                triggerSelectOnValidInput: false,
                                 onSearchComplete: function (query, searchWorlds) {
                                     searchWorldIds = searchWorlds.length && (!selectedWorldId || (searchWorlds.length > 1 || searchWorlds.filter(w => w.value !== worldData[selectedWorldId].title).length)) ? searchWorlds.map(w => worldsByName[w.value].id) : [];
+                                    if (searchWorldIds.length && selectedWorldId && (searchWorldIds.length !== 1 || selectedWorldId !== searchWorldIds[0]))
+                                        selectedWorldId = null;
                                 },
                                 onSelect: function (selectedWorld) {
                                     selectedWorldId = worldsByName[selectedWorld.value].id;
@@ -1440,6 +1481,30 @@
                                     searchWorldIds = [];
                                 }
                             });
+                        }
+                    });
+                }
+
+                function initContextMenu(localizedContextMenu) {
+                    $.contextMenu('destroy');
+                    $.contextMenu({
+                        selector: '.graph canvas', 
+                        trigger: 'none',
+                        items: {
+                            "start": {
+                                name: () => localizedContextMenu.items.start,
+                                callback: function () {
+                                    const world = worldData[contextWorldId];
+                                    $(".js--start-world").val(config.lang === 'en' ? world.title : world.titleJP).change();
+                                }
+                            },
+                            "end": {
+                                name: () => localizedContextMenu.items.end,
+                                callback: function () {
+                                    const world = worldData[contextWorldId];
+                                    $(".js--end-world").val(config.lang === 'en' ? world.title : world.titleJP).change();
+                                }
+                            }
                         }
                     });
                 }
@@ -1472,7 +1537,7 @@
                         }
                     });
 
-                    updateControlsContainer();
+                    updateControlsContainer(true);
                     $(window).resize(updateControlsContainer).blur(function() {
                         isShift = false;
                         isCtrl = false;
@@ -1493,8 +1558,8 @@
                             var bgColorPixel = uiThemeBgColors[config.uiTheme];
                             var altColor = "rgba(" + Math.min(bgColorPixel[0] + 48, 255) + ", " + Math.min(bgColorPixel[1] + 48, 255) + ", " + Math.min(bgColorPixel[2] + 48, 255) + ", 1)";
                             themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/[a-zA-Z0-9\_]+\/(containerbg|border(?:2)?|font\d)\.png\)/g, "url(/images/ui/" + config.uiTheme + "/$1.png)")
-                                .replace(/background-color:( *)[^;]*;( *)\/\*base\*\//g, "background-color:$1" + color + ";$2/*base*/")
-                                .replace(/background-color:( *)[^;]*;( *)\/\*alt\*\//g, "background-color:$1" + altColor + ";$2/*alt*/");
+                                .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "background-color:$1" + color + "$2;$3/*base*/")
+                                .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "background-color:$1" + altColor + "$2;$3/*alt*/");
                             $(".js--font-style").change();
                             updateConfig();
                         });
@@ -1506,8 +1571,8 @@
                         getFontColor(config.fontStyle, function (baseColor) {
                             getFontColor(config.fontStyle !== 4 ? 4 : 0, function (altColor) {
                                 themeStyles.textContent = themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/([a-zA-Z0-9\_]+)\/font\d\.png\)/g, "url(/images/ui/$1/font" + (config.fontStyle + 1) + ".png)")
-                                    .replace(/([^\-])color:( *)[^;]*;( *)\/\*base\*\//g, "$1color:$2" + baseColor + ";$3/*base*/")
-                                    .replace(/([^\-])color:( *)[^;]*;( *)\/\*alt\*\//g, "$1color:$2" + altColor + ";$3/*alt*/");
+                                    .replace(/([^\-])color:( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "$1color:$2" + baseColor + "$3;$4/*base*/")
+                                    .replace(/([^\-])color:( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "$1color:$2" + altColor + "$3;$4/*alt*/");
                                 updateConfig();
                             });
                         });
