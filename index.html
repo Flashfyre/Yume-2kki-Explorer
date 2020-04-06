@@ -964,6 +964,10 @@
                                 ctx.globalAlpha = 1;
                             }
                         })
+                        .onNodeDragEnd(node => {
+                            node.fx = node.x;
+                            node.fy = node.y;
+                        })
                         .onNodeHover((node, prevNode) => {
                             elem.style.cursor = node ? 'pointer' : null;
                             if (node)
