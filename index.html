@@ -655,7 +655,7 @@
 
                 let graph;
                 
-                let contextWorldId, selectedWorldId, selectedWorldZoomCheck;
+                let contextWorldId = null, selectedWorldId = null, selectedWorldZoomCheck;
 
                 let searchWorldIds = [];
 
@@ -869,7 +869,7 @@
                     }
                     graph
                         .nodeCanvasObject(({ id, img, x, y, scale, width, height, isHover }, ctx, globalScale) => {
-                            ctx.globalAlpha = (!selectedWorldId || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1) ? 1 : selectedWorldId && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length ? 0.5 : 0.1;
+                            ctx.globalAlpha = (selectedWorldId == null || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1) ? 1 : selectedWorldId != null && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length ? 0.5 : 0.1;
                             ctx.imageSmoothingEnabled = false;
                             ctx.drawImage(img, 0, 0, img.width, img.height, x - width / 2, y - height / 2, width, height);
                             if (config.labelMode === 3 || (config.labelMode === 1 && isHover) || (config.labelMode === 2 && id === selectedWorldId)) {
@@ -924,9 +924,9 @@
                         .nodeVal(node => node.height)
                         .nodeLabel(node => node.img.title)
                         .nodesPerStack(config.stackSize)
-                        .linkWidth(link => selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1)
-                        .linkColor(link => link.hidden ? 'transparent' : selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' :
-                            (!selectedWorldId || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)
+                        .linkWidth(link => selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1)
+                        .linkColor(link => link.hidden ? 'transparent' : selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' :
+                            (selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)
                             ? link.defaultColor : link.defaultColorFade)
                         .linkCanvasObjectMode('connTypeCheck')
                         .linkCanvasObject((link, ctx, globalScale) => {
@@ -934,11 +934,11 @@
                             if (hidden && config.connMode === 0)
                                 return;
                             const connType = link.connType;
-                            const fade = (selectedWorldId && link.source.id !== selectedWorldId && link.target.id !== selectedWorldId) || (searchWorldIds.length && searchWorldIds.indexOf(link.source.id) === -1 && searchWorldIds.indexOf(link.target.id) === -1);
+                            const fade = (selectedWorldId != null && link.source.id !== selectedWorldId && link.target.id !== selectedWorldId) || (searchWorldIds.length && searchWorldIds.indexOf(link.source.id) === -1 && searchWorldIds.indexOf(link.target.id) === -1);
                             if (!hidden) {
                                 ctx.beginPath();
-                                ctx.lineWidth = (selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1) / globalScale;
-                                ctx.strokeStyle = selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : !fade ? link.defaultColor : link.defaultColorFade;
+                                ctx.lineWidth = (selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1) / globalScale;
+                                ctx.strokeStyle = selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : !fade ? link.defaultColor : link.defaultColorFade;
                                 if (connType && connType & ConnType.ONE_WAY) {
                                     let currentDashOffset = dashOffset;
                                     if (link.key === lastOneWayLinkKey)
@@ -983,7 +983,7 @@
                                     : ('https://wikiwiki.jp/yume2kki-t/' + (world.titleJP.indexOf("：") > -1 ? world.titleJP.slice(0, world.titleJP.indexOf("：")) : world.titleJP)),
                                     "_blank", isShift ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
                             } else {
-                                if (node && (!selectedWorldId || selectedWorldId !== node.id)) {
+                                if (node && (selectedWorldId == null || selectedWorldId !== node.id)) {
                                     $(".js--search-world").val(config.lang === 'en' ? world.title : world.titleJP);
                                     selectedWorldId = node.id;
                                 } else {
@@ -1422,7 +1422,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "1.4.0");
+                            data.footer = data.footer.replace("{VERSION}", "1.4.1");
                             localizedConns = data.conn;
                             initContextMenu(data.contextMenu);
                             if (isInitial) {
@@ -1478,8 +1478,8 @@
                                 lookup: worldNames,
                                 triggerSelectOnValidInput: false,
                                 onSearchComplete: function (query, searchWorlds) {
-                                    searchWorldIds = searchWorlds.length && (!selectedWorldId || (searchWorlds.length > 1 || searchWorlds.filter(w => w.value !== worldData[selectedWorldId].title).length)) ? searchWorlds.map(w => worldsByName[w.value].id) : [];
-                                    if (searchWorldIds.length && selectedWorldId && (searchWorldIds.length !== 1 || selectedWorldId !== searchWorldIds[0]))
+                                    searchWorldIds = searchWorlds.length && (selectedWorldId == null || (searchWorlds.length > 1 || searchWorlds.filter(w => w.value !== worldData[selectedWorldId].title).length)) ? searchWorlds.map(w => worldsByName[w.value].id) : [];
+                                    if (searchWorldIds.length && selectedWorldId != null && (searchWorldIds.length !== 1 || selectedWorldId !== searchWorldIds[0]))
                                         selectedWorldId = null;
                                 },
                                 onSelect: function (selectedWorld) {
