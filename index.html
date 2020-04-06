@@ -1000,6 +1000,11 @@
                                 y: ev.y
                             });
                         })
+                        .onBackgroundClick(node => {
+                            $(".js--search-world").val("");
+                            selectedWorldId = null;
+                            selectedWorldZoomCheck = true;
+                        })
                         .iconLabel(icon => icon.text)
                         .cooldownTime(Infinity)
                         // Deactivate existing forces
