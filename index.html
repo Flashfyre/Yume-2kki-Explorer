@@ -1,5 +1,6 @@
 <html>
     <head>
+        <title data-localize="title">Yume 2kki Explorer</title>
         <link rel="shortcut icon" href="/favicon.ico">
         <style>
             @font-face {
@@ -981,13 +982,10 @@
                                 prevNode.isHover = false;
                         })
                         .onNodeClick(node => {
-                            const world = worldData[node.id];
-                            if (isCtrl || isShift) {
-                                window.open(config.lang === 'en' || !world.titleJP
-                                    ? 'https://yume2kki.fandom.com/wiki/' + world.title
-                                    : ('https://wikiwiki.jp/yume2kki-t/' + (world.titleJP.indexOf("：") > -1 ? world.titleJP.slice(0, world.titleJP.indexOf("：")) : world.titleJP)),
-                                    "_blank", isShift ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
-                            } else {
+                            if (isCtrl || isShift)
+                                openWorldWikiPage(node.id, isShift);
+                            else {
+                                const world = worldData[node.id];
                                 if (node && (selectedWorldId == null || selectedWorldId !== node.id)) {
                                     $(".js--search-world").addClass("selected").val(config.lang === 'en' || !world.titleJP ? world.title : world.titleJP);
                                     selectedWorldId = node.id;
@@ -1422,7 +1420,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "1.4.3");
+                            data.footer = data.footer.replace("{VERSION}", "1.4.4");
                             localizedConns = data.conn;
                             initContextMenu(data.contextMenu);
                             if (isInitial) {
@@ -1552,6 +1550,10 @@
                         selector: '.graph canvas', 
                         trigger: 'none',
                         items: {
+                            "wiki": {
+                                name: () => localizedContextMenu.items.wiki,
+                                callback: () => openWorldWikiPage(contextWorldId)
+                            },
                             "start": {
                                 name: () => localizedContextMenu.items.start,
                                 callback: function () {
@@ -1570,6 +1572,14 @@
                             }
                         }
                     });
+                }
+
+                function openWorldWikiPage(worldId, newWindow) {
+                    const world = worldData[worldId];
+                    window.open(config.lang === 'en' || !world.titleJP
+                        ? 'https://yume2kki.fandom.com/wiki/' + world.title
+                        : ('https://wikiwiki.jp/yume2kki-t/' + (world.titleJP.indexOf("：") > -1 ? world.titleJP.slice(0, world.titleJP.indexOf("：")) : world.titleJP)),
+                        "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
                 }
 
                 let worldsByName, worldNames, minSize, maxSize;
