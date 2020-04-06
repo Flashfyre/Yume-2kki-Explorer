@@ -1612,6 +1612,8 @@
 
                     $(".js--reset").click(function() {
                         $(".js--world-input").val("");
+                        selectedWorldId = null;
+                        selectedWorldZoomCheck = true;
                         if (worldData)
                             reloadGraph();
                     });
