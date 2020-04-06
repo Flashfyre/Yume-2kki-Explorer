@@ -306,9 +306,9 @@
                 </div>
                 <div class="control">
                     <label data-localize="origin.name" class="noselect">Origin:</label>
-                    <input name="startWorld" type="text" class="js--world-input js--start-world" />
+                    <input name="startWorld" type="text" class="js--world-input js--path--world-input js--start-world" />
                     <label data-localize="destination.name" class="noselect">Destination:</label>
-                    <input name="endWorld" type="text" class="js--world-input js--end-world" />
+                    <input name="endWorld" type="text" class="js--world-input js--path--world-input js--end-world" />
                     <button data-localize="reset" class="js--reset noselect">Reset</button>
                 </div>
             </div>
@@ -657,7 +657,7 @@
                 
                 let contextWorldId = null, selectedWorldId = null, selectedWorldZoomCheck;
 
-                let searchWorldIds = [];
+                let searchWorldIds = [], visibleWorldIds = [];
 
                 let localizedConns;
                 
@@ -680,8 +680,6 @@
 
                 function initGraph(displayMode, paths) {
 
-                    let visibleWorldIds;
-                    
                     const links = [];
 
                     const oneWayLinks = [];
@@ -799,6 +797,9 @@
                             }
                         }
                     }
+
+                    initWorldSearch();
+
                     oneWayLinks.length && (lastOneWayLinkKey = oneWayLinks[oneWayLinks.length - 1].key);
 
                     links.forEach(l => {
@@ -1466,30 +1467,38 @@
 
                     worldNames = Object.keys(worldsByName);
 
-                    $(".js--world-input").each(function () {
+                    $(".js--path--world-input").each(function () {
                         $(this).autocomplete("destroy");
-                        if (!$(this).is(".js--search-world")) {
-                            $(this).autocomplete({
-                                lookup: worldNames,
-                                onSelect: reloadGraph
-                            });
-                        } else {
-                            $(this).autocomplete({
-                                lookup: worldNames,
-                                triggerSelectOnValidInput: false,
-                                onSearchComplete: function (query, searchWorlds) {
-                                    searchWorldIds = searchWorlds.length && (selectedWorldId == null || (searchWorlds.length > 1 || searchWorlds.filter(w => w.value !== worldData[selectedWorldId].title).length)) ? searchWorlds.map(w => worldsByName[w.value].id) : [];
-                                    if (searchWorldIds.length && selectedWorldId != null && (searchWorldIds.length !== 1 || selectedWorldId !== searchWorldIds[0]))
-                                        selectedWorldId = null;
-                                },
-                                onSelect: function (selectedWorld) {
-                                    selectedWorldId = worldsByName[selectedWorld.value].id;
-                                    selectedWorldZoomCheck = true;
-                                },
-                                onHide: function () {
-                                    searchWorldIds = [];
-                                }
-                            });
+                        $(this).autocomplete({
+                            lookup: worldNames,
+                            onSelect: reloadGraph
+                        });
+                    });
+                }
+
+                function initWorldSearch() {
+                    const $search = $(".js--search-world");
+                    $search.autocomplete("destroy");
+                    const visibleWorldNames = worldData ? worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1).map(w => config.lang === 'en' ? w.title : w.titleJP) : [];
+                    if (selectedWorldId != null && visibleWorldIds.indexOf(selectedWorldId) === -1) {
+                        $search.val("");
+                        selectedWorldId = null;
+                        selectedWorldZoomCheck = true;
+                    }
+                    $search.autocomplete({
+                        lookup: visibleWorldNames,
+                        triggerSelectOnValidInput: false,
+                        onSearchComplete: function (query, searchWorlds) {
+                            searchWorldIds = searchWorlds.length && (selectedWorldId == null || (searchWorlds.length > 1 || searchWorlds.filter(w => w.value !== worldData[selectedWorldId].title).length)) ? searchWorlds.map(w => worldsByName[w.value].id) : [];
+                            if (searchWorldIds.length && selectedWorldId != null && (searchWorldIds.length !== 1 || selectedWorldId !== searchWorldIds[0]))
+                                selectedWorldId = null;
+                        },
+                        onSelect: function (selectedWorld) {
+                            selectedWorldId = worldsByName[selectedWorld.value].id;
+                            selectedWorldZoomCheck = true;
+                        },
+                        onHide: function () {
+                            searchWorldIds = [];
                         }
                     });
                 }
