@@ -249,6 +249,10 @@
                 background-color: rgba(45, 17, 23, 1); /*base*/
             }
 
+            input[type='text'].selected {
+                color: rgba(255, 255, 157, 1); /*alt*/
+            }
+
             .slider::-webkit-slider-thumb {
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
                 background-color: rgba(45, 17, 23, 1); /*base*/
@@ -655,7 +659,7 @@
 
                 let graph;
                 
-                let contextWorldId = null, selectedWorldId = null, selectedWorldZoomCheck;
+                let contextWorldId = null, startWorldId = null, endWorldId = null, selectedWorldId = null, selectedWorldZoomCheck;
 
                 let searchWorldIds = [], visibleWorldIds = [];
 
@@ -870,7 +874,7 @@
                     }
                     graph
                         .nodeCanvasObject(({ id, img, x, y, scale, width, height, isHover }, ctx, globalScale) => {
-                            ctx.globalAlpha = (selectedWorldId == null || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1) ? 1 : selectedWorldId != null && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length ? 0.5 : 0.1;
+                            ctx.globalAlpha = (selectedWorldId == null || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1) ? 1 : selectedWorldId != null && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length ? 0.625 : 0.1;
                             ctx.imageSmoothingEnabled = false;
                             ctx.drawImage(img, 0, 0, img.width, img.height, x - width / 2, y - height / 2, width, height);
                             if (config.labelMode === 3 || (config.labelMode === 1 && isHover) || (config.labelMode === 2 && id === selectedWorldId)) {
@@ -985,13 +989,10 @@
                                     "_blank", isShift ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
                             } else {
                                 if (node && (selectedWorldId == null || selectedWorldId !== node.id)) {
-                                    $(".js--search-world").val(config.lang === 'en' ? world.title : world.titleJP);
+                                    $(".js--search-world").addClass("selected").val(config.lang === 'en' ? world.title : world.titleJP);
                                     selectedWorldId = node.id;
-                                } else {
-                                    $(".js--search-world").val("");
-                                    selectedWorldId = null;
-                                }
-                                selectedWorldZoomCheck = true;
+                                } else
+                                    selectedWorldZoomCheck = true;
                             }
                         })
                         .onNodeRightClick((node, ev) => {
@@ -1002,7 +1003,7 @@
                             });
                         })
                         .onBackgroundClick(node => {
-                            $(".js--search-world").val("");
+                            $(".js--search-world").removeClass("selected").val("");
                             selectedWorldId = null;
                             selectedWorldZoomCheck = true;
                         })
@@ -1197,10 +1198,8 @@
                 }
 
                 function reloadGraph() {
-                    const startVal = $(".js--start-world").val();
-                    const endVal = $(".js--end-world").val();
-                    const startWorld = startVal && worldNames.indexOf(startVal) > -1 ? worldsByName[startVal] : null;
-                    const endWorld = endVal && worldNames.indexOf(endVal) > -1 ? worldsByName[endVal] : null;
+                    const startWorld = startWorldId != null ? worldData[startWorldId] : null;
+                    const endWorld = endWorldId != null ? worldData[endWorldId] : null;
                     const matchPaths = startWorld && endWorld && startWorld != endWorld
                         ? findPath(startWorld.id, endWorld.id, ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED)
                         : null;
@@ -1423,7 +1422,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "1.4.1");
+                            data.footer = data.footer.replace("{VERSION}", "1.4.2");
                             localizedConns = data.conn;
                             initContextMenu(data.contextMenu);
                             if (isInitial) {
@@ -1468,10 +1467,40 @@
                     worldNames = Object.keys(worldsByName);
 
                     $(".js--path--world-input").each(function () {
-                        $(this).autocomplete("destroy");
-                        $(this).autocomplete({
+                        $(this).off("change").autocomplete("destroy");
+                        $(this).on("change", function () {
+                            const currentWorldId = $(this).is(".js--start-world") ? startWorldId : endWorldId;
+                            const currentWorld = worldData[currentWorldId];
+                            if (currentWorld != null && $(this).val() !== (config.lang === 'en' ? currentWorld.title : currentWorld.titleJP)) {
+                                let isReloadGraph;
+                                $(this).removeClass("selected");
+                                if ($(this).is(".js--start-world")) {
+                                    isReloadGraph = endWorldId != null && endWorldId !== startWorldId;
+                                    startWorldId = null;
+                                } else {
+                                    isReloadGraph = startWorldId != null && startWorldId !== endWorldId;
+                                    endWorldId = null;
+                                }
+                                if (isReloadGraph)
+                                    reloadGraph();
+                            }
+                        }).autocomplete({
                             lookup: worldNames,
-                            onSelect: reloadGraph
+                            triggerSelectOnValidInput: false,
+                            onSelect: function (selectedWorld) {
+                                let isReloadGraph;
+                                const worldId = worldsByName[selectedWorld.value].id;
+                                $(this).addClass("selected");
+                                if ($(this).is(".js--start-world")) {
+                                    startWorldId = worldId;
+                                    isReloadGraph = endWorldId != null && endWorldId !== startWorldId;
+                                } else {
+                                    endWorldId = worldId;
+                                    isReloadGraph = startWorldId != null && startWorldId !== endWorldId;
+                                }
+                                if (isReloadGraph)
+                                    reloadGraph();
+                            }
                         });
                     });
                 }
@@ -1481,7 +1510,7 @@
                     $search.autocomplete("destroy");
                     const visibleWorldNames = worldData ? worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1).map(w => config.lang === 'en' ? w.title : w.titleJP) : [];
                     if (selectedWorldId != null && visibleWorldIds.indexOf(selectedWorldId) === -1) {
-                        $search.val("");
+                        $search.removeClass("selected").val("");
                         selectedWorldId = null;
                         selectedWorldZoomCheck = true;
                     }
@@ -1490,14 +1519,22 @@
                         triggerSelectOnValidInput: false,
                         onSearchComplete: function (query, searchWorlds) {
                             searchWorldIds = searchWorlds.length && (selectedWorldId == null || (searchWorlds.length > 1 || searchWorlds.filter(w => w.value !== worldData[selectedWorldId].title).length)) ? searchWorlds.map(w => worldsByName[w.value].id) : [];
-                            if (searchWorldIds.length && selectedWorldId != null && (searchWorldIds.length !== 1 || selectedWorldId !== searchWorldIds[0]))
+                            if (searchWorldIds.length && selectedWorldId != null && (searchWorldIds.length !== 1 || selectedWorldId !== searchWorldIds[0])) {
+                                $search.removeClass("selected");
                                 selectedWorldId = null;
+                            }
                         },
                         onSelect: function (selectedWorld) {
+                            $search.addClass("selected");
                             selectedWorldId = worldsByName[selectedWorld.value].id;
                             selectedWorldZoomCheck = true;
                         },
                         onHide: function () {
+                            if (selectedWorldId != null && $(this).val() !== (config.lang === 'en' ? worldData[selectedWorldId].title : worldData[selectedWorldId].titleJP)) {
+                                $search.removeClass("selected");
+                                selectedWorldId = null;
+                                selectedWorldZoomCheck = true;
+                            }
                             searchWorldIds = [];
                         }
                     });
@@ -1513,14 +1550,16 @@
                                 name: () => localizedContextMenu.items.start,
                                 callback: function () {
                                     const world = worldData[contextWorldId];
-                                    $(".js--start-world").val(config.lang === 'en' ? world.title : world.titleJP).change();
+                                    const worldName = config.lang === 'en' ? world.title : world.titleJP;
+                                    $(".js--start-world").val(worldName).change().autocomplete().select(0);
                                 }
                             },
                             "end": {
                                 name: () => localizedContextMenu.items.end,
                                 callback: function () {
                                     const world = worldData[contextWorldId];
-                                    $(".js--end-world").val(config.lang === 'en' ? world.title : world.titleJP).change();
+                                    const worldName = config.lang === 'en' ? world.title : world.titleJP;
+                                    $(".js--end-world").val(worldName).change().autocomplete().select(0);
                                 }
                             }
                         }
@@ -1629,7 +1668,9 @@
                     });
 
                     $(".js--reset").click(function() {
-                        $(".js--world-input").val("");
+                        $(".js--world-input").removeClass("selected").val("");
+                        startWorldId = null;
+                        endWorldId = null;
                         selectedWorldId = null;
                         selectedWorldZoomCheck = true;
                         if (worldData)
