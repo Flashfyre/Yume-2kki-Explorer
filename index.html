@@ -1,5 +1,6 @@
 <html>
     <head>
+        <title data-localize="title">Yume 2kki Explorer</title>
         <link rel="shortcut icon" href="/favicon.ico">
         <style>
             @font-face {
@@ -249,6 +250,10 @@
                 background-color: rgba(45, 17, 23, 1); /*base*/
             }
 
+            input[type='text'].selected {
+                color: rgba(255, 255, 157, 1); /*alt*/
+            }
+
             .slider::-webkit-slider-thumb {
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
                 background-color: rgba(45, 17, 23, 1); /*base*/
@@ -306,9 +311,9 @@
                 </div>
                 <div class="control">
                     <label data-localize="origin.name" class="noselect">Origin:</label>
-                    <input name="startWorld" type="text" class="js--world-input js--start-world" />
+                    <input name="startWorld" type="text" class="js--world-input js--path--world-input js--start-world" />
                     <label data-localize="destination.name" class="noselect">Destination:</label>
-                    <input name="endWorld" type="text" class="js--world-input js--end-world" />
+                    <input name="endWorld" type="text" class="js--world-input js--path--world-input js--end-world" />
                     <button data-localize="reset" class="js--reset noselect">Reset</button>
                 </div>
             </div>
@@ -655,9 +660,9 @@
 
                 let graph;
                 
-                let contextWorldId, selectedWorldId, selectedWorldZoomCheck;
+                let contextWorldId = null, startWorldId = null, endWorldId = null, selectedWorldId = null, selectedWorldZoomCheck;
 
-                let searchWorldIds = [];
+                let searchWorldIds = [], visibleWorldIds = [];
 
                 let localizedConns;
                 
@@ -680,8 +685,6 @@
 
                 function initGraph(displayMode, paths) {
 
-                    let visibleWorldIds;
-                    
                     const links = [];
 
                     const oneWayLinks = [];
@@ -799,6 +802,9 @@
                             }
                         }
                     }
+
+                    initWorldSearch();
+
                     oneWayLinks.length && (lastOneWayLinkKey = oneWayLinks[oneWayLinks.length - 1].key);
 
                     links.forEach(l => {
@@ -869,7 +875,7 @@
                     }
                     graph
                         .nodeCanvasObject(({ id, img, x, y, scale, width, height, isHover }, ctx, globalScale) => {
-                            ctx.globalAlpha = (!selectedWorldId || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1) ? 1 : selectedWorldId && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length ? 0.5 : 0.1;
+                            ctx.globalAlpha = (selectedWorldId == null || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1) ? 1 : selectedWorldId != null && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length ? 0.625 : 0.1;
                             ctx.imageSmoothingEnabled = false;
                             ctx.drawImage(img, 0, 0, img.width, img.height, x - width / 2, y - height / 2, width, height);
                             if (config.labelMode === 3 || (config.labelMode === 1 && isHover) || (config.labelMode === 2 && id === selectedWorldId)) {
@@ -924,9 +930,9 @@
                         .nodeVal(node => node.height)
                         .nodeLabel(node => node.img.title)
                         .nodesPerStack(config.stackSize)
-                        .linkWidth(link => selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1)
-                        .linkColor(link => link.hidden ? 'transparent' : selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' :
-                            (!selectedWorldId || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)
+                        .linkWidth(link => selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1)
+                        .linkColor(link => link.hidden ? 'transparent' : selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' :
+                            (selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)
                             ? link.defaultColor : link.defaultColorFade)
                         .linkCanvasObjectMode('connTypeCheck')
                         .linkCanvasObject((link, ctx, globalScale) => {
@@ -934,11 +940,11 @@
                             if (hidden && config.connMode === 0)
                                 return;
                             const connType = link.connType;
-                            const fade = (selectedWorldId && link.source.id !== selectedWorldId && link.target.id !== selectedWorldId) || (searchWorldIds.length && searchWorldIds.indexOf(link.source.id) === -1 && searchWorldIds.indexOf(link.target.id) === -1);
+                            const fade = (selectedWorldId != null && link.source.id !== selectedWorldId && link.target.id !== selectedWorldId) || (searchWorldIds.length && searchWorldIds.indexOf(link.source.id) === -1 && searchWorldIds.indexOf(link.target.id) === -1);
                             if (!hidden) {
                                 ctx.beginPath();
-                                ctx.lineWidth = (selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1) / globalScale;
-                                ctx.strokeStyle = selectedWorldId && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : !fade ? link.defaultColor : link.defaultColorFade;
+                                ctx.lineWidth = (selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1) / globalScale;
+                                ctx.strokeStyle = selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : !fade ? link.defaultColor : link.defaultColorFade;
                                 if (connType && connType & ConnType.ONE_WAY) {
                                     let currentDashOffset = dashOffset;
                                     if (link.key === lastOneWayLinkKey)
@@ -964,6 +970,10 @@
                                 ctx.globalAlpha = 1;
                             }
                         })
+                        .onNodeDragEnd(node => {
+                            node.fx = node.x;
+                            node.fy = node.y;
+                        })
                         .onNodeHover((node, prevNode) => {
                             elem.style.cursor = node ? 'pointer' : null;
                             if (node)
@@ -972,21 +982,15 @@
                                 prevNode.isHover = false;
                         })
                         .onNodeClick(node => {
-                            const world = worldData[node.id];
-                            if (isCtrl || isShift) {
-                                window.open(config.lang === 'en' || !world.titleJP
-                                    ? 'https://yume2kki.fandom.com/wiki/' + world.title
-                                    : ('https://wikiwiki.jp/yume2kki-t/' + (world.titleJP.indexOf("：") > -1 ? world.titleJP.slice(0, world.titleJP.indexOf("：")) : world.titleJP)),
-                                    "_blank", isShift ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
-                            } else {
-                                if (node && (!selectedWorldId || selectedWorldId !== node.id)) {
-                                    $(".js--search-world").val(config.lang === 'en' ? world.title : world.titleJP);
+                            if (isCtrl || isShift)
+                                openWorldWikiPage(node.id, isShift);
+                            else {
+                                const world = worldData[node.id];
+                                if (node && (selectedWorldId == null || selectedWorldId !== node.id)) {
+                                    $(".js--search-world").addClass("selected").val(config.lang === 'en' || !world.titleJP ? world.title : world.titleJP);
                                     selectedWorldId = node.id;
-                                } else {
-                                    $(".js--search-world").val("");
-                                    selectedWorldId = null;
-                                }
-                                selectedWorldZoomCheck = true;
+                                } else
+                                    selectedWorldZoomCheck = true;
                             }
                         })
                         .onNodeRightClick((node, ev) => {
@@ -995,6 +999,11 @@
                                 x: ev.x,
                                 y: ev.y
                             });
+                        })
+                        .onBackgroundClick(node => {
+                            $(".js--search-world").removeClass("selected").val("");
+                            selectedWorldId = null;
+                            selectedWorldZoomCheck = false;
                         })
                         .iconLabel(icon => icon.text)
                         .cooldownTime(Infinity)
@@ -1187,10 +1196,8 @@
                 }
 
                 function reloadGraph() {
-                    const startVal = $(".js--start-world").val();
-                    const endVal = $(".js--end-world").val();
-                    const startWorld = startVal && worldNames.indexOf(startVal) > -1 ? worldsByName[startVal] : null;
-                    const endWorld = endVal && worldNames.indexOf(endVal) > -1 ? worldsByName[endVal] : null;
+                    const startWorld = startWorldId != null ? worldData[startWorldId] : null;
+                    const endWorld = endWorldId != null ? worldData[endWorldId] : null;
                     const matchPaths = startWorld && endWorld && startWorld != endWorld
                         ? findPath(startWorld.id, endWorld.id, ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED)
                         : null;
@@ -1413,7 +1420,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "1.4.0");
+                            data.footer = data.footer.replace("{VERSION}", "1.4.4");
                             localizedConns = data.conn;
                             initContextMenu(data.contextMenu);
                             if (isInitial) {
@@ -1457,30 +1464,82 @@
 
                     worldNames = Object.keys(worldsByName);
 
-                    $(".js--world-input").each(function () {
-                        $(this).autocomplete("destroy");
-                        if (!$(this).is(".js--search-world")) {
-                            $(this).autocomplete({
-                                lookup: worldNames,
-                                onSelect: reloadGraph
-                            });
-                        } else {
-                            $(this).autocomplete({
-                                lookup: worldNames,
-                                triggerSelectOnValidInput: false,
-                                onSearchComplete: function (query, searchWorlds) {
-                                    searchWorldIds = searchWorlds.length && (!selectedWorldId || (searchWorlds.length > 1 || searchWorlds.filter(w => w.value !== worldData[selectedWorldId].title).length)) ? searchWorlds.map(w => worldsByName[w.value].id) : [];
-                                    if (searchWorldIds.length && selectedWorldId && (searchWorldIds.length !== 1 || selectedWorldId !== searchWorldIds[0]))
-                                        selectedWorldId = null;
-                                },
-                                onSelect: function (selectedWorld) {
-                                    selectedWorldId = worldsByName[selectedWorld.value].id;
-                                    selectedWorldZoomCheck = true;
-                                },
-                                onHide: function () {
-                                    searchWorldIds = [];
+                    $(".js--path--world-input").each(function () {
+                        $(this).off("change").autocomplete("destroy");
+                        $(this).on("change", function () {
+                            const currentWorldId = $(this).is(".js--start-world") ? startWorldId : endWorldId;
+                            const currentWorld = worldData[currentWorldId];
+                            if (currentWorld != null && $(this).val() !== (config.lang === 'en' || !currentWorld.titleJP ? currentWorld.title : currentWorld.titleJP)) {
+                                let isReloadGraph;
+                                $(this).removeClass("selected");
+                                if ($(this).is(".js--start-world")) {
+                                    isReloadGraph = endWorldId != null && endWorldId !== startWorldId;
+                                    startWorldId = null;
+                                } else {
+                                    isReloadGraph = startWorldId != null && startWorldId !== endWorldId;
+                                    endWorldId = null;
                                 }
-                            });
+                                if (isReloadGraph)
+                                    reloadGraph();
+                            }
+                        }).autocomplete({
+                            lookup: worldNames,
+                            triggerSelectOnValidInput: false,
+                            onSelect: function (selectedWorld) {
+                                let isReloadGraph;
+                                const worldId = worldsByName[selectedWorld.value].id;
+                                $(this).addClass("selected");
+                                if ($(this).is(".js--start-world")) {
+                                    startWorldId = worldId;
+                                    isReloadGraph = endWorldId != null && endWorldId !== startWorldId;
+                                } else {
+                                    endWorldId = worldId;
+                                    isReloadGraph = startWorldId != null && startWorldId !== endWorldId;
+                                }
+                                if (isReloadGraph)
+                                    reloadGraph();
+                            }
+                        });
+                    });
+                }
+
+                function initWorldSearch() {
+                    const $search = $(".js--search-world");
+                    $search.autocomplete("destroy");
+                    const visibleWorldNames = worldData ? worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1).map(w => config.lang === 'en' || !w.titleJP ? w.title : w.titleJP) : [];
+                    if (selectedWorldId != null && visibleWorldIds.indexOf(selectedWorldId) === -1) {
+                        $search.removeClass("selected").val("");
+                        selectedWorldId = null;
+                        selectedWorldZoomCheck = false;
+                    }
+                    $search.autocomplete({
+                        lookup: visibleWorldNames,
+                        triggerSelectOnValidInput: false,
+                        onSearchComplete: function (query, searchWorlds) {
+                            const selectedWorld = selectedWorldId != null ? worldData[selectedWorldId] : null;
+                            const selectedWorldName = selectedWorld ? config.lang === 'en' || !selectedWorld.titleJP ? selectedWorld.title : selectedWorld.titleJP : null;
+                            searchWorldIds = searchWorlds.length && (!selectedWorld || (searchWorlds.length > 1 || searchWorlds.filter(w => w.value !== selectedWorldName).length)) ? searchWorlds.map(w => worldsByName[w.value].id) : [];
+                            if (searchWorldIds.length && selectedWorld && (searchWorldIds.length !== 1 || selectedWorldId !== searchWorldIds[0])) {
+                                $search.removeClass("selected");
+                                selectedWorldId = null;
+                            }
+                        },
+                        onSelect: function (selectedWorld) {
+                            $search.addClass("selected");
+                            selectedWorldId = worldsByName[selectedWorld.value].id;
+                            selectedWorldZoomCheck = true;
+                        },
+                        onHide: function () {
+                            if (selectedWorldId != null) {
+                                const selectedWorld = worldData[selectedWorldId];
+                                const selectedWorldName = config.lang === 'en' || !selectedWorld.titleJP ? selectedWorld.title : wselectedWorld.titleJP;
+                                if ($(this).val() !== selectedWorldName) {
+                                    $search.removeClass("selected");
+                                    selectedWorldId = null;
+                                    selectedWorldZoomCheck = false;
+                                }
+                            }
+                            searchWorldIds = [];
                         }
                     });
                 }
@@ -1491,22 +1550,36 @@
                         selector: '.graph canvas', 
                         trigger: 'none',
                         items: {
+                            "wiki": {
+                                name: () => localizedContextMenu.items.wiki,
+                                callback: () => openWorldWikiPage(contextWorldId)
+                            },
                             "start": {
                                 name: () => localizedContextMenu.items.start,
                                 callback: function () {
                                     const world = worldData[contextWorldId];
-                                    $(".js--start-world").val(config.lang === 'en' ? world.title : world.titleJP).change();
+                                    const worldName = config.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
+                                    $(".js--start-world").val(worldName).change().autocomplete().select(0);
                                 }
                             },
                             "end": {
                                 name: () => localizedContextMenu.items.end,
                                 callback: function () {
                                     const world = worldData[contextWorldId];
-                                    $(".js--end-world").val(config.lang === 'en' ? world.title : world.titleJP).change();
+                                    const worldName = config.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
+                                    $(".js--end-world").val(worldName).change().autocomplete().select(0);
                                 }
                             }
                         }
                     });
+                }
+
+                function openWorldWikiPage(worldId, newWindow) {
+                    const world = worldData[worldId];
+                    window.open(config.lang === 'en' || !world.titleJP
+                        ? 'https://yume2kki.fandom.com/wiki/' + world.title
+                        : ('https://wikiwiki.jp/yume2kki-t/' + (world.titleJP.indexOf("：") > -1 ? world.titleJP.slice(0, world.titleJP.indexOf("：")) : world.titleJP)),
+                        "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
                 }
 
                 let worldsByName, worldNames, minSize, maxSize;
@@ -1611,9 +1684,11 @@
                     });
 
                     $(".js--reset").click(function() {
-                        $(".js--world-input").val("");
+                        $(".js--world-input").removeClass("selected").val("");
+                        startWorldId = null;
+                        endWorldId = null;
                         selectedWorldId = null;
-                        selectedWorldZoomCheck = true;
+                        selectedWorldZoomCheck = false;
                         if (worldData)
                             reloadGraph();
                     });
