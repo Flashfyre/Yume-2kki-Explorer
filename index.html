@@ -291,9 +291,11 @@
         </style>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.9.0/jquery.contextMenu.min.css" />
-        <script src="/js/force-graph-modded.js"></script>
+        //<script src="/js/force-graph-modded.js"></script>
         <script src="//unpkg.com/d3-quadtree"></script>
         <script src="//unpkg.com/d3-force"></script>
+        <script src="//unpkg.com/three"></script>
+        <script src="//unpkg.com/3d-force-graph"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.devbridge-autocomplete/1.4.10/jquery.autocomplete.min.js"></script>
@@ -867,108 +869,120 @@
 
                     const elem = document.getElementById('graph');
                 
-                    graph = ForceGraph()(elem);
+                    graph = ForceGraph3D()(elem);
                     if (displayMode < 4) {
                         graph = graph
                             .dagMode(displayMode === 0 ? 'td' : displayMode === 1 ? 'lr' : displayMode === 2 ? 'radialin' : 'radialout')
                             .dagLevelDistance(displayMode < 2 ? 12 : 24 + radius * (config.sizeDiff + 1));
                     }
                     graph
-                        .nodeCanvasObject(({ id, img, x, y, scale, width, height, isHover }, ctx, globalScale) => {
-                            ctx.globalAlpha = (selectedWorldId == null || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1) ? 1 : selectedWorldId != null && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length ? 0.625 : 0.1;
-                            ctx.imageSmoothingEnabled = false;
-                            ctx.drawImage(img, 0, 0, img.width, img.height, x - width / 2, y - height / 2, width, height);
-                            if (config.labelMode === 3 || (config.labelMode === 1 && isHover) || (config.labelMode === 2 && id === selectedWorldId)) {
-                                ctx.lineWidth = 0.25 * scale;
-                                ctx.strokeStyle = "#000000";
-                                ctx.fillStyle = "rgba(216, 216, 216, 1)";
-                                ctx.font = (2 * scale) + "px 'MS Gothic'";
-                                const world = worldData[id];
-                                const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
-                                let textLines = worldName.split(" ");
-                                for (let l = 0; l < textLines.length; l++) {
-                                    if (ctx.measureText(textLines[l]).width < width) {
-                                        let mergeIndex = 0;
-                                        for (let l2 = l + 1; l2 < textLines.length; l2++) {
-                                            const mergedLine = textLines.slice(l, l2 + 1).join(" ");
-                                            if (ctx.measureText(mergedLine).width < width) {
-                                                mergeIndex = l2;
-                                            } else
-                                                break;
-                                        }
-                                        if (mergeIndex) {
-                                            textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
-                                        }
-                                    } else if (textLines[l].indexOf("：") > -1)
-                                        textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
-                                }
-                                for (let l in textLines) {
-                                    const textLine = textLines[l];
-                                    const lineWidth = ctx.measureText(textLine).width;
-                                    const lineX = x - lineWidth / 2;
-                                    const lineY = (y + 0.5 * scale) - (textLines.length - 1) + l * 2 * scale;
-                                    ctx.strokeText(textLine, lineX, lineY);
-                                    ctx.fillText(textLine, lineX, lineY);
-                                }
-                            }
-                            if (selectedWorldId === id) {
-                                ctx.strokeStyle = '#f00';
-                                ctx.lineWidth = 1 / globalScale;
-                                ctx.strokeRect(x - width / 2, y - height / 2, width, height);
-                                if (selectedWorldZoomCheck) {
-                                    selectedWorldZoomCheck = false;
-                                    graph.centerAt(x, y, 1000);
-                                    graph.zoom(8, 1000);
-                                }
-                            }
-                            if (isHover && (isShift || isCtrl)) {
-                                ctx.fillText("🔗", x + (width / 2) - 3.5, y - (height / 2) + 2.5);
-                            }
-                            ctx.globalAlpha = 1;
-                        })
-                        .connMode(() => config.connMode)
+//                         .nodeCanvasObject(({ id, img, x, y, scale, width, height, isHover }, ctx, globalScale) => {
+//                             ctx.globalAlpha = (selectedWorldId == null || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1) ? 1 : selectedWorldId != null && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length ? 0.625 : 0.1;
+//                             ctx.imageSmoothingEnabled = false;
+//                             ctx.drawImage(img, 0, 0, img.width, img.height, x - width / 2, y - height / 2, width, height);
+//                             if (config.labelMode === 3 || (config.labelMode === 1 && isHover) || (config.labelMode === 2 && id === selectedWorldId)) {
+//                                 ctx.lineWidth = 0.25 * scale;
+//                                 ctx.strokeStyle = "#000000";
+//                                 ctx.fillStyle = "rgba(216, 216, 216, 1)";
+//                                 ctx.font = (2 * scale) + "px 'MS Gothic'";
+//                                 const world = worldData[id];
+//                                 const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
+//                                 let textLines = worldName.split(" ");
+//                                 for (let l = 0; l < textLines.length; l++) {
+//                                     if (ctx.measureText(textLines[l]).width < width) {
+//                                         let mergeIndex = 0;
+//                                         for (let l2 = l + 1; l2 < textLines.length; l2++) {
+//                                             const mergedLine = textLines.slice(l, l2 + 1).join(" ");
+//                                             if (ctx.measureText(mergedLine).width < width) {
+//                                                 mergeIndex = l2;
+//                                             } else
+//                                                 break;
+//                                         }
+//                                         if (mergeIndex) {
+//                                             textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
+//                                         }
+//                                     } else if (textLines[l].indexOf("：") > -1)
+//                                         textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
+//                                 }
+//                                 for (let l in textLines) {
+//                                     const textLine = textLines[l];
+//                                     const lineWidth = ctx.measureText(textLine).width;
+//                                     const lineX = x - lineWidth / 2;
+//                                     const lineY = (y + 0.5 * scale) - (textLines.length - 1) + l * 2 * scale;
+//                                     ctx.strokeText(textLine, lineX, lineY);
+//                                     ctx.fillText(textLine, lineX, lineY);
+//                                 }
+//                             }
+//                             if (selectedWorldId === id) {
+//                                 ctx.strokeStyle = '#f00';
+//                                 ctx.lineWidth = 1 / globalScale;
+//                                 ctx.strokeRect(x - width / 2, y - height / 2, width, height);
+//                                 if (selectedWorldZoomCheck) {
+//                                     selectedWorldZoomCheck = false;
+//                                     graph.centerAt(x, y, 1000);
+//                                     graph.zoom(8, 1000);
+//                                 }
+//                             }
+//                             if (isHover && (isShift || isCtrl)) {
+//                                 ctx.fillText("🔗", x + (width / 2) - 3.5, y - (height / 2) + 2.5);
+//                             }
+//                             ctx.globalAlpha = 1;
+//                         })
+                        //.connMode(() => config.connMode)
                         .nodeVal(node => node.height)
                         .nodeLabel(node => node.img.title)
-                        .nodesPerStack(config.stackSize)
+                        //.nodesPerStack(config.stackSize)
                         .linkWidth(link => selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1)
                         .linkColor(link => link.hidden ? 'transparent' : selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' :
                             (selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)
                             ? link.defaultColor : link.defaultColorFade)
-                        .linkCanvasObjectMode('connTypeCheck')
-                        .linkCanvasObject((link, ctx, globalScale) => {
-                            const hidden = link.hidden;
-                            if (hidden && config.connMode === 0)
-                                return;
-                            const connType = link.connType;
-                            const fade = (selectedWorldId != null && link.source.id !== selectedWorldId && link.target.id !== selectedWorldId) || (searchWorldIds.length && searchWorldIds.indexOf(link.source.id) === -1 && searchWorldIds.indexOf(link.target.id) === -1);
-                            if (!hidden) {
-                                ctx.beginPath();
-                                ctx.lineWidth = (selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1) / globalScale;
-                                ctx.strokeStyle = selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : !fade ? link.defaultColor : link.defaultColorFade;
-                                if (connType && connType & ConnType.ONE_WAY) {
-                                    let currentDashOffset = dashOffset;
-                                    if (link.key === lastOneWayLinkKey)
-                                        dashOffset = dashOffset < 9.8 ? dashOffset + 0.2 : 0;
-                                    ctx.setLineDash([5, 5]);
-                                    ctx.lineDashOffset = currentDashOffset * -1;
-                                }
-                            }
-                            const sourceX = link.source.x;
-                            const sourceY = link.source.y;
-                            const targetX = link.target.x;
-                            const targetY = link.target.y;
-                            if (!hidden) {
-                                ctx.moveTo(sourceX, sourceY);
-                                ctx.lineTo(targetX, targetY);
-                                ctx.stroke();
-                                ctx.closePath();
-                            }
-                            if (link.icons.length) {
-                                if (fade)
-                                    ctx.globalAlpha = 0.1;
-                                drawLinkIcons(link, ctx, globalScale);
-                                ctx.globalAlpha = 1;
-                            }
+//                         .linkCanvasObjectMode('connTypeCheck')
+//                         .linkCanvasObject((link, ctx, globalScale) => {
+//                             const hidden = link.hidden;
+//                             if (hidden && config.connMode === 0)
+//                                 return;
+//                             const connType = link.connType;
+//                             const fade = (selectedWorldId != null && link.source.id !== selectedWorldId && link.target.id !== selectedWorldId) || (searchWorldIds.length && searchWorldIds.indexOf(link.source.id) === -1 && searchWorldIds.indexOf(link.target.id) === -1);
+//                             if (!hidden) {
+//                                 ctx.beginPath();
+//                                 ctx.lineWidth = (selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1) / globalScale;
+//                                 ctx.strokeStyle = selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : !fade ? link.defaultColor : link.defaultColorFade;
+//                                 if (connType && connType & ConnType.ONE_WAY) {
+//                                     let currentDashOffset = dashOffset;
+//                                     if (link.key === lastOneWayLinkKey)
+//                                         dashOffset = dashOffset < 9.8 ? dashOffset + 0.2 : 0;
+//                                     ctx.setLineDash([5, 5]);
+//                                     ctx.lineDashOffset = currentDashOffset * -1;
+//                                 }
+//                             }
+//                             const sourceX = link.source.x;
+//                             const sourceY = link.source.y;
+//                             const targetX = link.target.x;
+//                             const targetY = link.target.y;
+//                             if (!hidden) {
+//                                 ctx.moveTo(sourceX, sourceY);
+//                                 ctx.lineTo(targetX, targetY);
+//                                 ctx.stroke();
+//                                 ctx.closePath();
+//                             }
+//                             if (link.icons.length) {
+//                                 if (fade)
+//                                     ctx.globalAlpha = 0.1;
+//                                 drawLinkIcons(link, ctx, globalScale);
+//                                 ctx.globalAlpha = 1;
+//                             }
+//                         })
+                        .nodeThreeObject(({ id }) =>  {
+                            //if(id == 0) {
+                                var texture = new THREE.TextureLoader().load(worldData[id].filename);
+                                return new THREE.Mesh(new THREE.BoxGeometry(20, 20, 20),
+                                    new THREE.MeshBasicMaterial({map: texture}))
+                            //}
+                            //else {                                             
+                            //    return new THREE.Mesh(new THREE.BoxGeometry(20, 20, 20),
+                            //       new THREE.MeshLambertMaterial({color: 0xFFFFFF}))
+                            //}                                 
+                                
                         })
                         .onNodeDragEnd(node => {
                             node.fx = node.x;
@@ -976,8 +990,9 @@
                         })
                         .onNodeHover((node, prevNode) => {
                             elem.style.cursor = node ? 'pointer' : null;
-                            if (node)
+                            if (node) {
                                 node.isHover = true;
+                            }
                             if (prevNode)
                                 prevNode.isHover = false;
                         })
@@ -1001,11 +1016,24 @@
                             });
                         })
                         .onBackgroundClick(node => {
+                                //worldData.forEach(w => {
+                                //    worldData[w.id].size = 100000 * worldData[w.id].connections.length;                       
+                                //}); 
+                                var maxDepth = null;
+                                worldData.forEach(w => {
+                                    if(worldData[w.id].depth > maxDepth)
+                                       maxDepth = worldData[w.id].depth;                   
+                                }); 
+                                
+                                worldData.forEach(w => {
+                                    worldData[w.id].size = 10000 * Math.pow(((maxDepth + 1) - worldData[w.id].depth), 2);                       
+                                }); 
+                                                            
                             $(".js--search-world").removeClass("selected").val("");
                             selectedWorldId = null;
                             selectedWorldZoomCheck = false;
                         })
-                        .iconLabel(icon => icon.text)
+                        //.iconLabel(icon => icon.text)
                         .cooldownTime(Infinity)
                         // Deactivate existing forces
                         // Add collision and bounding box forces
