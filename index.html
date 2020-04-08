@@ -366,7 +366,7 @@
                     <div class="control">
                         <label data-localize="connMode.name" class="noselect">Connection Mode:</label>
                         <select name="connMode" class="js--conn-mode">
-                            <option data-localize="connMode.values.oneWay" value="0" selected>One-Way)/option>
+                            <option data-localize="connMode.values.oneWay" value="0" selected>One-Way</option>
                             <option data-localize="connMode.values.twoWay" value="1">Two-Way</option>
                         </select>
                     </div>
@@ -1420,7 +1420,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "1.4.4");
+                            data.footer = data.footer.replace("{VERSION}", "1.4.5");
                             localizedConns = data.conn;
                             initContextMenu(data.contextMenu);
                             if (isInitial) {
