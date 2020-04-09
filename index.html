@@ -661,7 +661,7 @@
 
                 let graph;
                 
-                let contextWorldId = null, startWorldId = null, endWorldId = null, selectedWorldId = null, selectedWorldZoomCheck;
+                let contextWorldId = null, startWorldId = null, endWorldId = null, selectedWorldId = null;
 
                 let searchWorldIds = [], visibleWorldIds = [];
 
@@ -936,54 +936,64 @@
                         .nodesPerStack(config.stackSize)
                         .linkOpacity(1)
                         .linkWidth(link => selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1)
-                        .linkColor(link => link.hidden ? 'transparent' : selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' :
-                            (selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)
-                            ? link.defaultColor : link.defaultColorFade)
+//                         .linkColor(link => link.hidden ? 'transparent' : selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' :
+//                             (selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)
+//                             ? link.defaultColor : link.defaultColorFade)
+                        .linkColor( link  =>  {
+                            if(selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId))
+                                return 0xFFFFFF;
+                            else if((selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1))
+                                return link.defaultColor;
+                            else
+                                return link.defaultColorFade;
+                        })
 //                         .linkCanvasObjectMode('connTypeCheck')
-//                         .linkCanvasObject((link, ctx, globalScale) => {
-//                             const hidden = link.hidden;
-//                             if (hidden && config.connMode === 0)
-//                                 return;
-//                             const connType = link.connType;
-//                             const fade = (selectedWorldId != null && link.source.id !== selectedWorldId && link.target.id !== selectedWorldId) || (searchWorldIds.length && searchWorldIds.indexOf(link.source.id) === -1 && searchWorldIds.indexOf(link.target.id) === -1);
-//                             if (!hidden) {
-//                                 ctx.beginPath();
-//                                 ctx.lineWidth = (selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1) / globalScale;
-//                                 ctx.strokeStyle = selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : !fade ? link.defaultColor : link.defaultColorFade;
-//                                 if (connType && connType & ConnType.ONE_WAY) {
-//                                     let currentDashOffset = dashOffset;
-//                                     if (link.key === lastOneWayLinkKey)
-//                                         dashOffset = dashOffset < 9.8 ? dashOffset + 0.2 : 0;
-//                                     ctx.setLineDash([5, 5]);
-//                                     ctx.lineDashOffset = currentDashOffset * -1;
-//                                 }
-//                             }
-//                             const sourceX = link.source.x;
-//                             const sourceY = link.source.y;
-//                             const targetX = link.target.x;
-//                             const targetY = link.target.y;
-//                             if (!hidden) {
-//                                 ctx.moveTo(sourceX, sourceY);
-//                                 ctx.lineTo(targetX, targetY);
-//                                 ctx.stroke();
-//                                 ctx.closePath();
-//                             }
-//                             if (link.icons.length) {
-//                                 if (fade)
-//                                     ctx.globalAlpha = 0.1;
-//                                 drawLinkIcons(link, ctx, globalScale);
-//                                 ctx.globalAlpha = 1;
-//                             }
-//                         })
-                        .nodeThreeObject(({ id }) =>  {
-                            var texture = new THREE.TextureLoader().load(worldData[id].filename);
+                        .linkDirectionalParticleWidth(3)
+                        .linkDirectionalParticleColor(link => {
+                            if(link.source.id == undefined || link.target.id == undefined) {
+                                if(selectedWorldId == null || link.source == selectedWorldId || link.target === selectedWorldId)
+                                    return 0xFFFFFF;
+                                else
+                                    return 0x333333;
+                                }
+                                else {
+                                    if(selectedWorldId == null || link.source.id === selectedWorldId || link.target.id === selectedWorldId)
+                                        return 0xFFFFFF;
+                                    else
+                                        return 0x333333;
+                            }
+                        })
+                        .linkDirectionalParticles(link =>  {
+                                    var result;
+                                    if(link.source.id == undefined || link.target.id == undefined)                              
+                                       result = links.filter(lik => {return lik.key == link.source + '_' + link.target});
+                                    else
+                                       result = links.filter(lik => {return lik.key == link.source.id + '_' + link.target.id});
+
+                                    if(result == undefined)
+                                       return 0; // shouldn't happen
+
+                                    var connType = result[0].connType;
+                                    if(connType && connType & ConnType.ONE_WAY)
+                                       return 3;
+                                    else
+                                       return 0;
+                           })                        
+                        .nodeThreeObject(node =>  {
+                            var texture = new THREE.TextureLoader().load(worldData[node.id].filename);
                             texture.anisotropy = maxAnisotropy;
                             texture.minFilter = THREE.NearestFilter; // disables mipmaps (eliminates blur)
-                            return new THREE.Mesh(new THREE.BoxGeometry(20, 20, 20),
-                                 new THREE.MeshBasicMaterial({map: texture}))
-                        })
-                        .linkThreeObject(({ link, source, target }) =>  {
-                        
+
+                            var mat;
+                            if (selectedWorldId == null || node.id == selectedWorldId) {
+                                mat = new THREE.MeshBasicMaterial({map: texture, transparent: false});
+                            }
+                            else
+                                mat = new THREE.MeshBasicMaterial({map: texture, transparent: true, opacity: 0.2});                                 
+                            return new THREE.Mesh(new THREE.BoxGeometry(20, 20, 20), mat);
+//                              // test non-textured boxes
+//                              return new THREE.Mesh(new THREE.BoxGeometry(10, 10, 10),
+//                                  new THREE.MeshBasicMaterial({color: 0x00aa22}))
                         })
                         .onNodeDragEnd(node => {
                             node.fx = node.x;
@@ -1005,8 +1015,10 @@
                                 if (node && (selectedWorldId == null || selectedWorldId !== node.id)) {
                                     $(".js--search-world").addClass("selected").val(config.lang === 'en' || !world.titleJP ? world.title : world.titleJP);
                                     selectedWorldId = node.id;
-                                } else
-                                    selectedWorldZoomCheck = true;
+                                } else {
+                                    focusNode(node);
+                                    highlightWorldSelection();
+                                }
                             }
                         })
                         .onNodeRightClick((node, ev) => {
@@ -1018,8 +1030,9 @@
                         })
                         .onBackgroundClick(node => {
                             $(".js--search-world").removeClass("selected").val("");
-                            selectedWorldId = null;
-                            selectedWorldZoomCheck = false;
+                            if(selectedWorldId != null)
+								highlightWorldSelection();
+							selectedWorldId = null;
                         })
                         .iconLabel(icon => icon.text)
                         .cooldownTime(Infinity)
@@ -1526,7 +1539,6 @@
                     if (selectedWorldId != null && visibleWorldIds.indexOf(selectedWorldId) === -1) {
                         $search.removeClass("selected").val("");
                         selectedWorldId = null;
-                        selectedWorldZoomCheck = false;
                     }
                     $search.autocomplete({
                         lookup: visibleWorldNames,
@@ -1543,7 +1555,8 @@
                         onSelect: function (selectedWorld) {
                             $search.addClass("selected");
                             selectedWorldId = worldsByName[selectedWorld.value].id;
-                            selectedWorldZoomCheck = true;
+                            focusNode(graph.graphData().nodes[selectedWorldId]);
+                            highlightWorldSelection();
                         },
                         onHide: function () {
                             if (selectedWorldId != null) {
@@ -1552,7 +1565,6 @@
                                 if ($(this).val() !== selectedWorldName) {
                                     $search.removeClass("selected");
                                     selectedWorldId = null;
-                                    selectedWorldZoomCheck = false;
                                 }
                             }
                             searchWorldIds = [];
@@ -1596,6 +1608,17 @@
                         ? 'https://yume2kki.fandom.com/wiki/' + world.title
                         : ('https://wikiwiki.jp/yume2kki-t/' + (world.titleJP.indexOf("：") > -1 ? world.titleJP.slice(0, world.titleJP.indexOf("：")) : world.titleJP)),
                         "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
+                }
+
+                function focusNode(node) {
+                    const distance = 100;
+                    const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
+                    var cam = graph.cameraPosition();
+                    graph.cameraPosition({ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio}, node, 1000);
+                }
+
+                 function highlightWorldSelection() {
+                    graph.linkColor(graph.linkColor()).nodeThreeObject(graph.nodeThreeObject()).linkWidth(graph.linkWidth());
                 }
 
                 let worldsByName, worldNames, minSize, maxSize;
@@ -1704,7 +1727,6 @@
                         startWorldId = null;
                         endWorldId = null;
                         selectedWorldId = null;
-                        selectedWorldZoomCheck = false;
                         if (worldData)
                             reloadGraph();
                     });
