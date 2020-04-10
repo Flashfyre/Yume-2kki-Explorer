@@ -201,6 +201,17 @@
                 border-bottom: 1px solid #000;
             }
 
+            .graph-tooltip, .scene-tooltip {
+                font-family: 'MS Gothic' !important;
+                font-size: 16px !important;
+                padding: 4px;
+                border: 6px solid transparent;
+            }
+
+            .scene-nav-info {
+                display: none;
+            }
+
             .context-menu-list {
                 border: 0 !important;
                 padding: 0 !important;
@@ -278,7 +289,7 @@
                 color: rgba(255, 255, 157, 1); /*alt*/
             }
 
-            .context-menu-item {
+            .context-menu-item, .graph-tooltip, .scene-tooltip:not(:empty) {
                 color: rgba(216, 216, 216, 1) !important; /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round !important;
                 background-color: rgba(45, 17, 23, 1) !important; /*base*/
@@ -673,7 +684,7 @@
 
                 let graph;
                 
-                let contextWorldId = null, startWorldId = null, endWorldId = null, selectedWorldId = null;
+                let contextWorldId = null, startWorldId = null, endWorldId = null, selectedWorldId = null, selectedWorldZoomCheck = false;
 
                 let searchWorldIds = [], visibleWorldIds = [];
 
@@ -995,6 +1006,7 @@
                             .iconLabel(icon => icon.text);
                     else
                         graph = graph
+                            .backgroundColor('#00000000')
                             .linkOpacity(1)
                             .linkColor( link  =>  {
                                 if(selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId))
@@ -1039,7 +1051,7 @@
                                         return 0x333333;
                                 }
                             })
-                            .linkDirectionalParticles(link =>  {
+                            .linkDirectionalParticles(link => {
                                 var result;
                                 if (link.source.id === undefined || link.target.id === undefined)
                                     result = links.filter(l => l.key === link.source + '_' + link.target);
@@ -1052,8 +1064,8 @@
                                 var connType = result[0].connType;
                                 return connType && connType & ConnType.ONE_WAY ? 3 : 0;
                             })
-                            .nodeThreeObject(node =>  {
-                                var texture = new THREE.TextureLoader().load(worldData[node.id].filename);
+                            .nodeThreeObject(node => {
+                                const texture = new THREE.TextureLoader().load(worldData[node.id].filename);
                                 texture.anisotropy = maxAnisotropy;
                                 texture.minFilter = THREE.NearestFilter; // disables mipmaps (eliminates blur)
                                 return new THREE.Mesh(new THREE.BoxGeometry(20, 20, 20), new THREE.MeshBasicMaterial({map: texture}));
@@ -1061,15 +1073,15 @@
                             .linkThreeObject(link => {
                                 if (icons3D[link.key] === undefined) {
                                     if (link.icons[0] !== undefined) {
-                                        var myText = new SpriteText(link.icons[0].char, 12, 'white');
-                                        myText.name = link.icons[0].text;
-                                        myText.fontFace = 'MS Gothic';
-                                        myText.fontSize = 80;
+                                        var text = new SpriteText(link.icons[0].char, 12, 'white');
+                                        text.name = link.icons[0].text;
+                                        text.fontFace = 'MS Gothic';
+                                        text.fontSize = 80;
                                         // without the border emojis get cropped - possibly a bug in three-spritetext
-                                        myText.borderWidth = 1;
-                                        myText.borderColor = 'transparent';
-                                        icons3D[link.key] = myText;
-                                        graph.scene().add(myText);
+                                        text.borderWidth = 1;
+                                        text.borderColor = 'transparent';
+                                        icons3D[link.key] = text;
+                                        graph.scene().add(text);
                                         if (config.connMode === 0 && (link.connType & ConnType.NO_ENTRY))
                                             icons3D[link.key].material.opacity = 0;
                                     }
@@ -1117,11 +1129,11 @@
                                 } else {
                                     if (is2d)
                                         selectedWorldZoomCheck = true;
-                                    else {
+                                    else
                                         focusNode(node);
-                                        highlightWorldSelection();
-                                    }
                                 }
+                                if (!is2d)
+                                    highlightWorldSelection();
                             }
                         })
                         .onNodeRightClick((node, ev) => {
@@ -1167,7 +1179,7 @@
 
                     if (is2d) {
                         if (iconLabel) {
-                            iconLabel.remove();
+                            iconLabel.parentNode.removeChild(iconLabel);
                             iconLabel = null;
                         }
                     } else {
@@ -1797,37 +1809,43 @@
 
                 let worldsByName, worldNames, minSize, maxSize;
 
-                function onDocumentMouseMove( event ) {
+                function onDocumentMouseMove(event) {
                     updateRaycast();
                     // update the mouse variable
-                    mousePos.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-                    mousePos.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+                    mousePos.clientX = event.clientX;
+                    mousePos.clientY = event.clientY;
+                    mousePos.x = (event.clientX / window.innerWidth) * 2 - 1;
+                    mousePos.y = -(event.clientY / window.innerHeight) * 2 + 1;
                 }
 
                 function updateRaycast() {
-                    var vector = new THREE.Vector3( mousePos.x, mousePos.y, 1 );
+                    const vector = new THREE.Vector3(mousePos.x, mousePos.y, 1);
 
-                    raycaster.setFromCamera( vector, graph.camera() );
+                    raycaster.setFromCamera(vector, graph.camera());
                     // create an array containing all objects in the scene with which the ray intersects
-                    var intersects = raycaster.intersectObjects( graph.scene().children );
+                    var intersects = raycaster.intersectObjects(graph.graphData().nodes.map(node => node.__threeObj).filter(o => o).concat(graph.scene().children));
 
                     // if there is one (or more) intersections
-                    if ( intersects.length > 0 )
+                    if (intersects.length > 0)
                     {
-                        // update text, if it has a "name" field.
-                        if ( intersects[ 0 ].object.name )
-                        {
-                            var viewPortCoords = graph.graph2ScreenCoords(intersects[ 0 ].object.position.x, intersects[ 0 ].object.position.y, intersects[ 0 ].object.position.z);
-                            iconLabel.innerHTML = intersects[ 0 ].object.name;
-                            iconLabel.style.color = 'white';
-                            iconLabel.style.left = viewPortCoords.x;
-                            iconLabel.style.top = viewPortCoords.y;
-                        } else {
-                           iconLabel.style.color = 'transparent';
+                        const topObj = intersects[0];
+                        if (topObj.object.__graphObjType !== "node") {
+                            $(".graph .scene-tooltip").css("visibility", "hidden"); 
+                            // update text, if it has a "name" field.
+                            if (topObj.object.name) {
+                                const viewPortCoords = {
+                                    x: mousePos.clientX,
+                                    y: mousePos.clientY
+                                };
+                                iconLabel.innerHTML = intersects[0].object.name;
+                                iconLabel.style.left = viewPortCoords.x + (mousePos.x + 1) * iconLabel.offsetWidth * -0.5;
+                                iconLabel.style.top = viewPortCoords.y + 21;
+                            }
+                            return;
                         }
-                    } else { // there are no intersections
-                        iconLabel.style.color = 'transparent';
                     }
+                    iconLabel.innerHTML = '';
+                    $(".graph .scene-tooltip").css("visibility", "visible");
                 }
 
                 $(document).ready(function () {
