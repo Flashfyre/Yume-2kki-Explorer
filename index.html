@@ -438,100 +438,6 @@
                     }
                 });
 
-                CanvasRenderingContext2D.prototype.roundRect = function (x, y, width, height, radius) {
-                    if (width < 2 * radius) radius = width / 2;
-                    if (height < 2 * radius) radius = height / 2;
-                    this.moveTo(x + radius, y);
-                    this.arcTo(x + width, y, x + width, y + height, radius);
-                    this.arcTo(x + width, y + height, x, y + height, radius);
-                    this.arcTo(x, y + height, x, y, radius);
-                    this.arcTo(x, y, x + width, y, radius);
-                    return this;
-                };
-
-                CanvasRenderingContext2D.prototype.emoji = function (x, y, scale, emoji) {
-                    this.beginPath();
-                    
-                    switch (emoji) {
-                        case "⛔":
-                        case "🚫":
-                            this.arc(x + 3.125 * scale, y - 2.1 * scale, 3.3 * scale, 0, 2 * Math.PI);
-                            break;
-                        case "🔒":
-                        case "🔐":
-                            const isCondition = emoji === "🔐";
-                            this.roundRect(x - 0.21 * scale, y - 2.45 * scale, 5.4 * scale, 3.7 * scale, 0.5 * scale);
-                            if (isCondition)
-                                this.arc(x + 4.875 * scale, y - 3 * scale, 1.6 * scale, 0, 2 * Math.PI);
-                            this.moveTo(x + 0.175 * scale, y - 2.445 * scale);
-                            this.arc(x + 2.5 * scale, y - 3.1 * scale, 2.325 * scale, Math.PI, 0);
-                            this.lineTo(x + 4.825 * scale, y - 2.445 * scale);
-                            if (isCondition) {
-                                this.moveTo(x + 5.65 * scale, y - 1.5825 * scale);
-                                this.lineTo(x + 5.65 * scale, y + 0.525 * scale);
-                                this.lineTo(x + 4.85 * scale, y + 1.2375 * scale);
-                                this.lineTo(x + 4.85 * scale, y - 1.5825 * scale);
-                            }
-                            break;
-                        case "🔑":
-                            this.moveTo(x + 3.75 * scale, y - 2.9 * scale);
-                            this.lineTo(x + 6.5 * scale, y - 0.15 * scale);
-                            this.lineTo(x + 6.5 * scale, y + 1.2 * scale);
-                            this.lineTo(x + 4.85 * scale, y + 1.2 * scale);
-                            this.lineTo(x + 4.85 * scale, y + 0.6 * scale);
-                            this.lineTo(x + 4.15 * scale, y + 0.6 * scale);
-                            this.lineTo(x + 4.15 * scale, y);
-                            this.lineTo(x + 3.5 * scale, y);
-                            this.lineTo(x + 3.5 * scale, y - 0.6 * scale);
-                            this.lineTo(x + 3.1 * scale, y - 0.6 * scale);
-                            this.lineTo(x + 2.4 * scale, y - 1.4 * scale);
-                            this.arc(x + 1.85 * scale, y - 3.35 * scale, 2.1 * scale, 0.4 * Math.PI, 2.4 * Math.PI)
-                            break;
-                        case "🚩":
-                            this.moveTo(x - 0.05 * scale, y + 1.25 * scale);
-                            this.lineTo(x - 0.05 * scale, y - 4.25 * scale);
-                            this.arc(x + 0.475 * scale, y - 4.75 * scale, 0.725 * scale, 0.75 * Math.PI, 2.05 * Math.PI);
-                            this.lineTo(x + 5.9 * scale, y - 3.1 * scale);
-                            this.arc(x + 5.675 * scale, y - 2.775 * scale, 0.375 * scale, 1.5 * Math.PI, 0.4 * Math.PI);
-                            this.lineTo(x + 1 * scale, y - 0.8 * scale);
-                            this.lineTo(x + 1 * scale, y + 1.25 * scale);
-                            break;
-                        case "↩️":
-                            this.rect(x - 0.2 * scale, y - 5.425 * scale, 6.675 * scale, 6.675 * scale);
-                            break;
-                        case "✨":
-                            this.moveTo(x + 1.5 * scale, y - 2.64 * scale);
-                            this.bezierCurveTo(x + 3.6 * scale, y - 2.15 * scale, x + 3.35 * scale, y - 4.7 * scale, x + 3.35 * scale, y - 4.7 * scale);
-                            this.arc(x + 3.85 * scale, y - 4.8 * scale, 0.5 * scale, Math.PI, 2 * Math.PI);
-                            this.bezierCurveTo(x + 4.05 * scale, y - 2.25 * scale, x + 6 * scale, y - 2.5 * scale, x + 6 * scale, y - 2.5 * scale);
-                            this.arc(x + 6 * scale, y - 2 * scale, 0.5 * scale, 1.5 * Math.PI, 0.5 * Math.PI);
-                            this.bezierCurveTo(x + 4.05 * scale, y - 1.75 * scale, x + 4.35 * scale, y + 0.7 * scale, x + 4.35 * scale, y + 0.7 * scale);
-                            this.arc(x + 3.85 * scale, y + 0.8 * scale, 0.5 * scale, 0, Math.PI);
-                            this.bezierCurveTo(x + 3.6 * scale, y - 1.75 * scale, x + 1.5 * scale, y - 1.5 * scale, x + 1.5 * scale, y - 1.5 * scale);
-                            this.roundRect(x - 0.2 * scale, y - 3.35 * scale, 2.65 * scale, scale, 0.5 * scale);
-                            this.roundRect(x + 0.6 * scale, y - 4.4 * scale, 1.05 * scale, 3.1 * scale, 0.5 * scale);
-                            this.rect(x + 2.6 * scale, y - 1.2 * scale, 0.4 * scale, 0.4 * scale);
-                            this.roundRect(x + 0.85 * scale, y - 0.85 * scale, 2.65 * scale, scale, 0.5 * scale);
-                            this.roundRect(x + 1.65 * scale, y - 1.9 * scale, 1.05 * scale, 3.1 * scale, 0.5 * scale);
-                            break;
-                        case "🍀":
-                            this.arc(x + 1 * scale, y - 3.325 * scale, 1.1 * scale, 0, 2 * Math.PI);
-                            this.arc(x + 2.125 * scale, y - 4.4 * scale, 1.1 * scale, 0, 2 * Math.PI);
-                            this.arc(x + 4.1 * scale, y - 4.4 * scale, 1.1 * scale, 0, 2 * Math.PI);
-                            this.arc(x + 5.225 * scale, y - 3.325 * scale, 1.1 * scale, 0, 2 * Math.PI);
-                            this.arc(x + 0.875 * scale, y - 1.375 * scale, 1.1 * scale, 0, 2 * Math.PI);
-                            this.arc(x + 1.975 * scale, y - 0.275 * scale, 1.1 * scale, 0, 2 * Math.PI);
-                            this.arc(x + 3.125 * scale, y + 0.7 * scale, 0.575 * scale, 0, 2 * Math.PI);
-                            this.arc(x + 5.375 * scale, y - 1.375 * scale, 1.1 * scale, 0, 2 * Math.PI);
-                            this.arc(x + 4.225 * scale, y - 0.275 * scale, 1.1 * scale, 0, 2 * Math.PI);
-                            this.lineTo(x + 3.5 * scale, y + 0.85 * scale);
-                            this.lineTo(x + 2 * scale, y + 0.85 * scale);
-                            this.rect(x + 1.5 * scale, y - 3.5 * scale, 3.25 * scale, 4 * scale);
-                            break;
-                    }
-                    this.closePath();
-                };
-
                 function hueToRGBA(h, a) {
                     let s = 1, v = 1, r, g, b, i, f, p, q, t;
                     i = Math.floor(h * 6);
@@ -669,10 +575,10 @@
                 let icons3D = [];
 
                 var iconLabel;
-                var raycaster, mouse = { x: 0, y: 0 }, INTERSECTED;
+                var raycaster, mouse = { x: 0, y: 0 };
 
                 let localizedConns;
-                
+
                 let effectsJP;
 
                 let uiThemeBgColors = {};
@@ -872,12 +778,13 @@
 
                     let depthDistances;
 
+                    icons3D = [];
                     const elem = document.getElementById('graph');
-                
+
                     graph = ForceGraph3D()(elem);
-                                        
+
                     const maxAnisotropy = graph.renderer().capabilities.getMaxAnisotropy();
-                    
+
                     if (displayMode < 4) {
                         graph = graph
                             .dagMode(displayMode === 0 ? 'td' : displayMode === 1 ? 'lr' : displayMode === 2 ? 'radialin' : 'radialout')
@@ -925,7 +832,6 @@
 //                             } else
 //                                 return 1;
                         })
-//                         .linkCanvasObjectMode('connTypeCheck')
                         .linkDirectionalParticleWidth(3)
                         .linkDirectionalParticleColor(link => {
                             if(link.source.id == undefined || link.target.id == undefined) {
@@ -961,14 +867,10 @@
                             texture.anisotropy = maxAnisotropy;
                             texture.minFilter = THREE.NearestFilter; // disables mipmaps (eliminates blur)
                             return new THREE.Mesh(new THREE.BoxGeometry(20, 20, 20), new THREE.MeshBasicMaterial({map: texture}));
-//                              // test non-textured boxes
-//                              return new THREE.Mesh(new THREE.BoxGeometry(10, 10, 10),
-//                                  new THREE.MeshBasicMaterial({color: 0x00aa22}))
                         })
                         .linkThreeObject(link => {
                             if(icons3D[link.key] == undefined) {
                                 if(link.icons[0] != undefined) {
-                                    //var myText = new SpriteText({text: link.icons[0].char, fontFace: 'MS Gothic'});
                                     var myText = new SpriteText(link.icons[0].char, 12, 'white');
                                     myText.name = link.icons[0].text;
                                     myText.fontFace = 'MS Gothic';
@@ -1059,8 +961,13 @@
                     // when the mouse moves, call the given function
                     document.addEventListener( 'mousemove', onDocumentMouseMove, false );
 
+                    if(iconLabel) {
+                        var element = document.getElementById("iconLabel");
+                        element.parentNode.removeChild(element);
+                    }
                     iconLabel = document.createElement('div');
-                    iconLabel.innerHTML = 'anime';
+                    iconLabel.innerHTML = ' ';
+                    iconLabel.id = 'iconLabel';
                     iconLabel.className = "scene-tooltip";
                     iconLabel.style.position = 'absolute';
                     iconLabel.style.top = 0;
@@ -1103,7 +1010,7 @@
                     let char;
                     switch (connType) {
                         case ConnType.ONE_WAY:
-                            char = "➡️";
+                            char = "➜";
                             break;
                         case ConnType.NO_ENTRY:
                             char = "⛔";
