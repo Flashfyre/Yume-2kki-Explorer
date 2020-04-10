@@ -61,6 +61,13 @@
             "style7": "スタイル７"
         }
     },
+    "renderMode": {
+        "name": "レンダリングモード",
+        "values": {
+            "2d": "２Ｄ",
+            "3d": "３Ｄ"
+        }
+    },
     "displayMode": {
         "name": "ディスプレイモード",
         "values": {
