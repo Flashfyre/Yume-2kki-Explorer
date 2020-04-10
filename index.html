@@ -668,6 +668,9 @@
 
                 let icons3D = [];
 
+                let hoverSprite3D, canvas1, context1, texture1;
+                var raycaster, mouse = { x: 0, y: 0 }, INTERSECTED;
+
                 let localizedConns;
                 
                 let effectsJP;
@@ -967,6 +970,7 @@
                                 if(link.icons[0] != undefined) {
                                     //var myText = new SpriteText({text: link.icons[0].char, fontFace: 'MS Gothic'});
                                     var myText = new SpriteText(link.icons[0].char, 12, 0xFFFFFF);
+                                    myText.name = link.icons[0].text;
                                     myText.fontFace = 'MS Gothic';
                                     myText.fontSize = 80;
                                     // without the border emojis get cropped - possibly a bug in three-spritetext
@@ -1049,6 +1053,28 @@
                             }
                         })
                         .graphData(gData);
+
+                    // initialize object to perform world/screen calculations
+                    raycaster = new THREE.Raycaster();
+
+                    // when the mouse moves, call the given function
+                    document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+                    canvas1 = document.createElement('canvas');
+                    context1 = canvas1.getContext('2d');
+                    context1.font = "Bold 20px Arial";
+                    context1.fillStyle = "rgba(0,0,0,0.95)";
+                    context1.fillText('Hello, world!', 0, 20);
+
+                    // canvas contents will be used for a texture
+                    texture1 = new THREE.Texture(canvas1) 
+                    texture1.needsUpdate = true;
+
+                    ////////////////////////////////////////
+
+                    var spriteMaterial = new THREE.SpriteMaterial( { map: texture1} );
+                    hoverSprite3D = new THREE.Sprite( spriteMaterial );
+                    graph.scene().add(hoverSprite3D);
                 }
 
                 function getConnTypeIcon(connType, typeParams) {
@@ -1545,6 +1571,65 @@
                 }
 
                 let worldsByName, worldNames, minSize, maxSize;
+
+                function onDocumentMouseMove( event ) {
+                    // the following line would stop any other event handler from firing
+                    // (such as the mouse's TrackballControls)
+                    // event.preventDefault();
+
+                    updateRaycast();
+                    // update sprite position
+                    hoverSprite3D.position.set( event.clientX, event.clientY - 20, 0);
+
+                    // update the mouse variable
+                    mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+                    mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+                }
+
+                function updateRaycast() {
+
+                    raycaster.setFromCamera( mouse, graph.camera() );
+                    // create an array containing all objects in the scene with which the ray intersects
+                    var intersects = raycaster.intersectObjects( graph.scene().children );
+
+                    // INTERSECTED = the object in the scene currently closest to the camera 
+                    //		and intersected by the Ray projected from the mouse position 	
+
+                    // if there is one (or more) intersections
+                    if ( intersects.length > 0 )
+                    {
+                        // if the closest object intersected is not the currently stored intersection object
+                        if ( intersects[ 0 ].object != INTERSECTED ) 
+                        {
+                            // update text, if it has a "name" field.
+                            if ( intersects[ 0 ].object.name )
+                            {
+                                context1.clearRect(0,0,640,480);
+                                var message = intersects[ 0 ].object.name;
+                                var metrics = context1.measureText(message);
+                                var width = metrics.width;
+                                context1.fillStyle = "rgba(0,0,0,0.95)"; // black border
+                                context1.fillRect( 0,0, width+8,20+8);
+                                context1.fillStyle = "rgba(255,255,255,0.95)"; // white filler
+                                context1.fillRect( 2,2, width+4,20+4 );
+                                context1.fillStyle = "rgba(0,0,0,1)"; // text color
+                                context1.fillText( message, 4,20 );
+                                texture1.needsUpdate = true;
+                            }
+                            else
+                            {
+                                context1.clearRect(0,0,300,300);
+				                texture1.needsUpdate = true;
+                            }
+                        }
+                    } 
+                    else // there are no intersections
+                    {
+                        INTERSECTED = undefined;
+                        context1.clearRect(0,0,300,300);
+		                texture1.needsUpdate = true;
+                    }
+                }
 
                 $(document).ready(function () {
                     let loadingFrameCount = 0;
