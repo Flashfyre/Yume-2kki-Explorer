@@ -61,6 +61,13 @@
             "style7": "Style 7"
         }
     },
+    "renderMode": {
+        "name": "Render Mode:",
+        "values": {
+            "2d": "2D",
+            "3d": "3D"
+        }
+    },
     "displayMode": {
         "name": "Display Mode:",
         "values": {
