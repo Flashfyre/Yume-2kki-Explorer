@@ -947,50 +947,66 @@
                             else
                                 return link.defaultColorFade;
                         })
+                        .linkVisibility(link => {
+                            return 1;
+//                             //don't duplicate links
+//                             //works but removes particles in the process :<
+//                             var result, result2;
+//                             if(link.source.id == undefined || link.target.id == undefined) {
+//                                 result = links.filter(lik => {return lik.key == link.source + '_' + link.target});
+//                                 result2 = links.filter(lik => {return lik.key == link.target + '_' + link.source});
+//                             } else {
+//                                 result = links.filter(lik => {return lik.key == link.source.id + '_' + link.target.id});
+//                                 result2 = links.filter(lik => {return lik.key == link.target.id + '_' + link.source.id});
+//                             }
+
+//                             if(result == undefined)
+//                                return 0; // shouldn't happen
+
+//                             if(result2[0] != undefined) {
+//                                 if(result2[0].hidden != 0)
+//                                    return 0;
+//                                 else
+//                                    return 1;
+//                             } else
+//                                 return 1;
+                        })
 //                         .linkCanvasObjectMode('connTypeCheck')
                         .linkDirectionalParticleWidth(3)
                         .linkDirectionalParticleColor(link => {
                             if(link.source.id == undefined || link.target.id == undefined) {
-                                if(selectedWorldId == null || link.source == selectedWorldId || link.target === selectedWorldId)
+                                if((searchWorldIds.length && (searchWorldIds.indexOf(link.source) > -1 || searchWorldIds.indexOf(link.target) > -1) || !searchWorldIds.length && (selectedWorldId == null || link.source == selectedWorldId || link.target === selectedWorldId)))
                                     return 0xFFFFFF;
                                 else
                                     return 0x333333;
-                                }
-                                else {
-                                    if(selectedWorldId == null || link.source.id === selectedWorldId || link.target.id === selectedWorldId)
-                                        return 0xFFFFFF;
-                                    else
-                                        return 0x333333;
+                            } else {
+                                if((searchWorldIds.length && (searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1) || !searchWorldIds.length && (selectedWorldId == null || link.source.id === selectedWorldId || link.target.id === selectedWorldId)))
+                                    return 0xFFFFFF;
+                                else
+                                    return 0x333333;
                             }
                         })
                         .linkDirectionalParticles(link =>  {
-                                    var result;
-                                    if(link.source.id == undefined || link.target.id == undefined)                              
-                                       result = links.filter(lik => {return lik.key == link.source + '_' + link.target});
-                                    else
-                                       result = links.filter(lik => {return lik.key == link.source.id + '_' + link.target.id});
+                            var result;
+                            if(link.source.id == undefined || link.target.id == undefined)
+                               result = links.filter(lik => {return lik.key == link.source + '_' + link.target});
+                            else
+                               result = links.filter(lik => {return lik.key == link.source.id + '_' + link.target.id});
 
-                                    if(result == undefined)
-                                       return 0; // shouldn't happen
+                            if(result == undefined)
+                               return 0; // shouldn't happen
 
-                                    var connType = result[0].connType;
-                                    if(connType && connType & ConnType.ONE_WAY)
-                                       return 3;
-                                    else
-                                       return 0;
-                           })                        
+                            var connType = result[0].connType;
+                            if(connType && connType & ConnType.ONE_WAY)
+                               return 3;
+                            else
+                               return 0;
+                        })
                         .nodeThreeObject(node =>  {
                             var texture = new THREE.TextureLoader().load(worldData[node.id].filename);
                             texture.anisotropy = maxAnisotropy;
                             texture.minFilter = THREE.NearestFilter; // disables mipmaps (eliminates blur)
-
-                            var mat;
-                            if (selectedWorldId == null || node.id == selectedWorldId) {
-                                mat = new THREE.MeshBasicMaterial({map: texture, transparent: false});
-                            }
-                            else
-                                mat = new THREE.MeshBasicMaterial({map: texture, transparent: true, opacity: 0.2});                                 
-                            return new THREE.Mesh(new THREE.BoxGeometry(20, 20, 20), mat);
+                            return new THREE.Mesh(new THREE.BoxGeometry(20, 20, 20), new THREE.MeshBasicMaterial({map: texture}));
 //                              // test non-textured boxes
 //                              return new THREE.Mesh(new THREE.BoxGeometry(10, 10, 10),
 //                                  new THREE.MeshBasicMaterial({color: 0x00aa22}))
@@ -1030,9 +1046,10 @@
                         })
                         .onBackgroundClick(node => {
                             $(".js--search-world").removeClass("selected").val("");
-                            if(selectedWorldId != null)
+                            if(selectedWorldId != null) {
+                                selectedWorldId = null;
 								highlightWorldSelection();
-							selectedWorldId = null;
+                            }
                         })
                         .iconLabel(icon => icon.text)
                         .cooldownTime(Infinity)
@@ -1551,6 +1568,7 @@
                                 $search.removeClass("selected");
                                 selectedWorldId = null;
                             }
+                            highlightWorldSelection();
                         },
                         onSelect: function (selectedWorld) {
                             $search.addClass("selected");
@@ -1559,7 +1577,7 @@
                             highlightWorldSelection();
                         },
                         onHide: function () {
-                            if (selectedWorldId != null) {
+                           if (selectedWorldId != null) {
                                 const selectedWorld = worldData[selectedWorldId];
                                 const selectedWorldName = config.lang === 'en' || !selectedWorld.titleJP ? selectedWorld.title : wselectedWorld.titleJP;
                                 if ($(this).val() !== selectedWorldName) {
@@ -1568,6 +1586,7 @@
                                 }
                             }
                             searchWorldIds = [];
+                            highlightWorldSelection();
                         }
                     });
                 }
@@ -1617,8 +1636,19 @@
                     graph.cameraPosition({ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio}, node, 1000);
                 }
 
-                 function highlightWorldSelection() {
-                    graph.linkColor(graph.linkColor()).nodeThreeObject(graph.nodeThreeObject()).linkWidth(graph.linkWidth());
+                function highlightWorldSelection() {
+                    graph.linkColor(graph.linkColor()).linkWidth(graph.linkWidth());
+
+                    graph.graphData().nodes.forEach(node => {
+                        if((searchWorldIds.length && searchWorldIds.indexOf(node.id) > -1) || !searchWorldIds.length && (selectedWorldId == null || node.id && (node.id == selectedWorldId || worldData[selectedWorldId].connections.filter(c => c.targetId === node.id).length))) {
+                            node.__threeObj.material.transparent = false;
+                            node.__threeObj.material.opacity = 1.0;
+                        } else {
+                            node.__threeObj.material.transparent = true;
+                            node.__threeObj.material.opacity = 0.2;
+                       }
+                    });
+                    
                 }
 
                 let worldsByName, worldNames, minSize, maxSize;
