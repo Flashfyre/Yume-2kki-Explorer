@@ -1072,31 +1072,38 @@
                             })
                             .linkThreeObject(link => {
                                 if (icons3D[link.key] === undefined) {
-                                    if (link.icons[0] !== undefined) {
-                                        var text = new SpriteText(link.icons[0].char, 12, 'white');
-                                        text.name = link.icons[0].text;
+                                    let linkIcons = [];
+                                    link.icons.forEach(icon => {
+                                        const text = new SpriteText(icon.char, 12, 'white');
+                                        text.name = icon.text;
                                         text.fontFace = 'MS Gothic';
                                         text.fontSize = 80;
                                         // without the border emojis get cropped - possibly a bug in three-spritetext
                                         text.borderWidth = 1;
                                         text.borderColor = 'transparent';
-                                        icons3D[link.key] = text;
-                                        graph.scene().add(text);
                                         if (config.connMode === 0 && (link.connType & ConnType.NO_ENTRY))
-                                            icons3D[link.key].material.opacity = 0;
-                                    }
+                                            text.material.opacity = 0;
+                                        linkIcons.push(text);
+                                        graph.scene().add(text);
+                                    });
+                                    icons3D[link.key] = linkIcons;
                                 }
                                 return 0;
                             })
                             .linkPositionUpdate((linkObject, { start, end }, link) => {
                                 if (icons3D[link.key] !== undefined) {
-                                    var resX, resY, resZ;
-                                    var dist = new THREE.Vector3(start.x, start.y, start.z).distanceTo(new THREE.Vector3(end.x, end.y, end.z));
-                                    var rat = 20 / dist;
-                                    resX = (1 - rat) * start.x + rat * end.x;
-                                    resY = (1 - rat) * start.y + rat * end.y;
-                                    resZ = (1 - rat) * start.z + rat * end.z;
-                                    icons3D[link.key].position.set(resX, resY + 10, resZ);
+                                    const linkIcons = icons3D[link.key];
+                                    const dist = new THREE.Vector3(start.x, start.y, start.z).distanceTo(new THREE.Vector3(end.x, end.y, end.z));
+                                    const spacing = Math.min(((dist / 2) / dist) / (linkIcons.length + 1), 16 / dist);
+                                    for (let i in linkIcons) {
+                                        const icon = linkIcons[i];
+                                        let resX, resY, resZ;
+                                        const rat = ((dist / 4) / dist) + i * spacing;
+                                        resX = (1 - rat) * start.x + rat * end.x;
+                                        resY = (1 - rat) * start.y + rat * end.y;
+                                        resZ = (1 - rat) * start.z + rat * end.z;
+                                        icon.position.set(resX, resY + 10, resZ);
+                                    }
                                 }
                             });
                     graph = graph
@@ -1779,16 +1786,18 @@
 
                 function updateConnectionModeIcons() {
                     graph.graphData().links.forEach(link => {
-                        if (icons3D[link.key]) {
-                            if (selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId))
-                                icons3D[link.key].material.opacity = 1.0;
-                            else if ((selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1))
-                                icons3D[link.key].material.opacity = 1.0;
-                            else
-                                icons3D[link.key].material.opacity = 0.2;
+                        if (icons3D[link.key] !== undefined) {
+                            icons3D[link.key].forEach(icon => {
+                                if (selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId))
+                                    icon.material.opacity = 1.0;
+                                else if ((selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1))
+                                    icon.material.opacity = 1.0;
+                                else
+                                    icon.material.opacity = 0.2;
 
-                           if (config.connMode === 0 && (link.connType & ConnType.NO_ENTRY))
-                                icons3D[link.key].material.opacity = 0;
+                                if (config.connMode === 0 && (link.connType & ConnType.NO_ENTRY))
+                                    icon.material.opacity = 0;
+                            });
                         }
                     });
                 }
