@@ -1,4 +1,4 @@
-// Version 1.60.11 3d-force-graph - https://github.com/vasturiano/3d-force-graph
+// Version 1.60.12 3d-force-graph - https://github.com/vasturiano/3d-force-graph
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
@@ -40631,7 +40631,6 @@
   				break;
 
   			case 'Line':
-
   				object = new Line( getGeometry( data.geometry ), getMaterial( data.material ), data.mode );
 
   				break;
@@ -52725,7 +52724,7 @@ vec4 envMapTexelToLinear(vec4 color) {
           node.vx = 0;
           if (nDim > 1) { node.vy = 0; }
           if (nDim > 2) { node.vz = 0; }
-        }
+		}
       }
     }
 
@@ -53239,16 +53238,22 @@ vec4 envMapTexelToLinear(vec4 color) {
        *
        * @return number of nodes in the graph.
        */
-      getNodesCount: function () {
-        return nodes.size;
-      },
+      getNodeCount: getNodeCount,
 
       /**
        * Gets total number of links in the graph.
        */
-      getLinksCount: function () {
-        return links.length;
-      },
+      getLinkCount: getLinkCount,
+
+      /**
+       * Synonym for `getLinkCount()`
+       */
+      getLinksCount: getLinkCount,
+      
+      /**
+       * Synonym for `getNodeCount()`
+       */
+      getNodesCount: getNodeCount,
 
       /**
        * Gets all links (inbound and outbound) from the node with given id.
@@ -53476,7 +53481,15 @@ vec4 envMapTexelToLinear(vec4 color) {
       }
 
       return new Link(fromId, toId, data, linkId);
-    }
+	}
+	
+	function getNodeCount() {
+	  return nodes.size;
+	}
+
+	function getLinkCount() {
+	  return links.length;
+	}
 
     function getLinks(nodeId) {
       var node = getNode(nodeId);
@@ -63561,7 +63574,7 @@ vec4 envMapTexelToLinear(vec4 color) {
           // right-click
           state.onRightClick(state.hoverObj || null, ev);
         }
-      }, false);
+      }, true); // use capture phase to prevent propagation blocking from controls (specifically for fly)
       state.container.addEventListener('contextmenu', function (ev) {
         if (state.onRightClick) ev.preventDefault(); // prevent default contextmenu behavior and allow mouseup to fire instead
       }, false); // Setup renderer, camera and controls

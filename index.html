@@ -302,12 +302,13 @@
         </style>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.9.0/jquery.contextMenu.min.css" />
-        <script src="/js/force-graph-modded.js"></script>
-        <script src="/js/3d-force-graph-modded.js"></script>
         <script src="//unpkg.com/d3-quadtree"></script>
         <script src="//unpkg.com/d3-force"></script>
         <script src="//unpkg.com/three"></script>
         <script src="//unpkg.com/three-spritetext"></script>
+        <script src="//unpkg.com/threejs-meshline"></script>
+        <script src="/js/force-graph-modded.js"></script>
+        <script src="/js/3d-force-graph-modded.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.devbridge-autocomplete/1.4.10/jquery.autocomplete.min.js"></script>
@@ -1008,19 +1009,16 @@
                         graph = graph
                             .backgroundColor('#00000000')
                             .linkOpacity(1)
-                            .linkColor( link  =>  {
-                                if(selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId))
+                            .linkColor(link => {
+                                if (selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId))
                                     return 0xFFFFFF;
-                                else if((selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1))
+                                else if ((selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1))
                                     return link.defaultColor;
                                 else
                                     return link.defaultColorFade;
                             })
                             .linkVisibility(link => {
-                                return 1;
-                                //don't duplicate links
-                                //works but removes particles in the process :<
-                                /*let result, result2;
+                                let result, result2;
                                 if (link.source.id === undefined || link.target.id === undefined) {
                                     result = links.filter(l => l.key == link.source + '_' + link.target);
                                     result2 = links.filter(l => l.key == link.target + '_' + link.source);
@@ -1033,9 +1031,9 @@
                                     return 0; // shouldn't happen
 
                                 if (result2[0] !== undefined) {
-                                    return result2[0].hidden !== 0 ? 0 : 1;
-                             } else
-                                    return 1;*/
+                                    return result2[0].hidden ? 0 : 1;
+                                } else
+                                    return 1;
                             })
                             .linkDirectionalParticleWidth(3)
                             .linkDirectionalParticleColor(link => {
@@ -1065,10 +1063,11 @@
                                 return connType && connType & ConnType.ONE_WAY ? 3 : 0;
                             })
                             .nodeThreeObject(node => {
+                                const scale = worldScales[node.id];
                                 const texture = new THREE.TextureLoader().load(worldData[node.id].filename);
                                 texture.anisotropy = maxAnisotropy;
                                 texture.minFilter = THREE.NearestFilter; // disables mipmaps (eliminates blur)
-                                return new THREE.Mesh(new THREE.BoxGeometry(20, 20, 20), new THREE.MeshBasicMaterial({map: texture}));
+                                return new THREE.Mesh(new THREE.BoxGeometry(13 * scale, 13 * scale, 13 * scale), new THREE.MeshBasicMaterial({map: texture}));
                             })
                             .linkThreeObject(link => {
                                 if (icons3D[link.key] === undefined) {
@@ -1806,12 +1805,14 @@
                     graph.linkColor(graph.linkColor()).linkWidth(graph.linkWidth());
                     updateConnectionModeIcons();
                     graph.graphData().nodes.forEach(node => {
-                        if ((searchWorldIds.length && searchWorldIds.indexOf(node.id) > -1) || !searchWorldIds.length && (selectedWorldId == null || node.id && (node.id == selectedWorldId || worldData[selectedWorldId].connections.filter(c => c.targetId === node.id).length))) {
-                            node.__threeObj.material.transparent = false;
-                            node.__threeObj.material.opacity = 1.0;
-                        } else {
-                            node.__threeObj.material.transparent = true;
-                            node.__threeObj.material.opacity = 0.2;
+                        if (node.__threeObj) {
+                            if ((searchWorldIds.length && searchWorldIds.indexOf(node.id) > -1) || !searchWorldIds.length && (selectedWorldId == null || node.id && (node.id == selectedWorldId || worldData[selectedWorldId].connections.filter(c => c.targetId === node.id).length))) {
+                                node.__threeObj.material.transparent = false;
+                                node.__threeObj.material.opacity = 1.0;
+                            } else {
+                                node.__threeObj.material.transparent = true;
+                                node.__threeObj.material.opacity = 0.2;
+                            }
                         }
                     });
                 }
