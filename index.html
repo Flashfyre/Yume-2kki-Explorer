@@ -1826,7 +1826,7 @@
                     updateConnectionModeIcons();
                     graph.graphData().nodes.forEach(node => {
                         if (node.__threeObj) {
-                            if ((searchWorldIds.length && searchWorldIds.indexOf(node.id) > -1) || !searchWorldIds.length && (selectedWorldId == null || node.id && (node.id == selectedWorldId || worldData[selectedWorldId].connections.filter(c => c.targetId === node.id).length))) {
+                            if ((searchWorldIds.length && searchWorldIds.indexOf(node.id) > -1) || !searchWorldIds.length && (selectedWorldId == null || (node.id == selectedWorldId || worldData[selectedWorldId].connections.filter(c => c.targetId === node.id).length))) {
                                 node.__threeObj.material.transparent = false;
                                 node.__threeObj.material.opacity = 1.0;
                             } else {
