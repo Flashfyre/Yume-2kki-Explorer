@@ -1065,7 +1065,7 @@
                                         text.borderWidth = 1;
                                         text.borderColor = 'transparent';
                                         if (config.connMode === 0 && (link.connType & ConnType.NO_ENTRY))
-                                            text.material.opacity = 0;
+                                            text.visible = false;
                                         linkIcons.push(text);
                                         graph.scene().add(text);
                                     });
@@ -1807,6 +1807,7 @@
                     graph.graphData().links.forEach(link => {
                         if (icons3D[link.key] !== undefined) {
                             icons3D[link.key].forEach(icon => {
+                                icon.visible = true;
                                 if (selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId))
                                     icon.material.opacity = 1.0;
                                 else if ((selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1))
@@ -1815,7 +1816,7 @@
                                     icon.material.opacity = 0.2;
 
                                 if (config.connMode === 0 && (link.connType & ConnType.NO_ENTRY))
-                                    icon.material.opacity = 0;
+                                    icon.visible = false;
                             });
                         }
                     });
