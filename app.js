@@ -1053,7 +1053,7 @@ function getConnections(html) {
                     if (paramsText === "&#123;&#123;&#123;3}}}")
                         paramsText = "";
                     else {
-                        paramsText = paramsText.replace(/^Requires (to )?/, "").replace(/.$/, "");
+                        paramsText = paramsText.replace(/^Require(s|d) (to )?/, "").replace(/.$/, "");
                         paramsText = paramsText.substring(0, 1).toUpperCase() + paramsText.slice(1);
                     }
                     if (paramsText) {

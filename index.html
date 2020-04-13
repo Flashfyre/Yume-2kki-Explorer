@@ -201,6 +201,17 @@
                 border-bottom: 1px solid #000;
             }
 
+            .graph-tooltip, .scene-tooltip {
+                font-family: 'MS Gothic' !important;
+                font-size: 16px !important;
+                padding: 4px;
+                border: 6px solid transparent;
+            }
+
+            .scene-nav-info {
+                display: none;
+            }
+
             .context-menu-list {
                 border: 0 !important;
                 padding: 0 !important;
@@ -278,7 +289,7 @@
                 color: rgba(255, 255, 157, 1); /*alt*/
             }
 
-            .context-menu-item {
+            .context-menu-item, .graph-tooltip, .scene-tooltip:not(:empty) {
                 color: rgba(216, 216, 216, 1) !important; /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round !important;
                 background-color: rgba(45, 17, 23, 1) !important; /*base*/
@@ -291,9 +302,13 @@
         </style>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.9.0/jquery.contextMenu.min.css" />
-        <script src="/js/force-graph-modded.js"></script>
         <script src="//unpkg.com/d3-quadtree"></script>
         <script src="//unpkg.com/d3-force"></script>
+        <script src="//unpkg.com/three"></script>
+        <script src="//unpkg.com/three-spritetext"></script>
+        <script src="//unpkg.com/threejs-meshline"></script>
+        <script src="/js/force-graph-modded.js"></script>
+        <script src="/js/3d-force-graph-modded.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.devbridge-autocomplete/1.4.10/jquery.autocomplete.min.js"></script>
@@ -354,6 +369,13 @@
                         </select>
                     </div>
                     <div class="control">
+                        <label data-localize="renderMode.name" class="noselect">Render Mode:</label>
+                        <select name="renderMode" class="js--render-mode">
+                            <option data-localize="renderMode.values.vertical" value="0" selected>2D</option>
+                            <option data-localize="renderMode.values.horizontal" value="1">3D</option>
+                        </select>
+                    </div>
+                    <div class="control">
                         <label data-localize="displayMode.name" class="noselect">Display Mode:</label>
                         <select name="displayMode" class="js--display-mode">
                             <option data-localize="displayMode.values.vertical" value="0" selected>Vertical</option>
@@ -366,7 +388,7 @@
                     <div class="control">
                         <label data-localize="connMode.name" class="noselect">Connection Mode:</label>
                         <select name="connMode" class="js--conn-mode">
-                            <option data-localize="connMode.values.oneWay" value="0" selected>One-Way)/option>
+                            <option data-localize="connMode.values.oneWay" value="0" selected>One-Way</option>
                             <option data-localize="connMode.values.twoWay" value="1">Two-Way</option>
                         </select>
                     </div>
@@ -614,6 +636,9 @@
                                         case "fontStyle":
                                             $(".js--font-style").val(value);
                                             break;
+                                        case "renderMode":
+                                            $(".js--render-mode").val(value);
+                                            break;
                                         case "displayMode":
                                             $(".js--display-mode").val(value);
                                             if (parseInt(value) >= 2)
@@ -660,12 +685,18 @@
 
                 let graph;
                 
-                let contextWorldId = null, startWorldId = null, endWorldId = null, selectedWorldId = null, selectedWorldZoomCheck;
+                let contextWorldId = null, startWorldId = null, endWorldId = null, selectedWorldId = null, selectedWorldZoomCheck = false;
 
                 let searchWorldIds = [], visibleWorldIds = [];
 
+                let icons3D;
+
+                let iconLabel;
+
+                let raycaster, mousePos = { x: 0, y: 0 };
+
                 let localizedConns;
-                
+
                 let effectsJP;
 
                 let uiThemeBgColors = {};
@@ -676,6 +707,7 @@
                     lang: "en",
                     uiTheme: "Default_Custom",
                     fontStyle: 0,
+                    renderMode: 0,
                     displayMode: 0,
                     connMode: 0,
                     labelMode: 1,
@@ -683,7 +715,9 @@
                     stackSize: 20
                 };
 
-                function initGraph(displayMode, paths) {
+                function initGraph(renderMode, displayMode, paths) {
+
+                    const is2d = !renderMode;
 
                     const links = [];
 
@@ -865,114 +899,223 @@
 
                     let depthDistances;
 
+                    icons3D = [];
+
                     const elem = document.getElementById('graph');
-                
-                    graph = ForceGraph()(elem);
-                    if (displayMode < 4) {
+
+                    graph = is2d ? ForceGraph()(elem) : ForceGraph3D()(elem);
+
+                    const maxAnisotropy = !is2d ? graph.renderer().capabilities.getMaxAnisotropy() : null;
+
+                    if (displayMode < 4)
                         graph = graph
                             .dagMode(displayMode === 0 ? 'td' : displayMode === 1 ? 'lr' : displayMode === 2 ? 'radialin' : 'radialout')
                             .dagLevelDistance(displayMode < 2 ? 12 : 24 + radius * (config.sizeDiff + 1));
-                    }
-                    graph
-                        .nodeCanvasObject(({ id, img, x, y, scale, width, height, isHover }, ctx, globalScale) => {
-                            ctx.globalAlpha = (selectedWorldId == null || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1) ? 1 : selectedWorldId != null && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length ? 0.625 : 0.1;
-                            ctx.imageSmoothingEnabled = false;
-                            ctx.drawImage(img, 0, 0, img.width, img.height, x - width / 2, y - height / 2, width, height);
-                            if (config.labelMode === 3 || (config.labelMode === 1 && isHover) || (config.labelMode === 2 && id === selectedWorldId)) {
-                                ctx.lineWidth = 0.25 * scale;
-                                ctx.strokeStyle = "#000000";
-                                ctx.fillStyle = "rgba(216, 216, 216, 1)";
-                                ctx.font = (2 * scale) + "px 'MS Gothic'";
-                                const world = worldData[id];
-                                const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
-                                let textLines = worldName.split(" ");
-                                for (let l = 0; l < textLines.length; l++) {
-                                    if (ctx.measureText(textLines[l]).width < width) {
-                                        let mergeIndex = 0;
-                                        for (let l2 = l + 1; l2 < textLines.length; l2++) {
-                                            const mergedLine = textLines.slice(l, l2 + 1).join(" ");
-                                            if (ctx.measureText(mergedLine).width < width) {
-                                                mergeIndex = l2;
-                                            } else
-                                                break;
-                                        }
-                                        if (mergeIndex) {
-                                            textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
-                                        }
-                                    } else if (textLines[l].indexOf("：") > -1)
-                                        textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
+                    if (is2d)
+                        graph = graph
+                            .nodeCanvasObject(({ id, img, x, y, scale, width, height, isHover }, ctx, globalScale) => {
+                                ctx.globalAlpha = (selectedWorldId == null || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1) ? 1 : selectedWorldId != null && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length ? 0.625 : 0.1;
+                                ctx.imageSmoothingEnabled = false;
+                                ctx.drawImage(img, 0, 0, img.width, img.height, x - width / 2, y - height / 2, width, height);
+                                if (config.labelMode === 3 || (config.labelMode === 1 && isHover) || (config.labelMode === 2 && id === selectedWorldId)) {
+                                    ctx.lineWidth = 0.25 * scale;
+                                    ctx.strokeStyle = "#000000";
+                                    ctx.fillStyle = "rgba(216, 216, 216, 1)";
+                                    ctx.font = (2 * scale) + "px 'MS Gothic'";
+                                    const world = worldData[id];
+                                    const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
+                                    let textLines = worldName.split(" ");
+                                    for (let l = 0; l < textLines.length; l++) {
+                                        if (ctx.measureText(textLines[l]).width < width) {
+                                            let mergeIndex = 0;
+                                            for (let l2 = l + 1; l2 < textLines.length; l2++) {
+                                                const mergedLine = textLines.slice(l, l2 + 1).join(" ");
+                                                if (ctx.measureText(mergedLine).width < width) {
+                                                    mergeIndex = l2;
+                                                } else
+                                                    break;
+                                            }
+                                            if (mergeIndex) {
+                                                textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
+                                            }
+                                        } else if (textLines[l].indexOf("：") > -1)
+                                            textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
+                                    }
+                                    for (let l in textLines) {
+                                        const textLine = textLines[l];
+                                        const lineWidth = ctx.measureText(textLine).width;
+                                        const lineX = x - lineWidth / 2;
+                                        const lineY = (y + 0.5 * scale) - (textLines.length - 1) + l * 2 * scale;
+                                        ctx.strokeText(textLine, lineX, lineY);
+                                        ctx.fillText(textLine, lineX, lineY);
+                                    }
                                 }
-                                for (let l in textLines) {
-                                    const textLine = textLines[l];
-                                    const lineWidth = ctx.measureText(textLine).width;
-                                    const lineX = x - lineWidth / 2;
-                                    const lineY = (y + 0.5 * scale) - (textLines.length - 1) + l * 2 * scale;
-                                    ctx.strokeText(textLine, lineX, lineY);
-                                    ctx.fillText(textLine, lineX, lineY);
+                                if (selectedWorldId === id) {
+                                    ctx.strokeStyle = '#f00';
+                                    ctx.lineWidth = 1 / globalScale;
+                                    ctx.strokeRect(x - width / 2, y - height / 2, width, height);
+                                    if (selectedWorldZoomCheck) {
+                                        selectedWorldZoomCheck = false;
+                                        graph.centerAt(x, y, 1000);
+                                        graph.zoom(8, 1000);
+                                    }
                                 }
-                            }
-                            if (selectedWorldId === id) {
-                                ctx.strokeStyle = '#f00';
-                                ctx.lineWidth = 1 / globalScale;
-                                ctx.strokeRect(x - width / 2, y - height / 2, width, height);
-                                if (selectedWorldZoomCheck) {
-                                    selectedWorldZoomCheck = false;
-                                    graph.centerAt(x, y, 1000);
-                                    graph.zoom(8, 1000);
+                                if (isHover && (isShift || isCtrl)) {
+                                    ctx.fillText("🔗", x + (width / 2) - 3.5, y - (height / 2) + 2.5);
                                 }
-                            }
-                            if (isHover && (isShift || isCtrl)) {
-                                ctx.fillText("🔗", x + (width / 2) - 3.5, y - (height / 2) + 2.5);
-                            }
-                            ctx.globalAlpha = 1;
-                        })
+                                ctx.globalAlpha = 1;
+                            })
+                            .linkColor(link => link.hidden ? 'transparent' : selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' :
+                                (selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)
+                                ? link.defaultColor : link.defaultColorFade)
+                            .linkCanvasObjectMode('connTypeCheck')
+                            .linkCanvasObject((link, ctx, globalScale) => {
+                                const hidden = link.hidden;
+                                if (hidden && config.connMode === 0)
+                                    return;
+                                const connType = link.connType;
+                                const fade = (selectedWorldId != null && link.source.id !== selectedWorldId && link.target.id !== selectedWorldId) || (searchWorldIds.length && searchWorldIds.indexOf(link.source.id) === -1 && searchWorldIds.indexOf(link.target.id) === -1);
+                                if (!hidden) {
+                                    ctx.beginPath();
+                                    ctx.lineWidth = (selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1) / globalScale;
+                                    ctx.strokeStyle = selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : !fade ? link.defaultColor : link.defaultColorFade;
+                                    if (connType && connType & ConnType.ONE_WAY) {
+                                        let currentDashOffset = dashOffset;
+                                        if (link.key === lastOneWayLinkKey)
+                                            dashOffset = dashOffset < 9.8 ? dashOffset + 0.2 : 0;
+                                        ctx.setLineDash([5, 5]);
+                                        ctx.lineDashOffset = currentDashOffset * -1;
+                                    }
+                                }
+                                const sourceX = link.source.x;
+                                const sourceY = link.source.y;
+                                const targetX = link.target.x;
+                                const targetY = link.target.y;
+                                if (!hidden) {
+                                    ctx.moveTo(sourceX, sourceY);
+                                    ctx.lineTo(targetX, targetY);
+                                    ctx.stroke();
+                                    ctx.closePath();
+                                }
+                                if (link.icons.length) {
+                                    if (fade)
+                                        ctx.globalAlpha = 0.1;
+                                    drawLinkIcons(link, ctx, globalScale);
+                                    ctx.globalAlpha = 1;
+                                }
+                            })
+                            .iconLabel(icon => icon.text);
+                    else
+                        graph = graph
+                            .backgroundColor('#00000000')
+                            .linkOpacity(1)
+                            .linkColor(link => {
+                                if (selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId))
+                                    return 0xFFFFFF;
+                                else if ((selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1))
+                                    return link.defaultColor;
+                                else
+                                    return link.defaultColorFade;
+                            })
+                            .linkVisibility(link => {
+                                let result, result2;
+                                if (link.source.id === undefined || link.target.id === undefined) {
+                                    result = links.filter(l => l.key == link.source + '_' + link.target);
+                                    result2 = links.filter(l => l.key == link.target + '_' + link.source);
+                                } else {
+                                    result = links.filter(l => l.key == link.source.id + '_' + link.target.id);
+                                    result2 = links.filter(l => l.key == link.target.id + '_' + link.source.id);
+                                }
+
+                                if (result === undefined)
+                                    return 0; // shouldn't happen
+
+                                if (result2[0] !== undefined) {
+                                    return result2[0].hidden ? 0 : 1;
+                                } else
+                                    return 1;
+                            })
+                            .linkDirectionalParticleWidth(3)
+                            .linkDirectionalParticleColor(link => {
+                                if (link.source.id == undefined || link.target.id == undefined) {
+                                    if ((searchWorldIds.length && (searchWorldIds.indexOf(link.source) > -1 || searchWorldIds.indexOf(link.target) > -1) || !searchWorldIds.length && (selectedWorldId == null || link.source == selectedWorldId || link.target === selectedWorldId)))
+                                        return 0xFFFFFF;
+                                    else
+                                        return 0x333333;
+                                } else {
+                                    if ((searchWorldIds.length && (searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1) || !searchWorldIds.length && (selectedWorldId == null || link.source.id === selectedWorldId || link.target.id === selectedWorldId)))
+                                        return 0xFFFFFF;
+                                    else
+                                        return 0x333333;
+                                }
+                            })
+                            .linkDirectionalParticles(link => {
+                                var result;
+                                if (link.source.id === undefined || link.target.id === undefined)
+                                    result = links.filter(l => l.key === link.source + '_' + link.target);
+                                else
+                                    result = links.filter(l => l.key === link.source.id + '_' + link.target.id);
+
+                                if (result === undefined)
+                                    return 0; // shouldn't happen
+
+                                var connType = result[0].connType;
+                                return connType && connType & ConnType.ONE_WAY ? 3 : 0;
+                            })
+                            .nodeThreeObject(node => {
+                                const scale = worldScales[node.id];
+                                const texture = new THREE.TextureLoader().load(worldData[node.id].filename);
+                                texture.anisotropy = maxAnisotropy;
+                                texture.minFilter = THREE.NearestFilter; // disables mipmaps (eliminates blur)
+                                return new THREE.Mesh(new THREE.BoxGeometry(13 * scale, 13 * scale, 13 * scale), new THREE.MeshBasicMaterial({map: texture}));
+                            })
+                            .linkThreeObject(link => {
+                                if (icons3D[link.key] === undefined) {
+                                    let linkIcons = [];
+                                    link.icons.forEach(icon => {
+                                        const text = new SpriteText(icon.char, 12, 'white');
+                                        text.name = icon.text;
+                                        text.fontFace = 'MS Gothic';
+                                        text.fontSize = 80;
+                                        // without the border emojis get cropped - possibly a bug in three-spritetext
+                                        text.borderWidth = 1;
+                                        text.borderColor = 'transparent';
+                                        if (config.connMode === 0 && (link.connType & ConnType.NO_ENTRY))
+                                            text.material.opacity = 0;
+                                        linkIcons.push(text);
+                                        graph.scene().add(text);
+                                    });
+                                    icons3D[link.key] = linkIcons;
+                                }
+                                return 0;
+                            })
+                            .linkPositionUpdate((linkObject, { start, end }, link) => {
+                                if (icons3D[link.key] !== undefined) {
+                                    const linkIcons = icons3D[link.key];
+                                    const dist = new THREE.Vector3(start.x, start.y, start.z).distanceTo(new THREE.Vector3(end.x, end.y, end.z));
+                                    const spacing = Math.min(((dist / 2) / dist) / (linkIcons.length + 1), 16 / dist);
+                                    for (let i in linkIcons) {
+                                        const icon = linkIcons[i];
+                                        let resX, resY, resZ;
+                                        const rat = ((dist / 4) / dist) + i * spacing;
+                                        resX = (1 - rat) * start.x + rat * end.x;
+                                        resY = (1 - rat) * start.y + rat * end.y;
+                                        resZ = (1 - rat) * start.z + rat * end.z;
+                                        icon.position.set(resX, resY + 10, resZ);
+                                    }
+                                }
+                            });
+                    graph = graph
                         .connMode(() => config.connMode)
                         .nodeVal(node => node.height)
                         .nodeLabel(node => node.img.title)
                         .nodesPerStack(config.stackSize)
                         .linkWidth(link => selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1)
-                        .linkColor(link => link.hidden ? 'transparent' : selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' :
-                            (selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)
-                            ? link.defaultColor : link.defaultColorFade)
-                        .linkCanvasObjectMode('connTypeCheck')
-                        .linkCanvasObject((link, ctx, globalScale) => {
-                            const hidden = link.hidden;
-                            if (hidden && config.connMode === 0)
-                                return;
-                            const connType = link.connType;
-                            const fade = (selectedWorldId != null && link.source.id !== selectedWorldId && link.target.id !== selectedWorldId) || (searchWorldIds.length && searchWorldIds.indexOf(link.source.id) === -1 && searchWorldIds.indexOf(link.target.id) === -1);
-                            if (!hidden) {
-                                ctx.beginPath();
-                                ctx.lineWidth = (selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1) / globalScale;
-                                ctx.strokeStyle = selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : !fade ? link.defaultColor : link.defaultColorFade;
-                                if (connType && connType & ConnType.ONE_WAY) {
-                                    let currentDashOffset = dashOffset;
-                                    if (link.key === lastOneWayLinkKey)
-                                        dashOffset = dashOffset < 9.8 ? dashOffset + 0.2 : 0;
-                                    ctx.setLineDash([5, 5]);
-                                    ctx.lineDashOffset = currentDashOffset * -1;
-                                }
-                            }
-                            const sourceX = link.source.x;
-                            const sourceY = link.source.y;
-                            const targetX = link.target.x;
-                            const targetY = link.target.y;
-                            if (!hidden) {
-                                ctx.moveTo(sourceX, sourceY);
-                                ctx.lineTo(targetX, targetY);
-                                ctx.stroke();
-                                ctx.closePath();
-                            }
-                            if (link.icons.length) {
-                                if (fade)
-                                    ctx.globalAlpha = 0.1;
-                                drawLinkIcons(link, ctx, globalScale);
-                                ctx.globalAlpha = 1;
-                            }
-                        })
                         .onNodeDragEnd(node => {
                             node.fx = node.x;
                             node.fy = node.y;
+                            if (!is2d)
+                                node.fz = node.z;
                         })
                         .onNodeHover((node, prevNode) => {
                             elem.style.cursor = node ? 'pointer' : null;
@@ -989,8 +1132,14 @@
                                 if (node && (selectedWorldId == null || selectedWorldId !== node.id)) {
                                     $(".js--search-world").addClass("selected").val(config.lang === 'en' || !world.titleJP ? world.title : world.titleJP);
                                     selectedWorldId = node.id;
-                                } else
-                                    selectedWorldZoomCheck = true;
+                                } else {
+                                    if (is2d)
+                                        selectedWorldZoomCheck = true;
+                                    else
+                                        focusNode(node);
+                                }
+                                if (!is2d)
+                                    highlightWorldSelection();
                             }
                         })
                         .onNodeRightClick((node, ev) => {
@@ -1002,10 +1151,14 @@
                         })
                         .onBackgroundClick(node => {
                             $(".js--search-world").removeClass("selected").val("");
-                            selectedWorldId = null;
-                            selectedWorldZoomCheck = false;
+                            if (is2d) {
+                                selectedWorldId = null;
+                                selectedWorldZoomCheck = false;
+                            } else if (selectedWorldId != null) {
+                                selectedWorldId = null;
+								highlightWorldSelection();
+                            }
                         })
-                        .iconLabel(icon => icon.text)
                         .cooldownTime(Infinity)
                         // Deactivate existing forces
                         // Add collision and bounding box forces
@@ -1019,9 +1172,43 @@
                                 // bounce on box walls
                                 if (Math.abs(x) > SQUARE_HALF_SIDE) { node.vx += 0.1 * (x > 0 ? -1 : 1); }
                                 if (Math.abs(y) > SQUARE_HALF_SIDE) { node.vy += 0.1 * (y > 0 ? -1 : 1); }
+
+                                if (!is2d) {
+                                    const z = node.z || 0;
+                                    if (Math.abs(z) > SQUARE_HALF_SIDE) { node.vz += 0.1 * (z > 0 ? -1 : 1); }
+                                }
                             });
                         })
                         .graphData(gData);
+
+                    document.removeEventListener('mousemove', onDocumentMouseMove);
+
+                    if (is2d) {
+                        if (iconLabel) {
+                            iconLabel.parentNode.removeChild(iconLabel);
+                            iconLabel = null;
+                        }
+                    } else {
+                        // initialize object to perform world/screen calculations
+                        raycaster = new THREE.Raycaster();
+
+                        // when the mouse moves, call the given function
+                        document.addEventListener('mousemove', onDocumentMouseMove, false);
+
+                        if(iconLabel) {
+                            var element = document.getElementById("iconLabel");
+                            element.parentNode.removeChild(element);
+                        }
+                        iconLabel = document.createElement('div');
+                        iconLabel.innerHTML = ' ';
+                        iconLabel.id = 'iconLabel';
+                        iconLabel.className = "scene-tooltip";
+                        iconLabel.style.position = 'absolute';
+                        iconLabel.style.top = 0;
+                        iconLabel.style.color = 'transparent';
+                        iconLabel.style.zIndex = 10;
+                        document.body.appendChild(iconLabel);
+                    }
                 }
 
                 function getConnTypeIcon(connType, typeParams) {
@@ -1203,7 +1390,7 @@
                         : null;
                     if (graph)
                         graph._destructor();
-                    initGraph(config.displayMode, matchPaths)
+                    initGraph(config.renderMode, config.displayMode, matchPaths)
                 }
 
                 let mult = 1;
@@ -1420,7 +1607,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "1.4.4");
+                            data.footer = data.footer.replace("{VERSION}", "1.4.5");
                             localizedConns = data.conn;
                             initContextMenu(data.contextMenu);
                             if (isInitial) {
@@ -1510,7 +1697,6 @@
                     if (selectedWorldId != null && visibleWorldIds.indexOf(selectedWorldId) === -1) {
                         $search.removeClass("selected").val("");
                         selectedWorldId = null;
-                        selectedWorldZoomCheck = false;
                     }
                     $search.autocomplete({
                         lookup: visibleWorldNames,
@@ -1522,15 +1708,21 @@
                             if (searchWorldIds.length && selectedWorld && (searchWorldIds.length !== 1 || selectedWorldId !== searchWorldIds[0])) {
                                 $search.removeClass("selected");
                                 selectedWorldId = null;
+                                selectedWorldZoomCheck = false;
                             }
+                            if (config.renderMode)
+                                highlightWorldSelection();
                         },
                         onSelect: function (selectedWorld) {
                             $search.addClass("selected");
                             selectedWorldId = worldsByName[selectedWorld.value].id;
-                            selectedWorldZoomCheck = true;
+                            if (config.renderMode) {
+                                focusNode(graph.graphData().nodes[selectedWorldId]);
+                                highlightWorldSelection();
+                            }
                         },
                         onHide: function () {
-                            if (selectedWorldId != null) {
+                           if (selectedWorldId != null) {
                                 const selectedWorld = worldData[selectedWorldId];
                                 const selectedWorldName = config.lang === 'en' || !selectedWorld.titleJP ? selectedWorld.title : wselectedWorld.titleJP;
                                 if ($(this).val() !== selectedWorldName) {
@@ -1540,6 +1732,8 @@
                                 }
                             }
                             searchWorldIds = [];
+                            if (config.renderMode)
+                                highlightWorldSelection();
                         }
                     });
                 }
@@ -1582,7 +1776,87 @@
                         "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
                 }
 
+                function focusNode(node) {
+                    const distance = 100;
+                    const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
+                    var cam = graph.cameraPosition();
+                    graph.cameraPosition({ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio}, node, 1000);
+                }
+
+                function updateConnectionModeIcons() {
+                    graph.graphData().links.forEach(link => {
+                        if (icons3D[link.key] !== undefined) {
+                            icons3D[link.key].forEach(icon => {
+                                if (selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId))
+                                    icon.material.opacity = 1.0;
+                                else if ((selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1))
+                                    icon.material.opacity = 1.0;
+                                else
+                                    icon.material.opacity = 0.2;
+
+                                if (config.connMode === 0 && (link.connType & ConnType.NO_ENTRY))
+                                    icon.material.opacity = 0;
+                            });
+                        }
+                    });
+                }
+
+                function highlightWorldSelection() {
+                    graph.linkColor(graph.linkColor()).linkWidth(graph.linkWidth());
+                    updateConnectionModeIcons();
+                    graph.graphData().nodes.forEach(node => {
+                        if (node.__threeObj) {
+                            if ((searchWorldIds.length && searchWorldIds.indexOf(node.id) > -1) || !searchWorldIds.length && (selectedWorldId == null || node.id && (node.id == selectedWorldId || worldData[selectedWorldId].connections.filter(c => c.targetId === node.id).length))) {
+                                node.__threeObj.material.transparent = false;
+                                node.__threeObj.material.opacity = 1.0;
+                            } else {
+                                node.__threeObj.material.transparent = true;
+                                node.__threeObj.material.opacity = 0.2;
+                            }
+                        }
+                    });
+                }
+
                 let worldsByName, worldNames, minSize, maxSize;
+
+                function onDocumentMouseMove(event) {
+                    updateRaycast();
+                    // update the mouse variable
+                    mousePos.clientX = event.clientX;
+                    mousePos.clientY = event.clientY;
+                    mousePos.x = (event.clientX / window.innerWidth) * 2 - 1;
+                    mousePos.y = -(event.clientY / window.innerHeight) * 2 + 1;
+                }
+
+                function updateRaycast() {
+                    const vector = new THREE.Vector3(mousePos.x, mousePos.y, 1);
+
+                    raycaster.setFromCamera(vector, graph.camera());
+                    // create an array containing all objects in the scene with which the ray intersects
+                    var intersects = raycaster.intersectObjects(graph.graphData().nodes.map(node => node.__threeObj).filter(o => o).concat(graph.scene().children));
+
+                    // if there is one (or more) intersections
+                    if (intersects.length > 0)
+                    {
+                        const topObj = intersects[0];
+                        if (topObj.object.__graphObjType !== "node") {
+                            $(".graph .scene-tooltip").css("visibility", "hidden"); 
+                            // update text, if it has a "name" field.
+                            if (topObj.object.name) {
+                                const viewPortCoords = {
+                                    x: mousePos.clientX,
+                                    y: mousePos.clientY
+                                };
+                                iconLabel.innerHTML = intersects[0].object.name;
+                                iconLabel.style.left = viewPortCoords.x + (mousePos.x + 1) * iconLabel.offsetWidth * -0.5;
+                                iconLabel.style.top = viewPortCoords.y + 21;
+                            }
+                            return;
+                        }
+                    }
+                    iconLabel.innerHTML = '';
+                    $(".graph .scene-tooltip").css("visibility", "visible");
+                }
 
                 $(document).ready(function () {
                     let loadingFrameCount = 0;
@@ -1651,6 +1925,13 @@
                         });
                     });
 
+                    $(".js--render-mode").change(function() {
+                        config.renderMode = parseInt($(this).val());
+                        updateConfig();
+                        if (worldData)
+                            reloadGraph();
+                    });
+
                     $(".js--display-mode").change(function() {
                         config.displayMode = parseInt($(this).val());
                         updateConfig();
@@ -1661,6 +1942,8 @@
 
                     $(".js--conn-mode").change(function() {
                         config.connMode = parseInt($(this).val());
+                        if (config.renderMode)
+                            updateConnectionModeIcons();
                         updateConfig();
                     });
 
