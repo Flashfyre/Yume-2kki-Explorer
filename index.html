@@ -1686,7 +1686,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "1.4.5");
+                            data.footer = data.footer.replace("{VERSION}", "2.0.0");
                             localizedConns = data.conn;
                             initContextMenu(data.contextMenu);
                             if (isInitial) {
@@ -1867,12 +1867,11 @@
                         if (icons3D[link.key] !== undefined) {
                             icons3D[link.key].forEach(icon => {
                                 icon.visible = true;
-                                if (selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId))
-                                    icon.material.opacity = 1.0;
-                                else if ((selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1))
-                                    icon.material.opacity = 1.0;
-                                else
-                                    icon.material.opacity = 0.2;
+                                icon.material.opacity = selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId)
+                                    ? icon.material.opacity = 1.0
+                                    : (selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)
+                                    ? 0.625
+                                    : 0.1;
 
                                 if (config.connMode === 0 && (link.connType & ConnType.NO_ENTRY))
                                     icon.visible = false;
@@ -1885,13 +1884,10 @@
                     updateConnectionModeIcons();
                     graph.graphData().nodes.forEach(node => {
                         if (node.__threeObj) {
-                            if ((searchWorldIds.length && searchWorldIds.indexOf(node.id) > -1) || !searchWorldIds.length && (selectedWorldId == null || (node.id == selectedWorldId || worldData[selectedWorldId].connections.filter(c => c.targetId === node.id).length))) {
-                                node.__threeObj.material.transparent = false;
-                                node.__threeObj.material.opacity = 1.0;
-                            } else {
-                                node.__threeObj.material.transparent = true;
-                                node.__threeObj.material.opacity = 0.2;
-                            }
+                            const id = node.id;
+                            const opacity = (selectedWorldId == null || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1) ? 1 : selectedWorldId != null && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length ? 0.625 : 0.1;
+                            node.__threeObj.material.transparent = opacity < 1;
+                            node.__threeObj.material.opacity = opacity;
                         }
                     });
                     graph.graphData().links.forEach(link => {
