@@ -817,7 +817,7 @@
                                 }
                                 if (hidden)
                                     dagIgnoreIds.push(connWorld.id);
-                                const hue = 0.6666 - ((world.depth / (maxDepth - 1)) * 0.6666);
+                                const hue = Math.max(0.6666 - ((world.depth / (maxDepth - 1)) * 0.6666), 0);
                                 const link = {
                                     key: `${world.id}_${connWorld.id}`,
                                     source: world.id,
@@ -1008,40 +1008,36 @@
                             })
                             .iconLabel(icon => icon.text);
                     else {
-                        var clock = new THREE.Clock();
-                        var time = 0;
-                        var lineVertShader = `
-                          attribute float lineDistance;
-                          varying float vLineDistance;
+                        const clock = new THREE.Clock();
+                        let time = 0;
+                        const lineVertShader = `
+                            attribute float lineDistance;
+                            varying float vLineDistance;
 
-                          void main() {
-                            vLineDistance = lineDistance;
-                            vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-                            gl_Position = projectionMatrix * mvPosition;
-                          }
-                          `;
-                        var lineFragShader = `
-                          uniform vec3 diffuse;
-                          uniform float opacity;
-                          uniform float time; // added time uniform
-
-                          uniform float dashSize;
-                          uniform float gapSize;
-                          uniform float dotSize;
-                          varying float vLineDistance;
-
-                          void main() {
-                                float totalSize = dashSize + gapSize;
-                                float modulo = mod( vLineDistance + time, totalSize ); // time added to vLineDistance
-                            float dotDistance = dashSize + (gapSize * .5) - (dotSize * .5);
-
-                            if ( modulo > dashSize && mod(modulo, dotDistance) > dotSize ) {
-                              discard;
+                            void main() {
+                                vLineDistance = lineDistance;
+                                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                                gl_Position = projectionMatrix * mvPosition;
                             }
+                            `;
+                        const lineFragShader = `
+                            uniform vec3 diffuse;
+                            uniform float opacity;
+                            uniform float time;
 
-                            gl_FragColor = vec4( diffuse, opacity );
-                          }
-                          `;
+                            uniform float dashSize;
+                            uniform float gapSize;
+                            varying float vLineDistance;
+
+                            void main() {
+                                float totalSize = dashSize + gapSize;
+                                float modulo = mod(vLineDistance + time, totalSize);
+                                if (modulo > dashSize) {
+                                    discard;
+                                }
+                                gl_FragColor = vec4(diffuse, opacity);
+                            }
+                            `;
                         graph = graph
                             .backgroundColor('#00000000')
                             .linkOpacity(1)
@@ -1091,9 +1087,13 @@
                                 return ret;
                             })
                             .onEngineTick(() => {
+                                const graphData =  graph.graphData();
+
+                                time += clock.getDelta();
+
                                 if (config.labelMode > 0) {
                                     const camera = graph.camera();
-                                    graph.graphData().nodes.forEach(node => {
+                                    graphData.nodes.forEach(node => {
                                         const obj = node.__threeObj;
                                         if (obj) {
                                             const text = obj.children[0];
@@ -1114,6 +1114,10 @@
                                         }
                                     });
                                 }
+                                graphData.links.forEach(link => {
+                                    if (link.__lineObj.material.uniforms !== undefined)
+                                        link.__lineObj.material.uniforms.time.value = time;
+                                });
                             })
                             .linkThreeObject(link => {
                                 if (icons3D[link.key] === undefined) {
@@ -1135,29 +1139,28 @@
                                     icons3D[link.key] = linkIcons;
                                 }
 
-                                if(link.connType & ConnType.ONE_WAY) {
-                                    var lineMat = new THREE.ShaderMaterial({
-                                      uniforms: {
-                                        diffuse: {value: new THREE.Color(link.defaultColor)},
-                                        dashSize: {value: 1},
-                                        gapSize: {value: 1},
-                                        dotSize: {value: 0},
-                                        opacity: {value: 1.0},
-                                        time: {value: 0} // added uniform
-                                      },
-                                      vertexShader: lineVertShader,
-                                      fragmentShader: lineFragShader,
-                                      transparent: true
+                                if (link.connType & ConnType.ONE_WAY) {
+                                    const lineMat = new THREE.ShaderMaterial({
+                                        uniforms: {
+                                            diffuse: { value: new THREE.Color(link.defaultColor) },
+                                            dashSize: { value: 0.5 },
+                                            gapSize: { value: 0.5 },
+                                            opacity: { value: 1.0 },
+                                            time: { value: 0 }
+                                        },
+                                        vertexShader: lineVertShader,
+                                        fragmentShader: lineFragShader,
+                                        transparent: true
                                     });
 
-                                    var lineGeom = new THREE.BufferGeometry();
+                                    const lineGeom = new THREE.BufferGeometry();
                                     lineGeom.setAttribute('lineDistance', new THREE.BufferAttribute(new Float32Array([10]), 1));
 
                                     return new THREE.Line(lineGeom, lineMat);
                                 } else {
-                                    var material = new THREE.LineBasicMaterial({color: new THREE.Color(link.defaultColor)});
+                                    const material = new THREE.LineBasicMaterial({ color: new THREE.Color(link.defaultColor) });
                                     // if NO ENTRY make it transparent
-                                    if(link.connType & ConnType.NO_ENTRY) {
+                                    if (link.connType & ConnType.NO_ENTRY) {
                                         material.opacity = 0;
                                         material.transparent = true;
                                     }
@@ -1179,13 +1182,6 @@
                                         icon.position.set(resX, resY + 10, resZ);
                                     }
                                 }
-                            })
-                            .onEngineTick(function a() {
-                                time += clock.getDelta();
-                                graph.graphData().links.forEach(link => {
-                                    if(link.__lineObj.material.uniforms != undefined)
-                                        link.__lineObj.material.uniforms.time.value = time; // using of the time uniform
-                                })
                             });
                     };
                     graph = graph
@@ -1278,7 +1274,7 @@
                         // when the mouse moves, call the given function
                         document.addEventListener('mousemove', onDocumentMouseMove, false);
 
-                        if(iconLabel) {
+                        if (iconLabel) {
                             const element = document.getElementById("iconLabel");
                             element.parentNode.removeChild(element);
                         }
@@ -1945,7 +1941,7 @@
 
                     raycaster.setFromCamera(vector, graph.camera());
                     // create an array containing all objects in the scene with which the ray intersects
-                    const intersects = raycaster.intersectObjects(graph.graphData().nodes.map(node => node.__threeObj).filter(o => o).concat(graph.scene().children.filter(o => o.__graphObjType === 'icon')));
+                    const intersects = raycaster.intersectObjects(graph.graphData().nodes.map(node => node.__threeObj).filter(o => o).concat(graph.scene().children.filter(o => o.__graphObjType === 'icon' && o.visible)));
 
                     // if there is one (or more) intersections
                     if (intersects.length > 0)
