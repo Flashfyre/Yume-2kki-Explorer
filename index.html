@@ -305,7 +305,7 @@
         <script src="//unpkg.com/d3-quadtree"></script>
         <script src="//unpkg.com/d3-force"></script>
         <script src="//unpkg.com/three"></script>
-        <script src="//unpkg.com/three-spritetext"></script>
+        <script src="/js/three-spritetext-modded.js"></script>
         <script src="/js/force-graph-modded.js"></script>
         <script src="/js/3d-force-graph-modded.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
@@ -1069,32 +1069,33 @@
                                 const ret = new THREE.Mesh(new THREE.BoxGeometry(13 * scale, 13 * scale, 13 * scale), new THREE.MeshBasicMaterial({map: texture}));
                                 
                                 const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
-                                const text = new SpriteText(worldName, 3, 'white');
+                                const text = new SpriteText(worldName, 1.5, 'white');
                                 text.__graphObjType = 'label';
                                 text.fontFace = 'MS Gothic';
                                 text.fontSize = 80;
-                                text.position.z += 7 * scale;
+                                text.strokeWidth = 10;
+                                text.strokeColor = '#000000';
                                 
                                 let textLines = worldName.split(" ");
                                 for (let l = 0; l < textLines.length; l++) {
-                                    text._text = textLines[l];
-                                    if (text.scale.x < node.width) {
+                                    text.text = textLines[l];
+                                    if (text.scale.x * scale < node.width) {
                                         let mergeIndex = 0;
                                         for (let l2 = l + 1; l2 < textLines.length; l2++) {
                                             const mergedLine = textLines.slice(l, l2 + 1).join(" ");
-                                            text._text = mergedLine;
-                                            if (ret.scale.x < node.width) {
+                                            text.text = mergedLine;
+                                            if (text.scale.x * scale < node.width)
                                                 mergeIndex = l2;
-                                            } else
+                                            else
                                                 break;
                                         }
-                                        if (mergeIndex) {
+                                        if (mergeIndex)
                                             textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
-                                        }
                                     } else if (textLines[l].indexOf("：") > -1)
                                         textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
                                 }
                                 text.text = textLines.join('\r\n');
+                                text.defaultScale = {"x": text.scale.x, "y": text.scale.y};
                                 if (config.labelMode < 3)
                                     text.visible = false;
 
@@ -1104,27 +1105,22 @@
                             })
                             .onEngineTick(() => {
                                 if (config.labelMode > 0) {
-                                    const halfGraphWidth = graph.width() / 2;
-                                    const halfGraphHeight = graph.height() / 2;
                                     const camera = graph.camera();
-                                    camera.rotation.order = 'YXZ';
                                     graph.graphData().nodes.forEach(node => {
                                         const obj = node.__threeObj;
                                         if (obj) {
                                             const text = obj.children[0];
                                             if (config.labelMode === 3 || (config.labelMode === 1 && node.isHover) || (config.labelMode === 2 && node.id === selectedWorldId)) {
                                                 const scale = worldScales[node.id];
-                                                const rotationOffset = obj.quaternion.clone().inverse();
-                                                const rotation = camera.quaternion.clone().multiply(rotationOffset);
-                                                const rotationAngles = new THREE.Euler(0, 0, 0, 'YXZ').setFromQuaternion(rotation);
-                                                const angleRatio = Math.max(45 - Math.abs((THREE.Math.radToDeg((rotationAngles.x >= 0 ? 0 : Math.PI * 2) + rotationAngles.x) % 90) - 45),
-                                                    45 - Math.abs((THREE.Math.radToDeg((rotationAngles.y >= 0 ? 0 : Math.PI * 2) + rotationAngles.y) % 90) - 45)) / 45;
-                                                
-                                                const normalizedObjPosition = obj.position.normalize();
-                                                const normalizedTextPosition = text.position.normalize();
-                                                text.translateZ(normalizedTextPosition.z - normalizedObjPosition.z);
-                                                text.setRotationFromQuaternion(rotation);
-                                                text.translateZ(scale * (7 + 6.5 * angleRatio));
+                                                const dist = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z).distanceTo(new THREE.Vector3(node.x, node.y, node.z));
+                                                let resX, resY, resZ;
+                                                const rat = (13 * scale) / dist;
+                                                resX = (1 - rat) * node.x + rat * camera.position.x;
+                                                resY = (1 - rat) * node.y + rat * camera.position.y;
+                                                resZ = (1 - rat) * node.z + rat * camera.position.z;
+                                                text.position.set(resX - node.x, resY - node.y, resZ - node.z);
+                                                text.scale.x = text.defaultScale.x * scale;
+                                                text.scale.y = text.defaultScale.y * scale;
                                                 text.visible = true;
                                             } else
                                                 text.visible = false;
