@@ -305,7 +305,7 @@
         <script src="//unpkg.com/d3-quadtree"></script>
         <script src="//unpkg.com/d3-force"></script>
         <script src="//unpkg.com/three"></script>
-        <script src="/js/three-spritetext-modded.js"></script>
+        <script src="//unpkg.com/three-spritetext"></script>
         <script src="/js/force-graph-modded.js"></script>
         <script src="/js/3d-force-graph-modded.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
@@ -693,7 +693,6 @@
                 let icons3D;
 
                 const colorLinkSelected = new THREE.Color('red');
-                const colorLinkFade = new THREE.Color('rgb(70, 70, 70)');
 
                 let iconLabel;
 
@@ -1049,15 +1048,16 @@
                                 texture.anisotropy = maxAnisotropy;
                                 texture.minFilter = THREE.NearestFilter; // disables mipmaps (eliminates blur)
 
-                                const ret = new THREE.Mesh(new THREE.BoxGeometry(13 * scale, 13 * scale, 13 * scale), new THREE.MeshBasicMaterial({map: texture}));
+                                const ret = new THREE.Mesh(new THREE.BoxGeometry(13 * scale, 13 * scale, 13 * scale), new THREE.MeshBasicMaterial({ map: texture }));
                                 
                                 const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
                                 const text = new SpriteText(worldName, 1.5, 'white');
                                 text.__graphObjType = 'label';
                                 text.fontFace = 'MS Gothic';
                                 text.fontSize = 80;
-                                text.strokeWidth = 10;
+                                text.strokeWidth = 2;
                                 text.strokeColor = '#000000';
+                                text.backgroundColor = false;
                                 
                                 let textLines = worldName.split(" ");
                                 for (let l = 0; l < textLines.length; l++) {
@@ -1078,7 +1078,7 @@
                                         textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
                                 }
                                 text.text = textLines.join('\r\n');
-                                text.defaultScale = {"x": text.scale.x, "y": text.scale.y};
+                                text.defaultScale = { "x": text.scale.x, "y": text.scale.y };
                                 if (config.labelMode < 3)
                                     text.visible = false;
 
@@ -1131,7 +1131,7 @@
                                         // without the border emojis get cropped - possibly a bug in three-spritetext
                                         text.borderWidth = 1;
                                         text.borderColor = 'transparent';
-                                        if (config.connMode === 0 && (link.connType & ConnType.NO_ENTRY))
+                                        if (config.connMode === 0 && link.hidden)
                                             text.visible = false;
                                         linkIcons.push(text);
                                         graph.scene().add(text);
@@ -1156,13 +1156,22 @@
                                     const lineGeom = new THREE.BufferGeometry();
                                     lineGeom.setAttribute('lineDistance', new THREE.BufferAttribute(new Float32Array([10]), 1));
 
+                                    if (link.hidden) {
+                                        lineMat.opacity = 0;
+                                        lineMat.transparent = true;
+                                        if (lineMat.uniforms !== undefined)
+                                            lineMat.uniforms.opacity.value = 0;
+                                    }
+
                                     return new THREE.Line(lineGeom, lineMat);
                                 } else {
                                     const material = new THREE.LineBasicMaterial({ color: new THREE.Color(link.defaultColor) });
                                     // if NO ENTRY make it transparent
-                                    if (link.connType & ConnType.NO_ENTRY) {
+                                    if (link.hidden) {
                                         material.opacity = 0;
                                         material.transparent = true;
+                                        if (material.uniforms !== undefined)
+                                            material.uniforms.opacity.value = 0;
                                     }
                                     return new THREE.Line(new THREE.BufferGeometry(), material);
                                 }
@@ -1686,7 +1695,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "2.0.0");
+                            data.footer = data.footer.replace("{VERSION}", "2.0.1");
                             localizedConns = data.conn;
                             initContextMenu(data.contextMenu);
                             if (isInitial) {
@@ -1867,13 +1876,14 @@
                         if (icons3D[link.key] !== undefined) {
                             icons3D[link.key].forEach(icon => {
                                 icon.visible = true;
-                                icon.material.opacity = selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId)
-                                    ? icon.material.opacity = 1.0
-                                    : (selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)
+                                icon.material.opacity = (selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId))
+                                    || (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)
+                                    ? 1
+                                    : selectedWorldId != null && (selectedWorldId === link.source.id || selectedWorldId === link.target.id)
                                     ? 0.625
                                     : 0.1;
 
-                                if (config.connMode === 0 && (link.connType & ConnType.NO_ENTRY))
+                                if (config.connMode === 0 && link.hidden)
                                     icon.visible = false;
                             });
                         }
@@ -1891,30 +1901,28 @@
                         }
                     });
                     graph.graphData().links.forEach(link => {
-                         // do nothing for NO ENTRY links
-                        if(!(link.connType & ConnType.NO_ENTRY)) {
+                         // do nothing for hidden links
+                        if (!link.hidden) {
                             if (selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId)) {
                                 link.__lineObj.material.transparent = false;
-                                if (link.__lineObj.material.uniforms != undefined) {
+                                if (link.__lineObj.material.uniforms !== undefined)
                                     link.__lineObj.material.uniforms.diffuse.value = colorLinkSelected;
-                                } else {
+                                else
                                     link.__lineObj.material.color = colorLinkSelected;
-                                }
                             } else if ((selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)) {
                                 link.__lineObj.material.transparent = false;
-                                if (link.__lineObj.material.uniforms != undefined) {
+                                if (link.__lineObj.material.uniforms !== undefined)
+                                    link.__lineObj.material.uniforms.diffuse.value = new THREE.Color(link.defaultColor);
+                                else
+                                    link.__lineObj.material.color = new THREE.Color(link.defaultColor);
+                            } else {
+                                link.__lineObj.material.transparent = true;
+                                if (link.__lineObj.material.uniforms !== undefined) {
+                                    link.__lineObj.material.uniforms.opacity.value = 0.1;
                                     link.__lineObj.material.uniforms.diffuse.value = new THREE.Color(link.defaultColor);
                                 } else {
                                     link.__lineObj.material.color = new THREE.Color(link.defaultColor);
-                                }
-                            } else {
-                                link.__lineObj.material.transparent = true;
-                                if (link.__lineObj.material.uniforms != undefined) {
-                                    link.__lineObj.material.uniforms.opacity.value = 0.3;
-                                    link.__lineObj.material.uniforms.diffuse.value = colorLinkFade;
-                                } else {
-                                    link.__lineObj.material.color = colorLinkFade;
-                                    link.__lineObj.material.opacity = 0.3;
+                                    link.__lineObj.material.opacity = 0.1;
                                 }
                             }
                         }

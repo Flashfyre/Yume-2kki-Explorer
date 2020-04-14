@@ -149,9 +149,8 @@ app.get('/worlds', function(req, res) {
                     });
                 }).catch(err => console.error(err));
             }).catch(err => console.error(err))).catch(err => console.error(err));
-        } else {
+        } else
             checkUpdateData(pool).then(() => getWorldData(pool).then(wd => callback(wd)).catch(err => console.error(err))).catch(err => console.error(err));
-        }
     }).catch(err => console.error(err));
 });
 
