@@ -429,6 +429,8 @@
                 let isShift = false;
                 let isCtrl = false;
 
+                const worldScales = {};
+
                 $.fn.extend({
                     animateCss: function (animation, duration, endCallback) {
                         const animationEnd = "webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend";
@@ -727,8 +729,6 @@
                     let dashOffset = 0;
 
                     const addedLinks = [];
-
-                    const worldScales = {};
 
                     const dagIgnore = {};
 
@@ -1837,7 +1837,7 @@
                 }
 
                 function focusNode(node) {
-                    const distance = 100;
+                    const distance = 50 * worldScales[node.id];
                     const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
                     const cam = graph.cameraPosition();
                     graph.cameraPosition({ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio}, node, 1000);
