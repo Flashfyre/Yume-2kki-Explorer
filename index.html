@@ -1695,7 +1695,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "2.0.1");
+                            data.footer = data.footer.replace("{VERSION}", "2.0.2");
                             localizedConns = data.conn;
                             initContextMenu(data.contextMenu);
                             if (isInitial) {
@@ -1876,8 +1876,8 @@
                         if (icons3D[link.key] !== undefined) {
                             icons3D[link.key].forEach(icon => {
                                 icon.visible = true;
-                                icon.material.opacity = (selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId))
-                                    || (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)
+                                icon.material.opacity = (selectedWorldId == null || (selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId)))
+                                    && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)
                                     ? 1
                                     : selectedWorldId != null && (selectedWorldId === link.source.id || selectedWorldId === link.target.id)
                                     ? 0.625
