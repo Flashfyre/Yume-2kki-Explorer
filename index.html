@@ -110,6 +110,10 @@
                 height: 25%;
             }
 
+            .blocker {
+                padding: 24px 24px 32px 24px !important;
+            }
+
             .graph {
                 width: 100%;
                 height: 100%;
@@ -137,6 +141,14 @@
                 margin: 8px;
                 padding: 4px;
                 cursor: pointer;
+                font-family: 'MS Gothic';
+                font-size: 18px;
+                border: 6px solid transparent;
+            }
+
+            a {
+                text-decoration: none;
+                padding: 4px;
                 font-family: 'MS Gothic';
                 font-size: 18px;
                 border: 6px solid transparent;
@@ -175,6 +187,61 @@
                 height: 38px;
                 border: 6px solid transparent;
                 cursor: pointer;
+            }
+
+            .modal {
+                border: 10px solid transparent;
+                padding: 0 32px 24px 24px !important;
+                max-width: initial !important;
+                vertical-align: top !important;
+                height: 100%;
+                transition: height 0.25s;
+            }
+
+            .modal__content {
+                margin-right: -32px;
+                overflow-y: scroll;
+                height: calc(100% + 24px);
+            }
+
+            .modal__content a {
+                display: inline-block;
+                margin-bottom: 24px;
+            }
+
+            .modal__content::-webkit-scrollbar {
+                width: 18px;
+            }
+
+            .modal__content::-webkit-scrollbar-track {
+                border: 10px solid transparent;
+                background-color: rgba(255, 255, 255, 0.25);
+                margin-top: 24px;
+            }
+
+            .modal__content::-webkit-scrollbar-thumb {
+                border: 6px solid transparent;
+            }
+
+            .modal__content::-webkit-scrollbar-button {
+                height: 0px !important;
+            }
+
+            .modal__content--localized {
+                padding-bottom: 16px;
+            }
+            
+            a.close-modal {
+                display: flex !important;
+                align-items: center;
+                justify-content: space-around;
+                text-decoration: none;
+                text-indent: initial !important;
+                padding: 5px;
+                margin: 0;
+                border: none;
+                top: -10px !important;
+                right: -10px !important;
             }
 
             .autocomplete-suggestions {
@@ -226,30 +293,56 @@
                 background-color: #000000; /*base*/
             }
 
-            .controls {
-                background: url(/images/ui/Default_Custom/containerbg.png);
-                border-image: url(/images/ui/Default_Custom/border.png);
-                border-image-slice: 12;
-                border-image-repeat: repeat;
+            .controls, .modal {
+                background: url(/images/ui/Default_Custom/containerbg.png) !important;
+                border-image: url(/images/ui/Default_Custom/border.png) 12 repeat;
             }
 
             .controls--container--tab__button {
                 color: rgba(216, 216, 216, 1); /*base*/
             }
 
-            label, .loading-container .loading-container__text {
-                background-image: url(/images/ui/Default_Custom/font1.png);
+            label, h1, h2, h3, h4, p, .close-modal, .loading-container .loading-container__text {
+                background-image: url(/images/ui/Default_Custom/font1.png) !important;
                 -webkit-background-clip: text;
 	            -webkit-text-fill-color: transparent;
                 background-clip: text;
+            }
+
+            label {
                 background-size: 18px;
+            }
+
+            h1 {
+                background-size: 32px;
+            }
+
+            h2 {
+                background-size: 24px;
+            }
+
+            h3 {
+                background-size: 18.67px;
+            }
+
+            p, h4 {
+                background-size: 16px;
+            }
+
+            .modal__content::-webkit-scrollbar-track {
+                border-image: url(/images/ui/Default_Custom/border.png) 12 repeat !important;
+                background-color: rgba(45, 17, 23, 1); /*base*/
+            }
+
+            .modal__content::-webkit-scrollbar-thumb {
+                border-image: url(/images/ui/Default_Custom/border.png) 8 round !important;
             }
 
             .footer {
                 color: rgba(216, 216, 216, 1); /*base*/
             }
 
-            button {
+            button, a {
                 color: rgba(216, 216, 216, 1); /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
                 background-image: url(/images/ui/Default_Custom/containerbg.png);
@@ -302,6 +395,7 @@
         </style>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.9.0/jquery.contextMenu.min.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.css" />
         <script src="//unpkg.com/d3-quadtree"></script>
         <script src="//unpkg.com/d3-force"></script>
         <script src="//unpkg.com/three"></script>
@@ -314,21 +408,24 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-localize/0.1.0/jquery.localize.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.9.0/jquery.contextMenu.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.9.0/jquery.ui.position.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/remarkable/1.7.1/remarkable.min.js"></script>
         <script src="/js/conn-type.js"></script>
     </head>
     <body>
         <div class="content">
             <div class="controls controls-top">
                 <div class="control">
-                    <label data-localize="search.name" class="noselect">Search:</label>
+                    <label data-localize="controls.search.name" class="noselect">Search:</label>
                     <input name="searchWorld" type="text" class="js--world-input js--search-world" />
                 </div>
                 <div class="control">
-                    <label data-localize="origin.name" class="noselect">Origin:</label>
+                    <label data-localize="controls.origin.name" class="noselect">Origin:</label>
                     <input name="startWorld" type="text" class="js--world-input js--path--world-input js--start-world" />
-                    <label data-localize="destination.name" class="noselect">Destination:</label>
+                    <label data-localize="controls.destination.name" class="noselect">Destination:</label>
                     <input name="endWorld" type="text" class="js--world-input js--path--world-input js--end-world" />
-                    <button data-localize="reset" class="js--reset noselect">Reset</button>
+                    <button data-localize="controls.reset.name" class="js--reset noselect">Reset</button>
+                    <button data-localize="controls.help.name" class="js--help noselect">Help</button>
                 </div>
             </div>
             <div id="graph" class="graph">
@@ -344,68 +441,68 @@
             <div class="controls--container controls-bottom--container">
                 <div class="controls controls-bottom" style="opacity: 0;">
                     <div class="control">
-                        <label data-localize="lang.name" class="noselect">Language:</label>
+                        <label data-localize="settings.lang.name" class="noselect">Language:</label>
                         <select name="language" class="js--lang">
-                            <option data-localize="lang.values.english" value="en" selected>English</option>
-                            <option data-localize="lang.values.japanese" value="ja">Japanese</option>
+                            <option data-localize="settings.lang.values.english" value="en" selected>English</option>
+                            <option data-localize="settings.lang.values.japanese" value="ja">Japanese</option>
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="uiTheme.name" class="noselect">UI Theme:</label>
+                        <label data-localize="settings.uiTheme.name" class="noselect">UI Theme:</label>
                         <select name="uiTheme" class="js--ui-theme">
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="fontStyle.name" class="noselect">Font Style:</label>
+                        <label data-localize="settings.fontStyle.name" class="noselect">Font Style:</label>
                         <select name="fontStyle" class="js--font-style">
-                            <option data-localize="fontStyle.values.style1" value="0">Style 1</option>
-                            <option data-localize="fontStyle.values.style2" value="1">Style 2</option>
-                            <option data-localize="fontStyle.values.style3" value="2">Style 3</option>
-                            <option data-localize="fontStyle.values.style4" value="3">Style 4</option>
-                            <option data-localize="fontStyle.values.style5" value="4">Style 5</option>
-                            <option data-localize="fontStyle.values.style6" value="5">Style 6</option>
-                            <option data-localize="fontStyle.values.style7" value="6">Style 7</option>
+                            <option data-localize="settings.fontStyle.values.style1" value="0">Style 1</option>
+                            <option data-localize="settings.fontStyle.values.style2" value="1">Style 2</option>
+                            <option data-localize="settings.fontStyle.values.style3" value="2">Style 3</option>
+                            <option data-localize="settings.fontStyle.values.style4" value="3">Style 4</option>
+                            <option data-localize="settings.fontStyle.values.style5" value="4">Style 5</option>
+                            <option data-localize="settings.fontStyle.values.style6" value="5">Style 6</option>
+                            <option data-localize="settings.fontStyle.values.style7" value="6">Style 7</option>
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="renderMode.name" class="noselect">Render Mode:</label>
+                        <label data-localize="settings.renderMode.name" class="noselect">Render Mode:</label>
                         <select name="renderMode" class="js--render-mode">
-                            <option data-localize="renderMode.values.vertical" value="0" selected>2D</option>
-                            <option data-localize="renderMode.values.horizontal" value="1">3D</option>
+                            <option data-localize="settings.renderMode.values.vertical" value="0" selected>2D</option>
+                            <option data-localize="settings.renderMode.values.horizontal" value="1">3D</option>
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="displayMode.name" class="noselect">Display Mode:</label>
+                        <label data-localize="settings.displayMode.name" class="noselect">Display Mode:</label>
                         <select name="displayMode" class="js--display-mode">
-                            <option data-localize="displayMode.values.vertical" value="0" selected>Vertical</option>
-                            <option data-localize="displayMode.values.horizontal" value="1">Horizontal</option>
-                            <option data-localize="displayMode.values.radialIn" value="2">Inward</option>
-                            <option data-localize="displayMode.values.radialOut" value="3">Outward</option>
-                            <option data-localize="displayMode.values.free" value="4">Free</option>
+                            <option data-localize="settings.displayMode.values.vertical" value="0" selected>Vertical</option>
+                            <option data-localize="settings.displayMode.values.horizontal" value="1">Horizontal</option>
+                            <option data-localize="settings.displayMode.values.radialIn" value="2">Inward</option>
+                            <option data-localize="settings.displayMode.values.radialOut" value="3">Outward</option>
+                            <option data-localize="settings.displayMode.values.free" value="4">Free</option>
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="connMode.name" class="noselect">Connection Mode:</label>
+                        <label data-localize="settings.connMode.name" class="noselect">Connection Mode:</label>
                         <select name="connMode" class="js--conn-mode">
-                            <option data-localize="connMode.values.oneWay" value="0" selected>One-Way</option>
-                            <option data-localize="connMode.values.twoWay" value="1">Two-Way</option>
+                            <option data-localize="settings.connMode.values.oneWay" value="0" selected>One-Way</option>
+                            <option data-localize="settings.connMode.values.twoWay" value="1">Two-Way</option>
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="labelMode.name" class="noselect">Label Display:</label>
+                        <label data-localize="settings.labelMode.name" class="noselect">Label Display:</label>
                         <select name="labelMode" class="js--label-mode">
-                            <option data-localize="labelMode.values.never" value="0">Never</option>
-                            <option data-localize="labelMode.values.hover" value="1" selected>On Hover</option>
-                            <option data-localize="labelMode.values.select" value="2">On Select</option>
-                            <option data-localize="labelMode.values.always" value="3">Always</option>
+                            <option data-localize="settings.labelMode.values.never" value="0">Never</option>
+                            <option data-localize="settings.labelMode.values.hover" value="1" selected>On Hover</option>
+                            <option data-localize="settings.labelMode.values.select" value="2">On Select</option>
+                            <option data-localize="settings.labelMode.values.always" value="3">Always</option>
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="sizeDiff.name" class="noselect">Size Difference:</label>
+                        <label data-localize="settings.sizeDiff.name" class="noselect">Size Difference:</label>
                         <input type="range" min="1" max="10" value="1" step="0.5" class="js--size-diff slider" />
                     </div>
                     <div class="control js--stack-size--container">
-                        <label data-localize="stackSize.name" class="noselect">Stack Threshold:</label>
+                        <label data-localize="settings.stackSize.name" class="noselect">Stack Threshold:</label>
                         <input type="range" min="5" max="100" value="20" step="1" class="js--stack-size slider" />
                     </div>
                 </div>
@@ -673,11 +770,16 @@
                 }
 
                 function updateControlsContainer(updateTabMargin) {
-                    const controlsHeight = $(".controls-bottom").outerHeight();
-                    $(".controls--container").css({ "height": controlsHeight + "px", "margin-top": "-" + (controlsHeight + 20) + "px" });
-                    $(".controls--container--tab").css({ "height": controlsHeight + "px", "left": "calc(50% - " + (($(".controls--container--tab").outerWidth() - 16) / 2) + "px)" });
+                    const controlsHeight = $(".controls-top").outerHeight();
+                    const settingsHeight = $(".controls-bottom").outerHeight();
+                    $(".controls--container").css({ "height": settingsHeight + "px", "margin-top": "-" + (settingsHeight + 20) + "px" });
+                    $(".controls--container--tab").css({ "height": settingsHeight + "px", "left": "calc(50% - " + (($(".controls--container--tab").outerWidth() - 16) / 2) + "px)" });
                     if (updateTabMargin && $(".controls-bottom").hasClass("visible"))
-                        $(".controls--container--tab, .footer").css("margin-top", "-" + (controlsHeight + 8) + "px");
+                        $(".controls--container--tab, .footer").css("margin-top", "-" + (settingsHeight + 8) + "px");
+                    $(".js--help-modal").css({
+                        "margin-top": (controlsHeight + 16) + "px",
+                        "height": "calc(100% - " + (controlsHeight + 16 + ($(".controls-bottom").hasClass("visible") ? settingsHeight + 8 : 0)) + "px)"
+                    });
                 }
 
                 function loadWorldData(update, success, fail) {
@@ -904,7 +1006,7 @@
 
                     const elem = document.getElementById('graph');
 
-                    graph = is2d ? ForceGraph()(elem) : ForceGraph3D()(elem);
+                    graph = is2d ? ForceGraph()(elem) : ForceGraph3D({ controlType: 'orbit' })(elem);
 
                     const maxAnisotropy = !is2d ? graph.renderer().capabilities.getMaxAnisotropy() : null;
 
@@ -1198,7 +1300,6 @@
                         .nodeVal(node => node.height)
                         .nodeLabel(node => node.img.title)
                         .nodesPerStack(config.stackSize)
-                        .linkWidth(0)
                         .onNodeDragEnd(node => {
                             node.fx = node.x;
                             node.fy = node.y;
@@ -1695,19 +1796,22 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "2.0.2");
+                            data.footer = data.footer.replace("{VERSION}", "2.1.0");
                             localizedConns = data.conn;
                             initContextMenu(data.contextMenu);
                             if (isInitial) {
-                                Object.keys(data.uiTheme.values).forEach(t => {
-                                    $(".js--ui-theme").append('<option data-localize="uiTheme.values.' + t + '" value="' + t + '">' + data.uiTheme.values[t] + '</option>');
+                                Object.keys(data.settings.uiTheme.values).forEach(t => {
+                                    $(".js--ui-theme").append('<option data-localize="settings.uiTheme.values.' + t + '" value="' + t + '">' + data.settings.uiTheme.values[t] + '</option>');
                                 });
                                 $(".js--ui-theme").val(config.uiTheme).change();
                             }
-                            updateControlsContainer();
+                            window.setTimeout(() => updateControlsContainer(true), 0);
                             defaultCallback(data);
                         }
                     });
+
+                    $(".js--help-modal__content--localized--en").toggle(isEn);
+                    $(".js--help-modal__content--localized--jp").toggle(!isEn);
 
                     $.localize("conn", {
                         language: config.lang,
@@ -1942,13 +2046,16 @@
 
                 function updateRaycast() {
                     const vector = new THREE.Vector3(mousePos.x, mousePos.y, 1);
+                    let intersects = [];
 
-                    raycaster.setFromCamera(vector, graph.camera());
-                    // create an array containing all objects in the scene with which the ray intersects
-                    const intersects = raycaster.intersectObjects(graph.graphData().nodes.map(node => node.__threeObj).filter(o => o).concat(graph.scene().children.filter(o => o.__graphObjType === 'icon' && o.visible)));
+                    if (!$(".js--help-modal:visible").length) {
+                        raycaster.setFromCamera(vector, graph.camera());
+                        // create an array containing all objects in the scene with which the ray intersects
+                        intersects = raycaster.intersectObjects(graph.graphData().nodes.map(node => node.__threeObj).filter(o => o).concat(graph.scene().children.filter(o => o.__graphObjType === 'icon' && o.visible)));
+                    }
 
-                    // if there is one (or more) intersections
-                    if (intersects.length > 0)
+                    // if there are one or more intersections
+                    if (intersects.length)
                     {
                         const topObj = intersects[0];
                         if (topObj.object.__graphObjType !== "node") {
@@ -1970,6 +2077,14 @@
                     $(".graph .scene-tooltip").css("visibility", "visible");
                 }
 
+                function openHelpModal() {
+                    $(".js--help-modal").modal({
+                        fadeDuration: 100,
+                        closeClass: 'noselect',
+                        closeText: '✖'
+                    });
+                }
+
                 $(document).ready(function () {
                     let loadingFrameCount = 0;
                     const loadingTimer = window.setInterval(function () {
@@ -1983,7 +2098,6 @@
                     }, 300);
                     
                     $(".controls--container--tab__button").click(function() {
-                        updateControlsContainer();
                         if ($(".controls-bottom").hasClass("visible")) {
                             $(".controls-bottom").removeClass("visible").animateCss("slideOutDown", 250, function () {
                                 if (!$(this).hasClass("visible"))
@@ -1994,6 +2108,7 @@
                             $(".controls-bottom").addClass("visible").css("opacity", 1).animateCss("slideInUp", 250);
                             $(".controls--container--tab, .footer").css("margin-top", "-" + ($(".controls-bottom").outerHeight() + 8) + "px").animateCss("slideInUp", 250);
                         }
+                        updateControlsContainer();
                     });
 
                     updateControlsContainer(true);
@@ -2095,6 +2210,24 @@
                             reloadGraph();
                     });
 
+                    $(".js--help").click(function() {
+                        if ($(".js--help-modal:visible").length)
+                            $.modal.close();
+                        else if ($(".js--help-modal__content--localized").text())
+                            openHelpModal();
+                        else {
+                            $.get("/help", function (data) {
+                                const md = new Remarkable();
+                                data = data.split('---');
+                                const helpEn = md.render(data[0]);
+                                const helpJp = data.length > 1 ? md.render(data[1]) : helpEn;
+                                $('.js--help-modal__content--localized').html('<div class="js--help-modal__content--localized--en"' + (config.lang === 'en' ? '' : ' style="display: none;"') + '>' + helpEn + '</div>'
+                                    + '<div class="js--help-modal__content--localized--jp"' + (config.lang === 'en' ? ' style="display: none;"' : '') + '>' + helpJp + '</div>');
+                                openHelpModal();
+                            });
+                        }
+                    })
+
                     loadOrInitConfig();
 
                     initLocalization(true);
@@ -2132,6 +2265,12 @@
                     });
                 });
             </script>
+        </div>
+        <div id="helpModal" class="js--help-modal modal">
+            <div class="js--help-modal__content modal__content">
+                <div class="js--help-modal__content--localized modal__content--localized"></div>
+                <a href="https://github.com/Flashfyre/Yume-2kki-Explorer/issues/new" target="_blank" data-localize="helpModal.reportBug">Report a Bug</a>
+            </div>
         </div>
     </body>
 </html>

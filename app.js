@@ -126,9 +126,11 @@ function getConnPool() {
     });
 }
 
-app.use(express.static('public'))
+app.use(express.static('public'));
 
-app.get('/', (_, res) => res.sendFile('index.html', { root: '.' }))
+app.get('/', (_, res) => res.sendFile('index.html', { root: '.' }));
+
+app.get('/help', (_, res) => res.sendFile('README.md', { root: '.' }));
 
 const startLocation = "Urotsuki's Room";
 
