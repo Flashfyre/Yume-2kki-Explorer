@@ -826,10 +826,6 @@
 
                     const links = [];
 
-                    const oneWayLinks = [];
-
-                    let lastOneWayLinkKey;
-
                     let dashOffset = 0;
 
                     const addedLinks = [];
@@ -839,6 +835,8 @@
                     _.each(worldData, w => {
                         worldScales[w.id] = 1 + (Math.round((w.size - minSize) / (maxSize - minSize) * 10 * (config.sizeDiff - 1)) / 10);
                     });
+
+                    const maxDepth =  _.max(worldData.map(w => w.depth));
 
                     if (paths) {
                         visibleWorldIds = _.uniq(_.flatten(paths).map(p => p.id));
@@ -885,19 +883,15 @@
                                         hidden: false,
                                         defaultColor: hueToRGBA(hue, 1),
                                         defaultColorFade: hueToRGBA(hue, 0.1),
-                                        connTypeCheck: path[w - 1].connType ? 'replace' : undefined
+                                        connTypeCheck: 'replace'
                                     };
                                     links.push(link);
                                     addedLinks.push(linkId);
-                                    if (path[w - 1].connType & ConnType.ONE_WAY)
-                                        oneWayLinks.push(link);
                                 }
                             }
                         }
                     } else {
                         visibleWorldIds = Object.keys(worldData).map(id => parseInt(id));
-
-                        const maxDepth =  _.max(worldData.map(w => w.depth));
 
                         for (let w in visibleWorldIds) {
                             const world = worldData[visibleWorldIds[w]];
@@ -931,18 +925,14 @@
                                     hidden: hidden,
                                     defaultColor: hueToRGBA(hue, 1),
                                     defaultColorFade: hueToRGBA(hue, 0.1),
-                                    connTypeCheck: conn.type ? hidden ? 'after' : 'replace' : undefined
+                                    connTypeCheck: hidden ? 'after' : 'replace'
                                 };
                                 links.push(link);
-                                if (!hidden && conn.type & ConnType.ONE_WAY)
-                                    oneWayLinks.push(link);
                             }
                         }
                     }
 
                     initWorldSearch();
-
-                    oneWayLinks.length && (lastOneWayLinkKey = oneWayLinks[oneWayLinks.length - 1].key);
 
                     links.forEach(l => {
                         const icons = l.icons;
@@ -995,8 +985,17 @@
                 
                     const gData = {
                         nodes: nodes,
-                        links: links
+                        links: _.sortBy(links, l => {
+                            const world = worldData[l.source];
+                            return world.depth + (maxDepth + 1) * (l.connType & ConnType.ONE_WAY ? 1 : 0);
+                        })
                     };
+
+                    const lastLinkKey = gData.links[links.length - 1].key;
+
+                    const oneWayLinks = gData.links.filter(l => !l.hidden && l.connType & ConnType.ONE_WAY);
+
+                    const lastOneWayLinkKey = oneWayLinks.length ? oneWayLinks[oneWayLinks.length - 1].key : null;
 
                     let nodeDepths;
 
@@ -1033,14 +1032,13 @@
                                             let mergeIndex = 0;
                                             for (let l2 = l + 1; l2 < textLines.length; l2++) {
                                                 const mergedLine = textLines.slice(l, l2 + 1).join(" ");
-                                                if (ctx.measureText(mergedLine).width < width) {
+                                                if (ctx.measureText(mergedLine).width < width)
                                                     mergeIndex = l2;
-                                                } else
+                                                else
                                                     break;
                                             }
-                                            if (mergeIndex) {
+                                            if (mergeIndex)
                                                 textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
-                                            }
                                         } else if (textLines[l].indexOf("：") > -1)
                                             textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
                                     }
@@ -1063,49 +1061,41 @@
                                         graph.zoom(8, 1000);
                                     }
                                 }
-                                if (isHover && (isShift || isCtrl)) {
+                                if (isHover && (isShift || isCtrl))
                                     ctx.fillText("🔗", x + (width / 2) - 3.5, y - (height / 2) + 2.5);
-                                }
                                 ctx.globalAlpha = 1;
                             })
-                            .linkColor(link => link.hidden ? 'transparent' : selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' :
-                                (selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)
-                                ? link.defaultColor : link.defaultColorFade)
                             .linkCanvasObjectMode('connTypeCheck')
                             .linkCanvasObject((link, ctx, globalScale) => {
-                                const hidden = link.hidden;
-                                if (hidden && config.connMode === 0)
-                                    return;
-                                const connType = link.connType;
-                                const fade = (selectedWorldId != null && link.source.id !== selectedWorldId && link.target.id !== selectedWorldId) || (searchWorldIds.length && searchWorldIds.indexOf(link.source.id) === -1 && searchWorldIds.indexOf(link.target.id) === -1);
-                                if (!hidden) {
+                                if (!link.hidden) {
+                                    const connType = link.connType;
+                                    const fade = getLinkFaded(link);
+                                    const linkColor = getLinkColor(link);
                                     ctx.beginPath();
                                     ctx.lineWidth = (selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1) / globalScale;
-                                    ctx.strokeStyle = selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : !fade ? link.defaultColor : link.defaultColorFade;
+                                    ctx.strokeStyle = linkColor;
                                     if (connType && connType & ConnType.ONE_WAY) {
                                         let currentDashOffset = dashOffset;
-                                        if (link.key === lastOneWayLinkKey)
-                                            dashOffset = dashOffset < 9.8 ? dashOffset + 0.2 : 0;
+                                        link.key === lastOneWayLinkKey && (dashOffset = dashOffset < 9.8 ? dashOffset + 0.2 : 0);
                                         ctx.setLineDash([5, 5]);
                                         ctx.lineDashOffset = currentDashOffset * -1;
                                     }
-                                }
-                                const sourceX = link.source.x;
-                                const sourceY = link.source.y;
-                                const targetX = link.target.x;
-                                const targetY = link.target.y;
-                                if (!hidden) {
+                                    const sourceX = link.source.x;
+                                    const sourceY = link.source.y;
+                                    const targetX = link.target.x;
+                                    const targetY = link.target.y;
                                     ctx.moveTo(sourceX, sourceY);
                                     ctx.lineTo(targetX, targetY);
                                     ctx.stroke();
                                     ctx.closePath();
                                 }
-                                if (link.icons.length) {
-                                    if (fade)
-                                        ctx.globalAlpha = 0.1;
-                                    drawLinkIcons(link, ctx, globalScale);
-                                    ctx.globalAlpha = 1;
-                                }
+                                if (link.key === lastLinkKey)
+                                    gData.links.filter(l => (!l.hidden || config.connMode) && l.icons.length).forEach(l => {
+                                        if (getLinkFaded(l))
+                                            ctx.globalAlpha = 0.1;
+                                        drawLinkIcons(l, ctx, globalScale);
+                                        ctx.globalAlpha = 1;
+                                    });
                             })
                             .iconLabel(icon => icon.text);
                     else {
@@ -1398,6 +1388,16 @@
                         iconLabel.style.zIndex = 10;
                         document.body.appendChild(iconLabel);
                     }
+                }
+
+                function getLinkColor(link) {
+                    return link.hidden ? 'transparent' : selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' :
+                        (selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)
+                        ? link.defaultColor : link.defaultColorFade
+                }
+
+                function getLinkFaded(link) {
+                    return (selectedWorldId != null && link.source.id !== selectedWorldId && link.target.id !== selectedWorldId) || (searchWorldIds.length && searchWorldIds.indexOf(link.source.id) === -1 && searchWorldIds.indexOf(link.target.id) === -1);
                 }
 
                 function getConnTypeIcon(connType, typeParams) {
@@ -1796,7 +1796,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "2.1.0");
+                            data.footer = data.footer.replace("{VERSION}", "2.1.1");
                             localizedConns = data.conn;
                             initContextMenu(data.contextMenu);
                             if (isInitial) {
