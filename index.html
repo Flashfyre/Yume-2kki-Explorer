@@ -798,6 +798,7 @@
 
                 let iconLabel;
 
+                let linkDistancesInitialized = false;
                 let raycaster, mousePos = { x: 0, y: 0 };
 
                 let localizedConns;
@@ -1111,34 +1112,8 @@
                     else {
                         const clock = new THREE.Clock();
                         let time = 0;
-                        const lineVertShader = `
-                            attribute float lineDistance;
-                            varying float vLineDistance;
-
-                            void main() {
-                                vLineDistance = lineDistance;
-                                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-                                gl_Position = projectionMatrix * mvPosition;
-                            }
-                            `;
-                        const lineFragShader = `
-                            uniform vec3 diffuse;
-                            uniform float opacity;
-                            uniform float time;
-
-                            uniform float dashSize;
-                            uniform float gapSize;
-                            varying float vLineDistance;
-
-                            void main() {
-                                float totalSize = dashSize + gapSize;
-                                float modulo = mod(vLineDistance + time, totalSize);
-                                if (modulo > dashSize) {
-                                    discard;
-                                }
-                                gl_FragColor = vec4(diffuse, opacity);
-                            }
-                            `;
+                        
+                        var linksBufferedLines = undefined;
                         graph = graph
                             .backgroundColor('#00000000')
                             .linkOpacity(1)
@@ -1189,94 +1164,52 @@
                                 return ret;
                             })
                             .onEngineTick(() => {
-                                const graphData =  graph.graphData();
-
                                 time += clock.getDelta();
-
-                                if (config.labelMode > 0) {
-                                    const camera = graph.camera();
-                                    graphData.nodes.forEach(node => {
-                                        const obj = node.__threeObj;
-                                        if (obj) {
-                                            const text = obj.children[0];
-                                            if (config.labelMode === 3 || (config.labelMode === 1 && node.isHover) || (config.labelMode === 2 && node.id === selectedWorldId)) {
-                                                const scale = worldScales[node.id];
-                                                const dist = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z).distanceTo(new THREE.Vector3(node.x, node.y, node.z));
-                                                let resX, resY, resZ;
-                                                const rat = (13 * scale) / dist;
-                                                resX = (1 - rat) * node.x + rat * camera.position.x;
-                                                resY = (1 - rat) * node.y + rat * camera.position.y;
-                                                resZ = (1 - rat) * node.z + rat * camera.position.z;
-                                                text.position.set(resX - node.x, resY - node.y, resZ - node.z);
-                                                text.scale.x = text.defaultScale.x * scale;
-                                                text.scale.y = text.defaultScale.y * scale;
-                                                text.visible = true;
-                                            } else
-                                                text.visible = false;
-                                        }
-                                    });
-                                }
-                                graphData.links.forEach(link => {
-                                    if (link.__lineObj.material.uniforms !== undefined)
-                                        link.__lineObj.material.uniforms.time.value = time;
-                                });
+                                updateNodeLabels();
+                                updateLinkObjects(time);
                             })
                             .linkThreeObject(link => {
-                                if (icons3D[link.key] === undefined) {
-                                    let linkIcons = [];
-                                    link.icons.forEach(icon => {
-                                        const text = new SpriteText(icon.char, 12, 'white');
-                                        text.__graphObjType = 'icon';
-                                        text.name = icon.text;
-                                        text.fontFace = 'MS Gothic';
-                                        text.fontSize = 80;
-                                        // without the border emojis get cropped - possibly a bug in three-spritetext
-                                        text.borderWidth = 1;
-                                        text.borderColor = 'transparent';
-                                        if (config.connMode === 0 && link.hidden)
-                                            text.visible = false;
-                                        linkIcons.push(text);
-                                        graph.scene().add(text);
-                                    });
-                                    icons3D[link.key] = linkIcons;
-                                }
+//                                 if (link.connType & ConnType.ONE_WAY) {
+//                                     const lineMat = new THREE.ShaderMaterial({
+//                                         uniforms: {
+//                                             diffuse: { value: new THREE.Color(link.defaultColor) },
+//                                             dashSize: { value: 0.5 },
+//                                             gapSize: { value: 0.5 },
+//                                             opacity: { value: 1.0 },
+//                                             time: { value: 0 }
+//                                         },
+//                                         vertexShader: lineVertShader,
+//                                         fragmentShader: lineFragShader,
+//                                         transparent: true
+//                                     });
 
-                                if (link.connType & ConnType.ONE_WAY) {
-                                    const lineMat = new THREE.ShaderMaterial({
-                                        uniforms: {
-                                            diffuse: { value: new THREE.Color(link.defaultColor) },
-                                            dashSize: { value: 0.5 },
-                                            gapSize: { value: 0.5 },
-                                            opacity: { value: 1.0 },
-                                            time: { value: 0 }
-                                        },
-                                        vertexShader: lineVertShader,
-                                        fragmentShader: lineFragShader,
-                                        transparent: true
-                                    });
+//                                     const lineGeom = new THREE.BufferGeometry();
+//                                     lineGeom.setAttribute('lineDistance', new THREE.BufferAttribute(new Float32Array([10]), 1));
 
-                                    const lineGeom = new THREE.BufferGeometry();
-                                    lineGeom.setAttribute('lineDistance', new THREE.BufferAttribute(new Float32Array([10]), 1));
+//                                     if (link.hidden) {
+//                                         lineMat.opacity = 0;
+//                                         lineMat.transparent = true;
+//                                         if (lineMat.uniforms !== undefined)
+//                                             lineMat.uniforms.opacity.value = 0;
+//                                     }
 
-                                    if (link.hidden) {
-                                        lineMat.opacity = 0;
-                                        lineMat.transparent = true;
-                                        if (lineMat.uniforms !== undefined)
-                                            lineMat.uniforms.opacity.value = 0;
-                                    }
-
-                                    return new THREE.Line(lineGeom, lineMat);
-                                } else {
-                                    const material = new THREE.LineBasicMaterial({ color: new THREE.Color(link.defaultColor) });
-                                    // if NO ENTRY make it transparent
-                                    if (link.hidden) {
-                                        material.opacity = 0;
-                                        material.transparent = true;
-                                        if (material.uniforms !== undefined)
-                                            material.uniforms.opacity.value = 0;
-                                    }
-                                    return new THREE.Line(new THREE.BufferGeometry(), material);
-                                }
+//                                     return new THREE.Line(lineGeom, lineMat);
+//                                 }
+//                                 } else {
+//                                     const material = new THREE.LineBasicMaterial({ color: new THREE.Color(link.defaultColor) });
+//                                     // if NO ENTRY make it transparent
+//                                     if (link.hidden) {
+//                                         material.opacity = 0;
+//                                         material.transparent = true;
+//                                         if (material.uniforms !== undefined)
+//                                             material.uniforms.opacity.value = 0;
+//                                     }
+//                                     return new THREE.Line(new THREE.BufferGeometry(), material);
+//                                 }
+                            
+                                var dummy = new THREE.Points();
+                                dummy.visible = false;
+                                return dummy;
                             })
                             .linkPositionUpdate((linkObject, { start, end }, link) => {
                                 if (icons3D[link.key] !== undefined) {
@@ -1384,20 +1317,172 @@
                         // when the mouse moves, call the given function
                         document.addEventListener('mousemove', onDocumentMouseMove, false);
 
-                        if (iconLabel) {
-                            const element = document.getElementById("iconLabel");
-                            element.parentNode.removeChild(element);
-                        }
-                        iconLabel = document.createElement('div');
-                        iconLabel.innerHTML = ' ';
-                        iconLabel.id = 'iconLabel';
-                        iconLabel.className = "scene-tooltip";
-                        iconLabel.style.position = 'absolute';
-                        iconLabel.style.top = 0;
-                        iconLabel.style.color = 'transparent';
-                        iconLabel.style.zIndex = 10;
-                        document.body.appendChild(iconLabel);
+                        makeLinkIcons();
+                        makeLinkIconTooltip();
+                        makeLinkObjects();
+                        updateLinkObjects();
                     }
+                }
+
+                function updateNodeLabels() {
+                    if (config.labelMode > 0) {
+                        const camera = graph.camera();
+                        graph.graphData().nodes.forEach(node => {
+                            const obj = node.__threeObj;
+                            if (obj) {
+                                const text = obj.children[0];
+                                if (config.labelMode === 3 || (config.labelMode === 1 && node.isHover) || (config.labelMode === 2 && node.id === selectedWorldId)) {
+                                    const scale = worldScales[node.id];
+                                    const dist = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z).distanceTo(new THREE.Vector3(node.x, node.y, node.z));
+                                    let resX, resY, resZ;
+                                    const rat = (13 * scale) / dist;
+                                    resX = (1 - rat) * node.x + rat * camera.position.x;
+                                    resY = (1 - rat) * node.y + rat * camera.position.y;
+                                    resZ = (1 - rat) * node.z + rat * camera.position.z;
+                                    text.position.set(resX - node.x, resY - node.y, resZ - node.z);
+                                    text.scale.x = text.defaultScale.x * scale;
+                                    text.scale.y = text.defaultScale.y * scale;
+                                    text.visible = true;
+                                } else
+                                    text.visible = false;
+                            }
+                        });
+                    }
+                }
+
+                function makeLinkIcons() {
+                    graph.graphData().links.forEach(link => {
+                        if (icons3D[link.key] === undefined) {
+                            let linkIcons = [];
+                            link.icons.forEach(icon => {
+                                const text = new SpriteText(icon.char, 12, 'white');
+                                text.__graphObjType = 'icon';
+                                text.name = icon.text;
+                                text.fontFace = 'MS Gothic';
+                                text.fontSize = 80;
+                                // without the border emojis get cropped - possibly a bug in three-spritetext
+                                text.borderWidth = 1;
+                                text.borderColor = 'transparent';
+                                if (config.connMode === 0 && link.hidden)
+                                    text.visible = false;
+                                linkIcons.push(text);
+                                graph.scene().add(text);
+                            });
+                            icons3D[link.key] = linkIcons;
+                        }
+                    })
+                }
+
+                function makeLinkIconTooltip() {
+                    if (iconLabel) {
+                        const element = document.getElementById("iconLabel");
+                        element.parentNode.removeChild(element);
+                    }
+                    iconLabel = document.createElement('div');
+                    iconLabel.innerHTML = ' ';
+                    iconLabel.id = 'iconLabel';
+                    iconLabel.className = "scene-tooltip";
+                    iconLabel.style.position = 'absolute';
+                    iconLabel.style.top = 0;
+                    iconLabel.style.color = 'transparent';
+                    iconLabel.style.zIndex = 10;
+                    document.body.appendChild(iconLabel);
+                }
+
+                function makeLinkObjects() {
+                    const lineVertShader = `
+                        attribute float lineDistance;
+                        varying float vLineDistance;
+
+                        void main() {
+                            vLineDistance = lineDistance;
+                            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                            gl_Position = projectionMatrix * mvPosition;
+                        }
+                        `;
+                    const lineFragShader = `
+                        uniform vec3 diffuse;
+                        uniform float opacity;
+                        uniform float time;
+
+                        uniform float dashSize;
+                        uniform float gapSize;
+                        varying float vLineDistance;
+
+                        void main() {
+                            float totalSize = dashSize + gapSize;
+                            float modulo = mod(vLineDistance + time, totalSize);
+                            if (modulo > dashSize) {
+                                discard;
+                            }
+                            gl_FragColor = vec4(diffuse, opacity);
+                        }
+                        `;
+                    var size = graph.graphData().links.length;
+                    var geometry = new THREE.BufferGeometry();
+                    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(size * 2 * 3), 3));
+                    geometry.setAttribute('lineDistance', new THREE.BufferAttribute(new Float32Array(size * 2), 1));
+                    //var material = new THREE.LineBasicMaterial( { color: 0xff0000 } );
+                    const material = new THREE.ShaderMaterial({
+                        uniforms: {
+                            diffuse: { value: new THREE.Color('blue') },
+                            dashSize: { value: 0.5 },
+                            gapSize: { value: 0.5 },
+                            opacity: { value: 1.0 },
+                            time: { value: 0 }
+                        },
+                        vertexShader: lineVertShader,
+                        fragmentShader: lineFragShader,
+                        transparent: true
+                    });
+                    linksBufferedLines = new THREE.LineSegments(geometry, material);
+                    graph.scene().add(linksBufferedLines);
+                }
+
+                function updateLinkObjects(time) {
+                    var positions = linksBufferedLines.geometry.attributes.position.array;
+
+                    var index = 0;
+                    var linksInitialized = false;
+                    graph.graphData().links.forEach(link => {
+                        var source, target;
+                        if(link.source.x == undefined) {
+                            source = {x: 0, y:0, z: 0};
+                            target = {x: 0, y:0, z: 0};
+                        } else {
+                            linksInitialized = true;
+                            source = link.source;
+                            target = link.target;
+                        }
+                        positions[index++] = source.x;
+                        positions[index++] = source.y;
+                        positions[index++] = source.z;
+                        positions[index++] = target.x;
+                        positions[index++] = target.y;
+                        positions[index++] = target.z;
+                    })
+                    if(linksInitialized && !linkDistancesInitialized) {
+                        initLinkDistances();
+                        linkDistancesInitialized = true;
+                    }
+                    linksBufferedLines.material.uniforms.time.value = time;
+                    linksBufferedLines.geometry.attributes.position.needsUpdate = true;
+                    linksBufferedLines.geometry.computeBoundingSphere();
+                }
+
+                function initLinkDistances() {
+                    var actual = linksBufferedLines.geometry.attributes.position.array;
+                    var index = 3;
+                    var d = 0;
+                    for (let i = 0; i < graph.graphData().links.length * 2; i++) {
+                        if (i > 0) {
+                            var previousPoint = new THREE.Vector3(actual[index - 3], actual[index - 2], actual[index - 1]);
+                            var currentPoint = new THREE.Vector3(actual[index++], actual[index++], actual[index++]);
+                            d += currentPoint.distanceTo(previousPoint);
+                        }
+                        linksBufferedLines.geometry.attributes.lineDistance.array[i] = d;
+                    }
+                    linksBufferedLines.geometry.attributes.lineDistance.needsUpdate = true;
                 }
 
                 function getConnTypeIcon(connType, typeParams) {
