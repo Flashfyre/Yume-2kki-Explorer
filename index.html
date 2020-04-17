@@ -110,6 +110,10 @@
                 height: 25%;
             }
 
+            .blocker {
+                padding: 24px 24px 32px 24px !important;
+            }
+
             .graph {
                 width: 100%;
                 height: 100%;
@@ -137,6 +141,14 @@
                 margin: 8px;
                 padding: 4px;
                 cursor: pointer;
+                font-family: 'MS Gothic';
+                font-size: 18px;
+                border: 6px solid transparent;
+            }
+
+            a {
+                text-decoration: none;
+                padding: 4px;
                 font-family: 'MS Gothic';
                 font-size: 18px;
                 border: 6px solid transparent;
@@ -175,6 +187,61 @@
                 height: 38px;
                 border: 6px solid transparent;
                 cursor: pointer;
+            }
+
+            .modal {
+                border: 10px solid transparent;
+                padding: 0 32px 24px 24px !important;
+                max-width: initial !important;
+                vertical-align: top !important;
+                height: 100%;
+                transition: height 0.25s;
+            }
+
+            .modal__content {
+                margin-right: -32px;
+                overflow-y: scroll;
+                height: calc(100% + 24px);
+            }
+
+            .modal__content a {
+                display: inline-block;
+                margin-bottom: 24px;
+            }
+
+            .modal__content::-webkit-scrollbar {
+                width: 18px;
+            }
+
+            .modal__content::-webkit-scrollbar-track {
+                border: 10px solid transparent;
+                background-color: rgba(255, 255, 255, 0.25);
+                margin-top: 24px;
+            }
+
+            .modal__content::-webkit-scrollbar-thumb {
+                border: 6px solid transparent;
+            }
+
+            .modal__content::-webkit-scrollbar-button {
+                height: 0px !important;
+            }
+
+            .modal__content--localized {
+                padding-bottom: 16px;
+            }
+            
+            a.close-modal {
+                display: flex !important;
+                align-items: center;
+                justify-content: space-around;
+                text-decoration: none;
+                text-indent: initial !important;
+                padding: 5px;
+                margin: 0;
+                border: none;
+                top: -10px !important;
+                right: -10px !important;
             }
 
             .autocomplete-suggestions {
@@ -226,30 +293,56 @@
                 background-color: #000000; /*base*/
             }
 
-            .controls {
-                background: url(/images/ui/Default_Custom/containerbg.png);
-                border-image: url(/images/ui/Default_Custom/border.png);
-                border-image-slice: 12;
-                border-image-repeat: repeat;
+            .controls, .modal {
+                background: url(/images/ui/Default_Custom/containerbg.png) !important;
+                border-image: url(/images/ui/Default_Custom/border.png) 12 repeat;
             }
 
             .controls--container--tab__button {
                 color: rgba(216, 216, 216, 1); /*base*/
             }
 
-            label, .loading-container .loading-container__text {
-                background-image: url(/images/ui/Default_Custom/font1.png);
+            label, h1, h2, h3, h4, p, .close-modal, .loading-container .loading-container__text {
+                background-image: url(/images/ui/Default_Custom/font1.png) !important;
                 -webkit-background-clip: text;
 	            -webkit-text-fill-color: transparent;
                 background-clip: text;
+            }
+
+            label {
                 background-size: 18px;
+            }
+
+            h1 {
+                background-size: 32px;
+            }
+
+            h2 {
+                background-size: 24px;
+            }
+
+            h3 {
+                background-size: 18.67px;
+            }
+
+            p, h4 {
+                background-size: 16px;
+            }
+
+            .modal__content::-webkit-scrollbar-track {
+                border-image: url(/images/ui/Default_Custom/border.png) 12 repeat !important;
+                background-color: rgba(45, 17, 23, 1); /*base*/
+            }
+
+            .modal__content::-webkit-scrollbar-thumb {
+                border-image: url(/images/ui/Default_Custom/border.png) 8 round !important;
             }
 
             .footer {
                 color: rgba(216, 216, 216, 1); /*base*/
             }
 
-            button {
+            button, a {
                 color: rgba(216, 216, 216, 1); /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
                 background-image: url(/images/ui/Default_Custom/containerbg.png);
@@ -302,6 +395,7 @@
         </style>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.9.0/jquery.contextMenu.min.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.css" />
         <script src="//unpkg.com/d3-quadtree"></script>
         <script src="//unpkg.com/d3-force"></script>
         <script src="//unpkg.com/three"></script>
@@ -314,21 +408,24 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-localize/0.1.0/jquery.localize.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.9.0/jquery.contextMenu.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.9.0/jquery.ui.position.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/remarkable/1.7.1/remarkable.min.js"></script>
         <script src="/js/conn-type.js"></script>
     </head>
     <body>
         <div class="content">
             <div class="controls controls-top">
                 <div class="control">
-                    <label data-localize="search.name" class="noselect">Search:</label>
+                    <label data-localize="controls.search.name" class="noselect">Search:</label>
                     <input name="searchWorld" type="text" class="js--world-input js--search-world" />
                 </div>
                 <div class="control">
-                    <label data-localize="origin.name" class="noselect">Origin:</label>
+                    <label data-localize="controls.origin.name" class="noselect">Origin:</label>
                     <input name="startWorld" type="text" class="js--world-input js--path--world-input js--start-world" />
-                    <label data-localize="destination.name" class="noselect">Destination:</label>
+                    <label data-localize="controls.destination.name" class="noselect">Destination:</label>
                     <input name="endWorld" type="text" class="js--world-input js--path--world-input js--end-world" />
-                    <button data-localize="reset" class="js--reset noselect">Reset</button>
+                    <button data-localize="controls.reset.name" class="js--reset noselect">Reset</button>
+                    <button data-localize="controls.help.name" class="js--help noselect">Help</button>
                 </div>
             </div>
             <div id="graph" class="graph">
@@ -344,68 +441,68 @@
             <div class="controls--container controls-bottom--container">
                 <div class="controls controls-bottom" style="opacity: 0;">
                     <div class="control">
-                        <label data-localize="lang.name" class="noselect">Language:</label>
+                        <label data-localize="settings.lang.name" class="noselect">Language:</label>
                         <select name="language" class="js--lang">
-                            <option data-localize="lang.values.english" value="en" selected>English</option>
-                            <option data-localize="lang.values.japanese" value="ja">Japanese</option>
+                            <option data-localize="settings.lang.values.english" value="en" selected>English</option>
+                            <option data-localize="settings.lang.values.japanese" value="ja">Japanese</option>
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="uiTheme.name" class="noselect">UI Theme:</label>
+                        <label data-localize="settings.uiTheme.name" class="noselect">UI Theme:</label>
                         <select name="uiTheme" class="js--ui-theme">
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="fontStyle.name" class="noselect">Font Style:</label>
+                        <label data-localize="settings.fontStyle.name" class="noselect">Font Style:</label>
                         <select name="fontStyle" class="js--font-style">
-                            <option data-localize="fontStyle.values.style1" value="0">Style 1</option>
-                            <option data-localize="fontStyle.values.style2" value="1">Style 2</option>
-                            <option data-localize="fontStyle.values.style3" value="2">Style 3</option>
-                            <option data-localize="fontStyle.values.style4" value="3">Style 4</option>
-                            <option data-localize="fontStyle.values.style5" value="4">Style 5</option>
-                            <option data-localize="fontStyle.values.style6" value="5">Style 6</option>
-                            <option data-localize="fontStyle.values.style7" value="6">Style 7</option>
+                            <option data-localize="settings.fontStyle.values.style1" value="0">Style 1</option>
+                            <option data-localize="settings.fontStyle.values.style2" value="1">Style 2</option>
+                            <option data-localize="settings.fontStyle.values.style3" value="2">Style 3</option>
+                            <option data-localize="settings.fontStyle.values.style4" value="3">Style 4</option>
+                            <option data-localize="settings.fontStyle.values.style5" value="4">Style 5</option>
+                            <option data-localize="settings.fontStyle.values.style6" value="5">Style 6</option>
+                            <option data-localize="settings.fontStyle.values.style7" value="6">Style 7</option>
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="renderMode.name" class="noselect">Render Mode:</label>
+                        <label data-localize="settings.renderMode.name" class="noselect">Render Mode:</label>
                         <select name="renderMode" class="js--render-mode">
-                            <option data-localize="renderMode.values.vertical" value="0" selected>2D</option>
-                            <option data-localize="renderMode.values.horizontal" value="1">3D</option>
+                            <option data-localize="settings.renderMode.values.vertical" value="0" selected>2D</option>
+                            <option data-localize="settings.renderMode.values.horizontal" value="1">3D</option>
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="displayMode.name" class="noselect">Display Mode:</label>
+                        <label data-localize="settings.displayMode.name" class="noselect">Display Mode:</label>
                         <select name="displayMode" class="js--display-mode">
-                            <option data-localize="displayMode.values.vertical" value="0" selected>Vertical</option>
-                            <option data-localize="displayMode.values.horizontal" value="1">Horizontal</option>
-                            <option data-localize="displayMode.values.radialIn" value="2">Inward</option>
-                            <option data-localize="displayMode.values.radialOut" value="3">Outward</option>
-                            <option data-localize="displayMode.values.free" value="4">Free</option>
+                            <option data-localize="settings.displayMode.values.vertical" value="0" selected>Vertical</option>
+                            <option data-localize="settings.displayMode.values.horizontal" value="1">Horizontal</option>
+                            <option data-localize="settings.displayMode.values.radialIn" value="2">Inward</option>
+                            <option data-localize="settings.displayMode.values.radialOut" value="3">Outward</option>
+                            <option data-localize="settings.displayMode.values.free" value="4">Free</option>
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="connMode.name" class="noselect">Connection Mode:</label>
+                        <label data-localize="settings.connMode.name" class="noselect">Connection Mode:</label>
                         <select name="connMode" class="js--conn-mode">
-                            <option data-localize="connMode.values.oneWay" value="0" selected>One-Way</option>
-                            <option data-localize="connMode.values.twoWay" value="1">Two-Way</option>
+                            <option data-localize="settings.connMode.values.oneWay" value="0" selected>One-Way</option>
+                            <option data-localize="settings.connMode.values.twoWay" value="1">Two-Way</option>
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="labelMode.name" class="noselect">Label Display:</label>
+                        <label data-localize="settings.labelMode.name" class="noselect">Label Display:</label>
                         <select name="labelMode" class="js--label-mode">
-                            <option data-localize="labelMode.values.never" value="0">Never</option>
-                            <option data-localize="labelMode.values.hover" value="1" selected>On Hover</option>
-                            <option data-localize="labelMode.values.select" value="2">On Select</option>
-                            <option data-localize="labelMode.values.always" value="3">Always</option>
+                            <option data-localize="settings.labelMode.values.never" value="0">Never</option>
+                            <option data-localize="settings.labelMode.values.hover" value="1" selected>On Hover</option>
+                            <option data-localize="settings.labelMode.values.select" value="2">On Select</option>
+                            <option data-localize="settings.labelMode.values.always" value="3">Always</option>
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="sizeDiff.name" class="noselect">Size Difference:</label>
+                        <label data-localize="settings.sizeDiff.name" class="noselect">Size Difference:</label>
                         <input type="range" min="1" max="10" value="1" step="0.5" class="js--size-diff slider" />
                     </div>
                     <div class="control js--stack-size--container">
-                        <label data-localize="stackSize.name" class="noselect">Stack Threshold:</label>
+                        <label data-localize="settings.stackSize.name" class="noselect">Stack Threshold:</label>
                         <input type="range" min="5" max="100" value="20" step="1" class="js--stack-size slider" />
                     </div>
                 </div>
@@ -428,6 +525,8 @@
 
                 let isShift = false;
                 let isCtrl = false;
+
+                const worldScales = {};
 
                 $.fn.extend({
                     animateCss: function (animation, duration, endCallback) {
@@ -671,11 +770,16 @@
                 }
 
                 function updateControlsContainer(updateTabMargin) {
-                    const controlsHeight = $(".controls-bottom").outerHeight();
-                    $(".controls--container").css({ "height": controlsHeight + "px", "margin-top": "-" + (controlsHeight + 20) + "px" });
-                    $(".controls--container--tab").css({ "height": controlsHeight + "px", "left": "calc(50% - " + (($(".controls--container--tab").outerWidth() - 16) / 2) + "px)" });
+                    const controlsHeight = $(".controls-top").outerHeight();
+                    const settingsHeight = $(".controls-bottom").outerHeight();
+                    $(".controls--container").css({ "height": settingsHeight + "px", "margin-top": "-" + (settingsHeight + 20) + "px" });
+                    $(".controls--container--tab").css({ "height": settingsHeight + "px", "left": "calc(50% - " + (($(".controls--container--tab").outerWidth() - 16) / 2) + "px)" });
                     if (updateTabMargin && $(".controls-bottom").hasClass("visible"))
-                        $(".controls--container--tab, .footer").css("margin-top", "-" + (controlsHeight + 8) + "px");
+                        $(".controls--container--tab, .footer").css("margin-top", "-" + (settingsHeight + 8) + "px");
+                    $(".js--help-modal").css({
+                        "margin-top": (controlsHeight + 16) + "px",
+                        "height": "calc(100% - " + (controlsHeight + 16 + ($(".controls-bottom").hasClass("visible") ? settingsHeight + 8 : 0)) + "px)"
+                    });
                 }
 
                 function loadWorldData(update, success, fail) {
@@ -689,6 +793,8 @@
                 let searchWorldIds = [], visibleWorldIds = [];
 
                 let icons3D;
+
+                const colorLinkSelected = new THREE.Color('red');
 
                 let iconLabel;
 
@@ -727,8 +833,6 @@
                     let dashOffset = 0;
 
                     const addedLinks = [];
-
-                    const worldScales = {};
 
                     const dagIgnore = {};
 
@@ -814,7 +918,7 @@
                                 }
                                 if (hidden)
                                     dagIgnoreIds.push(connWorld.id);
-                                const hue = 0.6666 - ((world.depth / (maxDepth - 1)) * 0.6666);
+                                const hue = Math.max(0.6666 - ((world.depth / (maxDepth - 1)) * 0.6666), 0);
                                 const link = {
                                     key: `${world.id}_${connWorld.id}`,
                                     source: world.id,
@@ -902,7 +1006,7 @@
 
                     const elem = document.getElementById('graph');
 
-                    graph = is2d ? ForceGraph()(elem) : ForceGraph3D()(elem);
+                    graph = is2d ? ForceGraph()(elem) : ForceGraph3D({ controlType: 'orbit' })(elem);
 
                     const maxAnisotropy = !is2d ? graph.renderer().capabilities.getMaxAnisotropy() : null;
 
@@ -1004,60 +1108,40 @@
                                 }
                             })
                             .iconLabel(icon => icon.text);
-                    else
+                    else {
+                        const clock = new THREE.Clock();
+                        let time = 0;
+                        const lineVertShader = `
+                            attribute float lineDistance;
+                            varying float vLineDistance;
+
+                            void main() {
+                                vLineDistance = lineDistance;
+                                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                                gl_Position = projectionMatrix * mvPosition;
+                            }
+                            `;
+                        const lineFragShader = `
+                            uniform vec3 diffuse;
+                            uniform float opacity;
+                            uniform float time;
+
+                            uniform float dashSize;
+                            uniform float gapSize;
+                            varying float vLineDistance;
+
+                            void main() {
+                                float totalSize = dashSize + gapSize;
+                                float modulo = mod(vLineDistance + time, totalSize);
+                                if (modulo > dashSize) {
+                                    discard;
+                                }
+                                gl_FragColor = vec4(diffuse, opacity);
+                            }
+                            `;
                         graph = graph
                             .backgroundColor('#00000000')
                             .linkOpacity(1)
-                            .linkColor(link => {
-                                if (selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId))
-                                    return 0xFFFFFF;
-                                else if ((selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1))
-                                    return link.defaultColor;
-                                else
-                                    return link.defaultColorFade;
-                            })
-                            .linkVisibility(link => {
-                                let result, result2;
-                                if (link.source.id === undefined || link.target.id === undefined) {
-                                    result = links.filter(l => l.key == link.source + '_' + link.target);
-                                    result2 = links.filter(l => l.key == link.target + '_' + link.source);
-                                } else {
-                                    result = links.filter(l => l.key == link.source.id + '_' + link.target.id);
-                                    result2 = links.filter(l => l.key == link.target.id + '_' + link.source.id);
-                                }
-
-                                if (result === undefined)
-                                    return 0; // shouldn't happen
-
-                                return result2[0] !== undefined && !result2[0].hidden ? 0 : 1;
-                            })
-                            .linkDirectionalParticleWidth(3)
-                            .linkDirectionalParticleColor(link => {
-                                if (link.source.id == undefined || link.target.id == undefined) {
-                                    if ((searchWorldIds.length && (searchWorldIds.indexOf(link.source) > -1 || searchWorldIds.indexOf(link.target) > -1) || !searchWorldIds.length && (selectedWorldId == null || link.source == selectedWorldId || link.target === selectedWorldId)))
-                                        return 0xFFFFFF;
-                                    else
-                                        return 0x333333;
-                                } else {
-                                    if ((searchWorldIds.length && (searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1) || !searchWorldIds.length && (selectedWorldId == null || link.source.id === selectedWorldId || link.target.id === selectedWorldId)))
-                                        return 0xFFFFFF;
-                                    else
-                                        return 0x333333;
-                                }
-                            })
-                            .linkDirectionalParticles(link => {
-                                let result;
-                                if (link.source.id === undefined || link.target.id === undefined)
-                                    result = links.filter(l => l.key === link.source + '_' + link.target);
-                                else
-                                    result = links.filter(l => l.key === link.source.id + '_' + link.target.id);
-
-                                if (result === undefined)
-                                    return 0; // shouldn't happen
-
-                                const connType = result[0].connType;
-                                return connType && connType & ConnType.ONE_WAY ? 3 : 0;
-                            })
                             .nodeThreeObject(node => {
                                 const scale = worldScales[node.id];
                                 const world = worldData[node.id];
@@ -1066,35 +1150,37 @@
                                 texture.anisotropy = maxAnisotropy;
                                 texture.minFilter = THREE.NearestFilter; // disables mipmaps (eliminates blur)
 
-                                const ret = new THREE.Mesh(new THREE.BoxGeometry(13 * scale, 13 * scale, 13 * scale), new THREE.MeshBasicMaterial({map: texture}));
+                                const ret = new THREE.Mesh(new THREE.BoxGeometry(13 * scale, 13 * scale, 13 * scale), new THREE.MeshBasicMaterial({ map: texture }));
                                 
                                 const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
-                                const text = new SpriteText(worldName, 3, 'white');
+                                const text = new SpriteText(worldName, 1.5, 'white');
                                 text.__graphObjType = 'label';
                                 text.fontFace = 'MS Gothic';
                                 text.fontSize = 80;
-                                text.position.z += 7 * scale;
+                                text.strokeWidth = 2;
+                                text.strokeColor = '#000000';
+                                text.backgroundColor = false;
                                 
                                 let textLines = worldName.split(" ");
                                 for (let l = 0; l < textLines.length; l++) {
-                                    text._text = textLines[l];
-                                    if (text.scale.x < node.width) {
+                                    text.text = textLines[l];
+                                    if (text.scale.x * scale < node.width) {
                                         let mergeIndex = 0;
                                         for (let l2 = l + 1; l2 < textLines.length; l2++) {
                                             const mergedLine = textLines.slice(l, l2 + 1).join(" ");
-                                            text._text = mergedLine;
-                                            if (ret.scale.x < node.width) {
+                                            text.text = mergedLine;
+                                            if (text.scale.x * scale < node.width)
                                                 mergeIndex = l2;
-                                            } else
+                                            else
                                                 break;
                                         }
-                                        if (mergeIndex) {
+                                        if (mergeIndex)
                                             textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
-                                        }
                                     } else if (textLines[l].indexOf("：") > -1)
                                         textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
                                 }
                                 text.text = textLines.join('\r\n');
+                                text.defaultScale = { "x": text.scale.x, "y": text.scale.y };
                                 if (config.labelMode < 3)
                                     text.visible = false;
 
@@ -1103,34 +1189,37 @@
                                 return ret;
                             })
                             .onEngineTick(() => {
+                                const graphData =  graph.graphData();
+
+                                time += clock.getDelta();
+
                                 if (config.labelMode > 0) {
-                                    const halfGraphWidth = graph.width() / 2;
-                                    const halfGraphHeight = graph.height() / 2;
                                     const camera = graph.camera();
-                                    camera.rotation.order = 'YXZ';
-                                    graph.graphData().nodes.forEach(node => {
+                                    graphData.nodes.forEach(node => {
                                         const obj = node.__threeObj;
                                         if (obj) {
                                             const text = obj.children[0];
                                             if (config.labelMode === 3 || (config.labelMode === 1 && node.isHover) || (config.labelMode === 2 && node.id === selectedWorldId)) {
                                                 const scale = worldScales[node.id];
-                                                const rotationOffset = obj.quaternion.clone().inverse();
-                                                const rotation = camera.quaternion.clone().multiply(rotationOffset);
-                                                const rotationAngles = new THREE.Euler(0, 0, 0, 'YXZ').setFromQuaternion(rotation);
-                                                const angleRatio = Math.max(45 - Math.abs((THREE.Math.radToDeg((rotationAngles.x >= 0 ? 0 : Math.PI * 2) + rotationAngles.x) % 90) - 45),
-                                                    45 - Math.abs((THREE.Math.radToDeg((rotationAngles.y >= 0 ? 0 : Math.PI * 2) + rotationAngles.y) % 90) - 45)) / 45;
-                                                
-                                                const normalizedObjPosition = obj.position.normalize();
-                                                const normalizedTextPosition = text.position.normalize();
-                                                text.translateZ(normalizedTextPosition.z - normalizedObjPosition.z);
-                                                text.setRotationFromQuaternion(rotation);
-                                                text.translateZ(scale * (7 + 6.5 * angleRatio));
+                                                const dist = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z).distanceTo(new THREE.Vector3(node.x, node.y, node.z));
+                                                let resX, resY, resZ;
+                                                const rat = (13 * scale) / dist;
+                                                resX = (1 - rat) * node.x + rat * camera.position.x;
+                                                resY = (1 - rat) * node.y + rat * camera.position.y;
+                                                resZ = (1 - rat) * node.z + rat * camera.position.z;
+                                                text.position.set(resX - node.x, resY - node.y, resZ - node.z);
+                                                text.scale.x = text.defaultScale.x * scale;
+                                                text.scale.y = text.defaultScale.y * scale;
                                                 text.visible = true;
                                             } else
                                                 text.visible = false;
                                         }
                                     });
                                 }
+                                graphData.links.forEach(link => {
+                                    if (link.__lineObj.material.uniforms !== undefined)
+                                        link.__lineObj.material.uniforms.time.value = time;
+                                });
                             })
                             .linkThreeObject(link => {
                                 if (icons3D[link.key] === undefined) {
@@ -1144,14 +1233,50 @@
                                         // without the border emojis get cropped - possibly a bug in three-spritetext
                                         text.borderWidth = 1;
                                         text.borderColor = 'transparent';
-                                        if (config.connMode === 0 && (link.connType & ConnType.NO_ENTRY))
-                                            text.material.opacity = 0;
+                                        if (config.connMode === 0 && link.hidden)
+                                            text.visible = false;
                                         linkIcons.push(text);
                                         graph.scene().add(text);
                                     });
                                     icons3D[link.key] = linkIcons;
                                 }
-                                return 0;
+
+                                if (link.connType & ConnType.ONE_WAY) {
+                                    const lineMat = new THREE.ShaderMaterial({
+                                        uniforms: {
+                                            diffuse: { value: new THREE.Color(link.defaultColor) },
+                                            dashSize: { value: 0.5 },
+                                            gapSize: { value: 0.5 },
+                                            opacity: { value: 1.0 },
+                                            time: { value: 0 }
+                                        },
+                                        vertexShader: lineVertShader,
+                                        fragmentShader: lineFragShader,
+                                        transparent: true
+                                    });
+
+                                    const lineGeom = new THREE.BufferGeometry();
+                                    lineGeom.setAttribute('lineDistance', new THREE.BufferAttribute(new Float32Array([10]), 1));
+
+                                    if (link.hidden) {
+                                        lineMat.opacity = 0;
+                                        lineMat.transparent = true;
+                                        if (lineMat.uniforms !== undefined)
+                                            lineMat.uniforms.opacity.value = 0;
+                                    }
+
+                                    return new THREE.Line(lineGeom, lineMat);
+                                } else {
+                                    const material = new THREE.LineBasicMaterial({ color: new THREE.Color(link.defaultColor) });
+                                    // if NO ENTRY make it transparent
+                                    if (link.hidden) {
+                                        material.opacity = 0;
+                                        material.transparent = true;
+                                        if (material.uniforms !== undefined)
+                                            material.uniforms.opacity.value = 0;
+                                    }
+                                    return new THREE.Line(new THREE.BufferGeometry(), material);
+                                }
                             })
                             .linkPositionUpdate((linkObject, { start, end }, link) => {
                                 if (icons3D[link.key] !== undefined) {
@@ -1169,12 +1294,12 @@
                                     }
                                 }
                             });
+                    };
                     graph = graph
                         .connMode(() => config.connMode)
                         .nodeVal(node => node.height)
                         .nodeLabel(node => node.img.title)
                         .nodesPerStack(config.stackSize)
-                        .linkWidth(link => selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1)
                         .onNodeDragEnd(node => {
                             node.fx = node.x;
                             node.fy = node.y;
@@ -1259,7 +1384,7 @@
                         // when the mouse moves, call the given function
                         document.addEventListener('mousemove', onDocumentMouseMove, false);
 
-                        if(iconLabel) {
+                        if (iconLabel) {
                             const element = document.getElementById("iconLabel");
                             element.parentNode.removeChild(element);
                         }
@@ -1671,19 +1796,22 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "1.4.5");
+                            data.footer = data.footer.replace("{VERSION}", "2.1.0");
                             localizedConns = data.conn;
                             initContextMenu(data.contextMenu);
                             if (isInitial) {
-                                Object.keys(data.uiTheme.values).forEach(t => {
-                                    $(".js--ui-theme").append('<option data-localize="uiTheme.values.' + t + '" value="' + t + '">' + data.uiTheme.values[t] + '</option>');
+                                Object.keys(data.settings.uiTheme.values).forEach(t => {
+                                    $(".js--ui-theme").append('<option data-localize="settings.uiTheme.values.' + t + '" value="' + t + '">' + data.settings.uiTheme.values[t] + '</option>');
                                 });
                                 $(".js--ui-theme").val(config.uiTheme).change();
                             }
-                            updateControlsContainer();
+                            window.setTimeout(() => updateControlsContainer(true), 0);
                             defaultCallback(data);
                         }
                     });
+
+                    $(".js--help-modal__content--localized--en").toggle(isEn);
+                    $(".js--help-modal__content--localized--jp").toggle(!isEn);
 
                     $.localize("conn", {
                         language: config.lang,
@@ -1841,7 +1969,7 @@
                 }
 
                 function focusNode(node) {
-                    const distance = 100;
+                    const distance = 50 * worldScales[node.id];
                     const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
                     const cam = graph.cameraPosition();
                     graph.cameraPosition({ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio}, node, 1000);
@@ -1851,31 +1979,55 @@
                     graph.graphData().links.forEach(link => {
                         if (icons3D[link.key] !== undefined) {
                             icons3D[link.key].forEach(icon => {
-                                if (selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId))
-                                    icon.material.opacity = 1.0;
-                                else if ((selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1))
-                                    icon.material.opacity = 1.0;
-                                else
-                                    icon.material.opacity = 0.2;
+                                icon.visible = true;
+                                icon.material.opacity = (selectedWorldId == null || (selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId)))
+                                    && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)
+                                    ? 1
+                                    : selectedWorldId != null && (selectedWorldId === link.source.id || selectedWorldId === link.target.id)
+                                    ? 0.625
+                                    : 0.1;
 
-                                if (config.connMode === 0 && (link.connType & ConnType.NO_ENTRY))
-                                    icon.material.opacity = 0;
+                                if (config.connMode === 0 && link.hidden)
+                                    icon.visible = false;
                             });
                         }
                     });
                 }
 
                 function highlightWorldSelection() {
-                    graph.linkColor(graph.linkColor()).linkWidth(graph.linkWidth());
                     updateConnectionModeIcons();
                     graph.graphData().nodes.forEach(node => {
                         if (node.__threeObj) {
-                            if ((searchWorldIds.length && searchWorldIds.indexOf(node.id) > -1) || !searchWorldIds.length && (selectedWorldId == null || node.id && (node.id == selectedWorldId || worldData[selectedWorldId].connections.filter(c => c.targetId === node.id).length))) {
-                                node.__threeObj.material.transparent = false;
-                                node.__threeObj.material.opacity = 1.0;
+                            const id = node.id;
+                            const opacity = (selectedWorldId == null || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1) ? 1 : selectedWorldId != null && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length ? 0.625 : 0.1;
+                            node.__threeObj.material.transparent = opacity < 1;
+                            node.__threeObj.material.opacity = opacity;
+                        }
+                    });
+                    graph.graphData().links.forEach(link => {
+                         // do nothing for hidden links
+                        if (!link.hidden) {
+                            if (selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId)) {
+                                link.__lineObj.material.transparent = false;
+                                if (link.__lineObj.material.uniforms !== undefined)
+                                    link.__lineObj.material.uniforms.diffuse.value = colorLinkSelected;
+                                else
+                                    link.__lineObj.material.color = colorLinkSelected;
+                            } else if ((selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)) {
+                                link.__lineObj.material.transparent = false;
+                                if (link.__lineObj.material.uniforms !== undefined)
+                                    link.__lineObj.material.uniforms.diffuse.value = new THREE.Color(link.defaultColor);
+                                else
+                                    link.__lineObj.material.color = new THREE.Color(link.defaultColor);
                             } else {
-                                node.__threeObj.material.transparent = true;
-                                node.__threeObj.material.opacity = 0.2;
+                                link.__lineObj.material.transparent = true;
+                                if (link.__lineObj.material.uniforms !== undefined) {
+                                    link.__lineObj.material.uniforms.opacity.value = 0.1;
+                                    link.__lineObj.material.uniforms.diffuse.value = new THREE.Color(link.defaultColor);
+                                } else {
+                                    link.__lineObj.material.color = new THREE.Color(link.defaultColor);
+                                    link.__lineObj.material.opacity = 0.1;
+                                }
                             }
                         }
                     });
@@ -1894,13 +2046,16 @@
 
                 function updateRaycast() {
                     const vector = new THREE.Vector3(mousePos.x, mousePos.y, 1);
+                    let intersects = [];
 
-                    raycaster.setFromCamera(vector, graph.camera());
-                    // create an array containing all objects in the scene with which the ray intersects
-                    const intersects = raycaster.intersectObjects(graph.graphData().nodes.map(node => node.__threeObj).filter(o => o).concat(graph.scene().children.filter(o => o.__graphObjType === 'icon')));
+                    if (!$(".js--help-modal:visible").length) {
+                        raycaster.setFromCamera(vector, graph.camera());
+                        // create an array containing all objects in the scene with which the ray intersects
+                        intersects = raycaster.intersectObjects(graph.graphData().nodes.map(node => node.__threeObj).filter(o => o).concat(graph.scene().children.filter(o => o.__graphObjType === 'icon' && o.visible)));
+                    }
 
-                    // if there is one (or more) intersections
-                    if (intersects.length > 0)
+                    // if there are one or more intersections
+                    if (intersects.length)
                     {
                         const topObj = intersects[0];
                         if (topObj.object.__graphObjType !== "node") {
@@ -1922,6 +2077,14 @@
                     $(".graph .scene-tooltip").css("visibility", "visible");
                 }
 
+                function openHelpModal() {
+                    $(".js--help-modal").modal({
+                        fadeDuration: 100,
+                        closeClass: 'noselect',
+                        closeText: '✖'
+                    });
+                }
+
                 $(document).ready(function () {
                     let loadingFrameCount = 0;
                     const loadingTimer = window.setInterval(function () {
@@ -1935,7 +2098,6 @@
                     }, 300);
                     
                     $(".controls--container--tab__button").click(function() {
-                        updateControlsContainer();
                         if ($(".controls-bottom").hasClass("visible")) {
                             $(".controls-bottom").removeClass("visible").animateCss("slideOutDown", 250, function () {
                                 if (!$(this).hasClass("visible"))
@@ -1946,6 +2108,7 @@
                             $(".controls-bottom").addClass("visible").css("opacity", 1).animateCss("slideInUp", 250);
                             $(".controls--container--tab, .footer").css("margin-top", "-" + ($(".controls-bottom").outerHeight() + 8) + "px").animateCss("slideInUp", 250);
                         }
+                        updateControlsContainer();
                     });
 
                     updateControlsContainer(true);
@@ -2047,6 +2210,24 @@
                             reloadGraph();
                     });
 
+                    $(".js--help").click(function() {
+                        if ($(".js--help-modal:visible").length)
+                            $.modal.close();
+                        else if ($(".js--help-modal__content--localized").text())
+                            openHelpModal();
+                        else {
+                            $.get("/help", function (data) {
+                                const md = new Remarkable();
+                                data = data.split('---');
+                                const helpEn = md.render(data[0]);
+                                const helpJp = data.length > 1 ? md.render(data[1]) : helpEn;
+                                $('.js--help-modal__content--localized').html('<div class="js--help-modal__content--localized--en"' + (config.lang === 'en' ? '' : ' style="display: none;"') + '>' + helpEn + '</div>'
+                                    + '<div class="js--help-modal__content--localized--jp"' + (config.lang === 'en' ? ' style="display: none;"' : '') + '>' + helpJp + '</div>');
+                                openHelpModal();
+                            });
+                        }
+                    })
+
                     loadOrInitConfig();
 
                     initLocalization(true);
@@ -2084,6 +2265,12 @@
                     });
                 });
             </script>
+        </div>
+        <div id="helpModal" class="js--help-modal modal">
+            <div class="js--help-modal__content modal__content">
+                <div class="js--help-modal__content--localized modal__content--localized"></div>
+                <a href="https://github.com/Flashfyre/Yume-2kki-Explorer/issues/new" target="_blank" data-localize="helpModal.reportBug">Report a Bug</a>
+            </div>
         </div>
     </body>
 </html>
