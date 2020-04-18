@@ -1045,9 +1045,9 @@
                                             let mergeIndex = 0;
                                             for (let l2 = l + 1; l2 < textLines.length; l2++) {
                                                 const mergedLine = textLines.slice(l, l2 + 1).join(" ");
-                                                if (ctx.measureText(mergedLine).width < width) {
+                                                if (ctx.measureText(mergedLine).width < width)
                                                     mergeIndex = l2;
-                                                } else
+                                                else
                                                     break;
                                             }
                                             if (mergeIndex) {
@@ -1185,7 +1185,7 @@
                                 updateLinkDistances();
                             })
                             .linkThreeObject(link => {
-                                var dummy = new THREE.Points();
+                                const dummy = new THREE.Points();
                                 dummy.visible = false;
                                 return dummy;
                             })
@@ -1296,7 +1296,7 @@
                         document.addEventListener('mousemove', onDocumentMouseMove, false);
 
                         graph.graphData().links.forEach(link => {
-                            if(!link.hidden) {
+                            if (!link.hidden) {
                                 if (link.connType & ConnType.ONE_WAY)
                                     visibleOneWayLinks.push(link);
                                 else
@@ -1401,8 +1401,8 @@
                             gl_FragColor = vec4(vColor, vOpacity);
                         }
                     `;
-                    var size = visibleTwoWayLinks.length;
-                    var geometry = new THREE.BufferGeometry();
+                    const size = visibleTwoWayLinks.length;
+                    const geometry = new THREE.BufferGeometry();
                     geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(size * 2 * 3), 3));
                     geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(size * 2 * 3), 3));
                     geometry.setAttribute('opacity', new THREE.BufferAttribute(new Float32Array(size * 2), 1));
@@ -1412,7 +1412,7 @@
                         transparent: true,
                         vertexColors: true
                     });
-                    var bufferedGeometry = new THREE.LineSegments(geometry, material);
+                    const bufferedGeometry = new THREE.LineSegments(geometry, material);
                     graph.scene().add(bufferedGeometry);
                     return bufferedGeometry;
                 }
@@ -1451,8 +1451,8 @@
                             gl_FragColor = vec4(vColor, vOpacity);
                         }
                     `;
-                    var size = visibleOneWayLinks.length;
-                    var geometry = new THREE.BufferGeometry();
+                    const size = visibleOneWayLinks.length;
+                    const geometry = new THREE.BufferGeometry();
                     geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(size * 2 * 3), 3));
                     geometry.setAttribute('lineDistance', new THREE.BufferAttribute(new Float32Array(size * 2), 1));
                     geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(size * 2 * 3), 3));
@@ -1468,17 +1468,17 @@
                         transparent: true,
                         vertexColors: true
                     });
-                    var bufferedGeometry = new THREE.LineSegments(geometry, material);
+                    const bufferedGeometry = new THREE.LineSegments(geometry, material);
                     graph.scene().add(bufferedGeometry);
                     return bufferedGeometry;
                 }
 
                 function updateLinkObjects(linkData, bufferedObject) {
-                    var positions = bufferedObject.geometry.attributes.position.array;
-                    var index = 0;
+                    const positions = bufferedObject.geometry.attributes.position.array;
+                    let index = 0;
                     linkData.forEach(link => {
-                        var source, target;
-                        if(link.source.x == undefined) {
+                        let source, target;
+                        if (link.source.x == undefined) {
                             source = {x: 0, y:0, z: 0};
                             target = {x: 0, y:0, z: 0};
                         } else {
@@ -1501,13 +1501,13 @@
                 }
 
                 function updateLinkColors(linkData, bufferedObject) {
-                    var colors = bufferedObject.geometry.attributes.color.array;
-                    var opacities = bufferedObject.geometry.attributes.opacity.array;
-                    var index = 0;
-                    var opacityIndex = 0;
+                    const colors = bufferedObject.geometry.attributes.color.array;
+                    const opacities = bufferedObject.geometry.attributes.opacity.array;
+                    let index = 0;
+                    let opacityIndex = 0;
                     linkData.forEach(link => {
-                        var color;
-                        var opacity;
+                        let color;
+                        let opacity;
                         if (selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId)) {
                             opacity = 1.0;
                             color = colorLinkSelected;
@@ -1532,13 +1532,13 @@
                 }
 
                 function updateLinkDistances() {
-                    var actual = linksOneWayBuffered.geometry.attributes.position.array;
-                    var index = 3;
-                    var d = 0;
+                    const actual = linksOneWayBuffered.geometry.attributes.position.array;
+                    let index = 3;
+                    let d = 0;
                     for (let i = 0; i < visibleOneWayLinks.length * 2; i++) {
                         if ((i % 2)) {
-                            var previousPoint = new THREE.Vector3(actual[index - 3], actual[index - 2], actual[index - 1]);
-                            var currentPoint = new THREE.Vector3(actual[index++], actual[index++], actual[index++]);
+                            const previousPoint = new THREE.Vector3(actual[index - 3], actual[index - 2], actual[index - 1]);
+                            const currentPoint = new THREE.Vector3(actual[index++], actual[index++], actual[index++]);
                             d = currentPoint.distanceTo(previousPoint);
                             index += 3;
                         } else
