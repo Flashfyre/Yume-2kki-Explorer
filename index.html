@@ -1008,7 +1008,7 @@
                     let depthDistances;
 
                     const dashLineSpeed = 20;
-                    
+
                     icons3D = [];
 
                     visibleTwoWayLinks = [];
@@ -1381,11 +1381,37 @@
                 }
 
                 function makeTwoWayLinkObjects() {
+                    const lineVertShader = `
+                        attribute float opacity;
+                        varying vec3 vColor;
+                        varying float vOpacity;
+
+                        void main() {
+                            vColor = color;
+                            vOpacity = opacity;
+                            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                            gl_Position = projectionMatrix * mvPosition;
+                        }
+                    `;
+                    const lineFragShader = `
+                        varying vec3 vColor;
+                        varying float vOpacity;
+
+                        void main() {
+                            gl_FragColor = vec4(vColor, vOpacity);
+                        }
+                    `;
                     var size = visibleTwoWayLinks.length;
                     var geometry = new THREE.BufferGeometry();
                     geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(size * 2 * 3), 3));
                     geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(size * 2 * 3), 3));
-                    var material = new THREE.LineBasicMaterial({ vertexColors: true });
+                    geometry.setAttribute('opacity', new THREE.BufferAttribute(new Float32Array(size * 2), 1));
+                    const material = new THREE.ShaderMaterial({
+                        vertexShader: lineVertShader,
+                        fragmentShader: lineFragShader,
+                        transparent: true,
+                        vertexColors: true
+                    });
                     var bufferedGeometry = new THREE.LineSegments(geometry, material);
                     graph.scene().add(bufferedGeometry);
                     return bufferedGeometry;
@@ -1394,24 +1420,27 @@
                 function makeOneWayLinkObjects() {
                     const lineVertShader = `
                         attribute float lineDistance;
+                        attribute float opacity;
                         varying float vLineDistance;
                         varying vec3 vColor;
+                        varying float vOpacity;
 
                         void main() {
                             vColor = color;
+                            vOpacity = opacity;
                             vLineDistance = lineDistance;
                             vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
                             gl_Position = projectionMatrix * mvPosition;
                         }
-                        `;
+                    `;
                     const lineFragShader = `
-                        uniform float opacity;
                         uniform float time;
 
                         uniform float dashSize;
                         uniform float gapSize;
                         varying float vLineDistance;
                         varying vec3 vColor;
+                        varying float vOpacity;
 
                         void main() {
                             float totalSize = dashSize + gapSize;
@@ -1419,19 +1448,19 @@
                             if (modulo > dashSize) {
                                 discard;
                             }
-                            gl_FragColor = vec4(vColor, opacity);
+                            gl_FragColor = vec4(vColor, vOpacity);
                         }
-                        `;
+                    `;
                     var size = visibleOneWayLinks.length;
                     var geometry = new THREE.BufferGeometry();
                     geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(size * 2 * 3), 3));
                     geometry.setAttribute('lineDistance', new THREE.BufferAttribute(new Float32Array(size * 2), 1));
                     geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(size * 2 * 3), 3));
+                    geometry.setAttribute('opacity', new THREE.BufferAttribute(new Float32Array(size * 2), 1));
                     const material = new THREE.ShaderMaterial({
                         uniforms: {
                             dashSize: { value: 10 },
                             gapSize: { value: 10 },
-                            opacity: { value: 1.0 },
                             time: { value: 0 }
                         },
                         vertexShader: lineVertShader,
@@ -1473,18 +1502,20 @@
 
                 function updateLinkColors(linkData, bufferedObject) {
                     var colors = bufferedObject.geometry.attributes.color.array;
+                    var opacities = bufferedObject.geometry.attributes.opacity.array;
                     var index = 0;
+                    var opacityIndex = 0;
                     linkData.forEach(link => {
                         var color;
+                        var opacity;
                         if (selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId)) {
-                            //link.__lineObj.material.transparent = false;
+                            opacity = 1.0;
                             color = colorLinkSelected;
                         } else if ((selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)) {
-                            //link.__lineObj.material.transparent = false;
+                            opacity = 1.0;
                             color = new THREE.Color(link.defaultColor);
                         } else {
-                            //link.__lineObj.material.transparent = true;
-                            //link.__lineObj.material.uniforms.opacity.value = 0.1;
+                            opacity = 0.1;
                             color = new THREE.Color(link.defaultColor);
                         }
                         colors[index++] = color.r;
@@ -1493,8 +1524,11 @@
                         colors[index++] = color.r;
                         colors[index++] = color.g;
                         colors[index++] = color.b;
+                        opacities[opacityIndex++] = opacity;
+                        opacities[opacityIndex++] = opacity;
                     })
                     bufferedObject.geometry.attributes.color.needsUpdate = true;
+                    bufferedObject.geometry.attributes.opacity.needsUpdate = true;
                 }
 
                 function updateLinkDistances() {
