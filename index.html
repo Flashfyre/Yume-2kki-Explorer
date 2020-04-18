@@ -803,8 +803,6 @@
 
                 let iconLabel;
 
-                let linksInitialized = false;
-
                 let raycaster, mousePos = { x: 0, y: 0 };
 
                 let localizedConns;
@@ -1009,14 +1007,14 @@
 
                     let depthDistances;
 
+                    const dashLineSpeed = 20;
+                    
                     icons3D = [];
 
                     visibleTwoWayLinks = [];
                     visibleOneWayLinks = [];
 
                     linksBufferedLines = undefined;
-
-                    linksInitialized = false;
 
                     const elem = document.getElementById('graph');
 
@@ -1179,13 +1177,12 @@
                                 return ret;
                             })
                             .onEngineTick(() => {
-                                time += clock.getDelta();
+                                time -= clock.getDelta() * dashLineSpeed;
                                 updateNodeLabels();
                                 updateLinkObjects(visibleTwoWayLinks, linksTwoWayBuffered);
                                 updateLinkObjects(visibleOneWayLinks, linksOneWayBuffered);
-                                if(linksInitialized)
-                                    initLinkDistances(); // should probably be done once
                                 updateLinkAnimation(linksOneWayBuffered, time);
+                                updateLinkDistances();
                             })
                             .linkThreeObject(link => {
                                 var dummy = new THREE.Points();
@@ -1432,8 +1429,8 @@
                     geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(size * 2 * 3), 3));
                     const material = new THREE.ShaderMaterial({
                         uniforms: {
-                            dashSize: { value: 0.5 },
-                            gapSize: { value: 0.5 },
+                            dashSize: { value: 10 },
+                            gapSize: { value: 10 },
                             opacity: { value: 1.0 },
                             time: { value: 0 }
                         },
@@ -1456,7 +1453,6 @@
                             source = {x: 0, y:0, z: 0};
                             target = {x: 0, y:0, z: 0};
                         } else {
-                            linksInitialized = true;
                             source = link.source;
                             target = link.target;
                         }
@@ -1490,7 +1486,7 @@
                     bufferedObject.geometry.attributes.color.needsUpdate = true;
                 }
 
-                function initLinkDistances() {
+                function updateLinkDistances() {
                     var actual = linksOneWayBuffered.geometry.attributes.position.array;
                     var index = 3;
                     var d = 0;
