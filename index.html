@@ -400,7 +400,6 @@
         <script src="//unpkg.com/d3-force"></script>
         <script src="//unpkg.com/three"></script>
         <script src="//unpkg.com/three-spritetext"></script>
-        <script src="/js/force-graph-modded.js"></script>
         <script src="/js/3d-force-graph-modded.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.min.js"></script>
@@ -525,6 +524,7 @@
 
                 let isShift = false;
                 let isCtrl = false;
+                let fontsLoaded = false;
 
                 const worldScales = {};
 
@@ -783,7 +783,20 @@
                 }
 
                 function loadWorldData(update, success, fail) {
-                    $.get("/worlds" + (update ? "?update=true" : ""), success).fail(fail);
+                    $.get("/worlds" + (update ? "?update=true" : ""), function (data) {
+                        if (document.fonts.check("12px MS Gothic")) {
+                            fontsLoaded = true;
+                            success(data);
+                        } else {
+                            document.fonts.onloadingdone = e => fontsLoaded = true;
+                            const fontsLoadedCheck = window.setInterval(function () {
+                                if (fontsLoaded) {
+                                    window.clearInterval(fontsLoadedCheck);
+                                    success(data);
+                                }
+                            }, 100);
+                        }
+                    }).fail(fail);
                 }
 
                 let graph;
@@ -1017,173 +1030,113 @@
 
                     const elem = document.getElementById('graph');
 
-                    graph = is2d ? ForceGraph()(elem) : ForceGraph3D({ controlType: 'orbit' })(elem);
+                    graph = ForceGraph3D({
+                        controlType: 'orbit',
+                        numDimensions: is2d ? 2 : 3
+                    })(elem);
 
-                    const maxAnisotropy = !is2d ? graph.renderer().capabilities.getMaxAnisotropy() : null;
+                    const maxAnisotropy = graph.renderer().capabilities.getMaxAnisotropy();
 
                     if (displayMode < 4)
                         graph = graph
                             .dagMode(displayMode === 0 ? 'td' : displayMode === 1 ? 'lr' : displayMode === 2 ? 'radialin' : 'radialout')
                             .dagLevelDistance(displayMode < 2 ? 12 : 24 + radius * (config.sizeDiff + 1));
-                    if (is2d)
-                        graph = graph
-                            .nodeCanvasObject(({ id, img, x, y, scale, width, height, isHover }, ctx, globalScale) => {
-                                ctx.globalAlpha = (selectedWorldId == null || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1) ? 1 : selectedWorldId != null && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length ? 0.625 : 0.1;
-                                ctx.imageSmoothingEnabled = false;
-                                ctx.drawImage(img, 0, 0, img.width, img.height, x - width / 2, y - height / 2, width, height);
-                                if (config.labelMode === 3 || (config.labelMode === 1 && isHover) || (config.labelMode === 2 && id === selectedWorldId)) {
-                                    ctx.lineWidth = 0.25 * scale;
-                                    ctx.strokeStyle = "#000000";
-                                    ctx.fillStyle = "rgba(216, 216, 216, 1)";
-                                    ctx.font = (2 * scale) + "px 'MS Gothic'";
-                                    const world = worldData[id];
-                                    const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
-                                    let textLines = worldName.split(" ");
-                                    for (let l = 0; l < textLines.length; l++) {
-                                        if (ctx.measureText(textLines[l]).width < width) {
-                                            let mergeIndex = 0;
-                                            for (let l2 = l + 1; l2 < textLines.length; l2++) {
-                                                const mergedLine = textLines.slice(l, l2 + 1).join(" ");
-                                                if (ctx.measureText(mergedLine).width < width)
-                                                    mergeIndex = l2;
-                                                else
-                                                    break;
-                                            }
-                                            if (mergeIndex)
-                                                textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
-                                        } else if (textLines[l].indexOf("：") > -1)
-                                            textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
+                    const clock = new THREE.Clock();
+                    let time = 0;
+
+                    linksTwoWayBuffered = undefined;
+                    linksOneWayBuffered = undefined;
+
+                    graph = graph
+                        .numDimensions(is2d ? 2 : 3)
+                        .backgroundColor('#00000000')
+                        .linkOpacity(1)
+                        .nodeThreeObject(node => {
+                            const scale = worldScales[node.id];
+                            const world = worldData[node.id];
+                            const texture = new THREE.TextureLoader().load(world.filename);
+
+                            texture.anisotropy = maxAnisotropy;
+                            texture.minFilter = THREE.NearestFilter; // disables mipmaps (eliminates blur)
+
+                            const ret = new THREE.Mesh(new THREE.BoxGeometry(13 * scale, 9.75 * scale, is2d ? 0.1 : 9.75 * scale), new THREE.MeshBasicMaterial({ map: texture }));
+                            ret.material.transparent = true;
+                            if (is2d) {
+                                ret.material.depthTest = false;
+                                ret.renderOrder = world.id;
+                            }
+                            
+                            const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
+                            const text = new SpriteText(worldName, 1.5, 'white');
+                            text.__graphObjType = 'label';
+                            text.fontFace = 'MS Gothic';
+                            text.fontSize = 80;
+                            text.strokeWidth = is2d ? 1.5 : 2;
+                            text.strokeColor = '#000000';
+                            text.backgroundColor = false;
+                            if (is2d) {
+                                text.material.depthTest = false;
+                                text.renderOrder = world.id;
+                            }
+                            
+                            let textLines = worldName.split(" ");
+                            for (let l = 0; l < textLines.length; l++) {
+                                text.text = textLines[l];
+                                if (text.scale.x * scale < 13 * scale) {
+                                    let mergeIndex = 0;
+                                    for (let l2 = l + 1; l2 < textLines.length; l2++) {
+                                        const mergedLine = textLines.slice(l, l2 + 1).join(" ");
+                                        text.text = mergedLine;
+                                        if (text.scale.x * scale < 13 * scale)
+                                            mergeIndex = l2;
+                                        else
+                                            break;
                                     }
-                                    for (let l in textLines) {
-                                        const textLine = textLines[l];
-                                        const lineWidth = ctx.measureText(textLine).width;
-                                        const lineX = x - lineWidth / 2;
-                                        const lineY = (y + 0.5 * scale) - (textLines.length - 1) + l * 2 * scale;
-                                        ctx.strokeText(textLine, lineX, lineY);
-                                        ctx.fillText(textLine, lineX, lineY);
+                                    if (mergeIndex)
+                                        textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
+                                } else if (textLines[l].indexOf("：") > -1)
+                                    textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
+                            }
+                            text.text = textLines.join('\n');
+                            text.defaultScale = { "x": text.scale.x, "y": text.scale.y };
+                            if (config.labelMode < 3)
+                                text.visible = false;
+
+                            ret.add(text);
+
+                            return ret;
+                        })
+                        .onEngineTick(() => {
+                            time -= clock.getDelta() * dashLineSpeed;
+                            updateNodeLabels(is2d);
+                            updateLinkObjects(visibleTwoWayLinks, linksTwoWayBuffered, is2d);
+                            updateLinkObjects(visibleOneWayLinks, linksOneWayBuffered, is2d);
+                            updateLinkAnimation(linksOneWayBuffered, time);
+                            updateLinkDistances();
+                        })
+                        .linkThreeObject(link => {
+                            const dummy = new THREE.Points();
+                            dummy.visible = false;
+                            return dummy;
+                        })
+                        .linkPositionUpdate((linkObject, { start, end }, link) => {
+                            if (icons3D[link.key] !== undefined) {
+                                const linkIcons = icons3D[link.key];
+                                const dist = is2d
+                                    ? new THREE.Vector2(start.x, start.y).distanceTo(new THREE.Vector2(end.x, end.y))
+                                    : new THREE.Vector3(start.x, start.y, start.z).distanceTo(new THREE.Vector3(end.x, end.y, end.z));
+                                const spacing = Math.min(((dist / 2) / dist) / (linkIcons.length + 1), 16 / dist);
+                                if (is2d) {
+                                    for (let i in linkIcons) {
+                                        const icon = linkIcons[i];
+                                        let resX, resY;
+                                        const rat = ((dist / 4) / dist) + i * spacing;
+                                        resX = (1 - rat) * start.x + rat * end.x;
+                                        resY = (1 - rat) * start.y + rat * end.y;
+                                        icon.position.set(resX, resY, 0);
                                     }
-                                }
-                                if (selectedWorldId === id) {
-                                    ctx.strokeStyle = '#f00';
-                                    ctx.lineWidth = 1 / globalScale;
-                                    ctx.strokeRect(x - width / 2, y - height / 2, width, height);
-                                    if (selectedWorldZoomCheck) {
-                                        selectedWorldZoomCheck = false;
-                                        graph.centerAt(x, y, 1000);
-                                        graph.zoom(8, 1000);
-                                    }
-                                }
-                                if (isHover && (isShift || isCtrl))
-                                    ctx.fillText("🔗", x + (width / 2) - 3.5, y - (height / 2) + 2.5);
-                                ctx.globalAlpha = 1;
-                            })
-                            .linkCanvasObjectMode('connTypeCheck')
-                            .linkCanvasObject((link, ctx, globalScale) => {
-                                if (!link.hidden) {
-                                    const connType = link.connType;
-                                    const fade = getLinkFaded(link);
-                                    const linkColor = getLinkColor(link);
-                                    ctx.beginPath();
-                                    ctx.lineWidth = (selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1) / globalScale;
-                                    ctx.strokeStyle = linkColor;
-                                    if (connType && connType & ConnType.ONE_WAY) {
-                                        let currentDashOffset = dashOffset;
-                                        link.key === lastOneWayLinkKey && (dashOffset = dashOffset < 9.8 ? dashOffset + 0.2 : 0);
-                                        ctx.setLineDash([5, 5]);
-                                        ctx.lineDashOffset = currentDashOffset * -1;
-                                    }
-                                    const sourceX = link.source.x;
-                                    const sourceY = link.source.y;
-                                    const targetX = link.target.x;
-                                    const targetY = link.target.y;
-                                    ctx.moveTo(sourceX, sourceY);
-                                    ctx.lineTo(targetX, targetY);
-                                    ctx.stroke();
-                                    ctx.closePath();
-                                }
-                                if (link.key === lastLinkKey)
-                                    gData.links.filter(l => (!l.hidden || config.connMode) && l.icons.length).forEach(l => {
-                                        if (getLinkFaded(l))
-                                            ctx.globalAlpha = 0.1;
-                                        drawLinkIcons(l, ctx, globalScale);
-                                        ctx.globalAlpha = 1;
-                                    });
-                            })
-                            .iconLabel(icon => icon.text);
-                    else {
-                        const clock = new THREE.Clock();
-                        let time = 0;
-
-                        linksTwoWayBuffered = undefined;
-                        linksOneWayBuffered = undefined;
-
-                        graph = graph
-                            .backgroundColor('#00000000')
-                            .linkOpacity(1)
-                            .nodeThreeObject(node => {
-                                const scale = worldScales[node.id];
-                                const world = worldData[node.id];
-                                const texture = new THREE.TextureLoader().load(world.filename);
-
-                                texture.anisotropy = maxAnisotropy;
-                                texture.minFilter = THREE.NearestFilter; // disables mipmaps (eliminates blur)
-
-                                const ret = new THREE.Mesh(new THREE.BoxGeometry(13 * scale, 13 * scale, 13 * scale), new THREE.MeshBasicMaterial({ map: texture }));
-                                
-                                const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
-                                const text = new SpriteText(worldName, 1.5, 'white');
-                                text.__graphObjType = 'label';
-                                text.fontFace = 'MS Gothic';
-                                text.fontSize = 80;
-                                text.strokeWidth = 2;
-                                text.strokeColor = '#000000';
-                                text.backgroundColor = false;
-                                
-                                let textLines = worldName.split(" ");
-                                for (let l = 0; l < textLines.length; l++) {
-                                    text.text = textLines[l];
-                                    if (text.scale.x * scale < node.width) {
-                                        let mergeIndex = 0;
-                                        for (let l2 = l + 1; l2 < textLines.length; l2++) {
-                                            const mergedLine = textLines.slice(l, l2 + 1).join(" ");
-                                            text.text = mergedLine;
-                                            if (text.scale.x * scale < node.width)
-                                                mergeIndex = l2;
-                                            else
-                                                break;
-                                        }
-                                        if (mergeIndex)
-                                            textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
-                                    } else if (textLines[l].indexOf("：") > -1)
-                                        textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
-                                }
-                                text.text = textLines.join('\r\n');
-                                text.defaultScale = { "x": text.scale.x, "y": text.scale.y };
-                                if (config.labelMode < 3)
-                                    text.visible = false;
-
-                                ret.add(text);
-
-                                return ret;
-                            })
-                            .onEngineTick(() => {
-                                time -= clock.getDelta() * dashLineSpeed;
-                                updateNodeLabels();
-                                updateLinkObjects(visibleTwoWayLinks, linksTwoWayBuffered);
-                                updateLinkObjects(visibleOneWayLinks, linksOneWayBuffered);
-                                updateLinkAnimation(linksOneWayBuffered, time);
-                                updateLinkDistances();
-                            })
-                            .linkThreeObject(link => {
-                                const dummy = new THREE.Points();
-                                dummy.visible = false;
-                                return dummy;
-                            })
-                            .linkPositionUpdate((linkObject, { start, end }, link) => {
-                                if (icons3D[link.key] !== undefined) {
-                                    const linkIcons = icons3D[link.key];
-                                    const dist = new THREE.Vector3(start.x, start.y, start.z).distanceTo(new THREE.Vector3(end.x, end.y, end.z));
-                                    const spacing = Math.min(((dist / 2) / dist) / (linkIcons.length + 1), 16 / dist);
+                                } else {
+                                    
                                     for (let i in linkIcons) {
                                         const icon = linkIcons[i];
                                         let resX, resY, resZ;
@@ -1191,14 +1144,14 @@
                                         resX = (1 - rat) * start.x + rat * end.x;
                                         resY = (1 - rat) * start.y + rat * end.y;
                                         resZ = (1 - rat) * start.z + rat * end.z;
-                                        icon.position.set(resX, resY + 10, resZ);
+                                        icon.position.set(resX, resY + 10, is2d ? 0 : resZ);
                                     }
                                 }
-                            });
-                    };
+                            }
+                        });
                     graph = graph
                         .connMode(() => config.connMode)
-                        .nodeVal(node => node.height)
+                        .nodeVal(node => node.width)
                         .nodeLabel(node => node.img.title)
                         .nodesPerStack(config.stackSize)
                         .onNodeDragEnd(node => {
@@ -1222,14 +1175,9 @@
                                 if (node && (selectedWorldId == null || selectedWorldId !== node.id)) {
                                     $(".js--search-world").addClass("selected").val(config.lang === 'en' || !world.titleJP ? world.title : world.titleJP);
                                     selectedWorldId = node.id;
-                                } else {
-                                    if (is2d)
-                                        selectedWorldZoomCheck = true;
-                                    else
-                                        focusNode(node);
-                                }
-                                if (!is2d)
-                                    highlightWorldSelection();
+                                } else
+                                    focusNode(node);
+                                highlightWorldSelection();
                             }
                         })
                         .onNodeRightClick((node, ev) => {
@@ -1241,18 +1189,13 @@
                         })
                         .onBackgroundClick(node => {
                             $(".js--search-world").removeClass("selected").val("");
-                            if (is2d) {
-                                selectedWorldId = null;
-                                selectedWorldZoomCheck = false;
-                            } else if (selectedWorldId != null) {
-                                selectedWorldId = null;
-								highlightWorldSelection();
-                            }
+                            selectedWorldId = null;
+                            highlightWorldSelection();
                         })
                         .cooldownTime(Infinity)
                         // Deactivate existing forces
                         // Add collision and bounding box forces
-                        .d3Force('collide', d3.forceCollide((node) => radius * worldScales[node.id]))
+                        .d3Force('collide', d3.forceCollide(node => radius * worldScales[node.id]))
                         .d3Force('box', () => {
                             const SQUARE_HALF_SIDE = radius * 50;
 
@@ -1273,11 +1216,11 @@
 
                     document.removeEventListener('mousemove', onDocumentMouseMove);
 
-                    if (is2d) {
-                        if (iconLabel) {
+                    if (false) {
+                        /*if (iconLabel) {
                             iconLabel.parentNode.removeChild(iconLabel);
                             iconLabel = null;
-                        }
+                        }*/
                     } else {
                         // initialize object to perform world/screen calculations
                         raycaster = new THREE.Raycaster();
@@ -1294,18 +1237,18 @@
                             }
                         })
 
-                        makeLinkIcons();
+                        makeLinkIcons(is2d);
                         makeLinkIconTooltip();
-                        linksTwoWayBuffered = makeTwoWayLinkObjects();
-                        linksOneWayBuffered = makeOneWayLinkObjects();
-                        updateLinkObjects(visibleTwoWayLinks, linksTwoWayBuffered);
-                        updateLinkObjects(visibleOneWayLinks, linksOneWayBuffered);
+                        linksTwoWayBuffered = makeTwoWayLinkObjects(is2d);
+                        linksOneWayBuffered = makeOneWayLinkObjects(is2d);
+                        updateLinkObjects(visibleTwoWayLinks, linksTwoWayBuffered, is2d);
+                        updateLinkObjects(visibleOneWayLinks, linksOneWayBuffered, is2d);
                         updateLinkColors(visibleTwoWayLinks, linksTwoWayBuffered);
                         updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
                     }
                 }
 
-                function updateNodeLabels() {
+                function updateNodeLabels(is2d) {
                     if (config.labelMode > 0) {
                         const camera = graph.camera();
                         graph.graphData().nodes.forEach(node => {
@@ -1314,13 +1257,15 @@
                                 const text = obj.children[0];
                                 if (config.labelMode === 3 || (config.labelMode === 1 && node.isHover) || (config.labelMode === 2 && node.id === selectedWorldId)) {
                                     const scale = worldScales[node.id];
-                                    const dist = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z).distanceTo(new THREE.Vector3(node.x, node.y, node.z));
-                                    let resX, resY, resZ;
-                                    const rat = (13 * scale) / dist;
-                                    resX = (1 - rat) * node.x + rat * camera.position.x;
-                                    resY = (1 - rat) * node.y + rat * camera.position.y;
-                                    resZ = (1 - rat) * node.z + rat * camera.position.z;
-                                    text.position.set(resX - node.x, resY - node.y, resZ - node.z);
+                                    if (!is2d) {
+                                        const dist = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z).distanceTo(new THREE.Vector3(node.x, node.y, node.z));
+                                        let resX, resY, resZ;
+                                        const rat = (13 * scale) / dist;
+                                        resX = (1 - rat) * node.x + rat * camera.position.x;
+                                        resY = (1 - rat) * node.y + rat * camera.position.y;
+                                        resZ = (1 - rat) * node.z + rat * camera.position.z;
+                                        text.position.set(resX - node.x, resY - node.y, resZ - node.z);
+                                    }
                                     text.scale.x = text.defaultScale.x * scale;
                                     text.scale.y = text.defaultScale.y * scale;
                                     text.visible = true;
@@ -1331,12 +1276,12 @@
                     }
                 }
 
-                function makeLinkIcons() {
+                function makeLinkIcons(is2d) {
                     graph.graphData().links.forEach(link => {
                         if (icons3D[link.key] === undefined) {
                             let linkIcons = [];
                             link.icons.forEach(icon => {
-                                const text = new SpriteText(icon.char, 12, 'white');
+                                const text = new SpriteText(icon.char, 1, 'white');
                                 text.__graphObjType = 'icon';
                                 text.name = icon.text;
                                 text.fontFace = 'MS Gothic';
@@ -1344,8 +1289,11 @@
                                 // without the border emojis get cropped - possibly a bug in three-spritetext
                                 text.borderWidth = 1;
                                 text.borderColor = 'transparent';
-                                if (config.connMode === 0 && link.hidden)
-                                    text.visible = false;
+                                if (is2d) {
+                                    text.renderOrder = worldData.length;
+                                    text.material.depthTest = false;
+                                }
+                                config.connMode === 0 && link.hidden && (text.visible = false);
                                 linkIcons.push(text);
                                 graph.scene().add(text);
                             });
@@ -1370,7 +1318,7 @@
                     document.body.appendChild(iconLabel);
                 }
 
-                function makeTwoWayLinkObjects() {
+                function makeTwoWayLinkObjects(is2d) {
                     const lineVertShader = `
                         attribute float opacity;
                         varying vec3 vColor;
@@ -1400,14 +1348,17 @@
                         vertexShader: lineVertShader,
                         fragmentShader: lineFragShader,
                         transparent: true,
-                        vertexColors: true
+                        vertexColors: true,
+                        depthTest: !is2d
                     });
                     const bufferedGeometry = new THREE.LineSegments(geometry, material);
+                    if (is2d)
+                        bufferedGeometry.renderOrder = -1;
                     graph.scene().add(bufferedGeometry);
                     return bufferedGeometry;
                 }
 
-                function makeOneWayLinkObjects() {
+                function makeOneWayLinkObjects(is2d) {
                     const lineVertShader = `
                         attribute float lineDistance;
                         attribute float opacity;
@@ -1456,34 +1407,38 @@
                         vertexShader: lineVertShader,
                         fragmentShader: lineFragShader,
                         transparent: true,
-                        vertexColors: true
+                        vertexColors: true,
+                        depthTest: !is2d
                     });
                     const bufferedGeometry = new THREE.LineSegments(geometry, material);
+                    if (is2d)
+                        bufferedGeometry.renderOrder = -1;
                     graph.scene().add(bufferedGeometry);
                     return bufferedGeometry;
                 }
 
-                function updateLinkObjects(linkData, bufferedObject) {
+                function updateLinkObjects(linkData, bufferedObject, is2d) {
                     const positions = bufferedObject.geometry.attributes.position.array;
                     let index = 0;
                     linkData.forEach(link => {
                         let source, target;
                         if (link.source.x == undefined) {
-                            source = {x: 0, y:0, z: 0};
-                            target = {x: 0, y:0, z: 0};
+                            source = { x: 0, y: 0, z: 0 };
+                            target = { x: 0, y: 0, z: 0 };
                         } else {
                             source = link.source;
                             target = link.target;
                         }
                         positions[index++] = source.x;
                         positions[index++] = source.y;
-                        positions[index++] = source.z;
+                        positions[index++] = is2d ? 0 : source.z;
                         positions[index++] = target.x;
                         positions[index++] = target.y;
-                        positions[index++] = target.z;
+                        positions[index++] = is2d ? 0 : target.z;
                     })
                     bufferedObject.geometry.attributes.position.needsUpdate = true;
-                    bufferedObject.geometry.computeBoundingSphere();
+                    if (!is2d)
+                        bufferedObject.geometry.computeBoundingSphere();
                 }
 
                 function updateLinkAnimation(bufferedObject, time) {
@@ -2050,16 +2005,13 @@
                                 selectedWorldId = null;
                                 selectedWorldZoomCheck = false;
                             }
-                            if (config.renderMode)
-                                highlightWorldSelection();
+                            highlightWorldSelection();
                         },
                         onSelect: function (selectedWorld) {
                             $search.addClass("selected");
                             selectedWorldId = worldsByName[selectedWorld.value].id;
-                            if (config.renderMode) {
-                                focusNode(graph.graphData().nodes[selectedWorldId]);
-                                highlightWorldSelection();
-                            }
+                            focusNode(graph.graphData().nodes[selectedWorldId]);
+                            highlightWorldSelection();
                         },
                         onHide: function () {
                            if (selectedWorldId != null) {
@@ -2072,8 +2024,7 @@
                                 }
                             }
                             searchWorldIds = [];
-                            if (config.renderMode)
-                                highlightWorldSelection();
+                            highlightWorldSelection();
                         }
                     });
                 }
@@ -2292,14 +2243,13 @@
 
                     $(".js--conn-mode").change(function() {
                         config.connMode = parseInt($(this).val());
-                        if (config.renderMode)
-                            updateConnectionModeIcons();
+                        updateConnectionModeIcons();
                         updateConfig();
                     });
 
                     $(".js--label-mode").change(function() {
                         config.labelMode = parseInt($(this).val());
-                        if (!config.labelMode && config.renderMode) {
+                        if (!config.labelMode) {
                             graph.graphData().nodes.forEach(node => {
                                 const obj = node.__threeObj;
                                 if (obj)

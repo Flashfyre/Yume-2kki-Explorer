@@ -63494,10 +63494,19 @@ vec4 envMapTexelToLinear(vec4 color) {
       } // to be deprecated
 
     },
-    stateInit: function stateInit() {
+    stateInit: function stateInit(options) {
+	  let camera;
+	  if (!options || !options.numDimensions || options.numDimensions >= 3) {
+        camera = new three$2.PerspectiveCamera();
+	  } else {
+		let aspectRatio = window.innerWidth / window.innerHeight;
+		let frustumSize = 1000;
+		camera = new three$2.OrthographicCamera(frustumSize * aspectRatio / -2, frustumSize * aspectRatio / 2, frustumSize / 2, frustumSize / -2, 0.1, 2000)
+	  }
+	  
       return {
         scene: new three$2.Scene(),
-        camera: new three$2.PerspectiveCamera(),
+        camera: camera,
         clock: new three$2.Clock()
       };
     },
@@ -63887,7 +63896,7 @@ vec4 envMapTexelToLinear(vec4 color) {
       // Expose controls
       tbControls: function tbControls(state) {
         return state.renderObjs.tbControls();
-      },
+	  },
       // To be deprecated
       _destructor: function _destructor() {
         this.pauseAnimation();
@@ -63899,12 +63908,14 @@ vec4 envMapTexelToLinear(vec4 color) {
     }, linkedFGMethods, {}, linkedRenderObjsMethods),
     stateInit: function stateInit(_ref5) {
       var controlType = _ref5.controlType,
-          rendererConfig = _ref5.rendererConfig;
+		  rendererConfig = _ref5.rendererConfig,
+		  numDimensions = _ref5.numDimensions;
       return {
         forceGraph: new threeForcegraph(),
         renderObjs: threeRenderObjects({
           controlType: controlType,
-          rendererConfig: rendererConfig
+		  rendererConfig: rendererConfig,
+		  numDimensions: numDimensions
         })
       };
     },
