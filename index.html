@@ -1475,7 +1475,18 @@
                     var colors = bufferedObject.geometry.attributes.color.array;
                     var index = 0;
                     linkData.forEach(link => {
-                        var color = new THREE.Color(link.defaultColor);
+                        var color;
+                        if (selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId)) {
+                            //link.__lineObj.material.transparent = false;
+                            color = colorLinkSelected;
+                        } else if ((selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)) {
+                            //link.__lineObj.material.transparent = false;
+                            color = new THREE.Color(link.defaultColor);
+                        } else {
+                            //link.__lineObj.material.transparent = true;
+                            //link.__lineObj.material.uniforms.opacity.value = 0.1;
+                            color = new THREE.Color(link.defaultColor);
+                        }
                         colors[index++] = color.r;
                         colors[index++] = color.g;
                         colors[index++] = color.b;
@@ -2107,33 +2118,8 @@
                             node.__threeObj.material.opacity = opacity;
                         }
                     });
-                    graph.graphData().links.forEach(link => {
-                         // do nothing for hidden links
-                        if (!link.hidden) {
-                            if (selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId)) {
-                                link.__lineObj.material.transparent = false;
-                                if (link.__lineObj.material.uniforms !== undefined)
-                                    link.__lineObj.material.uniforms.diffuse.value = colorLinkSelected;
-                                else
-                                    link.__lineObj.material.color = colorLinkSelected;
-                            } else if ((selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)) {
-                                link.__lineObj.material.transparent = false;
-                                if (link.__lineObj.material.uniforms !== undefined)
-                                    link.__lineObj.material.uniforms.diffuse.value = new THREE.Color(link.defaultColor);
-                                else
-                                    link.__lineObj.material.color = new THREE.Color(link.defaultColor);
-                            } else {
-                                link.__lineObj.material.transparent = true;
-                                if (link.__lineObj.material.uniforms !== undefined) {
-                                    link.__lineObj.material.uniforms.opacity.value = 0.1;
-                                    link.__lineObj.material.uniforms.diffuse.value = new THREE.Color(link.defaultColor);
-                                } else {
-                                    link.__lineObj.material.color = new THREE.Color(link.defaultColor);
-                                    link.__lineObj.material.opacity = 0.1;
-                                }
-                            }
-                        }
-                    });
+                    updateLinkColors(visibleTwoWayLinks, linksTwoWayBuffered);
+                    updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
                 }
 
                 let worldsByName, worldNames, minSize, maxSize;
