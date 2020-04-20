@@ -400,7 +400,7 @@
         <script src="//unpkg.com/d3-force"></script>
         <script src="//unpkg.com/three"></script>
         <script src="//unpkg.com/three-spritetext"></script>
-        <script src="/js/3d-force-graph-modded.js"></script>
+        <script src="/js/yume-2kki-explorer.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.devbridge-autocomplete/1.4.10/jquery.autocomplete.min.js"></script>
@@ -1030,7 +1030,7 @@
 
                     const elem = document.getElementById('graph');
 
-                    graph = ForceGraph3D({
+                    graph = Y2EForceGraph({
                         controlType: 'orbit',
                         numDimensions: is2d ? 2 : 3
                     })(elem);
@@ -1216,36 +1216,29 @@
 
                     document.removeEventListener('mousemove', onDocumentMouseMove);
 
-                    if (false) {
-                        /*if (iconLabel) {
-                            iconLabel.parentNode.removeChild(iconLabel);
-                            iconLabel = null;
-                        }*/
-                    } else {
-                        // initialize object to perform world/screen calculations
-                        raycaster = new THREE.Raycaster();
+                    // initialize object to perform world/screen calculations
+                    raycaster = new THREE.Raycaster();
 
-                        // when the mouse moves, call the given function
-                        document.addEventListener('mousemove', onDocumentMouseMove, false);
+                    // when the mouse moves, call the given function
+                    document.addEventListener('mousemove', onDocumentMouseMove, false);
 
-                        graph.graphData().links.forEach(link => {
-                            if (!link.hidden) {
-                                if (link.connType & ConnType.ONE_WAY)
-                                    visibleOneWayLinks.push(link);
-                                else
-                                    visibleTwoWayLinks.push(link);
-                            }
-                        })
+                    graph.graphData().links.forEach(link => {
+                        if (!link.hidden) {
+                            if (link.connType & ConnType.ONE_WAY)
+                                visibleOneWayLinks.push(link);
+                            else
+                                visibleTwoWayLinks.push(link);
+                        }
+                    })
 
-                        makeLinkIcons(is2d);
-                        makeLinkIconTooltip();
-                        linksTwoWayBuffered = makeTwoWayLinkObjects(is2d);
-                        linksOneWayBuffered = makeOneWayLinkObjects(is2d);
-                        updateLinkObjects(visibleTwoWayLinks, linksTwoWayBuffered, is2d);
-                        updateLinkObjects(visibleOneWayLinks, linksOneWayBuffered, is2d);
-                        updateLinkColors(visibleTwoWayLinks, linksTwoWayBuffered);
-                        updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
-                    }
+                    makeLinkIcons(is2d);
+                    makeLinkIconTooltip();
+                    linksTwoWayBuffered = makeTwoWayLinkObjects(is2d);
+                    linksOneWayBuffered = makeOneWayLinkObjects(is2d);
+                    updateLinkObjects(visibleTwoWayLinks, linksTwoWayBuffered, is2d);
+                    updateLinkObjects(visibleOneWayLinks, linksOneWayBuffered, is2d);
+                    updateLinkColors(visibleTwoWayLinks, linksTwoWayBuffered);
+                    updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
                 }
 
                 function updateNodeLabels(is2d) {
@@ -1437,8 +1430,7 @@
                         positions[index++] = is2d ? 0 : target.z;
                     })
                     bufferedObject.geometry.attributes.position.needsUpdate = true;
-                    if (!is2d)
-                        bufferedObject.geometry.computeBoundingSphere();
+                    bufferedObject.geometry.computeBoundingSphere();
                 }
 
                 function updateLinkAnimation(bufferedObject, time) {
@@ -1471,7 +1463,7 @@
                         colors[index++] = color.b;
                         opacities[opacityIndex++] = opacity;
                         opacities[opacityIndex++] = opacity;
-                    })
+                    });
                     bufferedObject.geometry.attributes.color.needsUpdate = true;
                     bufferedObject.geometry.attributes.opacity.needsUpdate = true;
                 }
@@ -2099,7 +2091,6 @@
                         if (node.__threeObj) {
                             const id = node.id;
                             const opacity = (selectedWorldId == null || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1) ? 1 : selectedWorldId != null && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length ? 0.625 : 0.1;
-                            node.__threeObj.material.transparent = opacity < 1;
                             node.__threeObj.material.opacity = opacity;
                         }
                     });
