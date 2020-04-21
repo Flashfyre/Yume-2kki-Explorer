@@ -527,7 +527,6 @@
                 let fontsLoaded = false;
 
                 const worldScales = {};
-                let is2d;
 
                 $.fn.extend({
                     animateCss: function (animation, duration, endCallback) {
@@ -841,7 +840,7 @@
 
                 function initGraph(renderMode, displayMode, paths) {
 
-                    is2d = !renderMode;
+                    const is2d = !renderMode;
 
                     const links = [];
 
@@ -1218,7 +1217,7 @@
                     document.removeEventListener('mousemove', onDocumentMouseMove);
                     document.removeEventListener('wheel', onDocumentMouseWheel);
 
-                    if(is2d) {
+                    if (is2d) {
                         document.addEventListener('wheel', onDocumentMouseWheel);
                         graph.controls().mouseButtons.PAN = THREE.MOUSE.LEFT;
                         graph.controls().mouseButtons.ORBIT = THREE.MOUSE.MIDDLE;
@@ -1227,11 +1226,11 @@
                         graph.controls().update();
                     }
 
+                     // when the mouse moves, call the given function
+                     document.addEventListener('mousemove', onDocumentMouseMove, false);
+
                     // initialize object to perform world/screen calculations
                     raycaster = new THREE.Raycaster();
-
-                    // when the mouse moves, call the given function
-                    document.addEventListener('mousemove', onDocumentMouseMove, false);
 
                     graph.graphData().links.forEach(link => {
                         if (!link.hidden) {
@@ -2072,7 +2071,7 @@
 
                 function focusNode(node) {
                     const distance = 50 * worldScales[node.id];
-                    if(is2d)
+                    if (!config.renderMode)
                         graph.cameraPosition({ x: node.x, y: node.y, z: distance}, node, 1000);
                     else {
                         const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
@@ -2118,7 +2117,7 @@
                     var camera = graph.camera();
                     var controls = graph.controls();
                     const minDistance = 15;
-                    if(camera.position.z <= minDistance && event.deltaY < 0)
+                    if (camera.position.z <= minDistance && event.deltaY < 0)
                         return;
                     var factor = Math.pow(camera.position.z, 0.75);
                     var mX = (event.clientX / window.innerWidth) * 2 - 1;
