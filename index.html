@@ -801,7 +801,7 @@
 
                 let graph;
                 
-                let contextWorldId = null, startWorldId = null, endWorldId = null, selectedWorldId = null, selectedWorldZoomCheck = false;
+                let contextWorldId = null, startWorldId = null, endWorldId = null, selectedWorldId = null;
 
                 let searchWorldIds = [], visibleWorldIds = [];
                 
@@ -1030,7 +1030,7 @@
 
                     const elem = document.getElementById('graph');
 
-                    graph = Y2EForceGraph({
+                    graph = Y2E.ForceGraph3D({
                         controlType: 'orbit',
                         numDimensions: is2d ? 2 : 3
                     })(elem);
@@ -1214,14 +1214,14 @@
                         .graphData(gData);
 
                     document.removeEventListener('mousemove', onDocumentMouseMove);
-                    document.removeEventListener('wheel', onDocumentMouseWheel);
 
                     if (is2d) {
-                        document.addEventListener('wheel', onDocumentMouseWheel);
-                        graph.controls().mouseButtons.PAN = THREE.MOUSE.LEFT;
-                        graph.controls().mouseButtons.ORBIT = THREE.MOUSE.MIDDLE;
-                        graph.controls().enableRotate = false;
-                        graph.controls().update();
+                        const controls = graph.controls();
+                        controls.minAzimuthAngle = 0;
+                        controls.maxAzimuthAngle = 0;
+                        controls.mouseButtons.PAN = THREE.MOUSE.LEFT;
+                        controls.enableRotate = false;
+                        controls.update();
                     }
 
                      // when the mouse moves, call the given function
@@ -1570,110 +1570,6 @@
                     return char;
                 }
 
-                function drawLinkIcons(link, ctx, globalScale) {
-                    const sourceScale = link.sourceScale;
-                    const targetScale = link.targetScale;
-                    const connType = link.connType;
-                    const icons = link.icons;
-                    let sourceX = link.source.x;
-                    let sourceY = link.source.y;
-                    let targetX = link.target.x;
-                    let targetY = link.target.y;
-                    let tempSourceX = sourceX;
-                    let tempSourceY = sourceY;
-                    let tempTargetX = targetX;
-                    let tempTargetY = targetY;
-                    /*ctx.save();
-                    ctx.beginPath();
-                    var style = ctx.strokeStyle;
-                    var lwidth = ctx.lineWidth;
-                    ctx.strokeStyle = "rgba(255, 0, 0, 1)";
-                    ctx.lineWidth = 0.1;*/
-                    let gapSize;
-                    const scale = globalScale < 24 ? 1 : 24 / globalScale;
-                    const isX = Math.abs(targetX - sourceX) >= Math.abs(targetY - sourceY);
-                    if (isX) {
-                        const addSourceCoord = (sourceX < targetX ? 8 : -8) * sourceScale;
-                        const addTargetCoord = (targetX < sourceX ? 8 : -8) * targetScale;
-                        sourceX += addSourceCoord;
-                        sourceY = sourceY + (tempTargetY - tempSourceY)/(tempTargetX - tempSourceX) * addSourceCoord;
-                        targetX += addTargetCoord;
-                        targetY = targetY + (tempSourceY - tempTargetY)/(tempSourceX - tempTargetX) * addTargetCoord;
-                        gapSize = Math.max(Math.min(((sourceX < targetX ? targetX - sourceX : sourceX - targetX) - 16 * scale) / icons.length - 1, 8 * scale), 0);
-                    } else {
-                        const addSourceCoord = (sourceY < targetY ? 6 : -6) * sourceScale;
-                        const addTargetCoord = (targetY < sourceY ? 6 : -6) * targetScale;
-                        sourceY += addSourceCoord;
-                        sourceX = sourceX + (tempTargetX - tempSourceX)/(tempTargetY - tempSourceY) * addSourceCoord;
-                        targetY += addTargetCoord;
-                        targetX = targetX + (tempSourceX - tempTargetX)/(tempSourceY - tempTargetY) * addTargetCoord;
-                        gapSize = Math.max(Math.min(((sourceY < targetY ? targetY - sourceY : sourceY - targetY) - 16 * scale) / icons.length - 1, 8 * scale), 0);
-                    }
-                    /*ctx.arc(sourceX, sourceY, 0.3, 0, 2 * Math.PI)
-                    ctx.stroke();
-                    ctx.closePath();
-                    ctx.beginPath();
-                    ctx.strokeStyle = "rgba(0, 0, 255, 1)";
-                    ctx.arc(targetX, targetY, 0.3, 0, 2 * Math.PI)
-                    ctx.stroke();
-                    ctx.closePath();
-                    ctx.restore();
-                    ctx.strokeStyle = style;
-                    ctx.lineWidth = lwidth;*/
-                    ctx.fillStyle = "#fff";
-                    ctx.font = (scale * 6) + "px 'MS Gothic'";
-                    const textBaseX = (sourceX * 1.5 + targetX * 0.5) / 2;
-                    const textBaseY = (sourceY * 1.5 + targetY * 0.5) / 2;
-                    for (let e = 0; e < icons.length; e++) {
-                        const emoji = icons[e].char;
-                        let textX, textY;
-                        const addCoord = gapSize * ((icons.length * -0.5) + e + 0.5); //e * gapSize;
-                        if (isX) {
-                            textX = (textBaseX + addCoord) - 3.5 * scale;
-                            textY = textBaseY + (targetY - sourceY)/(targetX - sourceX) * addCoord;
-                        } else {
-                            textY = textBaseY + addCoord;
-                            textX = (textBaseX + (targetX - sourceX)/(targetY - sourceY) * addCoord) - 3.5 * scale;
-                        }
-                        /*if (isX) {
-                            textX = ((sourceX + 8 * scale) + addCoord) - 3.5 * scale;
-                            textY = sourceY + (targetY - sourceY)/(targetX - sourceX) * addCoord;
-                        } else {
-                            textY = ((sourceY + 8 * scale) + addCoord)
-                            textX = (sourceX + (targetX - sourceX)/(targetY - sourceY) * addCoord) - 3.5 * scale;;
-                        }*/
-                        if (e === 0 && connType & ConnType.ONE_WAY) {
-                            ctx.beginPath();
-                            ctx.setLineDash([0, 0]);
-                            if (sourceX >= targetX) {
-                                ctx.save();
-                                ctx.scale(-1, 1);
-                                textX += 7 * scale;
-                                ctx.strokeStyle = "#000";
-                                ctx.lineWidth = 0.2 * scale;
-                                ctx.roundRect(-textX - 0.25 * scale, textY - 5.5 * scale, 6.5 * scale, 6.5 * scale, 0.5 * scale);
-                                ctx.fill();
-                                ctx.stroke();
-                                ctx.fillStyle = "#000";
-                                ctx.fillText(emoji, -textX, textY);
-                                ctx.fillStyle = "#fff";
-                                ctx.restore();
-                            } else {
-                                ctx.strokeStyle = "#000";
-                                ctx.lineWidth = 0.2 * scale;
-                                ctx.roundRect(textX - 0.25 * scale, textY - 5.5 * scale, 6.5 * scale, 6.5 * scale, 0.5 * scale);
-                                ctx.fill();
-                                ctx.stroke();
-                                ctx.fillStyle = "#000";
-                                ctx.fillText(emoji, textX, textY);
-                                ctx.fillStyle = "#fff";
-                            }
-                            ctx.closePath();
-                        } else
-                            ctx.fillText(emoji, textX, textY);
-                    }
-                }
-
                 function reloadGraph() {
                     const startWorld = startWorldId != null ? worldData[startWorldId] : null;
                     const endWorld = endWorldId != null ? worldData[endWorldId] : null;
@@ -2003,7 +1899,6 @@
                             if (searchWorldIds.length && selectedWorld && (searchWorldIds.length !== 1 || selectedWorldId !== searchWorldIds[0])) {
                                 $search.removeClass("selected");
                                 selectedWorldId = null;
-                                selectedWorldZoomCheck = false;
                             }
                             highlightWorldSelection();
                         },
@@ -2020,7 +1915,6 @@
                                 if ($(this).val() !== selectedWorldName) {
                                     $search.removeClass("selected");
                                     selectedWorldId = null;
-                                    selectedWorldZoomCheck = false;
                                 }
                             }
                             searchWorldIds = [];
@@ -2069,9 +1963,16 @@
 
                 function focusNode(node) {
                     const distance = 50 * worldScales[node.id];
-                    if (!config.renderMode)
+                    if (!config.renderMode) {
+                        const camera = graph.camera();
                         graph.cameraPosition({ x: node.x, y: node.y, z: distance }, node, 1000);
-                    else {
+                        const oldZoom = { zoom: camera.zoom };
+                        const newZoom = { zoom: 20 };
+                        new Y2E.TWEEN.Tween(oldZoom).to(newZoom, graph.controls().zoomSpeed * 1000).easing(Y2E.TWEEN.Easing.Quadratic.Out).onUpdate(zoom => {
+                            camera.zoom = zoom.zoom;
+                            camera.updateProjectionMatrix();
+                        }).start();
+                    } else {
                         const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
                         graph.cameraPosition({ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, node, 1000);
                     }
@@ -2110,28 +2011,6 @@
                 }
 
                 let worldsByName, worldNames, minSize, maxSize;
-
-                function onDocumentMouseWheel(event) {
-                    const camera = graph.camera();
-                    const controls = graph.controls();
-                    const minDistance = 15;
-                    if (camera.position.z <= minDistance && event.deltaY < 0)
-                        return;
-                    factor = Math.pow(camera.position.z, 0.75);
-                    const mX = (event.clientX / window.innerWidth) * 2 - 1;
-                    const mY = -(event.clientY / window.innerHeight) * 2 + 1;
-                    const vector = new THREE.Vector3(mX, mY, 0.1);
-
-                    vector.unproject(camera);
-                    vector.sub(camera.position);
-                    if (event.deltaY < 0) {
-                        camera.position.addVectors(camera.position, vector.setLength(factor));
-                        controls.target.addVectors(controls.target, vector.setLength(factor));
-                    } else {
-                        camera.position.subVectors(camera.position, vector.setLength(factor));
-                        controls.target.subVectors(controls.target, vector.setLength(factor));
-                    }
-                }
 
                 function onDocumentMouseMove(event) {
                     updateRaycast();
@@ -2302,7 +2181,6 @@
                         startWorldId = null;
                         endWorldId = null;
                         selectedWorldId = null;
-                        selectedWorldZoomCheck = false;
                         if (worldData)
                             reloadGraph();
                     });

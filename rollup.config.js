@@ -5,7 +5,7 @@ import { name, homepage, version } from './package.json';
 
 const umdConf = {
   format: 'umd',
-  name: 'Y2EForceGraph',
+  name: 'Y2E',
   banner: `// Version ${version} ${name} - ${homepage}`
 };
 

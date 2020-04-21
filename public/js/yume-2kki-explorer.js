@@ -1,9 +1,9 @@
 // Version 2.1.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
-	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
-	typeof define === 'function' && define.amd ? define(factory) :
-	(global = global || self, global.Y2EForceGraph = factory());
-}(this, (function () { 'use strict';
+	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+	typeof define === 'function' && define.amd ? define(['exports'], factory) :
+	(global = global || self, factory(global.Y2E = {}));
+}(this, (function (exports) { 'use strict';
 
 	// Polyfills
 
@@ -64150,7 +64150,10 @@ vec4 envMapTexelToLinear(vec4 color) {
 	  }
 	});
 
-	return _3dForceGraph;
+	exports.ForceGraph3D = _3dForceGraph;
+	exports.TWEEN = TWEEN;
+
+	Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
 //# sourceMappingURL=yume-2kki-explorer.js.map
