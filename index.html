@@ -1050,6 +1050,7 @@
                     graph = graph
                         .numDimensions(is2d ? 2 : 3)
                         .backgroundColor('#00000000')
+                        .enableNavigationControls(is2d ? false : true)
                         .linkOpacity(1)
                         .nodeThreeObject(node => {
                             const scale = worldScales[node.id];
@@ -1215,6 +1216,10 @@
                         .graphData(gData);
 
                     document.removeEventListener('mousemove', onDocumentMouseMove);
+                    document.removeEventListener('wheel', onDocumentMouseWheel);
+
+                    if(is2d)
+                        document.addEventListener('wheel', onDocumentMouseWheel);
 
                     // initialize object to perform world/screen calculations
                     raycaster = new THREE.Raycaster();
@@ -1239,6 +1244,26 @@
                     updateLinkObjects(visibleOneWayLinks, linksOneWayBuffered, is2d);
                     updateLinkColors(visibleTwoWayLinks, linksTwoWayBuffered);
                     updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
+                }
+
+                function zoom2D(offset, deltaY) {
+                    var camera = graph.camera();
+                    var controls = graph.controls();
+                    var shiftX = offset.x / 5;
+                    var shiftY = -offset.y / 5;
+                    controls.target.x += shiftX;
+                    controls.target.y += shiftY;
+                    camera.position.x += shiftX;
+                    camera.position.y += shiftY;
+                    var shiftZ;
+                    if(deltaY > 0) {
+                        shiftZ = 20;
+                    } else {
+                        shiftZ = -20;
+                    }
+                    controls.target.z += shiftZ;
+                    camera.position.z += shiftZ;
+                    camera.updateProjectionMatrix();
                 }
 
                 function updateNodeLabels(is2d) {
@@ -2099,6 +2124,11 @@
                 }
 
                 let worldsByName, worldNames, minSize, maxSize;
+
+                function onDocumentMouseWheel(event) {
+                    var offset = new THREE.Vector2(mousePos.clientX - window.innerWidth / 2, mousePos.clientY - window.innerHeight / 2);
+                    zoom2D(offset, event.deltaY);
+                }
 
                 function onDocumentMouseMove(event) {
                     updateRaycast();
