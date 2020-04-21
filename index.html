@@ -527,6 +527,7 @@
                 let fontsLoaded = false;
 
                 const worldScales = {};
+                let is2d;
 
                 $.fn.extend({
                     animateCss: function (animation, duration, endCallback) {
@@ -840,7 +841,7 @@
 
                 function initGraph(renderMode, displayMode, paths) {
 
-                    const is2d = !renderMode;
+                    is2d = !renderMode;
 
                     const links = [];
 
@@ -2071,9 +2072,12 @@
 
                 function focusNode(node) {
                     const distance = 50 * worldScales[node.id];
-                    const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
-                    const cam = graph.cameraPosition();
-                    graph.cameraPosition({ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio}, node, 1000);
+                    if(is2d)
+                        graph.cameraPosition({ x: node.x, y: node.y, z: distance}, node, 1000);
+                    else {
+                        const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
+                        graph.cameraPosition({ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio}, node, 1000);
+                    }
                 }
 
                 function updateConnectionModeIcons() {
