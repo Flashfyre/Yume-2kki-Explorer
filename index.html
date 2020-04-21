@@ -1215,12 +1215,22 @@
                         .graphData(gData);
 
                     document.removeEventListener('mousemove', onDocumentMouseMove);
+                    document.removeEventListener('wheel', onDocumentMouseWheel);
+
+                    if (is2d) {
+                        document.addEventListener('wheel', onDocumentMouseWheel);
+                        graph.controls().mouseButtons.PAN = THREE.MOUSE.LEFT;
+                        graph.controls().mouseButtons.ORBIT = THREE.MOUSE.MIDDLE;
+                        graph.controls().enableRotate = false;
+                        graph.controls().enableZoom = false;
+                        graph.controls().update();
+                    }
+
+                     // when the mouse moves, call the given function
+                     document.addEventListener('mousemove', onDocumentMouseMove, false);
 
                     // initialize object to perform world/screen calculations
                     raycaster = new THREE.Raycaster();
-
-                    // when the mouse moves, call the given function
-                    document.addEventListener('mousemove', onDocumentMouseMove, false);
 
                     graph.graphData().links.forEach(link => {
                         if (!link.hidden) {
@@ -2061,9 +2071,12 @@
 
                 function focusNode(node) {
                     const distance = 50 * worldScales[node.id];
-                    const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
-                    const cam = graph.cameraPosition();
-                    graph.cameraPosition({ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio}, node, 1000);
+                    if (!config.renderMode)
+                        graph.cameraPosition({ x: node.x, y: node.y, z: distance}, node, 1000);
+                    else {
+                        const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
+                        graph.cameraPosition({ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio}, node, 1000);
+                    }
                 }
 
                 function updateConnectionModeIcons() {
@@ -2099,6 +2112,28 @@
                 }
 
                 let worldsByName, worldNames, minSize, maxSize;
+
+                function onDocumentMouseWheel(event) {
+                    var camera = graph.camera();
+                    var controls = graph.controls();
+                    const minDistance = 15;
+                    if (camera.position.z <= minDistance && event.deltaY < 0)
+                        return;
+                    var factor = Math.pow(camera.position.z, 0.75);
+                    var mX = (event.clientX / window.innerWidth) * 2 - 1;
+                    var mY = -(event.clientY / window.innerHeight) * 2 + 1;
+                    var vector = new THREE.Vector3(mX, mY, 0.1);
+
+                    vector.unproject(camera);
+                    vector.sub(camera.position);
+                    if (event.deltaY < 0) {
+                        camera.position.addVectors(camera.position, vector.setLength(factor));
+                        controls.target.addVectors(controls.target, vector.setLength(factor));
+                    } else {
+                        camera.position.subVectors(camera.position, vector.setLength(factor));
+                        controls.target.subVectors(controls.target, vector.setLength(factor));
+                    }
+                }
 
                 function onDocumentMouseMove(event) {
                     updateRaycast();
