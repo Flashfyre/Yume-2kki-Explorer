@@ -1221,7 +1221,6 @@
                         graph.controls().mouseButtons.PAN = THREE.MOUSE.LEFT;
                         graph.controls().mouseButtons.ORBIT = THREE.MOUSE.MIDDLE;
                         graph.controls().enableRotate = false;
-                        graph.controls().enableZoom = false;
                         graph.controls().update();
                     }
 
@@ -2118,7 +2117,7 @@
                     const minDistance = 15;
                     if (camera.position.z <= minDistance && event.deltaY < 0)
                         return;
-                     factor = Math.pow(camera.position.z, 0.75);
+                    factor = Math.pow(camera.position.z, 0.75);
                     const mX = (event.clientX / window.innerWidth) * 2 - 1;
                     const mY = -(event.clientY / window.innerHeight) * 2 + 1;
                     const vector = new THREE.Vector3(mX, mY, 0.1);
