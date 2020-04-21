@@ -1962,12 +1962,13 @@
                 }
 
                 function focusNode(node) {
-                    const distance = 50 * worldScales[node.id];
+                    const scale = worldScales[node.id];
+                    const distance = 50 * scale;
                     if (!config.renderMode) {
                         const camera = graph.camera();
                         graph.cameraPosition({ x: node.x, y: node.y, z: distance }, node, 1000);
                         const oldZoom = { zoom: camera.zoom };
-                        const newZoom = { zoom: 20 };
+                        const newZoom = { zoom: 20 / scale };
                         new Y2E.TWEEN.Tween(oldZoom).to(newZoom, graph.controls().zoomSpeed * 1000).easing(Y2E.TWEEN.Easing.Quadratic.Out).onUpdate(zoom => {
                             camera.zoom = zoom.zoom;
                             camera.updateProjectionMatrix();
