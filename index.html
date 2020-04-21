@@ -1251,26 +1251,6 @@
                     updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
                 }
 
-                function zoom2D(offset, deltaY) {
-                    var camera = graph.camera();
-                    var controls = graph.controls();
-                    var shiftX = offset.x / 5;
-                    var shiftY = -offset.y / 5;
-                    controls.target.x += shiftX;
-                    controls.target.y += shiftY;
-                    camera.position.x += shiftX;
-                    camera.position.y += shiftY;
-                    var shiftZ;
-                    if(deltaY > 0) {
-                        shiftZ = 20;
-                    } else {
-                        shiftZ = -20;
-                    }
-                    controls.target.z += shiftZ;
-                    camera.position.z += shiftZ;
-                    camera.updateProjectionMatrix();
-                }
-
                 function updateNodeLabels(is2d) {
                     if (config.labelMode > 0) {
                         const camera = graph.camera();
@@ -2131,8 +2111,25 @@
                 let worldsByName, worldNames, minSize, maxSize;
 
                 function onDocumentMouseWheel(event) {
-                    var offset = new THREE.Vector2(mousePos.clientX - window.innerWidth / 2, mousePos.clientY - window.innerHeight / 2);
-                    zoom2D(offset, event.deltaY);
+                    var camera = graph.camera();
+                    var controls = graph.controls();
+                    const minDistance = 15;
+                    if(camera.position.z <= minDistance && event.deltaY < 0)
+                        return;
+                    var factor = Math.pow(camera.position.z, 0.75);
+                    var mX = (event.clientX / window.innerWidth) * 2 - 1;
+                    var mY = -(event.clientY / window.innerHeight) * 2 + 1;
+                    var vector = new THREE.Vector3(mX, mY, 0.1);
+
+                    vector.unproject(camera);
+                    vector.sub(camera.position);
+                    if (event.deltaY < 0) {
+                        camera.position.addVectors(camera.position, vector.setLength(factor));
+                        controls.target.addVectors(controls.target, vector.setLength(factor));
+                    } else {
+                        camera.position.subVectors(camera.position, vector.setLength(factor));
+                        controls.target.subVectors(controls.target, vector.setLength(factor));
+                    }
                 }
 
                 function onDocumentMouseMove(event) {
