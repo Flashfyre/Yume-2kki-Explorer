@@ -1050,7 +1050,6 @@
                     graph = graph
                         .numDimensions(is2d ? 2 : 3)
                         .backgroundColor('#00000000')
-                        .enableNavigationControls(is2d ? false : true)
                         .linkOpacity(1)
                         .nodeThreeObject(node => {
                             const scale = worldScales[node.id];
@@ -1218,8 +1217,14 @@
                     document.removeEventListener('mousemove', onDocumentMouseMove);
                     document.removeEventListener('wheel', onDocumentMouseWheel);
 
-                    if(is2d)
+                    if(is2d) {
                         document.addEventListener('wheel', onDocumentMouseWheel);
+                        graph.controls().mouseButtons.PAN = THREE.MOUSE.LEFT;
+                        graph.controls().mouseButtons.ORBIT = THREE.MOUSE.MIDDLE;
+                        graph.controls().enableRotate = false;
+                        graph.controls().enableZoom = false;
+                        graph.controls().update();
+                    }
 
                     // initialize object to perform world/screen calculations
                     raycaster = new THREE.Raycaster();
