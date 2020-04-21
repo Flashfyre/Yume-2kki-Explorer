@@ -1136,7 +1136,6 @@
                                         icon.position.set(resX, resY, 0);
                                     }
                                 } else {
-                                    
                                     for (let i in linkIcons) {
                                         const icon = linkIcons[i];
                                         let resX, resY, resZ;
@@ -2072,10 +2071,10 @@
                 function focusNode(node) {
                     const distance = 50 * worldScales[node.id];
                     if (!config.renderMode)
-                        graph.cameraPosition({ x: node.x, y: node.y, z: distance}, node, 1000);
+                        graph.cameraPosition({ x: node.x, y: node.y, z: distance }, node, 1000);
                     else {
                         const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
-                        graph.cameraPosition({ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio}, node, 1000);
+                        graph.cameraPosition({ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, node, 1000);
                     }
                 }
 
@@ -2114,15 +2113,15 @@
                 let worldsByName, worldNames, minSize, maxSize;
 
                 function onDocumentMouseWheel(event) {
-                    var camera = graph.camera();
-                    var controls = graph.controls();
+                    const camera = graph.camera();
+                    const controls = graph.controls();
                     const minDistance = 15;
                     if (camera.position.z <= minDistance && event.deltaY < 0)
                         return;
-                    var factor = Math.pow(camera.position.z, 0.75);
-                    var mX = (event.clientX / window.innerWidth) * 2 - 1;
-                    var mY = -(event.clientY / window.innerHeight) * 2 + 1;
-                    var vector = new THREE.Vector3(mX, mY, 0.1);
+                     factor = Math.pow(camera.position.z, 0.75);
+                    const mX = (event.clientX / window.innerWidth) * 2 - 1;
+                    const mY = -(event.clientY / window.innerHeight) * 2 + 1;
+                    const vector = new THREE.Vector3(mX, mY, 0.1);
 
                     vector.unproject(camera);
                     vector.sub(camera.position);

@@ -63189,7 +63189,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	  }
 	}
 
-	var css_248z = ".scene-nav-info {\n  bottom: 5px;\n  width: 100%;\n  text-align: center;\n  color: slategrey;\n  opacity: 0.7;\n  font-size: 10px;\n}\n\n.scene-tooltip {\n  color: lavender;\n  font-size: 15px;\n}\n\n.scene-nav-info, .scene-tooltip {\n  position: absolute;\n  font-family: sans-serif;\n  pointer-events: none;\n}";
+	var css_248z = ".scene-nav-info {\r\n  bottom: 5px;\r\n  width: 100%;\r\n  text-align: center;\r\n  color: slategrey;\r\n  opacity: 0.7;\r\n  font-size: 10px;\r\n}\r\n\r\n.scene-tooltip {\r\n  color: lavender;\r\n  font-size: 15px;\r\n}\r\n\r\n.scene-nav-info, .scene-tooltip {\r\n  position: absolute;\r\n  font-family: sans-serif;\r\n  pointer-events: none;\r\n}";
 	styleInject(css_248z);
 
 	var three$2 = window.THREE ? window.THREE // Prefer consumption from global THREE, if exists
@@ -63385,10 +63385,20 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    } // to be deprecated
 
 	  },
-	  stateInit: function stateInit() {
+	  stateInit: function stateInit(options) {
+	    var camera;
+
+	    if (!options || !options.numDimensions || options.numDimensions >= 3) {
+	      camera = new three$2.PerspectiveCamera();
+	    } else {
+	      var aspectRatio = window.innerWidth / window.innerHeight;
+	      var frustumSize = 1000;
+	      camera = new three$2.OrthographicCamera(frustumSize * aspectRatio / -2, frustumSize * aspectRatio / 2, frustumSize / 2, frustumSize / -2, 0.1, 2000);
+	    }
+
 	    return {
 	      scene: new three$2.Scene(),
-	      camera: new three$2.PerspectiveCamera(),
+	      camera: camera,
 	      clock: new three$2.Clock()
 	    };
 	  },
@@ -63906,12 +63916,14 @@ vec4 envMapTexelToLinear(vec4 color) {
 	  }, linkedFGMethods, {}, linkedRenderObjsMethods),
 	  stateInit: function stateInit(_ref5) {
 	    var controlType = _ref5.controlType,
-	        rendererConfig = _ref5.rendererConfig;
+	        rendererConfig = _ref5.rendererConfig,
+	        numDimensions = _ref5.numDimensions;
 	    return {
 	      forceGraph: new threeForcegraph(),
 	      renderObjs: threeRenderObjects({
 	        controlType: controlType,
-	        rendererConfig: rendererConfig
+	        rendererConfig: rendererConfig,
+	        numDimensions: numDimensions
 	      })
 	    };
 	  },

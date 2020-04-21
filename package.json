@@ -13,6 +13,7 @@
     "mysql": "^2.18.1",
     "superagent": "^5.2.2",
     "three-forcegraph": "https://github.com/Flashfyre/three-forcegraph.git",
+    "three-render-objects": "https://github.com/Flashfyre/three-render-objects.git",
     "yarn": "^1.22.4"
   },
   "devDependencies": {
@@ -23,7 +24,7 @@
   "resolutions": {
     "3d-force-graph": "https://github.com/Flashfyre/3d-force-graph.git",
     "three-forcegraph": "https://github.com/Flashfyre/three-forcegraph.git",
-    "3d-force-graph/three-forcegraph": "https://github.com/Flashfyre/three-forcegraph.git"
+    "three-render-objects": "https://github.com/Flashfyre/three-render-objects.git"
   },
   "scripts": {
     "start": "node app.js",
