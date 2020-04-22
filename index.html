@@ -893,8 +893,6 @@
                                         key: linkId,
                                         source: sourceId,
                                         target: targetId,
-                                        sourceScale: worldScales[sourceId],
-                                        targetScale: worldScales[targetId],
                                         connType: path[w - 1].connType,
                                         typeParams: path[w - 1].typeParams,
                                         icons: [],
@@ -935,8 +933,6 @@
                                     key: `${world.id}_${connWorld.id}`,
                                     source: world.id,
                                     target: connWorld.id,
-                                    sourceScale: worldScales[world.id],
-                                    targetScale: worldScales[connWorld.id],
                                     connType: conn.type,
                                     typeParams: conn.typeParams,
                                     icons: [],
@@ -1065,6 +1061,8 @@
                                 ret.material.depthTest = false;
                                 ret.renderOrder = world.id;
                             }
+
+                            ret.material.opacity = getNodeOpacity(node);
                             
                             const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
                             const text = new SpriteText(worldName, 1.5, 'white');
@@ -1150,8 +1148,7 @@
                                     }
                                 }
                             }
-                        });
-                    graph = graph
+                        })
                         .connMode(() => config.connMode)
                         .nodeVal(node => node.width)
                         .nodeLabel(node => node.img.title)
@@ -1283,9 +1280,20 @@
                     }
                 }
 
+                function getNodeOpacity(node) {
+                    const id = node.id;
+                    const opacity = (selectedWorldId == null || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1)
+                        ? 1
+                        : selectedWorldId != null && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length
+                        ? 0.625
+                        : 0.1;
+                    return opacity;
+                }
+
                 function makeLinkIcons(is2d) {
                     graph.graphData().links.forEach(link => {
                         if (icons3D[link.key] === undefined) {
+                            const linkOpacity = getLinkOpacity(link);
                             let linkIcons = [];
                             link.icons.forEach(icon => {
                                 const text = new SpriteText(icon.char, 1, 'white');
@@ -1293,20 +1301,21 @@
                                 text.name = icon.text;
                                 text.fontFace = 'MS Gothic';
                                 text.fontSize = 80;
-                                // without the border emojis get cropped - possibly a bug in three-spritetext
                                 text.borderWidth = 1;
                                 text.borderColor = 'transparent';
                                 if (is2d) {
-                                    text.renderOrder = worldData.length;
+                                    text.renderOrder = 0;
                                     text.material.depthTest = false;
                                 }
-                                config.connMode === 0 && link.hidden && (text.visible = false);
+                                text.material.transparent = true;
+                                text.material.opacity = linkOpacity;
+                                !config.connMode && link.hidden && (text.visible = false);
                                 linkIcons.push(text);
                                 graph.scene().add(text);
                             });
                             icons3D[link.key] = linkIcons;
                         }
-                    })
+                    });
                 }
 
                 function makeLinkIconTooltip() {
@@ -1459,10 +1468,12 @@
                     linkData.forEach(link => {
                         let color;
                         let opacity;
-                        if (selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId)) {
+                        const sourceId = link.source.id !== undefined ? link.source.id : link.source;
+                        const targetId = link.target.id !== undefined ? link.target.id : link.target;
+                        if (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)) {
                             opacity = 1.0;
                             color = colorLinkSelected;
-                        } else if ((selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)) {
+                        } else if ((selectedWorldId == null || selectedWorldId === sourceId || selectedWorldId === targetId) && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)) {
                             opacity = 1.0;
                             color = new THREE.Color(link.defaultColor);
                         } else {
@@ -1500,13 +1511,28 @@
                 }
 
                 function getLinkColor(link) {
-                    return link.hidden ? 'transparent' : selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' :
-                        (selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)
-                        ? link.defaultColor : link.defaultColorFade
+                    const sourceId = link.source.id !== undefined ? link.source.id : link.source;
+                    const targetId = link.target.id !== undefined ? link.target.id : link.target;
+                    return link.hidden ? 'transparent' : selectedWorldId != null && (sourceId === selectedWorldId || selectedWorldId === targetId) ? '#f00' :
+                        (selectedWorldId == null || selectedWorldId === sourceId || selectedWorldId === targetId) && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)
+                        ? link.defaultColor : link.defaultColorFade;
                 }
 
                 function getLinkFaded(link) {
-                    return (selectedWorldId != null && link.source.id !== selectedWorldId && link.target.id !== selectedWorldId) || (searchWorldIds.length && searchWorldIds.indexOf(link.source.id) === -1 && searchWorldIds.indexOf(link.target.id) === -1);
+                    const sourceId = link.source.id !== undefined ? link.source.id : link.source;
+                    const targetId = link.target.id !== undefined ? link.target.id : link.target;
+                    return (selectedWorldId != null && sourceId !== selectedWorldId && selectedWorldId !== targetId) || (searchWorldIds.length && searchWorldIds.indexOf(sourceId) === -1 && searchWorldIds.indexOf(targetId) === -1);
+                }
+
+                function getLinkOpacity(link) {
+                    const sourceId = link.source.id !== undefined ? link.source.id : link.source;
+                    const targetId = link.target.id !== undefined ? link.target.id : link.target;
+                    return (selectedWorldId == null || (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)))
+                        && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)
+                        ? 1
+                        : selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)
+                        ? 0.625
+                        : 0.1
                 }
 
                 function getConnTypeIcon(connType, typeParams) {
@@ -1584,7 +1610,7 @@
                         : null;
                     if (graph)
                         graph._destructor();
-                    initGraph(config.renderMode, config.displayMode, matchPaths)
+                    initGraph(config.renderMode, config.displayMode, matchPaths);
                 }
 
                 let mult = 1;
@@ -1988,17 +2014,11 @@
                 function updateConnectionModeIcons() {
                     graph.graphData().links.forEach(link => {
                         if (icons3D[link.key] !== undefined) {
+                            const linkOpacity = getLinkOpacity(link);
                             icons3D[link.key].forEach(icon => {
                                 icon.visible = true;
-                                icon.material.opacity = (selectedWorldId == null || (selectedWorldId != null && (selectedWorldId === link.source.id || link.target.id === selectedWorldId)))
-                                    && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)
-                                    ? 1
-                                    : selectedWorldId != null && (selectedWorldId === link.source.id || selectedWorldId === link.target.id)
-                                    ? 0.625
-                                    : 0.1;
-
-                                if (config.connMode === 0 && link.hidden)
-                                    icon.visible = false;
+                                icon.material.opacity = linkOpacity;
+                                config.connMode === 0 && link.hidden && (icon.visible = false);
                             });
                         }
                     });
@@ -2006,13 +2026,7 @@
 
                 function highlightWorldSelection() {
                     updateConnectionModeIcons();
-                    graph.graphData().nodes.forEach(node => {
-                        if (node.__threeObj) {
-                            const id = node.id;
-                            const opacity = (selectedWorldId == null || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1) ? 1 : selectedWorldId != null && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length ? 0.625 : 0.1;
-                            node.__threeObj.material.opacity = opacity;
-                        }
-                    });
+                    graph.graphData().nodes.forEach(node => node.__threeObj && (node.__threeObj.material.opacity = getNodeOpacity(node)));
                     updateLinkColors(visibleTwoWayLinks, linksTwoWayBuffered);
                     updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
                 }
