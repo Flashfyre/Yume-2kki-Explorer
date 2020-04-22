@@ -13,8 +13,7 @@
     "mysql": "^2.18.1",
     "superagent": "^5.2.2",
     "three-forcegraph": "https://github.com/Flashfyre/three-forcegraph.git",
-    "three-render-objects": "https://github.com/Flashfyre/three-render-objects.git",
-    "yarn": "^1.22.4"
+    "three-render-objects": "https://github.com/Flashfyre/three-render-objects.git"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^11.1.0",
@@ -33,7 +32,7 @@
   },
   "engines": {
     "node": "12.14.1",
-    "yarn": "1.22.4"
+    "yarn": "1.21.1"
   },
   "repository": "git+https://github.com/Flashfyre/Yume-2kki-Explorer.git",
   "author": "Samuel Harbord (FlashfyreDev)",

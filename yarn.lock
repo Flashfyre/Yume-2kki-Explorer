@@ -4,7 +4,7 @@
 
 "3d-force-graph@https://github.com/Flashfyre/3d-force-graph.git":
   version "1.61.0"
-  resolved "https://github.com/Flashfyre/3d-force-graph.git#28e148a72687f2c0a380b62f816a17d6dec25e6f"
+  resolved "https://github.com/Flashfyre/3d-force-graph.git#9876eb35893650d2c5e89302f0c5895173778d68"
   dependencies:
     accessor-fn "^1.3.0"
     kapsule "^1.13.3"
@@ -85,9 +85,9 @@
   integrity sha512-EYNwp3bU+98cpU4lAWYYL7Zz+2gryWH1qbdDTidVd6hkiR6weksdbMadyXKXNPEkQFhXM+hVO9ZygomHXp+AIw==
 
 "@types/node@*":
-  version "13.13.1"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-13.13.1.tgz#1ba94c5a177a1692518bfc7b41aec0aa1a14354e"
-  integrity sha512-uysqysLJ+As9jqI5yqjwP3QJrhOcUwBjHUlUxPxjbplwKoILvXVsmYWEhfmAQlrPfbRZmhJB007o4L9sKqtHqQ==
+  version "13.13.2"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-13.13.2.tgz#160d82623610db590a64e8ca81784e11117e5a54"
+  integrity sha512-LB2R1Oyhpg8gu4SON/mfforE525+Hi/M1ineICEDftqNVTyFg1aRIeGuTvXAoWHc4nbrFncWtJgMmoyRvuGh7A==
 
 "@types/resolve@0.0.8":
   version "0.0.8"
@@ -317,9 +317,9 @@ d3-binarytree@^0.1.8:
   integrity sha512-+N2TjL9CAGMkjwlnsx/wUiHJtAnik6S63AfvWS6RYkraD60ixgI4S7q3sMR5ugLMXWckWhZfvUpZQzwAzkm/lA==
 
 d3-color@1:
-  version "1.4.0"
-  resolved "https://registry.yarnpkg.com/d3-color/-/d3-color-1.4.0.tgz#89c45a995ed773b13314f06460df26d60ba0ecaf"
-  integrity sha512-TzNPeJy2+iEepfiL92LAAB7fvnp/dV2YwANPVHdDWmYMm23qIJBYww3qT8I8C1wXrmrg4UWs7BKc2tKIgyjzHg==
+  version "1.4.1"
+  resolved "https://registry.yarnpkg.com/d3-color/-/d3-color-1.4.1.tgz#c52002bf8846ada4424d55d97982fef26eb3bc8a"
+  integrity sha512-p2sTHSLCJI2QKunbGb7ocOh7DgTAn8IrLx21QRc/BSnodXM4sv6aLQlnfpvehFMLZEfBc6g9pH9SWQccFYfJ9Q==
 
 d3-dispatch@^1.0.6:
   version "1.0.6"
@@ -1241,9 +1241,9 @@ setprototypeof@1.1.1:
   integrity sha512-JvdAWfbXeIGaZ9cILp38HntZSFSo3mWg6xGcJJsd+d4aRMOqauag1C63dJfDw7OaMYwEbHMOxEZ1lqVRYP2OAw==
 
 source-map-support@~0.5.12:
-  version "0.5.17"
-  resolved "https://registry.yarnpkg.com/source-map-support/-/source-map-support-0.5.17.tgz#29fe1b3c98b9dbd5064ada89052ee8ff070cb46c"
-  integrity sha512-bwdKOBZ5L0gFRh4KOxNap/J/MpvX9Yxsq9lFDx65s3o7F/NiHy7JRaGIS8MwW6tZPAq9UXE207Il0cfcb5yu/Q==
+  version "0.5.18"
+  resolved "https://registry.yarnpkg.com/source-map-support/-/source-map-support-0.5.18.tgz#f5f33489e270bd7f7d7e7b8debf283f3a4066960"
+  integrity sha512-9luZr/BZ2QeU6tO2uG8N2aZpVSli4TSAOAqFOyTO51AJcD9P99c0K1h6dD6r6qo5dyT44BR5exweOaLLeldTkQ==
   dependencies:
     buffer-from "^1.0.0"
     source-map "^0.6.0"
@@ -1349,7 +1349,7 @@ three-fly-controls@^2.0.0:
 
 three-forcegraph@^1.32.0, "three-forcegraph@https://github.com/Flashfyre/three-forcegraph.git":
   version "1.32.0"
-  resolved "https://github.com/Flashfyre/three-forcegraph.git#73c7fe7c31e9a87df8c695ebf5d087b5da11811d"
+  resolved "https://github.com/Flashfyre/three-forcegraph.git#8eb016275538d61630b2b251ddb8a5a8375911c3"
   dependencies:
     accessor-fn "^1.3.0"
     d3-force-3d "^2.1.0"
@@ -1369,7 +1369,7 @@ three-orbit-controls@^82.1.0:
 
 three-render-objects@^1.13.3, "three-render-objects@https://github.com/Flashfyre/three-render-objects.git":
   version "1.13.3"
-  resolved "https://github.com/Flashfyre/three-render-objects.git#04719be2192d639aeda6ffaf498a5659c9509e1a"
+  resolved "https://github.com/Flashfyre/three-render-objects.git#c259fe9eb1178f2717621342588421e2c8867219"
   dependencies:
     "@tweenjs/tween.js" "^18.5.0"
     accessor-fn "^1.3.0"
@@ -1479,8 +1479,3 @@ wrappy@1:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/wrappy/-/wrappy-1.0.2.tgz#b5243d8f3ec1aa35f1364605bc0d1036e30ab69f"
   integrity sha1-tSQ9jz7BqjXxNkYFvA0QNuMKtp8=
-
-yarn@^1.22.4:
-  version "1.22.4"
-  resolved "https://registry.yarnpkg.com/yarn/-/yarn-1.22.4.tgz#01c1197ca5b27f21edc8bc472cd4c8ce0e5a470e"
-  integrity sha512-oYM7hi/lIWm9bCoDMEWgffW8aiNZXCWeZ1/tGy0DWrN6vmzjCXIKu2Y21o8DYVBUtiktwKcNoxyGl/2iKLUNGA==
