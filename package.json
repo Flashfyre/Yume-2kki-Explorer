@@ -28,7 +28,7 @@
   "scripts": {
     "start": "node app.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "rollup --config rollup.config.js && node app.js"
+    "compile": "rollup --config rollup.config.js"
   },
   "engines": {
     "node": "12.14.1",
