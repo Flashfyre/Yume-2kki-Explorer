@@ -1100,6 +1100,8 @@
                             }
                             text.text = textLines.join('\n');
                             text.defaultScale = { "x": text.scale.x, "y": text.scale.y };
+                            text.material.transparent = true;
+                            text.material.opacity = ret.material.opacity;
                             if (config.labelMode < 3)
                                 text.visible = false;
 
@@ -1276,6 +1278,7 @@
                                     }
                                     text.scale.x = text.defaultScale.x * scale;
                                     text.scale.y = text.defaultScale.y * scale;
+                                    text.material.opacity = getNodeOpacity(node);
                                     text.visible = true;
                                 } else
                                     text.visible = false;
@@ -1837,7 +1840,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "2.2.0");
+                            data.footer = data.footer.replace("{VERSION}", "2.2.1");
                             localizedConns = data.conn;
                             initContextMenu(data.contextMenu);
                             if (isInitial) {
