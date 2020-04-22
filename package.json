@@ -31,6 +31,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "rollup --config rollup.config.js && node app.js"
   },
+  "engines": {
+    "node": "12.14.1"
+  },
   "repository": "git+https://github.com/Flashfyre/Yume-2kki-Explorer.git",
   "author": "Samuel Harbord (FlashfyreDev)",
   "license": "MIT",
