@@ -1216,7 +1216,8 @@
                         })
                         .graphData(gData);
 
-                    document.removeEventListener('mousemove', onDocumentMouseMove);
+                    document.removeEventListener('mousemove', onDocumentMouseMove, false);
+                    document.querySelector('#graph canvas').removeEventListener('wheel', clearTweens, false)
 
                     if (is2d) {
                         const controls = graph.controls();
@@ -1230,6 +1231,7 @@
 
                      // when the mouse moves, call the given function
                      document.addEventListener('mousemove', onDocumentMouseMove, false);
+                     document.querySelector('#graph canvas').addEventListener('wheel', clearTweens, false);
 
                     // initialize object to perform world/screen calculations
                     raycaster = new THREE.Raycaster();
@@ -2024,6 +2026,10 @@
                     mousePos.clientY = event.clientY;
                     mousePos.x = (event.clientX / window.innerWidth) * 2 - 1;
                     mousePos.y = -(event.clientY / window.innerHeight) * 2 + 1;
+                }
+
+                function clearTweens() {
+                    Y2E.TWEEN._tweens = {};
                 }
 
                 function updateRaycast() {
