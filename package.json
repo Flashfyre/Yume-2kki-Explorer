@@ -32,7 +32,8 @@
     "build": "rollup --config rollup.config.js && node app.js"
   },
   "engines": {
-    "node": "12.14.1"
+    "node": "12.14.1",
+    "yarn": "1.22.4"
   },
   "repository": "git+https://github.com/Flashfyre/Yume-2kki-Explorer.git",
   "author": "Samuel Harbord (FlashfyreDev)",
