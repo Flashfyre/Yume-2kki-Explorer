@@ -1147,6 +1147,10 @@
                                         icon.position.set(resX, resY, is2d ? 0 : resZ);
                                     }
                                 }
+                                if (link.connType & ConnType.ONE_WAY) {
+                                    const oneWayIcon = linkIcons.filter(i => i.connType & ConnType.ONE_WAY)[0];
+                                    oneWayIcon.material.map.repeat.x = link.source.x <= link.target.x ? 1 : -1;
+                                }
                             }
                         })
                         .connMode(() => config.connMode)
@@ -1299,6 +1303,7 @@
                                 const text = new SpriteText(icon.char, 1, 'white');
                                 text.__graphObjType = 'icon';
                                 text.name = icon.text;
+                                text.connType = icon.type;
                                 text.fontFace = 'MS Gothic';
                                 text.fontSize = 80;
                                 text.borderWidth = 1;
@@ -1309,6 +1314,10 @@
                                 }
                                 text.material.transparent = true;
                                 text.material.opacity = linkOpacity;
+                                if (icon.type & ConnType.ONE_WAY) {
+                                    text.material.map.wrapS = THREE.RepeatWrapping;
+                                    link.source.x > link.target.x && (text.material.map.repeat.x = -1);
+                                }
                                 !config.connMode && link.hidden && (text.visible = false);
                                 linkIcons.push(text);
                                 graph.scene().add(text);
@@ -1560,6 +1569,7 @@
                         }
                     }
                     return {
+                        type: connType,
                         char: char,
                         text: name + (description ? (config.lang === 'en' ? ' - ' : '：') + description : '')
                     };
@@ -1827,7 +1837,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "2.1.1");
+                            data.footer = data.footer.replace("{VERSION}", "2.2.0");
                             localizedConns = data.conn;
                             initContextMenu(data.contextMenu);
                             if (isInitial) {
