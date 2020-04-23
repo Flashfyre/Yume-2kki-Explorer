@@ -1297,40 +1297,7 @@
                 }
 
                 // START WEBGL2.0 SPECIFIC CODE
-                var nodeImgDimensions = {x: 320, y: 240};
-
                 function initNodeObject() {
-                    var filenames = [];
-                    worldData.forEach(node => {
-                         filenames.push(worldData[node.id].filename);
-                    })
-
-                    // Load all node images before making a texture array
-                    Promise.all(getImageRawData(filenames))
-                    .then(images => {
-                        const buffer = new ArrayBuffer(nodeImgDimensions.x * nodeImgDimensions.y * 4 * images.length);
-                        var rawImageDataArray = new Uint8ClampedArray(buffer);
-                        var i = 0;
-                        images.forEach(img => {
-                            var canvas = document.createElement('canvas');
-                            canvas.width = nodeImgDimensions.x;
-                            canvas.height = nodeImgDimensions.y;
-                            var context = canvas.getContext('2d');
-                            // stretch to fit
-                            context.drawImage( img, 0, 0, img.width, img.height,
-                                                    0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
-                            var myData = context.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
-                            var offset = i * myData.data.length;
-                            rawImageDataArray.set(myData.data, offset);
-                            delete canvas;
-                            i++;
-                        })
-                        createInsancedNodeObject(rawImageDataArray); // actual creation happens here
-                    })
-                    .catch(err => console.error(err))
-                }
-
-                function createInsancedNodeObject(rawImageDataArray) {
                     const lineVertShader = `#version 300 es
                         precision highp float;
                         precision highp int;
@@ -1372,8 +1339,11 @@
                             fragmentColor = temp;
                         }
                     `;
+
+                    var nodeImgDimensions = {x: 320, y: 240};
+                    const buffer = new ArrayBuffer(nodeImgDimensions.x * nodeImgDimensions.y * 4 * worldData.length);
                     var amount = graph.graphData().nodes.length;
-                    var texture = new THREE.DataTexture2DArray(rawImageDataArray, nodeImgDimensions.x, nodeImgDimensions.y, amount);
+                    var texture = new THREE.DataTexture2DArray(new Uint8ClampedArray(buffer), nodeImgDimensions.x, nodeImgDimensions.y, amount);
                     texture.format = THREE.RGBAFormat;
                     texture.type = THREE.UnsignedByteType;
                     const material = new THREE.RawShaderMaterial({
@@ -1400,6 +1370,32 @@
                     nodeObject.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
                     graph.scene().add(nodeObject);
+
+                    var filenames = [];
+                    graph.graphData().nodes.forEach(node => {
+                         filenames.push(worldData[node.id].filename);
+                    })
+
+                    Promise.all(getImageRawData(filenames))
+                    .then(images => {
+                        var i = 0;
+                        var canvas = document.createElement('canvas');
+                        canvas.width = nodeImgDimensions.x;
+                        canvas.height = nodeImgDimensions.y;
+                        var context = canvas.getContext('2d');
+                        images.forEach(img => {
+                            // stretch to fit
+                            context.drawImage( img, 0, 0, img.width, img.height,
+                                                    0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
+                            var myData = context.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
+                            var offset = i * myData.data.length;
+                            nodeObject.material.uniforms.diffuse.value.image.data.set(myData.data, offset);
+                            i++;
+                        })
+                        delete canvas;
+                        nodeObject.material.uniforms.diffuse.value.needsUpdate = true;
+                    })
+                    .catch(err => console.error(err))
                 }
 
                 function updateNodePositions(is2d) {
