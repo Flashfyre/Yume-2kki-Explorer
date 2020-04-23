@@ -860,6 +860,7 @@
 
                     if (paths) {
                         visibleWorldIds = _.uniq(_.flatten(paths).map(p => p.id));
+
                         const pathScores = [];
                         let minPathDepth = paths[0].length - 2;
                         let maxPathDepth;
@@ -1026,27 +1027,22 @@
 
                     linksBufferedLines = undefined;
 
-                    let isWebGL2;
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('webgl2');
+                   
+                    const isWebGL2 = context != null;
 
-                    var canvas = document.createElement( 'canvas' );
-                    var context = canvas.getContext( 'webgl2');
-                    var rendererConfig;
-
-                    if(context) {
-                        isWebGL2 = true;
-                        rendererConfig = {
+                    const rendererConfig = isWebGL2
+                        ? {
                             antialias: true,
                             alpha: true,
                             canvas: canvas,
                             context: context
-                        };
-                    } else {
-                        isWebGL2 = false;
-                        rendererConfig = {
+                        }
+                        : {
                             antialias: true,
                             alpha: true
                         };
-                    }
 
                     const elem = document.getElementById('graph');
 
@@ -1073,12 +1069,12 @@
                         .backgroundColor('#00000000')
                         .linkOpacity(1)
                         .nodeThreeObject(node => {
+                            let ret;
                             const scale = worldScales[node.id];
                             const world = worldData[node.id];
-                            var ret;
                             const box = new THREE.BoxGeometry(13 * scale, 9.75 * scale, is2d ? 0.1 : 9.75 * scale);
-                            var material;
-                            if(isWebGL2) {
+                            let material;
+                            if (isWebGL2) {
                                 material = new THREE.MeshBasicMaterial();
                                 material.visible = false;
                                 ret = new THREE.Mesh(box, material);
@@ -1093,7 +1089,6 @@
                                     ret.material.depthTest = false;
                                     ret.renderOrder = world.id;
                                 }
-
                                 ret.material.opacity = getNodeOpacity(node);
                             }
 
@@ -1149,7 +1144,7 @@
                             updateLinkObjects(visibleOneWayLinks, linksOneWayBuffered, is2d);
                             updateLinkAnimation(linksOneWayBuffered, time);
                             updateLinkDistances();
-                            if(isWebGL2)
+                            if (isWebGL2)
                                 updateNodePositions(is2d);
                         })
                         .linkThreeObject(link => {
@@ -1271,7 +1266,7 @@
                      document.addEventListener('mousemove', onDocumentMouseMove, false);
                      document.querySelector('#graph canvas').addEventListener('wheel', clearTweens, false);
 
-                    if(isWebGL2)
+                    if (isWebGL2)
                         initNodeObject();
 
                     // initialize object to perform world/screen calculations
@@ -1340,10 +1335,10 @@
                         }
                     `;
 
-                    var nodeImgDimensions = {x: 320, y: 240};
+                    const nodeImgDimensions = { x: 320, y: 240 };
                     const buffer = new ArrayBuffer(nodeImgDimensions.x * nodeImgDimensions.y * 4 * worldData.length);
-                    var amount = graph.graphData().nodes.length;
-                    var texture = new THREE.DataTexture2DArray(new Uint8ClampedArray(buffer), nodeImgDimensions.x, nodeImgDimensions.y, amount);
+                    const amount = graph.graphData().nodes.length;
+                    const texture = new THREE.DataTexture2DArray(new Uint8ClampedArray(buffer), nodeImgDimensions.x, nodeImgDimensions.y, amount);
                     texture.format = THREE.RGBAFormat;
                     texture.type = THREE.UnsignedByteType;
                     const material = new THREE.RawShaderMaterial({
@@ -1355,14 +1350,14 @@
                         transparent: true
                     });
 
-                    var opacities = [];
-                    var texIndexes = [];
-                    var i = 0;
-                    for(i = 0; i < amount; i++) {
+                    const opacities = [];
+                    const texIndexes = [];
+                    for (let i = 0; i < amount; i++) {
                         opacities[i] = 1.0;
                         texIndexes[i] = i;
                     }
-                    var geometry = new THREE.BoxBufferGeometry(1, 1, 1);
+
+                    const geometry = new THREE.BoxBufferGeometry(1, 1, 1);
                     geometry.attributes.opacity = new THREE.InstancedBufferAttribute(new Float32Array(opacities), 1);
                     geometry.attributes.texIndex = new THREE.InstancedBufferAttribute(new Float32Array(texIndexes), 1);
 
@@ -1371,48 +1366,48 @@
 
                     graph.scene().add(nodeObject);
 
-                    var filenames = [];
+                    const filenames = [];
                     graph.graphData().nodes.forEach(node => {
-                         filenames.push(worldData[node.id].filename);
-                    })
+                        filenames.push(worldData[node.id].filename);
+                    });
 
                     Promise.all(getImageRawData(filenames))
-                    .then(images => {
-                        var i = 0;
-                        var canvas = document.createElement('canvas');
-                        canvas.width = nodeImgDimensions.x;
-                        canvas.height = nodeImgDimensions.y;
-                        var context = canvas.getContext('2d');
-                        images.forEach(img => {
-                            // stretch to fit
-                            context.drawImage( img, 0, 0, img.width, img.height,
-                                                    0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
-                            var myData = context.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
-                            var offset = i * myData.data.length;
-                            nodeObject.material.uniforms.diffuse.value.image.data.set(myData.data, offset);
-                            i++;
+                        .then(images => {
+                            const canvas = document.createElement('canvas');
+                            const context = canvas.getContext('2d');
+                            canvas.width = nodeImgDimensions.x;
+                            canvas.height = nodeImgDimensions.y;
+                            let index = 0;
+                            images.forEach(img => {
+                                // stretch to fit
+                                context.drawImage( img, 0, 0, img.width, img.height,
+                                                        0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
+                                const nodeImageData = context.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
+                                const offset = index * nodeImageData.data.length;
+                                nodeObject.material.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
+                                index++;
+                            });
+                            delete canvas;
+                            nodeObject.material.uniforms.diffuse.value.needsUpdate = true;
                         })
-                        delete canvas;
-                        nodeObject.material.uniforms.diffuse.value.needsUpdate = true;
-                    })
-                    .catch(err => console.error(err))
+                        .catch(err => console.error(err));
                 }
 
                 function updateNodePositions(is2d) {
-                    var dummy = new THREE.Object3D();
-                    if(nodeObject) {
-                        var i = 0;
+                    const dummy = new THREE.Object3D();
+                    if (nodeObject) {
+                        let index = 0;
                         graph.graphData().nodes.forEach(node => {
-                            nodeObject.getMatrixAt(i, dummy.matrix);
-                            if(!is2d)
+                            nodeObject.getMatrixAt(index, dummy.matrix);
+                            if (!is2d)
                                 dummy.position.set(node.x, node.y, node.z);
                             else
                                 dummy.position.set(node.x, node.y, 0);
-                            var scale = worldScales[node.id];
+                            const scale = worldScales[node.id];
                             dummy.scale.set(13 * scale, 9.75 * scale, is2d ? 0.1 : 9.75 * scale);
                             dummy.updateMatrix();
-                            nodeObject.setMatrixAt(i, dummy.matrix);
-                            i++;
+                            nodeObject.setMatrixAt(index, dummy.matrix);
+                            index++;
                         });
                         nodeObject.instanceMatrix.needsUpdate = true;
                     }
@@ -1433,9 +1428,9 @@
                                 image => resolve(image),
                                 undefined, // onProgress callback not supported from r84
                                 err => reject(err)
-                            )
-                        })
-                    })
+                            );
+                        });
+                    });
                 }
 
                 function updateNodeLabels(is2d) {
@@ -2219,17 +2214,16 @@
 
                 function highlightWorldSelection() {
                     updateConnectionModeIcons();
-                    var i = 0;
+                    let index = 0;
                     graph.graphData().nodes.forEach(node => {
-                        if(nodeObject)
-                            nodeObject.geometry.attributes.opacity.array[i] = getNodeOpacity(node);
-                        else {
-                            node.__threeObj.material.opacity = getNodeOpacity(node)
-                        }
-                        i++;
+                        const nodeOpacity = getNodeOpacity(node);
+                        if (nodeObject)
+                            nodeObject.geometry.attributes.opacity.array[index] = getNodeOpacity(node);
+                        else
+                            node.__threeObj.material.opacity = nodeOpacity;
+                        index++;
                     });
-                    if(nodeObject)
-                        nodeObject.geometry.attributes.opacity.needsUpdate = true;
+                    nodeObject && (nodeObject.geometry.attributes.opacity.needsUpdate = true);
                     updateLinkColors(visibleTwoWayLinks, linksTwoWayBuffered);
                     updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
                 }
