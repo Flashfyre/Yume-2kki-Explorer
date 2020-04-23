@@ -1401,8 +1401,9 @@
                 function updateNodePositions(is2d) {
                     var dummy = new THREE.Object3D();
                     if(nodeObject) {
+                        var i = 0;
                         graph.graphData().nodes.forEach(node => {
-                            nodeObject.getMatrixAt(node.id, dummy.matrix);
+                            nodeObject.getMatrixAt(i, dummy.matrix);
                             if(!is2d)
                                 dummy.position.set(node.x, node.y, node.z);
                             else
@@ -1410,7 +1411,8 @@
                             var scale = worldScales[node.id];
                             dummy.scale.set(13 * scale, 9.75 * scale, is2d ? 0.1 : 9.75 * scale);
                             dummy.updateMatrix();
-                            nodeObject.setMatrixAt(node.id, dummy.matrix);
+                            nodeObject.setMatrixAt(i, dummy.matrix);
+                            i++;
                         });
                         nodeObject.instanceMatrix.needsUpdate = true;
                     }
