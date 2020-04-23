@@ -2219,12 +2219,14 @@
 
                 function highlightWorldSelection() {
                     updateConnectionModeIcons();
+                    var i = 0;
                     graph.graphData().nodes.forEach(node => {
                         if(nodeObject)
-                            nodeObject.geometry.attributes.opacity.array[node.id] = getNodeOpacity(node);
+                            nodeObject.geometry.attributes.opacity.array[i] = getNodeOpacity(node);
                         else {
                             node.__threeObj.material.opacity = getNodeOpacity(node)
                         }
+                        i++;
                     });
                     if(nodeObject)
                         nodeObject.geometry.attributes.opacity.needsUpdate = true;
