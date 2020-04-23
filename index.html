@@ -810,6 +810,8 @@
                 let linksTwoWayBuffered;
                 let linksOneWayBuffered;
 
+                let nodeObject;
+
                 let icons3D;
 
                 const colorLinkSelected = new THREE.Color('red');
@@ -1024,9 +1026,32 @@
 
                     linksBufferedLines = undefined;
 
+                    let isWebGL2;
+
+                    var canvas = document.createElement( 'canvas' );
+                    var context = canvas.getContext( 'webgl2');
+                    var rendererConfig;
+
+                    if(context) {
+                        isWebGL2 = true;
+                        rendererConfig = {
+                            antialias: true,
+                            alpha: true,
+                            canvas: canvas,
+                            context: context
+                        };
+                    } else {
+                        isWebGL2 = false;
+                        rendererConfig = {
+                            antialias: true,
+                            alpha: true
+                        };
+                    }
+
                     const elem = document.getElementById('graph');
 
                     graph = Y2E.ForceGraph3D({
+                        rendererConfig: rendererConfig,
                         controlType: 'orbit',
                         numDimensions: is2d ? 2 : 3
                     })(elem);
@@ -1050,20 +1075,28 @@
                         .nodeThreeObject(node => {
                             const scale = worldScales[node.id];
                             const world = worldData[node.id];
-                            const texture = new THREE.TextureLoader().load(world.filename);
+                            var ret;
+                            const box = new THREE.BoxGeometry(13 * scale, 9.75 * scale, is2d ? 0.1 : 9.75 * scale);
+                            var material;
+                            if(isWebGL2) {
+                                material = new THREE.MeshBasicMaterial();
+                                material.visible = false;
+                                ret = new THREE.Mesh(box, material);
+                            } else {
+                                const texture = new THREE.TextureLoader().load(world.filename);
+                                texture.anisotropy = maxAnisotropy;
+                                texture.minFilter = THREE.NearestFilter; // disables mipmaps (eliminates blur)
+                                material = new THREE.MeshBasicMaterial({ map: texture });
+                                ret = new THREE.Mesh(box, material);
+                                ret.material.transparent = true;
+                                if (is2d) {
+                                    ret.material.depthTest = false;
+                                    ret.renderOrder = world.id;
+                                }
 
-                            texture.anisotropy = maxAnisotropy;
-                            texture.minFilter = THREE.NearestFilter; // disables mipmaps (eliminates blur)
-
-                            const ret = new THREE.Mesh(new THREE.BoxGeometry(13 * scale, 9.75 * scale, is2d ? 0.1 : 9.75 * scale), new THREE.MeshBasicMaterial({ map: texture }));
-                            ret.material.transparent = true;
-                            if (is2d) {
-                                ret.material.depthTest = false;
-                                ret.renderOrder = world.id;
+                                ret.material.opacity = getNodeOpacity(node);
                             }
 
-                            ret.material.opacity = getNodeOpacity(node);
-                            
                             const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
                             const text = new SpriteText(worldName, 1.5, 'white');
                             text.__graphObjType = 'label';
@@ -1116,6 +1149,8 @@
                             updateLinkObjects(visibleOneWayLinks, linksOneWayBuffered, is2d);
                             updateLinkAnimation(linksOneWayBuffered, time);
                             updateLinkDistances();
+                            if(isWebGL2)
+                                updateNodePositions(is2d);
                         })
                         .linkThreeObject(link => {
                             const dummy = new THREE.Points();
@@ -1236,6 +1271,9 @@
                      document.addEventListener('mousemove', onDocumentMouseMove, false);
                      document.querySelector('#graph canvas').addEventListener('wheel', clearTweens, false);
 
+                    if(isWebGL2)
+                        initNodeObject();
+
                     // initialize object to perform world/screen calculations
                     raycaster = new THREE.Raycaster();
 
@@ -1256,6 +1294,150 @@
                     updateLinkObjects(visibleOneWayLinks, linksOneWayBuffered, is2d);
                     updateLinkColors(visibleTwoWayLinks, linksTwoWayBuffered);
                     updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
+                }
+
+                // START WEBGL2.0 SPECIFIC CODE
+                var nodeImgDimensions = {x: 320, y: 240};
+
+                function initNodeObject() {
+                    var filenames = [];
+                    worldData.forEach(node => {
+                         filenames.push(worldData[node.id].filename);
+                    })
+
+                    // Load all node images before making a texture array
+                    Promise.all(getImageRawData(filenames))
+                    .then(images => {
+                        const buffer = new ArrayBuffer(nodeImgDimensions.x * nodeImgDimensions.y * 4 * images.length);
+                        var rawImageDataArray = new Uint8ClampedArray(buffer);
+                        var i = 0;
+                        images.forEach(img => {
+                            var canvas = document.createElement('canvas');
+                            canvas.width = nodeImgDimensions.x;
+                            canvas.height = nodeImgDimensions.y;
+                            var context = canvas.getContext('2d');
+                            // stretch to fit
+                            context.drawImage( img, 0, 0, img.width, img.height,
+                                                    0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
+                            var myData = context.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
+                            var offset = i * myData.data.length;
+                            rawImageDataArray.set(myData.data, offset);
+                            delete canvas;
+                            i++;
+                        })
+                        createInsancedNodeObject(rawImageDataArray); // actual creation happens here
+                    })
+                    .catch(err => console.error(err))
+                }
+
+                function createInsancedNodeObject(rawImageDataArray) {
+                    const lineVertShader = `#version 300 es
+                        precision highp float;
+                        precision highp int;
+
+                        uniform mat4 modelViewMatrix;
+                        uniform mat4 projectionMatrix;
+                        in mat4 instanceMatrix;
+                        in vec3 position;
+                        in vec3 normal;
+                        in vec2 uv;
+
+                        in float opacity;
+                        out float vOpacity;
+                        out vec2 vUv;
+                        in float texIndex;
+                        out float vTexIndex;
+                        void main() {
+                            vOpacity = opacity;
+                            vUv = vec2(uv.x, 1.0 - uv.y); // flip texture vertically, because of how it's stored
+                            vTexIndex = texIndex;
+                            vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+                            gl_Position = projectionMatrix * mvPosition;
+                        }
+                    `;
+                    const lineFragShader = `#version 300 es
+                        precision highp float;
+                        precision highp int;
+                        precision highp sampler2DArray;
+
+                        in float vOpacity;
+                        uniform sampler2DArray diffuse;
+                        in vec2 vUv;
+                        out vec4 fragmentColor;
+                        in float vTexIndex;
+
+                        void main() {
+                            vec4 temp = texture(diffuse, vec3(vUv, int(vTexIndex)));
+                            temp.a = vOpacity;
+                            fragmentColor = temp;
+                        }
+                    `;
+                    var amount = graph.graphData().nodes.length;
+                    var texture = new THREE.DataTexture2DArray(rawImageDataArray, nodeImgDimensions.x, nodeImgDimensions.y, amount);
+                    texture.format = THREE.RGBAFormat;
+                    texture.type = THREE.UnsignedByteType;
+                    const material = new THREE.RawShaderMaterial({
+                        uniforms: {
+                            diffuse: {value: texture },
+                        },
+                        vertexShader: lineVertShader,
+                        fragmentShader: lineFragShader,
+                        transparent: true
+                    });
+
+                    var opacities = [];
+                    var texIndexes = [];
+                    var i = 0;
+                    for(i = 0; i < amount; i++) {
+                        opacities[i] = 1.0;
+                        texIndexes[i] = i;
+                    }
+                    var geometry = new THREE.BoxBufferGeometry(1, 1, 1);
+                    geometry.attributes.opacity = new THREE.InstancedBufferAttribute(new Float32Array(opacities), 1);
+                    geometry.attributes.texIndex = new THREE.InstancedBufferAttribute(new Float32Array(texIndexes), 1);
+
+                    nodeObject = new THREE.InstancedMesh(geometry, material, amount);
+                    nodeObject.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+
+                    graph.scene().add(nodeObject);
+                }
+
+                function updateNodePositions(is2d) {
+                    var dummy = new THREE.Object3D();
+                    if(nodeObject) {
+                        graph.graphData().nodes.forEach(node => {
+                            nodeObject.getMatrixAt(node.id, dummy.matrix);
+                            if(!is2d)
+                                dummy.position.set(node.x, node.y, node.z);
+                            else
+                                dummy.position.set(node.x, node.y, 0);
+                            var scale = worldScales[node.id];
+                            dummy.scale.set(13 * scale, 9.75 * scale, is2d ? 0.1 : 9.75 * scale);
+                            dummy.updateMatrix();
+                            nodeObject.setMatrixAt(node.id, dummy.matrix);
+                        });
+                        nodeObject.instanceMatrix.needsUpdate = true;
+                    }
+                }
+                // END WEBGL2.0 SPECIFIC CODE
+
+                /**
+                 *
+                 * @param {Array} texturesSources - List of Strings that represent texture sources
+                 * @returns {Array} Array containing a Promise for each source 
+                 */
+                function getImageRawData (imageSources) {
+                    const loader = new THREE.ImageLoader()
+                    return imageSources.map(imageSource => {
+                        return new Promise((resolve, reject) => {
+                            loader.load(
+                                imageSource,
+                                image => resolve(image),
+                                undefined, // onProgress callback not supported from r84
+                                err => reject(err)
+                            )
+                        })
+                    })
                 }
 
                 function updateNodeLabels(is2d) {
@@ -2039,7 +2221,15 @@
 
                 function highlightWorldSelection() {
                     updateConnectionModeIcons();
-                    graph.graphData().nodes.forEach(node => node.__threeObj && (node.__threeObj.material.opacity = getNodeOpacity(node)));
+                    graph.graphData().nodes.forEach(node => {
+                        if(nodeObject)
+                            nodeObject.geometry.attributes.opacity.array[node.id] = getNodeOpacity(node);
+                        else {
+                            node.__threeObj.material.opacity = getNodeOpacity(node)
+                        }
+                    });
+                    if(nodeObject)
+                        nodeObject.geometry.attributes.opacity.needsUpdate = true;
                     updateLinkColors(visibleTwoWayLinks, linksTwoWayBuffered);
                     updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
                 }
