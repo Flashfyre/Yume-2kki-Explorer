@@ -1267,7 +1267,7 @@
                      document.querySelector('#graph canvas').addEventListener('wheel', clearTweens, false);
 
                     if (isWebGL2)
-                        initNodeObject();
+                        initNodeObject(is2d);
 
                     // initialize object to perform world/screen calculations
                     raycaster = new THREE.Raycaster();
@@ -1292,7 +1292,7 @@
                 }
 
                 // START WEBGL2.0 SPECIFIC CODE
-                function initNodeObject() {
+                function initNodeObject(is2d) {
                     const lineVertShader = `#version 300 es
                         precision highp float;
                         precision highp int;
@@ -1347,7 +1347,8 @@
                         },
                         vertexShader: lineVertShader,
                         fragmentShader: lineFragShader,
-                        transparent: true
+                        transparent: true,
+                        depthTest: !is2d
                     });
 
                     const opacities = [];
