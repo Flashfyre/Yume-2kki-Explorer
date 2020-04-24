@@ -1329,7 +1329,7 @@
                         in float vTexIndex;
 
                         void main() {
-                            vec4 temp = texture(diffuse, vec3(vUv, int(vTexIndex)));
+                            vec4 temp = texture(diffuse, vec3(vUv, int(vTexIndex + 0.1)));
                             temp.a = vOpacity;
                             fragmentColor = temp;
                         }
