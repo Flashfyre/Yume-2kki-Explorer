@@ -1107,7 +1107,9 @@
                                 text.borderWidth = 1;
                                 text.borderColor = 'transparent';
                             }
-                            
+                            if (isWebGL2)
+                                text.renderOrder = 2;
+
                             let textLines = worldName.split(" ");
                             for (let l = 0; l < textLines.length; l++) {
                                 text.text = textLines[l];
@@ -1364,7 +1366,7 @@
 
                     nodeObject = new THREE.InstancedMesh(geometry, material, amount);
                     nodeObject.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-
+                    nodeObject.renderOrder = 1;
                     graph.scene().add(nodeObject);
 
                     const filenames = [];
