@@ -1457,7 +1457,7 @@
 
                     iconObject = new THREE.InstancedMesh(geometry, material, amountIcons);
                     iconObject.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-                    if(!is2d)
+                    if (!is2d)
                         iconObject.renderOrder = 3;
                     else
                         iconObject.renderOrder = -1;
