@@ -1111,9 +1111,10 @@
                                     text.borderWidth = 1;
                                     text.borderColor = 'transparent';
                                 }
-                                if (isWebGL2)
+                                if (isWebGL2) {
                                     text.renderOrder = 2;
-
+                                    text.material.depthWrite = false;
+                                }
                                 let textLines = worldName.split(" ");
                                 for (let l = 0; l < textLines.length; l++) {
                                     text.text = textLines[l];
@@ -1162,9 +1163,7 @@
                             return dummy;
                         })
                         .linkPositionUpdate((linkObject, { start, end }, link) => {
-                            if (isWebGL2) {
-                                
-                            } else if (icons3D[link.key] !== undefined) {
+                            if (!isWebGL2 && icons3D[link.key] !== undefined) {
                                 const linkIcons = icons3D[link.key];
                                 const dist = is2d
                                     ? new THREE.Vector2(start.x, start.y).distanceTo(new THREE.Vector2(end.x, end.y))
@@ -1284,7 +1283,8 @@
                         makeIconObject(is2d);
                         if (is2d)
                             updateNodeLabels2D();
-                    }
+                    } else
+                        makeLinkIcons(is2d);
 
                     // initialize object to perform world/screen calculations
                     raycaster = new THREE.Raycaster();
@@ -1298,7 +1298,6 @@
                         }
                     })
 
-                    makeLinkIcons(is2d);
                     makeLinkIconTooltip();
                     linksTwoWayBuffered = makeTwoWayLinkObjects(is2d);
                     linksOneWayBuffered = makeOneWayLinkObjects(is2d);
@@ -1311,13 +1310,11 @@
                 // START WEBGL2.0 SPECIFIC CODE
                 const instanceVS = `#version 300 es
                     precision highp float;
-                    precision highp int;
 
                     uniform mat4 modelViewMatrix;
                     uniform mat4 projectionMatrix;
                     in mat4 instanceMatrix;
                     in vec3 position;
-                    in vec3 normal;
                     in vec2 uv;
 
                     in float opacity;
@@ -1334,9 +1331,32 @@
                     }
                 `;
 
+                const instanceIconVS = `#version 300 es
+                    precision highp float;
+
+                    uniform mat4 modelViewMatrix;
+                    uniform mat4 projectionMatrix;
+                    in mat4 instanceMatrix;
+                    in vec3 position;
+                    in vec2 uv;
+
+                    in float opacity;
+                    out float vOpacity;
+                    out vec2 vUv;
+                    in float texIndex;
+                    out float vTexIndex;
+                    void main() {
+                        vOpacity = opacity;
+                        vUv = vec2(uv.x, 1.0 - uv.y); // flip texture vertically, because of how it's stored
+                        vTexIndex = texIndex;
+                        vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+                        mvPosition.xy += position.xy;
+                        gl_Position = projectionMatrix * mvPosition;
+                    }
+                `;
+
                 const instanceFS = `#version 300 es
                     precision highp float;
-                    precision highp int;
                     precision highp sampler2DArray;
 
                     in float vOpacity;
@@ -1352,8 +1372,25 @@
                     }
                 `;
 
+                const instanceIconFS = `#version 300 es
+                    precision highp float;
+                    precision highp int;
+                    precision highp sampler2DArray;
+
+                    in float vOpacity;
+                    uniform sampler2DArray diffuse;
+                    in vec2 vUv;
+                    out vec4 fragmentColor;
+                    in float vTexIndex;
+
+                    void main() {
+                        vec4 temp = texture(diffuse, vec3(vUv, int(vTexIndex + 0.1)));
+                        temp.a = temp.a * vOpacity;
+                        fragmentColor = temp;
+                    }
+                `;
+
                 function makeIconObject(is2d) {
-                    // create icon texture data
                     const connTypes = [
                         ConnType.ONE_WAY,
                         ConnType.NO_ENTRY,
@@ -1366,7 +1403,7 @@
                         ConnType.LOCKED_CONDITION,
                         ConnType.INACCESSIBLE
                     ];
-                    const iconImgDimensions = { x: 40, y: 40 };
+                    const iconImgDimensions = { x: 64, y: 64 };
                     const amountTextures = connTypes.length;
 
                     const buffer = new ArrayBuffer(iconImgDimensions.x * iconImgDimensions.y * 4 * amountTextures);
@@ -1379,9 +1416,9 @@
                         const context = canvas.getContext('2d');
                         canvas.width = iconImgDimensions.x;
                         canvas.height = iconImgDimensions.y;
-                        context.font = '32px MS Gothic';
+                        context.font = '50px MS Gothic';
                         context.fillStyle = 'white';
-                        context.fillText(char, 0, 30);
+                        context.fillText(char, 0, 52);
                         const imgData = context.getImageData(0, 0, iconImgDimensions.x, iconImgDimensions.y);
                         const offset = index * imgData.data.length;
                         iconImgData.set(imgData.data, offset);
@@ -1395,10 +1432,11 @@
                         uniforms: {
                             diffuse: {value: texture },
                         },
-                        vertexShader: instanceVS,
-                        fragmentShader: instanceFS,
+                        vertexShader: instanceIconVS,
+                        fragmentShader: instanceIconFS,
                         transparent: true,
-                        depthTest: !is2d
+                        depthTest: !is2d,
+                        depthWrite: false
                     });
 
                     const opacities = [];
@@ -1419,7 +1457,10 @@
 
                     iconObject = new THREE.InstancedMesh(geometry, material, amountIcons);
                     iconObject.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-                    iconObject.renderOrder = 0;
+                    if(!is2d)
+                        iconObject.renderOrder = 3;
+                    else
+                        iconObject.renderOrder = -1;
                     graph.scene().add(iconObject);
                 }
 
@@ -1457,7 +1498,6 @@
                                         dummy.position.set(pos.x, pos.y, pos.z);
                                     else
                                         dummy.position.set(pos.x, pos.y, 0);
-                                    dummy.lookAt(graph.camera().position);
                                     dummy.updateMatrix();
                                     iconObject.setMatrixAt(index, dummy.matrix);
                                 }
@@ -1641,36 +1681,36 @@
                 }
 
                 function makeLinkIcons(is2d) {
-//                     graph.graphData().links.forEach(link => {
-//                         if (icons3D[link.key] === undefined) {
-//                             const linkOpacity = getLinkOpacity(link);
-//                             let linkIcons = [];
-//                             link.icons.forEach(icon => {
-//                                 const text = new SpriteText(icon.char, 1, 'white');
-//                                 text.__graphObjType = 'icon';
-//                                 text.name = icon.text;
-//                                 text.connType = icon.type;
-//                                 text.fontFace = 'MS Gothic';
-//                                 text.fontSize = 80;
-//                                 text.borderWidth = 1;
-//                                 text.borderColor = 'transparent';
-//                                 if (is2d) {
-//                                     text.renderOrder = 0;
-//                                     text.material.depthTest = false;
-//                                 }
-//                                 text.material.transparent = true;
-//                                 text.material.opacity = linkOpacity;
-//                                 if (icon.type & ConnType.ONE_WAY) {
-//                                     text.material.map.wrapS = THREE.RepeatWrapping;
-//                                     link.source.x > link.target.x && (text.material.map.repeat.x = -1);
-//                                 }
-//                                 !config.connMode && link.hidden && (text.visible = false);
-//                                 linkIcons.push(text);
-//                                 graph.scene().add(text);
-//                             });
-//                             icons3D[link.key] = linkIcons;
-//                         }
-//                     });
+                    graph.graphData().links.forEach(link => {
+                        if (icons3D[link.key] === undefined) {
+                            const linkOpacity = getLinkOpacity(link);
+                            let linkIcons = [];
+                            link.icons.forEach(icon => {
+                                const text = new SpriteText(icon.char, 1, 'white');
+                                text.__graphObjType = 'icon';
+                                text.name = icon.text;
+                                text.connType = icon.type;
+                                text.fontFace = 'MS Gothic';
+                                text.fontSize = 80;
+                                text.borderWidth = 1;
+                                text.borderColor = 'transparent';
+                                if (is2d) {
+                                    text.renderOrder = 0;
+                                    text.material.depthTest = false;
+                                }
+                                text.material.transparent = true;
+                                text.material.opacity = linkOpacity;
+                                if (icon.type & ConnType.ONE_WAY) {
+                                    text.material.map.wrapS = THREE.RepeatWrapping;
+                                    link.source.x > link.target.x && (text.material.map.repeat.x = -1);
+                                }
+                                !config.connMode && link.hidden && (text.visible = false);
+                                linkIcons.push(text);
+                                graph.scene().add(text);
+                            });
+                            icons3D[link.key] = linkIcons;
+                        }
+                    });
                 }
 
                 function makeLinkIconTooltip() {
@@ -1724,7 +1764,7 @@
                     });
                     const bufferedGeometry = new THREE.LineSegments(geometry, material);
                     if (is2d)
-                        bufferedGeometry.renderOrder = -1;
+                        bufferedGeometry.renderOrder = -2;
                     graph.scene().add(bufferedGeometry);
                     return bufferedGeometry;
                 }
@@ -1783,7 +1823,7 @@
                     });
                     const bufferedGeometry = new THREE.LineSegments(geometry, material);
                     if (is2d)
-                        bufferedGeometry.renderOrder = -1;
+                        bufferedGeometry.renderOrder = -2;
                     graph.scene().add(bufferedGeometry);
                     return bufferedGeometry;
                 }
@@ -2368,16 +2408,18 @@
                 }
 
                 function updateConnectionModeIcons() {
-//                     graph.graphData().links.forEach(link => {
-//                         if (icons3D[link.key] !== undefined) {
-//                             const linkOpacity = getLinkOpacity(link);
-//                             icons3D[link.key].forEach(icon => {
-//                                 icon.visible = true;
-//                                 icon.material.opacity = linkOpacity;
-//                                 config.connMode === 0 && link.hidden && (icon.visible = false);
-//                             });
-//                         }
-//                     });
+                    if (!isWebGL2) {
+                        graph.graphData().links.forEach(link => {
+                            if (icons3D[link.key] !== undefined) {
+                                const linkOpacity = getLinkOpacity(link);
+                                icons3D[link.key].forEach(icon => {
+                                    icon.visible = true;
+                                    icon.material.opacity = linkOpacity;
+                                    config.connMode === 0 && link.hidden && (icon.visible = false);
+                                });
+                            }
+                        });
+                    }
                 }
 
                 function highlightWorldSelection() {
