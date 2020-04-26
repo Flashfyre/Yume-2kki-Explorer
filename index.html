@@ -1369,7 +1369,11 @@
                         texIndexes[i] = i;
                     }
 
-                    const geometry = new THREE.BoxBufferGeometry(1, 1, 1);
+                    let geometry;
+                    if (is2d)
+                        geometry = new THREE.PlaneBufferGeometry(1, 1);
+                    else
+                        geometry = new THREE.BoxBufferGeometry(1, 1, 1);
                     geometry.attributes.opacity = new THREE.InstancedBufferAttribute(new Float32Array(opacities), 1);
                     geometry.attributes.texIndex = new THREE.InstancedBufferAttribute(new Float32Array(texIndexes), 1);
 
