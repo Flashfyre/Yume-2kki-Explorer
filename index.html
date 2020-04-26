@@ -1470,11 +1470,11 @@
                         let index = 0;
                         graph.graphData().links.forEach(link => {
                             const start = link.source;
-                                const end = link.target;
-                                const dist = is2d
-                                    ? new THREE.Vector2(start.x, start.y).distanceTo(new THREE.Vector2(end.x, end.y))
-                                    : new THREE.Vector3(start.x, start.y, start.z).distanceTo(new THREE.Vector3(end.x, end.y, end.z));
-                                const spacing = Math.min(((dist / 2) / dist) / (link.icons.length + 1), 16 / dist);
+                            const end = link.target;
+                            const dist = is2d
+                                ? new THREE.Vector2(start.x, start.y).distanceTo(new THREE.Vector2(end.x, end.y))
+                                : new THREE.Vector3(start.x, start.y, start.z).distanceTo(new THREE.Vector3(end.x, end.y, end.z));
+                            const spacing = Math.min(((dist / 2) / dist) / (link.icons.length + 1), 16 / dist);
                             let iconIndex = 0;
                             link.icons.forEach(icon => {
                                 let pos;
@@ -2408,7 +2408,19 @@
                 }
 
                 function updateConnectionModeIcons() {
-                    if (!isWebGL2) {
+                    if (isWebGL2) {
+                        let iconIndex = 0;
+                        graph.graphData().links.forEach(link => {
+                            const linkOpacity = getLinkOpacity(link);
+                            link.icons.forEach(icon => {
+                                let opacities = iconObject.geometry.attributes.opacity.array;
+                                opacities[iconIndex] = linkOpacity;
+                                config.connMode === 0 && link.hidden && (opacities[iconIndex] = 0);
+                                iconIndex++;
+                            });
+                        });
+                        iconObject.geometry.attributes.opacity.needsUpdate = true;
+                    } else {
                         graph.graphData().links.forEach(link => {
                             if (icons3D[link.key] !== undefined) {
                                 const linkOpacity = getLinkOpacity(link);
