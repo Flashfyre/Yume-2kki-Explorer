@@ -1392,27 +1392,51 @@
                             if (is2d)
                                 images = images.concat(images);
                             const canvas = document.createElement('canvas');
-                            const context = canvas.getContext('2d');
+                            const ctx = canvas.getContext('2d');
                             canvas.width = nodeImgDimensions.x;
                             canvas.height = nodeImgDimensions.y;
+                            const fontSize = 36;
+                            const halfFontSize = fontSize / 2;
+                            let lineYOffset;
                             let index = 0;
                             images.forEach(img => {
                                 // stretch to fit
-                                context.drawImage( img, 0, 0, img.width, img.height,
-                                                        0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
+                                ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
                                 if (index >= worldData.length) {
-                                    context.font = '37px MS Gothic';
-                                    context.strokeStyle = 'black';
-                                    context.lineWidth = 5;
-                                    const world = worldData[index - worldData.length];
+                                    ctx.font = fontSize + 'px MS Gothic';
+                                    ctx.fillStyle = 'white';
+                                    ctx.strokeStyle = 'black';
+                                    ctx.lineWidth = 5;
+                                    const worldId = index - worldData.length;
+                                    const world = worldData[worldId];
                                     const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
-                                    const textWidth = context.measureText(worldName).width;
-                                    context.fillText(worldName, (canvas.width / 2) - (textWidth / 2), canvas.height / 2);
-                                    context.strokeText(worldName, (canvas.width / 2) - (textWidth / 2), canvas.height / 2);
-                                    context.fillStyle = 'white';
-                                    context.fillText(worldName, (canvas.width / 2) - (textWidth / 2), canvas.height / 2);
+                                    let textLines = worldName.split(" ");
+                                    for (let l = 0; l < textLines.length; l++) {
+                                        if (ctx.measureText(textLines[l]).width < nodeImgDimensions.x) {
+                                            let mergeIndex = 0;
+                                            for (let l2 = l + 1; l2 < textLines.length; l2++) {
+                                                const mergedLine = textLines.slice(l, l2 + 1).join(" ");
+                                                if (ctx.measureText(mergedLine).width < nodeImgDimensions.x)
+                                                    mergeIndex = l2;
+                                                else
+                                                    break;
+                                            }
+                                            if (mergeIndex)
+                                                textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
+                                        } else if (textLines[l].indexOf("：") > -1)
+                                            textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
+                                    }
+                                    for (let l in textLines) {
+                                        const textLine = textLines[l];
+                                        const lineWidth = ctx.measureText(textLine).width;
+                                        !lineYOffset && (lineYOffset = ctx.measureText(textLine).actualBoundingBoxAscent / 2);
+                                        const lineX = (nodeImgDimensions.x - lineWidth) / 2;
+                                        const lineY = ((nodeImgDimensions.y / 2) + lineYOffset) - ((textLines.length - 1) * halfFontSize) + l * fontSize;
+                                        ctx.strokeText(textLine, lineX, lineY);
+                                        ctx.fillText(textLine, lineX, lineY);
+                                    }
                                 }
-                                const nodeImageData = context.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
+                                const nodeImageData = ctx.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
                                 const offset = index * nodeImageData.data.length;
                                 nodeObject.material.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
                                 index++;
