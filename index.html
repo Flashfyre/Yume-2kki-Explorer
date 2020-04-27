@@ -1281,6 +1281,7 @@
                     if (isWebGL2) {
                         initNodeObject(is2d);
                         makeIconObject(is2d);
+                        updateConnectionModeIcons();
                         if (is2d)
                             updateNodeLabels2D();
                     } else
@@ -1390,6 +1391,9 @@
                     }
                 `;
 
+                let unsortedIconTexIndexes = [];
+                let unsortedIconOpacities = [];
+                let amountIcons;
                 function makeIconObject(is2d) {
                     const connTypes = [
                         ConnType.ONE_WAY,
@@ -1407,7 +1411,13 @@
                     const amountTextures = connTypes.length;
 
                     const buffer = new ArrayBuffer(iconImgDimensions.x * iconImgDimensions.y * 4 * amountTextures);
-                    const amountIcons = graph.graphData().links.filter(link => link.icons.length).length;
+
+                    amountIcons = 0;
+                    graph.graphData().links.forEach(link => {
+                        link.icons.forEach(icon => {
+                            amountIcons++;
+                        })
+                    });
                     let iconImgData = new Uint8ClampedArray(buffer);
                     let index = 0;
                     connTypes.forEach(type => {
@@ -1450,6 +1460,9 @@
                             iconIndex++;
                         });
                     });
+
+                    unsortedIconTexIndexes = texIndexes.slice();
+                    unsortedIconOpacities = opacities.slice();
 
                     const geometry = new THREE.PlaneBufferGeometry(5, 5);
                     geometry.attributes.opacity = new THREE.InstancedBufferAttribute(new Float32Array(opacities), 1);
@@ -1505,8 +1518,52 @@
                                 iconIndex++;
                             });
                         });
-                        iconObject.instanceMatrix.needsUpdate = true;
+                        sortInstances(iconObject, unsortedIconOpacities, unsortedIconTexIndexes);
                     }
+                }
+
+                function sortInstances(instanceObject, unsortedOpacities, unsortedTexIndexes) {
+                    const camera = graph.camera();
+                    let dummy = new THREE.Object3D();
+                    let index = 0;
+                    let positions = [];
+                    graph.graphData().links.forEach(link => {
+                        link.icons.forEach(icon => {
+                            instanceObject.getMatrixAt(index, dummy.matrix);
+                            positions[index] = new THREE.Vector3(dummy.matrix.elements[12], dummy.matrix.elements[13], dummy.matrix.elements[14]);
+                            index++;
+                        });
+                    });
+
+                    const opacities = instanceObject.geometry.attributes.opacity.array;
+                    const texIndexes = instanceObject.geometry.attributes.texIndex.array;
+                    let vecArray = [];
+                    for (var i = 0; i < amountIcons; i++)
+                        vecArray.push({ pos: positions[i], opacity: unsortedOpacities[i], texIndex: unsortedTexIndexes[i] });
+                    vecArray.sort(function(a, b) {
+                        if (a.pos.distanceTo(camera.position) > b.pos.distanceTo(camera.position))
+                            return -1;
+                        if (a.pos.distanceTo(camera.position) < b.pos.distanceTo(camera.position))
+                            return 1;
+                        return 0;
+                    });
+
+                    index = 0;
+                    graph.graphData().links.forEach(link => {
+                        link.icons.forEach(icon => {
+                            instanceObject.getMatrixAt(index, dummy.matrix);
+                            dummy.position.set(vecArray[index].pos.x, vecArray[index].pos.y, vecArray[index].pos.z);
+                            dummy.updateMatrix();
+                            instanceObject.setMatrixAt(index, dummy.matrix);
+                            opacities[index] = vecArray[index].opacity;
+                            texIndexes[index] = vecArray[index].texIndex;
+                            index++;
+                        });
+                    });
+
+                    instanceObject.instanceMatrix.needsUpdate = true;
+                    instanceObject.geometry.attributes.opacity.needsUpdate = true;
+                    instanceObject.geometry.attributes.texIndex.needsUpdate = true;
                 }
 
                 function initNodeObject(is2d) {
@@ -2433,16 +2490,18 @@
 
                 function updateConnectionModeIcons() {
                     if (isWebGL2) {
+                        iconObject.geometry.attributes.opacity.array.set(unsortedIconOpacities, 0);
+                        let opacities = iconObject.geometry.attributes.opacity.array;
                         let iconIndex = 0;
                         graph.graphData().links.forEach(link => {
                             const linkOpacity = getLinkOpacity(link);
                             link.icons.forEach(icon => {
-                                let opacities = iconObject.geometry.attributes.opacity.array;
                                 opacities[iconIndex] = linkOpacity;
                                 config.connMode === 0 && link.hidden && (opacities[iconIndex] = 0);
                                 iconIndex++;
                             });
                         });
+                        unsortedIconOpacities = opacities.slice();
                         iconObject.geometry.attributes.opacity.needsUpdate = true;
                     } else {
                         graph.graphData().links.forEach(link => {
