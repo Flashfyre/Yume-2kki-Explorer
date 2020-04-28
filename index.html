@@ -527,7 +527,7 @@
                 let fontsLoaded = false;
                 let isWebGL2;
                 let is2d;
-
+                let iconTexts = [];
                 const worldScales = {};
 
                 $.fn.extend({
@@ -854,6 +854,8 @@
                     const addedLinks = [];
 
                     const dagIgnore = {};
+
+                    iconTexts = [];
 
                     _.each(worldData, w => {
                         worldScales[w.id] = 1 + (Math.round((w.size - minSize) / (maxSize - minSize) * 10 * (config.sizeDiff - 1)) / 10);
@@ -1281,6 +1283,13 @@
                     if (isWebGL2) {
                         initNodeObject(is2d);
                         makeIconObject(is2d);
+                        let index = 0;
+                        graph.graphData().links.forEach(link => {
+                            link.icons.forEach(icon => {
+                                iconTexts[index] = icon.text;
+                                index++;
+                            });
+                        });
                         updateConnectionModeIcons();
                         if (is2d)
                             updateNodeLabels2D();
@@ -1393,6 +1402,7 @@
 
                 let unsortedIconTexIndexes = [];
                 let unsortedIconOpacities = [];
+                let sortedIconIds = [];
                 let amountIcons;
                 function makeIconObject(is2d) {
                     const connTypes = [
@@ -1481,6 +1491,7 @@
                     const dummy = new THREE.Object3D();
                     if (iconObject) {
                         let index = 0;
+                        const camPos = graph.camera().position;
                         graph.graphData().links.forEach(link => {
                             const start = link.source;
                             const end = link.target;
@@ -1519,6 +1530,7 @@
                             });
                         });
                         sortInstances(iconObject, unsortedIconOpacities, unsortedIconTexIndexes);
+                        iconObject.instanceMatrix.needsUpdate = true;
                     }
                 }
 
@@ -1539,7 +1551,7 @@
                     const texIndexes = instanceObject.geometry.attributes.texIndex.array;
                     let vecArray = [];
                     for (var i = 0; i < amountIcons; i++)
-                        vecArray.push({ pos: positions[i], opacity: unsortedOpacities[i], texIndex: unsortedTexIndexes[i] });
+                        vecArray.push({ pos: positions[i], opacity: unsortedOpacities[i], texIndex: unsortedTexIndexes[i], unsortedId: i });
                     vecArray.sort(function(a, b) {
                         if (a.pos.distanceTo(camera.position) > b.pos.distanceTo(camera.position))
                             return -1;
@@ -1549,10 +1561,18 @@
                     });
 
                     index = 0;
+                    vecArray.forEach(item => {
+                       sortedIconIds[index] = item.unsortedId;
+                       index++;
+                    });
+
+                    index = 0;
+                    const camPos = graph.camera().position;
                     graph.graphData().links.forEach(link => {
                         link.icons.forEach(icon => {
                             instanceObject.getMatrixAt(index, dummy.matrix);
                             dummy.position.set(vecArray[index].pos.x, vecArray[index].pos.y, vecArray[index].pos.z);
+                            dummy.lookAt(camPos);
                             dummy.updateMatrix();
                             instanceObject.setMatrixAt(index, dummy.matrix);
                             opacities[index] = vecArray[index].opacity;
@@ -1561,7 +1581,6 @@
                         });
                     });
 
-                    instanceObject.instanceMatrix.needsUpdate = true;
                     instanceObject.geometry.attributes.opacity.needsUpdate = true;
                     instanceObject.geometry.attributes.texIndex.needsUpdate = true;
                 }
@@ -2557,26 +2576,48 @@
                     if (!$(".js--help-modal:visible").length) {
                         raycaster.setFromCamera(vector, graph.camera());
                         // create an array containing all objects in the scene with which the ray intersects
-                        intersects = raycaster.intersectObjects(graph.graphData().nodes.map(node => node.__threeObj).filter(o => o).concat(graph.scene().children.filter(o => o.__graphObjType === 'icon' && o.visible)));
+                        if (isWebGL2)
+                            intersects = raycaster.intersectObject(iconObject);
+                        else
+                            intersects = raycaster.intersectObjects(graph.graphData().nodes.map(node => node.__threeObj).filter(o => o).concat(graph.scene().children.filter(o => o.__graphObjType === 'icon' && o.visible)));
                     }
 
                     // if there are one or more intersections
                     if (intersects.length)
                     {
-                        const topObj = intersects[0];
-                        if (topObj.object.__graphObjType !== "node") {
-                            $(".graph .scene-tooltip").css("visibility", "hidden"); 
-                            // update text, if it has a "name" field.
-                            if (topObj.object.name) {
+                        if (isWebGL2) {
+                            const topInstanceId = intersects[0].instanceId;
+                            if (iconObject.geometry.attributes.opacity.array[topInstanceId] < 1)
+                                return;
+                            const index = sortedIconIds[topInstanceId];
+                            const text = iconTexts[index];
+                            $(".graph .scene-tooltip").css("visibility", "hidden");
+                            if (text != undefined) {
                                 const viewPortCoords = {
                                     x: mousePos.clientX,
                                     y: mousePos.clientY
                                 };
-                                iconLabel.innerHTML = intersects[0].object.name;
+                                iconLabel.innerHTML = text;
                                 iconLabel.style.left = viewPortCoords.x + (mousePos.x + 1) * iconLabel.offsetWidth * -0.5;
                                 iconLabel.style.top = viewPortCoords.y + 21;
                             }
                             return;
+                        } else {
+                            const topObj = intersects[0];
+                            if (topObj.object.__graphObjType !== "node") {
+                                $(".graph .scene-tooltip").css("visibility", "hidden"); 
+                                // update text, if it has a "name" field.
+                                if (topObj.object.name) {
+                                    const viewPortCoords = {
+                                        x: mousePos.clientX,
+                                        y: mousePos.clientY
+                                    };
+                                    iconLabel.innerHTML = intersects[0].object.name;
+                                    iconLabel.style.left = viewPortCoords.x + (mousePos.x + 1) * iconLabel.offsetWidth * -0.5;
+                                    iconLabel.style.top = viewPortCoords.y + 21;
+                                }
+                                return;
+                            }
                         }
                     }
                     iconLabel.innerHTML = '';
