@@ -1220,11 +1220,9 @@
                             copyImageData(node.id, index, totalNodeCount);
                             index++;
                         });
-                        nodeObject.material.uniforms.diffuse.value.needsUpdate = true;
-                    } else {
+                    } else
                         nodeObject.material.uniforms.diffuse.value.image.data.set(worldImageData, 0);
-                        nodeObject.material.uniforms.diffuse.value.needsUpdate = true;
-                    }
+                    nodeObject.material.uniforms.diffuse.value.needsUpdate = true;
                 }
 
                 function copyImageData(from, to, totalNodeCount) {
