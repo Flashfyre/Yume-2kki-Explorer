@@ -1403,7 +1403,7 @@
                 let unsortedIconTexIndexes = [];
                 let unsortedIconOpacities = [];
                 let sortedIconIds = [];
-                let amountIcons;
+                let iconCount;
                 function makeIconObject(is2d) {
                     const connTypes = [
                         ConnType.ONE_WAY,
@@ -1422,10 +1422,10 @@
 
                     const buffer = new ArrayBuffer(iconImgDimensions.x * iconImgDimensions.y * 4 * amountTextures);
 
-                    amountIcons = 0;
+                    iconCount = 0;
                     graph.graphData().links.forEach(link => {
                         link.icons.forEach(icon => {
-                            amountIcons++;
+                            iconCount++;
                         })
                     });
                     let iconImgData = new Uint8ClampedArray(buffer);
@@ -1455,7 +1455,7 @@
                     texture.type = THREE.UnsignedByteType;
                     const material = new THREE.RawShaderMaterial({
                         uniforms: {
-                            diffuse: {value: texture },
+                            diffuse: { value: texture },
                         },
                         vertexShader: instanceIconVS,
                         fragmentShader: instanceIconFS,
@@ -1483,12 +1483,9 @@
                     geometry.attributes.opacity = new THREE.InstancedBufferAttribute(new Float32Array(opacities), 1);
                     geometry.attributes.texIndex = new THREE.InstancedBufferAttribute(new Float32Array(texIndexes), 1);
 
-                    iconObject = new THREE.InstancedMesh(geometry, material, amountIcons);
+                    iconObject = new THREE.InstancedMesh(geometry, material, iconCount);
                     iconObject.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-                    if (!is2d)
-                        iconObject.renderOrder = 3;
-                    else
-                        iconObject.renderOrder = -1;
+                    iconObject.renderOrder = is2d ? -1 : 3;
                     graph.scene().add(iconObject);
                 }
 
@@ -1521,7 +1518,7 @@
                                     resZ = (1 - rat) * start.z + rat * end.z;
                                     pos = new THREE.Vector3(resX, resY, is2d ? 0 : resZ);
                                 }
-                                if (pos != undefined) {
+                                if (pos !== undefined) {
                                     iconObject.getMatrixAt(index, dummy.matrix);
                                     if (!is2d)
                                         dummy.position.set(pos.x, pos.y, pos.z);
@@ -1571,15 +1568,14 @@
                     const opacities = instanceObject.geometry.attributes.opacity.array;
                     const texIndexes = instanceObject.geometry.attributes.texIndex.array;
                     let vecArray = [];
-                    for (var i = 0; i < amountIcons; i++)
+                    for (let i = 0; i < iconCount; i++)
                         vecArray.push({ pos: positions[i], opacity: unsortedOpacities[i], texIndex: unsortedTexIndexes[i], unsortedId: i });
-                    vecArray.sort(function(a, b) {
-                        if (a.pos.distanceTo(camera.position) > b.pos.distanceTo(camera.position))
-                            return -1;
-                        if (a.pos.distanceTo(camera.position) < b.pos.distanceTo(camera.position))
-                            return 1;
-                        return 0;
-                    });
+                    vecArray.sort((a, b) => a.pos.distanceTo(camera.position) > b.pos.distanceTo(camera.position)
+                        ? -1
+                        : a.pos.distanceTo(camera.position) < b.pos.distanceTo(camera.position)
+                        ? 1
+                        : 0
+                    );
 
                     index = 0;
                     vecArray.forEach(item => {
@@ -1615,7 +1611,7 @@
                     texture.type = THREE.UnsignedByteType;
                     const material = new THREE.RawShaderMaterial({
                         uniforms: {
-                            diffuse: {value: texture },
+                            diffuse: { value: texture },
                         },
                         vertexShader: instanceVS,
                         fragmentShader: instanceFS,
@@ -1954,7 +1950,7 @@
                     let index = 0;
                     linkData.forEach(link => {
                         let source, target;
-                        if (link.source.x == undefined) {
+                        if (link.source.x === undefined) {
                             source = { x: 0, y: 0, z: 0 };
                             target = { x: 0, y: 0, z: 0 };
                         } else {
@@ -2613,7 +2609,7 @@
                             const index = sortedIconIds[topInstanceId];
                             const text = iconTexts[index];
                             $(".graph .scene-tooltip").css("visibility", "hidden");
-                            if (text != undefined) {
+                            if (text !== undefined) {
                                 const viewPortCoords = {
                                     x: mousePos.clientX,
                                     y: mousePos.clientY
