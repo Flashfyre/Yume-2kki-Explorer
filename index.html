@@ -975,7 +975,7 @@
                             let ret;
                             const scale = worldScales[node.id];
                             const world = worldData[node.id];
-                            const box = new THREE.BoxGeometry(13 * scale, 9.75 * scale, is2d ? 0.1 : 9.75 * scale);
+                            const box = new THREE.BoxGeometry(13 * scale, 9.75 * scale, is2d ? 0.1 : 13 * scale);
                             let material;
                             if (isWebGL2) {
                                 material = new THREE.MeshBasicMaterial();
@@ -1634,7 +1634,7 @@
                             else
                                 dummy.position.set(node.x, node.y, 0);
                             const scale = worldScales[node.id];
-                            dummy.scale.set(13 * scale, 9.75 * scale, is2d ? 0.1 : 9.75 * scale);
+                            dummy.scale.set(13 * scale, 9.75 * scale, is2d ? 0.1 : 13 * scale);
                             dummy.updateMatrix();
                             nodeObject.setMatrixAt(index, dummy.matrix);
                             index++;
