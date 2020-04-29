@@ -527,7 +527,7 @@
                 let fontsLoaded = false;
                 let isWebGL2;
                 let is2d;
-
+                let iconTexts = [];
                 const worldScales = {};
 
                 $.fn.extend({
@@ -813,6 +813,7 @@
                 let linksOneWayBuffered;
 
                 let nodeObject;
+                let iconObject;
 
                 let icons3D;
 
@@ -853,6 +854,8 @@
                     const addedLinks = [];
 
                     const dagIgnore = {};
+
+                    iconTexts = [];
 
                     _.each(worldData, w => {
                         worldScales[w.id] = 1 + (Math.round((w.size - minSize) / (maxSize - minSize) * 10 * (config.sizeDiff - 1)) / 10);
@@ -1110,9 +1113,10 @@
                                     text.borderWidth = 1;
                                     text.borderColor = 'transparent';
                                 }
-                                if (isWebGL2)
+                                if (isWebGL2) {
                                     text.renderOrder = 2;
-
+                                    text.material.depthWrite = false;
+                                }
                                 let textLines = worldName.split(" ");
                                 for (let l = 0; l < textLines.length; l++) {
                                     text.text = textLines[l];
@@ -1150,8 +1154,10 @@
                             updateLinkObjects(visibleOneWayLinks, linksOneWayBuffered, is2d);
                             updateLinkAnimation(linksOneWayBuffered, time);
                             updateLinkDistances();
-                            if (isWebGL2)
+                            if (isWebGL2) {
                                 updateNodePositions(is2d);
+                                updateIconPositions(is2d);
+                            }
                         })
                         .linkThreeObject(link => {
                             const dummy = new THREE.Points();
@@ -1159,7 +1165,7 @@
                             return dummy;
                         })
                         .linkPositionUpdate((linkObject, { start, end }, link) => {
-                            if (icons3D[link.key] !== undefined) {
+                            if (!isWebGL2 && icons3D[link.key] !== undefined) {
                                 const linkIcons = icons3D[link.key];
                                 const dist = is2d
                                     ? new THREE.Vector2(start.x, start.y).distanceTo(new THREE.Vector2(end.x, end.y))
@@ -1276,9 +1282,19 @@
 
                     if (isWebGL2) {
                         initNodeObject(is2d);
+                        makeIconObject(is2d);
+                        let index = 0;
+                        graph.graphData().links.forEach(link => {
+                            link.icons.forEach(icon => {
+                                iconTexts[index] = icon.text;
+                                index++;
+                            });
+                        });
+                        updateConnectionModeIcons();
                         if (is2d)
                             updateNodeLabels2D();
-                    }
+                    } else
+                        makeLinkIcons(is2d);
 
                     // initialize object to perform world/screen calculations
                     raycaster = new THREE.Raycaster();
@@ -1292,7 +1308,6 @@
                         }
                     })
 
-                    makeLinkIcons(is2d);
                     makeLinkIconTooltip();
                     linksTwoWayBuffered = makeTwoWayLinkObjects(is2d);
                     linksOneWayBuffered = makeOneWayLinkObjects(is2d);
@@ -1303,49 +1318,291 @@
                 }
 
                 // START WEBGL2.0 SPECIFIC CODE
+                const instanceVS = `#version 300 es
+                    precision highp float;
+
+                    uniform mat4 modelViewMatrix;
+                    uniform mat4 projectionMatrix;
+                    in mat4 instanceMatrix;
+                    in vec3 position;
+                    in vec2 uv;
+
+                    in float opacity;
+                    out float vOpacity;
+                    out vec2 vUv;
+                    in float texIndex;
+                    out float vTexIndex;
+                    void main() {
+                        vOpacity = opacity;
+                        vUv = vec2(uv.x, 1.0 - uv.y); // flip texture vertically, because of how it's stored
+                        vTexIndex = texIndex;
+                        vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+                        gl_Position = projectionMatrix * mvPosition;
+                    }
+                `;
+
+                const instanceIconVS = `#version 300 es
+                    precision highp float;
+
+                    uniform mat4 modelViewMatrix;
+                    uniform mat4 projectionMatrix;
+                    in mat4 instanceMatrix;
+                    in vec3 position;
+                    in vec2 uv;
+
+                    in float opacity;
+                    out float vOpacity;
+                    out vec2 vUv;
+                    in float texIndex;
+                    out float vTexIndex;
+                    void main() {
+                        vOpacity = opacity;
+                        vUv = vec2(uv.x, 1.0 - uv.y); // flip texture vertically, because of how it's stored
+                        vTexIndex = texIndex;
+                        vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+                        mvPosition.xy += position.xy;
+                        gl_Position = projectionMatrix * mvPosition;
+                    }
+                `;
+
+                const instanceFS = `#version 300 es
+                    precision highp float;
+                    precision highp sampler2DArray;
+
+                    in float vOpacity;
+                    uniform sampler2DArray diffuse;
+                    in vec2 vUv;
+                    out vec4 fragmentColor;
+                    in float vTexIndex;
+
+                    void main() {
+                        vec4 temp = texture(diffuse, vec3(vUv, int(vTexIndex + 0.1)));
+                        temp.a = vOpacity;
+                        fragmentColor = temp;
+                    }
+                `;
+
+                const instanceIconFS = `#version 300 es
+                    precision highp float;
+                    precision highp int;
+                    precision highp sampler2DArray;
+
+                    in float vOpacity;
+                    uniform sampler2DArray diffuse;
+                    in vec2 vUv;
+                    out vec4 fragmentColor;
+                    in float vTexIndex;
+
+                    void main() {
+                        vec4 temp = texture(diffuse, vec3(vUv, int(vTexIndex + 0.1)));
+                        temp.a = temp.a * vOpacity;
+                        fragmentColor = temp;
+                    }
+                `;
+
+                let unsortedIconTexIndexes = [];
+                let unsortedIconOpacities = [];
+                let sortedIconIds = [];
+                let iconCount;
+                function makeIconObject(is2d) {
+                    const connTypes = [
+                        ConnType.ONE_WAY,
+                        ConnType.NO_ENTRY,
+                        ConnType.UNLOCK,
+                        ConnType.LOCKED,
+                        ConnType.DEAD_END,
+                        ConnType.ISOLATED,
+                        ConnType.EFFECT,
+                        ConnType.CHANCE,
+                        ConnType.LOCKED_CONDITION,
+                        ConnType.INACCESSIBLE
+                    ];
+                    const iconImgDimensions = { x: 64, y: 64 };
+                    const amountTextures = connTypes.length + 1; // 1 reversed one-way arrow
+
+                    const buffer = new ArrayBuffer(iconImgDimensions.x * iconImgDimensions.y * 4 * amountTextures);
+
+                    iconCount = 0;
+                    graph.graphData().links.forEach(link => {
+                        link.icons.forEach(icon => {
+                            iconCount++;
+                        })
+                    });
+                    let iconImgData = new Uint8ClampedArray(buffer);
+                    let index = 0;
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = iconImgDimensions.x;
+                    canvas.height = iconImgDimensions.y;
+                    context.font = '50px MS Gothic';
+                    context.fillStyle = 'white';
+                    const dataLength = iconImgDimensions.x * iconImgDimensions.y * 4;
+                    connTypes.forEach(type => {
+                        let char = getConnTypeChar(type);
+                        context.fillText(char, 0, 52);
+                        const imgData = context.getImageData(0, 0, iconImgDimensions.x, iconImgDimensions.y);
+                        const offset = index * dataLength;
+                        iconImgData.set(imgData.data, offset);
+                        context.clearRect(0, 0, canvas.width, canvas.height);
+                        index++;
+                    });
+                    context.scale(-1, 1);
+                    context.fillText(getConnTypeChar(ConnType.ONE_WAY), -canvas.width, 52);
+                    iconImgData.set(context.getImageData(0, 0, iconImgDimensions.x, iconImgDimensions.y).data, index * dataLength);
+
+                    const texture = new THREE.DataTexture2DArray(iconImgData, iconImgDimensions.x, iconImgDimensions.y, amountTextures);
+                    texture.format = THREE.RGBAFormat;
+                    texture.type = THREE.UnsignedByteType;
+                    const material = new THREE.RawShaderMaterial({
+                        uniforms: {
+                            diffuse: { value: texture },
+                        },
+                        vertexShader: instanceIconVS,
+                        fragmentShader: instanceIconFS,
+                        transparent: true,
+                        depthTest: !is2d,
+                        depthWrite: false
+                    });
+
+                    const opacities = [];
+                    const texIndexes = [];
+
+                    let iconIndex = 0;
+                    graph.graphData().links.forEach(link => {
+                        link.icons.forEach(icon => {
+                            texIndexes[iconIndex] = connTypes.findIndex(a => a == icon.type);
+                            opacities[iconIndex] = 1.0;
+                            iconIndex++;
+                        });
+                    });
+
+                    unsortedIconTexIndexes = texIndexes.slice();
+                    unsortedIconOpacities = opacities.slice();
+
+                    const geometry = new THREE.PlaneBufferGeometry(5, 5);
+                    geometry.attributes.opacity = new THREE.InstancedBufferAttribute(new Float32Array(opacities), 1);
+                    geometry.attributes.texIndex = new THREE.InstancedBufferAttribute(new Float32Array(texIndexes), 1);
+
+                    iconObject = new THREE.InstancedMesh(geometry, material, iconCount);
+                    iconObject.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                    iconObject.renderOrder = is2d ? -1 : 3;
+                    graph.scene().add(iconObject);
+                }
+
+                function updateIconPositions(is2d) {
+                    const dummy = new THREE.Object3D();
+                    if (iconObject) {
+                        let index = 0;
+                        const camPos = graph.camera().position;
+                        graph.graphData().links.forEach(link => {
+                            const start = link.source;
+                            const end = link.target;
+                            const dist = is2d
+                                ? new THREE.Vector2(start.x, start.y).distanceTo(new THREE.Vector2(end.x, end.y))
+                                : new THREE.Vector3(start.x, start.y, start.z).distanceTo(new THREE.Vector3(end.x, end.y, end.z));
+                            const spacing = Math.min(((dist / 2) / dist) / (link.icons.length + 1), 16 / dist);
+                            let iconIndex = 0;
+                            link.icons.forEach(icon => {
+                                let pos;
+                                if (is2d) {
+                                    let resX, resY;
+                                    const rat = ((dist / 4) / dist) + iconIndex * spacing;
+                                    resX = (1 - rat) * start.x + rat * end.x;
+                                    resY = (1 - rat) * start.y + rat * end.y;
+                                    pos = new THREE.Vector3(resX, resY, 0);
+                                } else {
+                                    let resX, resY, resZ;
+                                    const rat = ((dist / 4) / dist) + iconIndex * spacing;
+                                    resX = (1 - rat) * start.x + rat * end.x;
+                                    resY = (1 - rat) * start.y + rat * end.y;
+                                    resZ = (1 - rat) * start.z + rat * end.z;
+                                    pos = new THREE.Vector3(resX, resY, is2d ? 0 : resZ);
+                                }
+                                if (pos !== undefined) {
+                                    iconObject.getMatrixAt(index, dummy.matrix);
+                                    if (!is2d)
+                                        dummy.position.set(pos.x, pos.y, pos.z);
+                                    else
+                                        dummy.position.set(pos.x, pos.y, 0);
+                                    dummy.updateMatrix();
+                                    iconObject.setMatrixAt(index, dummy.matrix);
+                                }
+                                const texIndex = unsortedIconTexIndexes[index];
+                                if (texIndex == 0 || texIndex == 10) {
+                                    if (is2d) {
+                                        if (start.x > end.x) {
+                                            if (texIndex == 0)
+                                                unsortedIconTexIndexes[index] = 10;
+                                        } else if (texIndex == 10)
+                                            unsortedIconTexIndexes[index] = 0;
+                                    } else {
+                                        if (graph.graph2ScreenCoords(start.x, start.y, start.z).x > graph.graph2ScreenCoords(end.x, end.y, end.z).x) {
+                                            if (texIndex == 0)
+                                                unsortedIconTexIndexes[index] = 10;
+                                        } else if (texIndex == 10)
+                                            unsortedIconTexIndexes[index] = 0;
+                                    }
+                                }
+                                index++;
+                                iconIndex++;
+                            });
+                        });
+                        sortInstances(iconObject, unsortedIconOpacities, unsortedIconTexIndexes);
+                        iconObject.instanceMatrix.needsUpdate = true;
+                    }
+                }
+
+                function sortInstances(instanceObject, unsortedOpacities, unsortedTexIndexes) {
+                    const camera = graph.camera();
+                    let dummy = new THREE.Object3D();
+                    let index = 0;
+                    let positions = [];
+                    graph.graphData().links.forEach(link => {
+                        link.icons.forEach(icon => {
+                            instanceObject.getMatrixAt(index, dummy.matrix);
+                            positions[index] = new THREE.Vector3(dummy.matrix.elements[12], dummy.matrix.elements[13], dummy.matrix.elements[14]);
+                            index++;
+                        });
+                    });
+
+                    const opacities = instanceObject.geometry.attributes.opacity.array;
+                    const texIndexes = instanceObject.geometry.attributes.texIndex.array;
+                    let vecArray = [];
+                    for (let i = 0; i < iconCount; i++)
+                        vecArray.push({ pos: positions[i], opacity: unsortedOpacities[i], texIndex: unsortedTexIndexes[i], unsortedId: i });
+                    vecArray.sort((a, b) => a.pos.distanceTo(camera.position) > b.pos.distanceTo(camera.position)
+                        ? -1
+                        : a.pos.distanceTo(camera.position) < b.pos.distanceTo(camera.position)
+                        ? 1
+                        : 0
+                    );
+
+                    index = 0;
+                    vecArray.forEach(item => {
+                       sortedIconIds[index] = item.unsortedId;
+                       index++;
+                    });
+
+                    index = 0;
+                    const camPos = graph.camera().position;
+                    graph.graphData().links.forEach(link => {
+                        link.icons.forEach(icon => {
+                            instanceObject.getMatrixAt(index, dummy.matrix);
+                            dummy.position.set(vecArray[index].pos.x, vecArray[index].pos.y, vecArray[index].pos.z);
+                            dummy.lookAt(camPos);
+                            dummy.updateMatrix();
+                            instanceObject.setMatrixAt(index, dummy.matrix);
+                            opacities[index] = vecArray[index].opacity;
+                            texIndexes[index] = vecArray[index].texIndex;
+                            index++;
+                        });
+                    });
+
+                    instanceObject.geometry.attributes.opacity.needsUpdate = true;
+                    instanceObject.geometry.attributes.texIndex.needsUpdate = true;
+                }
+
                 function initNodeObject(is2d) {
-                    const lineVertShader = `#version 300 es
-                        precision highp float;
-                        precision highp int;
-
-                        uniform mat4 modelViewMatrix;
-                        uniform mat4 projectionMatrix;
-                        in mat4 instanceMatrix;
-                        in vec3 position;
-                        in vec3 normal;
-                        in vec2 uv;
-
-                        in float opacity;
-                        out float vOpacity;
-                        out vec2 vUv;
-                        in float texIndex;
-                        out float vTexIndex;
-                        void main() {
-                            vOpacity = opacity;
-                            vUv = vec2(uv.x, 1.0 - uv.y); // flip texture vertically, because of how it's stored
-                            vTexIndex = texIndex;
-                            vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
-                            gl_Position = projectionMatrix * mvPosition;
-                        }
-                    `;
-                    const lineFragShader = `#version 300 es
-                        precision highp float;
-                        precision highp int;
-                        precision highp sampler2DArray;
-
-                        in float vOpacity;
-                        uniform sampler2DArray diffuse;
-                        in vec2 vUv;
-                        out vec4 fragmentColor;
-                        in float vTexIndex;
-
-                        void main() {
-                            vec4 temp = texture(diffuse, vec3(vUv, int(vTexIndex + 0.1)));
-                            temp.a = vOpacity;
-                            fragmentColor = temp;
-                        }
-                    `;
-
                     const nodeImgDimensions = { x: 320, y: 240 };
                     const buffer = new ArrayBuffer(nodeImgDimensions.x * nodeImgDimensions.y * 4 * worldData.length * 2);
                     const amount = graph.graphData().nodes.length;
@@ -1354,10 +1611,10 @@
                     texture.type = THREE.UnsignedByteType;
                     const material = new THREE.RawShaderMaterial({
                         uniforms: {
-                            diffuse: {value: texture },
+                            diffuse: { value: texture },
                         },
-                        vertexShader: lineVertShader,
-                        fragmentShader: lineFragShader,
+                        vertexShader: instanceVS,
+                        fragmentShader: instanceFS,
                         transparent: true,
                         depthTest: !is2d
                     });
@@ -1626,7 +1883,7 @@
                     });
                     const bufferedGeometry = new THREE.LineSegments(geometry, material);
                     if (is2d)
-                        bufferedGeometry.renderOrder = -1;
+                        bufferedGeometry.renderOrder = -2;
                     graph.scene().add(bufferedGeometry);
                     return bufferedGeometry;
                 }
@@ -1685,7 +1942,7 @@
                     });
                     const bufferedGeometry = new THREE.LineSegments(geometry, material);
                     if (is2d)
-                        bufferedGeometry.renderOrder = -1;
+                        bufferedGeometry.renderOrder = -2;
                     graph.scene().add(bufferedGeometry);
                     return bufferedGeometry;
                 }
@@ -1695,7 +1952,7 @@
                     let index = 0;
                     linkData.forEach(link => {
                         let source, target;
-                        if (link.source.x == undefined) {
+                        if (link.source.x === undefined) {
                             source = { x: 0, y: 0, z: 0 };
                             target = { x: 0, y: 0, z: 0 };
                         } else {
@@ -2270,16 +2527,32 @@
                 }
 
                 function updateConnectionModeIcons() {
-                    graph.graphData().links.forEach(link => {
-                        if (icons3D[link.key] !== undefined) {
+                    if (isWebGL2) {
+                        iconObject.geometry.attributes.opacity.array.set(unsortedIconOpacities, 0);
+                        let opacities = iconObject.geometry.attributes.opacity.array;
+                        let iconIndex = 0;
+                        graph.graphData().links.forEach(link => {
                             const linkOpacity = getLinkOpacity(link);
-                            icons3D[link.key].forEach(icon => {
-                                icon.visible = true;
-                                icon.material.opacity = linkOpacity;
-                                config.connMode === 0 && link.hidden && (icon.visible = false);
+                            link.icons.forEach(icon => {
+                                opacities[iconIndex] = linkOpacity;
+                                config.connMode === 0 && link.hidden && (opacities[iconIndex] = 0);
+                                iconIndex++;
                             });
-                        }
-                    });
+                        });
+                        unsortedIconOpacities = opacities.slice();
+                        iconObject.geometry.attributes.opacity.needsUpdate = true;
+                    } else {
+                        graph.graphData().links.forEach(link => {
+                            if (icons3D[link.key] !== undefined) {
+                                const linkOpacity = getLinkOpacity(link);
+                                icons3D[link.key].forEach(icon => {
+                                    icon.visible = true;
+                                    icon.material.opacity = linkOpacity;
+                                    config.connMode === 0 && link.hidden && (icon.visible = false);
+                                });
+                            }
+                        });
+                    }
                 }
 
                 function highlightWorldSelection() {
@@ -2322,26 +2595,48 @@
                     if (!$(".js--help-modal:visible").length) {
                         raycaster.setFromCamera(vector, graph.camera());
                         // create an array containing all objects in the scene with which the ray intersects
-                        intersects = raycaster.intersectObjects(graph.graphData().nodes.map(node => node.__threeObj).filter(o => o).concat(graph.scene().children.filter(o => o.__graphObjType === 'icon' && o.visible)));
+                        if (isWebGL2)
+                            intersects = raycaster.intersectObject(iconObject);
+                        else
+                            intersects = raycaster.intersectObjects(graph.graphData().nodes.map(node => node.__threeObj).filter(o => o).concat(graph.scene().children.filter(o => o.__graphObjType === 'icon' && o.visible)));
                     }
 
                     // if there are one or more intersections
                     if (intersects.length)
                     {
-                        const topObj = intersects[0];
-                        if (topObj.object.__graphObjType !== "node") {
-                            $(".graph .scene-tooltip").css("visibility", "hidden"); 
-                            // update text, if it has a "name" field.
-                            if (topObj.object.name) {
+                        if (isWebGL2) {
+                            const topInstanceId = intersects[0].instanceId;
+                            if (iconObject.geometry.attributes.opacity.array[topInstanceId] < 1)
+                                return;
+                            const index = sortedIconIds[topInstanceId];
+                            const text = iconTexts[index];
+                            $(".graph .scene-tooltip").css("visibility", "hidden");
+                            if (text !== undefined) {
                                 const viewPortCoords = {
                                     x: mousePos.clientX,
                                     y: mousePos.clientY
                                 };
-                                iconLabel.innerHTML = intersects[0].object.name;
+                                iconLabel.innerHTML = text;
                                 iconLabel.style.left = viewPortCoords.x + (mousePos.x + 1) * iconLabel.offsetWidth * -0.5;
                                 iconLabel.style.top = viewPortCoords.y + 21;
                             }
                             return;
+                        } else {
+                            const topObj = intersects[0];
+                            if (topObj.object.__graphObjType !== "node") {
+                                $(".graph .scene-tooltip").css("visibility", "hidden"); 
+                                // update text, if it has a "name" field.
+                                if (topObj.object.name) {
+                                    const viewPortCoords = {
+                                        x: mousePos.clientX,
+                                        y: mousePos.clientY
+                                    };
+                                    iconLabel.innerHTML = intersects[0].object.name;
+                                    iconLabel.style.left = viewPortCoords.x + (mousePos.x + 1) * iconLabel.offsetWidth * -0.5;
+                                    iconLabel.style.top = viewPortCoords.y + 21;
+                                }
+                                return;
+                            }
                         }
                     }
                     iconLabel.innerHTML = '';
