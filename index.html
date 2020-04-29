@@ -753,6 +753,7 @@
                 };
 
                 let worldImageData = [];
+
                 function initGraph(renderMode, displayMode, paths) {
 
                     is2d = !renderMode;
@@ -2251,7 +2252,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "2.4.0");
+                            data.footer = data.footer.replace("{VERSION}", "2.4.1");
                             localizedConns = data.conn;
                             initContextMenu(data.contextMenu);
                             if (isInitial) {
@@ -2737,10 +2738,7 @@
                         graphCanvas = document.createElement('canvas');
                         graphContext = graphCanvas.getContext('webgl2');
 
-                        isWebGL2 = graphContext != null;
-                        if (isWebGL2) {
-                            initNodeObject(!config.renderMode);
-                        }
+                        (isWebGL2 = (graphContext != null)) && initNodeObject(!config.renderMode);
                         reloadGraph();
                     }, function () {
                         window.clearInterval(loadingTimer);
