@@ -961,6 +961,9 @@
                     linksTwoWayBuffered = undefined;
                     linksOneWayBuffered = undefined;
 
+                    const dummyLinkObject = new THREE.Line();
+                    dummyLinkObject.visible = false;
+
                     graph = graph
                         .numDimensions(is2d ? 2 : 3)
                         .backgroundColor('#00000000')
@@ -1052,9 +1055,7 @@
                             }
                         })
                         .linkThreeObject(link => {
-                            const dummy = new THREE.Points();
-                            dummy.visible = false;
-                            return dummy;
+                            return dummyLinkObject;
                         })
                         .linkPositionUpdate((linkObject, { start, end }, link) => {
                             if (!isWebGL2 && icons3D[link.key] !== undefined) {
