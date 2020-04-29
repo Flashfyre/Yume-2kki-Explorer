@@ -1418,7 +1418,7 @@
                         ConnType.INACCESSIBLE
                     ];
                     const iconImgDimensions = { x: 64, y: 64 };
-                    const amountTextures = connTypes.length;
+                    const amountTextures = connTypes.length + 1; // 1 reversed one-way arrow
 
                     const buffer = new ArrayBuffer(iconImgDimensions.x * iconImgDimensions.y * 4 * amountTextures);
 
@@ -1430,20 +1430,25 @@
                     });
                     let iconImgData = new Uint8ClampedArray(buffer);
                     let index = 0;
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = iconImgDimensions.x;
+                    canvas.height = iconImgDimensions.y;
+                    context.font = '50px MS Gothic';
+                    context.fillStyle = 'white';
+                    const dataLength = iconImgDimensions.x * iconImgDimensions.y * 4;
                     connTypes.forEach(type => {
                         let char = getConnTypeChar(type);
-                        const canvas = document.createElement('canvas');
-                        const context = canvas.getContext('2d');
-                        canvas.width = iconImgDimensions.x;
-                        canvas.height = iconImgDimensions.y;
-                        context.font = '50px MS Gothic';
-                        context.fillStyle = 'white';
                         context.fillText(char, 0, 52);
                         const imgData = context.getImageData(0, 0, iconImgDimensions.x, iconImgDimensions.y);
-                        const offset = index * imgData.data.length;
+                        const offset = index * dataLength;
                         iconImgData.set(imgData.data, offset);
+                        context.clearRect(0, 0, canvas.width, canvas.height);
                         index++;
                     });
+                    context.scale(-1, 1);
+                    context.fillText(getConnTypeChar(ConnType.ONE_WAY), -canvas.width, 52);
+                    iconImgData.set(context.getImageData(0, 0, iconImgDimensions.x, iconImgDimensions.y).data, index * dataLength);
 
                     const texture = new THREE.DataTexture2DArray(iconImgData, iconImgDimensions.x, iconImgDimensions.y, amountTextures);
                     texture.format = THREE.RGBAFormat;
@@ -1524,6 +1529,22 @@
                                         dummy.position.set(pos.x, pos.y, 0);
                                     dummy.updateMatrix();
                                     iconObject.setMatrixAt(index, dummy.matrix);
+                                }
+                                const texIndex = unsortedIconTexIndexes[index];
+                                if (texIndex == 0 || texIndex == 10) {
+                                    if (is2d) {
+                                        if (start.x > end.x) {
+                                            if (texIndex == 0)
+                                                unsortedIconTexIndexes[index] = 10;
+                                        } else if (texIndex == 10)
+                                            unsortedIconTexIndexes[index] = 0;
+                                    } else {
+                                        if (graph.graph2ScreenCoords(start.x, start.y, start.z).x > graph.graph2ScreenCoords(end.x, end.y, end.z).x) {
+                                            if (texIndex == 0)
+                                                unsortedIconTexIndexes[index] = 10;
+                                        } else if (texIndex == 10)
+                                            unsortedIconTexIndexes[index] = 0;
+                                    }
                                 }
                                 index++;
                                 iconIndex++;
