@@ -1215,8 +1215,9 @@
                     nodeObject.count = nodes.length;
                     if (isPath) {
                         let index = 0;
+                        const totalNodeCount = nodes.length;
                         nodes.forEach(node => {
-                            copyImageData(node.id, index);
+                            copyImageData(node.id, index, totalNodeCount);
                             index++;
                         });
                         nodeObject.material.uniforms.diffuse.value.needsUpdate = true;
@@ -1226,13 +1227,13 @@
                     }
                 }
 
-                function copyImageData(from, to) {
+                function copyImageData(from, to, totalNodeCount) {
                     const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
                     let offsetFrom = from * dataLength;
                     let offsetTo = to * dataLength;
                     nodeObject.material.uniforms.diffuse.value.image.data.set(worldImageData.slice(offsetFrom, offsetFrom + dataLength), offsetTo);
                     offsetFrom += worldData.length * dataLength;
-                    offsetTo += nodes.length * dataLength;
+                    offsetTo += totalNodeCount * dataLength;
                     nodeObject.material.uniforms.diffuse.value.image.data.set(worldImageData.slice(offsetFrom, offsetFrom + dataLength), offsetTo);
                 }
 
