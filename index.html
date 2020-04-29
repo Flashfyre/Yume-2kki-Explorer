@@ -527,6 +527,9 @@
                 let fontsLoaded = false;
                 let isWebGL2;
                 let is2d;
+                let graphCanvas;
+                let graphContext;
+                const nodeImgDimensions = { x: 320, y: 240 };
                 let iconTexts = [];
                 const worldScales = {};
 
@@ -749,6 +752,7 @@
                     stackSize: 20
                 };
 
+                let worldImageData = [];
                 function initGraph(renderMode, displayMode, paths) {
 
                     is2d = !renderMode;
@@ -917,6 +921,9 @@
                         })
                     };
 
+                    if (isWebGL2)
+                        updateNodeImageData(nodes, paths);
+
                     const dashLineSpeed = 20;
 
                     icons3D = [];
@@ -924,17 +931,12 @@
                     visibleTwoWayLinks = [];
                     visibleOneWayLinks = [];
 
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('webgl2');
-                   
-                    isWebGL2 = context != null;
-
                     const rendererConfig = isWebGL2
                         ? {
                             antialias: true,
                             alpha: true,
-                            canvas: canvas,
-                            context: context
+                            canvas: graphCanvas,
+                            context: graphContext
                         }
                         : {
                             antialias: true,
@@ -1174,7 +1176,7 @@
                      document.querySelector('#graph canvas').addEventListener('wheel', clearTweens, false);
 
                     if (isWebGL2) {
-                        initNodeObject(is2d);
+                        graph.scene().add(nodeObject);
                         makeIconObject(is2d);
                         let index = 0;
                         graph.graphData().links.forEach(link => {
@@ -1209,6 +1211,31 @@
                 }
 
                 // START WEBGL2.0 SPECIFIC CODE
+                function updateNodeImageData(nodes, isPath) {
+                    nodeObject.count = nodes.length;
+                    if (isPath) {
+                        let index = 0;
+                        nodes.forEach(node => {
+                            copyImageData(node.id, index);
+                            index++;
+                        });
+                        nodeObject.material.uniforms.diffuse.value.needsUpdate = true;
+                    } else {
+                        nodeObject.material.uniforms.diffuse.value.image.data.set(worldImageData, 0);
+                        nodeObject.material.uniforms.diffuse.value.needsUpdate = true;
+                    }
+                }
+
+                function copyImageData(from, to) {
+                    const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
+                    let offsetFrom = from * dataLength;
+                    let offsetTo = to * dataLength;
+                    nodeObject.material.uniforms.diffuse.value.image.data.set(worldImageData.slice(offsetFrom, offsetFrom + dataLength), offsetTo);
+                    offsetFrom += worldData.length * dataLength;
+                    offsetTo += nodes.length * dataLength;
+                    nodeObject.material.uniforms.diffuse.value.image.data.set(worldImageData.slice(offsetFrom, offsetFrom + dataLength), offsetTo);
+                }
+
                 const instanceVS = `#version 300 es
                     precision highp float;
 
@@ -1494,9 +1521,8 @@
                 }
 
                 function initNodeObject(is2d) {
-                    const nodeImgDimensions = { x: 320, y: 240 };
                     const buffer = new ArrayBuffer(nodeImgDimensions.x * nodeImgDimensions.y * 4 * worldData.length * 2);
-                    const amount = graph.graphData().nodes.length;
+                    const amount = worldData.length;
                     const texture = new THREE.DataTexture2DArray(new Uint8ClampedArray(buffer), nodeImgDimensions.x, nodeImgDimensions.y, amount * 2);
                     texture.format = THREE.RGBAFormat;
                     texture.type = THREE.UnsignedByteType;
@@ -1528,10 +1554,9 @@
                     nodeObject = new THREE.InstancedMesh(geometry, material, amount);
                     nodeObject.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
                     nodeObject.renderOrder = 1;
-                    graph.scene().add(nodeObject);
 
                     const filenames = [];
-                    graph.graphData().nodes.forEach(node => {
+                    worldData.forEach(node => {
                         filenames.push(worldData[node.id].filename);
                     });
 
@@ -1592,6 +1617,7 @@
                                 index++;
                             });
                             delete canvas;
+                            worldImageData = nodeObject.material.uniforms.diffuse.value.image.data.slice();
                             nodeObject.material.uniforms.diffuse.value.needsUpdate = true;
                         })
                         .catch(err => console.error(err));
@@ -2709,6 +2735,13 @@
 
                         window.clearInterval(loadingTimer);
 
+                        graphCanvas = document.createElement('canvas');
+                        graphContext = graphCanvas.getContext('webgl2');
+
+                        isWebGL2 = graphContext != null;
+                        if (isWebGL2) {
+                            initNodeObject(!config.renderMode);
+                        }
                         reloadGraph();
                     }, function () {
                         window.clearInterval(loadingTimer);
