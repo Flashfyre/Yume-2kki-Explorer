@@ -1218,7 +1218,7 @@
                         nodes.forEach(node => {
                             copyImageData(node.id, index, totalNodeCount);
                             if (is2d)
-                                copyImageData(node.id + totalNodeCount, index + worldData.length);
+                                copyImageData(node.id + worldData.length, index + totalNodeCount);
                             index++;
                         });
                     } else
