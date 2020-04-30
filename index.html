@@ -923,8 +923,6 @@
                         })
                     };
 
-                    const dashLineSpeed = 20;
-
                     icons3D = [];
 
                     visibleTwoWayLinks = [];
@@ -956,8 +954,6 @@
                         graph = graph
                             .dagMode(displayMode === 0 ? 'td' : displayMode === 1 ? 'lr' : displayMode === 2 ? 'radialin' : 'radialout')
                             .dagLevelDistance(displayMode < 2 ? 12 : 24 + radius * (config.sizeDiff + 1));
-                    const clock = new THREE.Clock();
-                    let time = 0;
 
                     linksTwoWayBuffered = undefined;
                     linksOneWayBuffered = undefined;
@@ -1043,12 +1039,8 @@
                             return ret;
                         })
                         .onEngineTick(() => {
-                            time -= clock.getDelta() * dashLineSpeed;
-                            if (!(isWebGL2 && is2d))
-                                updateNodeLabels(is2d);
                             updateLinkObjects(visibleTwoWayLinks, linksTwoWayBuffered, is2d);
                             updateLinkObjects(visibleOneWayLinks, linksOneWayBuffered, is2d);
-                            updateLinkAnimation(linksOneWayBuffered, time);
                             updateLinkDistances();
                             if (isWebGL2) {
                                 updateNodePositions(is2d);
@@ -1135,7 +1127,7 @@
                             selectedWorldId = null;
                             highlightWorldSelection();
                         })
-                        .cooldownTime(Infinity)
+                        .cooldownTicks(400)
                         // Deactivate existing forces
                         // Add collision and bounding box forces
                         .d3Force('collide', d3.forceCollide(node => radius * worldScales[node.id]))
@@ -1174,6 +1166,14 @@
                      document.addEventListener('mousemove', onDocumentMouseMove, false);
                      document.querySelector('#graph canvas').addEventListener('wheel', clearTweens, false);
 
+                    (function () {
+                      let _animationCycle = graph._animationCycle
+                      graph._animationCycle = function () {
+                        onRender(is2d);
+                        _animationCycle.apply(this)
+                      }
+                    })()
+
                     if (isWebGL2) {
                         initNodeObject(is2d);
                         updateNodeImageData(nodes, paths, is2d);
@@ -1207,6 +1207,16 @@
                     linksOneWayBuffered = makeOneWayLinkObjects(is2d);
                     updateLinkColors(visibleTwoWayLinks, linksTwoWayBuffered);
                     updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
+                }
+
+                const clock = new THREE.Clock();
+                let time = 0;
+                const dashLineSpeed = 20;
+                function onRender(is2d) {
+                    time -= clock.getDelta() * dashLineSpeed;
+                    if (!(isWebGL2 && is2d))
+                        updateNodeLabels(is2d);
+                    updateLinkAnimation(linksOneWayBuffered, time);
                 }
 
                 // START WEBGL2.0 SPECIFIC CODE
