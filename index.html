@@ -530,6 +530,7 @@
                 let graphCanvas;
                 let graphContext;
                 const nodeImgDimensions = { x: 320, y: 240 };
+                let nodeObjectMaterial;
                 let iconTexts = [];
                 const worldScales = {};
 
@@ -922,9 +923,6 @@
                         })
                     };
 
-                    if (isWebGL2)
-                        updateNodeImageData(nodes, paths);
-
                     const dashLineSpeed = 20;
 
                     icons3D = [];
@@ -1177,7 +1175,8 @@
                      document.querySelector('#graph canvas').addEventListener('wheel', clearTweens, false);
 
                     if (isWebGL2) {
-                        graph.scene().add(nodeObject);
+                        initNodeObject(is2d);
+                        updateNodeImageData(nodes, paths, is2d);
                         makeIconObject(is2d);
                         let index = 0;
                         graph.graphData().links.forEach(link => {
@@ -1187,8 +1186,7 @@
                             });
                         });
                         updateConnectionModeIcons();
-                        if (is2d)
-                            updateNodeLabels2D();
+                        updateNodeLabels2D();
                     } else
                         makeLinkIcons(is2d);
 
@@ -1212,13 +1210,15 @@
                 }
 
                 // START WEBGL2.0 SPECIFIC CODE
-                function updateNodeImageData(nodes, isPath) {
+                function updateNodeImageData(nodes, isPath, is2d) {
                     nodeObject.count = nodes.length;
                     if (isPath) {
                         let index = 0;
                         const totalNodeCount = nodes.length;
                         nodes.forEach(node => {
                             copyImageData(node.id, index, totalNodeCount);
+                            if (is2d)
+                                copyImageData(node.id + totalNodeCount, index + worldData.length);
                             index++;
                         });
                     } else
@@ -1226,13 +1226,10 @@
                     nodeObject.material.uniforms.diffuse.value.needsUpdate = true;
                 }
 
-                function copyImageData(from, to, totalNodeCount) {
+                function copyImageData(from, to) {
                     const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
                     let offsetFrom = from * dataLength;
                     let offsetTo = to * dataLength;
-                    nodeObject.material.uniforms.diffuse.value.image.data.set(worldImageData.slice(offsetFrom, offsetFrom + dataLength), offsetTo);
-                    offsetFrom += worldData.length * dataLength;
-                    offsetTo += totalNodeCount * dataLength;
                     nodeObject.material.uniforms.diffuse.value.image.data.set(worldImageData.slice(offsetFrom, offsetFrom + dataLength), offsetTo);
                 }
 
@@ -1520,13 +1517,13 @@
                     instanceObject.geometry.attributes.texIndex.needsUpdate = true;
                 }
 
-                function initNodeObject(is2d) {
+                function initNodeObjectMaterial() {
                     const buffer = new ArrayBuffer(nodeImgDimensions.x * nodeImgDimensions.y * 4 * worldData.length * 2);
                     const amount = worldData.length;
                     const texture = new THREE.DataTexture2DArray(new Uint8ClampedArray(buffer), nodeImgDimensions.x, nodeImgDimensions.y, amount * 2);
                     texture.format = THREE.RGBAFormat;
                     texture.type = THREE.UnsignedByteType;
-                    const material = new THREE.RawShaderMaterial({
+                    nodeObjectMaterial = new THREE.RawShaderMaterial({
                         uniforms: {
                             diffuse: { value: texture },
                         },
@@ -1535,25 +1532,6 @@
                         transparent: true,
                         depthTest: !is2d
                     });
-
-                    const opacities = [];
-                    const texIndexes = [];
-                    for (let i = 0; i < amount; i++) {
-                        opacities[i] = 1.0;
-                        texIndexes[i] = i;
-                    }
-
-                    let geometry;
-                    if (is2d)
-                        geometry = new THREE.PlaneBufferGeometry(1, 1);
-                    else
-                        geometry = new THREE.BoxBufferGeometry(1, 1, 1);
-                    geometry.attributes.opacity = new THREE.InstancedBufferAttribute(new Float32Array(opacities), 1);
-                    geometry.attributes.texIndex = new THREE.InstancedBufferAttribute(new Float32Array(texIndexes), 1);
-
-                    nodeObject = new THREE.InstancedMesh(geometry, material, amount);
-                    nodeObject.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-                    nodeObject.renderOrder = 1;
 
                     const filenames = [];
                     worldData.forEach(node => {
@@ -1581,7 +1559,7 @@
                                 ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
                                 let nodeImageData = ctx.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
                                 let offset = index * dataLength;
-                                nodeObject.material.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
+                                nodeObjectMaterial.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
                                 const worldId = index;
                                 const world = worldData[worldId];
                                 const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
@@ -1613,14 +1591,36 @@
 
                                 nodeImageData = ctx.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
                                 offset = offsetLabels + index * dataLength;
-                                nodeObject.material.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
+                                nodeObjectMaterial.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
                                 index++;
                             });
                             delete canvas;
-                            worldImageData = nodeObject.material.uniforms.diffuse.value.image.data.slice();
-                            nodeObject.material.uniforms.diffuse.value.needsUpdate = true;
+                            worldImageData = nodeObjectMaterial.uniforms.diffuse.value.image.data.slice();
+                            nodeObjectMaterial.uniforms.diffuse.value.needsUpdate = true;
                         })
                         .catch(err => console.error(err));
+                }
+
+                function initNodeObject(is2d) {
+                    const amount = worldData.length;
+                    const opacities = [];
+                    const texIndexes = [];
+                    for (let i = 0; i < amount; i++) {
+                        opacities[i] = 1.0;
+                        texIndexes[i] = i;
+                    }
+
+                    let geometry;
+                    if (is2d)
+                        geometry = new THREE.PlaneBufferGeometry(1, 1);
+                    else
+                        geometry = new THREE.BoxBufferGeometry(1, 1, 1);
+                    geometry.attributes.opacity = new THREE.InstancedBufferAttribute(new Float32Array(opacities), 1);
+                    geometry.attributes.texIndex = new THREE.InstancedBufferAttribute(new Float32Array(texIndexes), 1);
+                    nodeObject = new THREE.InstancedMesh(geometry, nodeObjectMaterial, amount);
+                    nodeObject.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                    nodeObject.renderOrder = 1;
+                    graph.scene().add(nodeObject);
                 }
 
                 function updateNodePositions(is2d) {
@@ -1647,7 +1647,7 @@
                     if (nodeObject) {
                         let index = 0;
                         graph.graphData().nodes.forEach(node => {
-                            if (config.labelMode === 3 || (config.labelMode === 1 && node.isHover) || (config.labelMode === 2 && node.id === selectedWorldId))
+                            if (is2d && (config.labelMode === 3 || (config.labelMode === 1 && node.isHover) || (config.labelMode === 2 && node.id === selectedWorldId)))
                                 nodeObject.geometry.attributes.texIndex.array[index] = index + graph.graphData().nodes.length;
                             else
                                 nodeObject.geometry.attributes.texIndex.array[index] = index;
@@ -2738,7 +2738,7 @@
                         graphCanvas = document.createElement('canvas');
                         graphContext = graphCanvas.getContext('webgl2');
 
-                        (isWebGL2 = (graphContext != null)) && initNodeObject(!config.renderMode);
+                        (isWebGL2 = (graphContext != null)) && initNodeObjectMaterial();
                         reloadGraph();
                     }, function () {
                         window.clearInterval(loadingTimer);
