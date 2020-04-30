@@ -1167,11 +1167,11 @@
                      document.querySelector('#graph canvas').addEventListener('wheel', clearTweens, false);
 
                     (function () {
-                      let _animationCycle = graph._animationCycle
-                      graph._animationCycle = function () {
-                        onRender(is2d);
-                        _animationCycle.apply(this)
-                      }
+                        let _animationCycle = graph._animationCycle
+                        graph._animationCycle = function () {
+                            onRender(is2d);
+                            _animationCycle.apply(this)
+                        }
                     })()
 
                     if (isWebGL2) {
