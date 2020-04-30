@@ -1,4 +1,4 @@
-// Version 2.2.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 2.4.2 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -59408,7 +59408,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        } // Use radial force for radial dags
 
 
-	        state.d3ForceLayout.force('dagRadial', ['radialin', 'radialout'].indexOf(state.dagMode) !== -1 ? forceRadial(function (node) {
+	        state.d3ForceLayout.force('dagRadial', isDagRadial ? forceRadial(function (node) {
 	          var nodeDepth = nodeDepths[node[state.nodeId]];
 	          return (state.dagMode === 'radialin' ? maxDepth - nodeDepth : nodeDepth) * dagLevelDistance;
 	        }).strength(1) : null);

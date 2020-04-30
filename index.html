@@ -2262,7 +2262,7 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "2.4.1");
+                            data.footer = data.footer.replace("{VERSION}", "2.4.2");
                             localizedConns = data.conn;
                             initContextMenu(data.contextMenu);
                             if (isInitial) {
@@ -2748,7 +2748,11 @@
                         graphCanvas = document.createElement('canvas');
                         graphContext = graphCanvas.getContext('webgl2');
 
-                        (isWebGL2 = (graphContext != null)) && initNodeObjectMaterial();
+                        isWebGL2 = (graphContext != null);
+
+                        if (isWebGL2)
+                            initNodeObjectMaterial();
+                            
                         reloadGraph();
                     }, function () {
                         window.clearInterval(loadingTimer);
