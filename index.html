@@ -1042,10 +1042,8 @@
                             updateLinkObjects(visibleTwoWayLinks, linksTwoWayBuffered, is2d);
                             updateLinkObjects(visibleOneWayLinks, linksOneWayBuffered, is2d);
                             updateLinkDistances();
-                            if (isWebGL2) {
+                            if (isWebGL2)
                                 updateNodePositions(is2d);
-                                updateIconPositions(is2d);
-                            }
                         })
                         .linkThreeObject(link => {
                             return dummyLinkObject;
@@ -1216,6 +1214,8 @@
                     time -= clock.getDelta() * dashLineSpeed;
                     if (!(isWebGL2 && is2d))
                         updateNodeLabels(is2d);
+                    if (isWebGL2)
+                        updateIconPositions(is2d);
                     updateLinkAnimation(linksOneWayBuffered, time);
                 }
 
