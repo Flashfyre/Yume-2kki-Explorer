@@ -110,6 +110,10 @@
                 height: 25%;
             }
 
+            .blocker {
+                padding: 24px 24px 32px 24px !important;
+            }
+
             .graph {
                 width: 100%;
                 height: 100%;
@@ -137,6 +141,14 @@
                 margin: 8px;
                 padding: 4px;
                 cursor: pointer;
+                font-family: 'MS Gothic';
+                font-size: 18px;
+                border: 6px solid transparent;
+            }
+
+            a {
+                text-decoration: none;
+                padding: 4px;
                 font-family: 'MS Gothic';
                 font-size: 18px;
                 border: 6px solid transparent;
@@ -177,6 +189,61 @@
                 cursor: pointer;
             }
 
+            .modal {
+                border: 10px solid transparent;
+                padding: 0 32px 24px 24px !important;
+                max-width: initial !important;
+                vertical-align: top !important;
+                height: 100%;
+                transition: height 0.25s;
+            }
+
+            .modal__content {
+                margin-right: -32px;
+                overflow-y: scroll;
+                height: calc(100% + 24px);
+            }
+
+            .modal__content a {
+                display: inline-block;
+                margin-bottom: 24px;
+            }
+
+            .modal__content::-webkit-scrollbar {
+                width: 18px;
+            }
+
+            .modal__content::-webkit-scrollbar-track {
+                border: 10px solid transparent;
+                background-color: rgba(255, 255, 255, 0.25);
+                margin-top: 24px;
+            }
+
+            .modal__content::-webkit-scrollbar-thumb {
+                border: 6px solid transparent;
+            }
+
+            .modal__content::-webkit-scrollbar-button {
+                height: 0px !important;
+            }
+
+            .modal__content--localized {
+                padding-bottom: 16px;
+            }
+            
+            a.close-modal {
+                display: flex !important;
+                align-items: center;
+                justify-content: space-around;
+                text-decoration: none;
+                text-indent: initial !important;
+                padding: 5px;
+                margin: 0;
+                border: none;
+                top: -10px !important;
+                right: -10px !important;
+            }
+
             .autocomplete-suggestions {
                 border: 6px solid transparent;
                 overflow: auto;
@@ -201,6 +268,17 @@
                 border-bottom: 1px solid #000;
             }
 
+            .graph-tooltip, .scene-tooltip {
+                font-family: 'MS Gothic' !important;
+                font-size: 16px !important;
+                padding: 4px;
+                border: 6px solid transparent;
+            }
+
+            .scene-nav-info {
+                display: none;
+            }
+
             .context-menu-list {
                 border: 0 !important;
                 padding: 0 !important;
@@ -215,30 +293,56 @@
                 background-color: #000000; /*base*/
             }
 
-            .controls {
-                background: url(/images/ui/Default_Custom/containerbg.png);
-                border-image: url(/images/ui/Default_Custom/border.png);
-                border-image-slice: 12;
-                border-image-repeat: repeat;
+            .controls, .modal {
+                background: url(/images/ui/Default_Custom/containerbg.png) !important;
+                border-image: url(/images/ui/Default_Custom/border.png) 12 repeat;
             }
 
             .controls--container--tab__button {
                 color: rgba(216, 216, 216, 1); /*base*/
             }
 
-            label, .loading-container .loading-container__text {
-                background-image: url(/images/ui/Default_Custom/font1.png);
+            label, h1, h2, h3, h4, p, .close-modal, .loading-container .loading-container__text {
+                background-image: url(/images/ui/Default_Custom/font1.png) !important;
                 -webkit-background-clip: text;
 	            -webkit-text-fill-color: transparent;
                 background-clip: text;
+            }
+
+            label {
                 background-size: 18px;
+            }
+
+            h1 {
+                background-size: 32px;
+            }
+
+            h2 {
+                background-size: 24px;
+            }
+
+            h3 {
+                background-size: 18.67px;
+            }
+
+            p, h4 {
+                background-size: 16px;
+            }
+
+            .modal__content::-webkit-scrollbar-track {
+                border-image: url(/images/ui/Default_Custom/border.png) 12 repeat !important;
+                background-color: rgba(45, 17, 23, 1); /*base*/
+            }
+
+            .modal__content::-webkit-scrollbar-thumb {
+                border-image: url(/images/ui/Default_Custom/border.png) 8 round !important;
             }
 
             .footer {
                 color: rgba(216, 216, 216, 1); /*base*/
             }
 
-            button {
+            button, a {
                 color: rgba(216, 216, 216, 1); /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
                 background-image: url(/images/ui/Default_Custom/containerbg.png);
@@ -278,7 +382,7 @@
                 color: rgba(255, 255, 157, 1); /*alt*/
             }
 
-            .context-menu-item {
+            .context-menu-item, .graph-tooltip, .scene-tooltip:not(:empty) {
                 color: rgba(216, 216, 216, 1) !important; /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round !important;
                 background-color: rgba(45, 17, 23, 1) !important; /*base*/
@@ -291,30 +395,36 @@
         </style>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.9.0/jquery.contextMenu.min.css" />
-        <script src="/js/force-graph-modded.js"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.css" />
         <script src="//unpkg.com/d3-quadtree"></script>
         <script src="//unpkg.com/d3-force"></script>
+        <script src="//unpkg.com/three"></script>
+        <script src="//unpkg.com/three-spritetext"></script>
+        <script src="/js/yume-2kki-explorer.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.devbridge-autocomplete/1.4.10/jquery.autocomplete.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-localize/0.1.0/jquery.localize.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.9.0/jquery.contextMenu.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.9.0/jquery.ui.position.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/remarkable/1.7.1/remarkable.min.js"></script>
         <script src="/js/conn-type.js"></script>
     </head>
     <body>
         <div class="content">
             <div class="controls controls-top">
                 <div class="control">
-                    <label data-localize="search.name" class="noselect">Search:</label>
+                    <label data-localize="controls.search.name" class="noselect">Search:</label>
                     <input name="searchWorld" type="text" class="js--world-input js--search-world" />
                 </div>
                 <div class="control">
-                    <label data-localize="origin.name" class="noselect">Origin:</label>
+                    <label data-localize="controls.origin.name" class="noselect">Origin:</label>
                     <input name="startWorld" type="text" class="js--world-input js--path--world-input js--start-world" />
-                    <label data-localize="destination.name" class="noselect">Destination:</label>
+                    <label data-localize="controls.destination.name" class="noselect">Destination:</label>
                     <input name="endWorld" type="text" class="js--world-input js--path--world-input js--end-world" />
-                    <button data-localize="reset" class="js--reset noselect">Reset</button>
+                    <button data-localize="controls.reset.name" class="js--reset noselect">Reset</button>
+                    <button data-localize="controls.help.name" class="js--help noselect">Help</button>
                 </div>
             </div>
             <div id="graph" class="graph">
@@ -330,61 +440,68 @@
             <div class="controls--container controls-bottom--container">
                 <div class="controls controls-bottom" style="opacity: 0;">
                     <div class="control">
-                        <label data-localize="lang.name" class="noselect">Language:</label>
+                        <label data-localize="settings.lang.name" class="noselect">Language:</label>
                         <select name="language" class="js--lang">
-                            <option data-localize="lang.values.english" value="en" selected>English</option>
-                            <option data-localize="lang.values.japanese" value="ja">Japanese</option>
+                            <option data-localize="settings.lang.values.english" value="en" selected>English</option>
+                            <option data-localize="settings.lang.values.japanese" value="ja">Japanese</option>
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="uiTheme.name" class="noselect">UI Theme:</label>
+                        <label data-localize="settings.uiTheme.name" class="noselect">UI Theme:</label>
                         <select name="uiTheme" class="js--ui-theme">
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="fontStyle.name" class="noselect">Font Style:</label>
+                        <label data-localize="settings.fontStyle.name" class="noselect">Font Style:</label>
                         <select name="fontStyle" class="js--font-style">
-                            <option data-localize="fontStyle.values.style1" value="0">Style 1</option>
-                            <option data-localize="fontStyle.values.style2" value="1">Style 2</option>
-                            <option data-localize="fontStyle.values.style3" value="2">Style 3</option>
-                            <option data-localize="fontStyle.values.style4" value="3">Style 4</option>
-                            <option data-localize="fontStyle.values.style5" value="4">Style 5</option>
-                            <option data-localize="fontStyle.values.style6" value="5">Style 6</option>
-                            <option data-localize="fontStyle.values.style7" value="6">Style 7</option>
+                            <option data-localize="settings.fontStyle.values.style1" value="0">Style 1</option>
+                            <option data-localize="settings.fontStyle.values.style2" value="1">Style 2</option>
+                            <option data-localize="settings.fontStyle.values.style3" value="2">Style 3</option>
+                            <option data-localize="settings.fontStyle.values.style4" value="3">Style 4</option>
+                            <option data-localize="settings.fontStyle.values.style5" value="4">Style 5</option>
+                            <option data-localize="settings.fontStyle.values.style6" value="5">Style 6</option>
+                            <option data-localize="settings.fontStyle.values.style7" value="6">Style 7</option>
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="displayMode.name" class="noselect">Display Mode:</label>
+                        <label data-localize="settings.renderMode.name" class="noselect">Render Mode:</label>
+                        <select name="renderMode" class="js--render-mode">
+                            <option data-localize="settings.renderMode.values.vertical" value="0" selected>2D</option>
+                            <option data-localize="settings.renderMode.values.horizontal" value="1">3D</option>
+                        </select>
+                    </div>
+                    <div class="control">
+                        <label data-localize="settings.displayMode.name" class="noselect">Display Mode:</label>
                         <select name="displayMode" class="js--display-mode">
-                            <option data-localize="displayMode.values.vertical" value="0" selected>Vertical</option>
-                            <option data-localize="displayMode.values.horizontal" value="1">Horizontal</option>
-                            <option data-localize="displayMode.values.radialIn" value="2">Inward</option>
-                            <option data-localize="displayMode.values.radialOut" value="3">Outward</option>
-                            <option data-localize="displayMode.values.free" value="4">Free</option>
+                            <option data-localize="settings.displayMode.values.vertical" value="0" selected>Vertical</option>
+                            <option data-localize="settings.displayMode.values.horizontal" value="1">Horizontal</option>
+                            <option data-localize="settings.displayMode.values.radialIn" value="2">Inward</option>
+                            <option data-localize="settings.displayMode.values.radialOut" value="3">Outward</option>
+                            <option data-localize="settings.displayMode.values.free" value="4">Free</option>
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="connMode.name" class="noselect">Connection Mode:</label>
+                        <label data-localize="settings.connMode.name" class="noselect">Connection Mode:</label>
                         <select name="connMode" class="js--conn-mode">
-                            <option data-localize="connMode.values.oneWay" value="0" selected>One-Way)/option>
-                            <option data-localize="connMode.values.twoWay" value="1">Two-Way</option>
+                            <option data-localize="settings.connMode.values.oneWay" value="0" selected>One-Way</option>
+                            <option data-localize="settings.connMode.values.twoWay" value="1">Two-Way</option>
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="labelMode.name" class="noselect">Label Display:</label>
+                        <label data-localize="settings.labelMode.name" class="noselect">Label Display:</label>
                         <select name="labelMode" class="js--label-mode">
-                            <option data-localize="labelMode.values.never" value="0">Never</option>
-                            <option data-localize="labelMode.values.hover" value="1" selected>On Hover</option>
-                            <option data-localize="labelMode.values.select" value="2">On Select</option>
-                            <option data-localize="labelMode.values.always" value="3">Always</option>
+                            <option data-localize="settings.labelMode.values.never" value="0">Never</option>
+                            <option data-localize="settings.labelMode.values.hover" value="1" selected>On Hover</option>
+                            <option data-localize="settings.labelMode.values.select" value="2">On Select</option>
+                            <option data-localize="settings.labelMode.values.always" value="3">Always</option>
                         </select>
                     </div>
                     <div class="control">
-                        <label data-localize="sizeDiff.name" class="noselect">Size Difference:</label>
+                        <label data-localize="settings.sizeDiff.name" class="noselect">Size Difference:</label>
                         <input type="range" min="1" max="10" value="1" step="0.5" class="js--size-diff slider" />
                     </div>
                     <div class="control js--stack-size--container">
-                        <label data-localize="stackSize.name" class="noselect">Stack Threshold:</label>
+                        <label data-localize="settings.stackSize.name" class="noselect">Stack Threshold:</label>
                         <input type="range" min="5" max="100" value="20" step="1" class="js--stack-size slider" />
                     </div>
                 </div>
@@ -407,6 +524,15 @@
 
                 let isShift = false;
                 let isCtrl = false;
+                let fontsLoaded = false;
+                let isWebGL2;
+                let is2d;
+                let graphCanvas;
+                let graphContext;
+                const nodeImgDimensions = { x: 320, y: 240 };
+                let nodeObjectMaterial;
+                let iconTexts = [];
+                const worldScales = {};
 
                 $.fn.extend({
                     animateCss: function (animation, duration, endCallback) {
@@ -435,100 +561,6 @@
                         return this;
                     }
                 });
-
-                CanvasRenderingContext2D.prototype.roundRect = function (x, y, width, height, radius) {
-                    if (width < 2 * radius) radius = width / 2;
-                    if (height < 2 * radius) radius = height / 2;
-                    this.moveTo(x + radius, y);
-                    this.arcTo(x + width, y, x + width, y + height, radius);
-                    this.arcTo(x + width, y + height, x, y + height, radius);
-                    this.arcTo(x, y + height, x, y, radius);
-                    this.arcTo(x, y, x + width, y, radius);
-                    return this;
-                };
-
-                CanvasRenderingContext2D.prototype.emoji = function (x, y, scale, emoji) {
-                    this.beginPath();
-                    
-                    switch (emoji) {
-                        case "⛔":
-                        case "🚫":
-                            this.arc(x + 3.125 * scale, y - 2.1 * scale, 3.3 * scale, 0, 2 * Math.PI);
-                            break;
-                        case "🔒":
-                        case "🔐":
-                            const isCondition = emoji === "🔐";
-                            this.roundRect(x - 0.21 * scale, y - 2.45 * scale, 5.4 * scale, 3.7 * scale, 0.5 * scale);
-                            if (isCondition)
-                                this.arc(x + 4.875 * scale, y - 3 * scale, 1.6 * scale, 0, 2 * Math.PI);
-                            this.moveTo(x + 0.175 * scale, y - 2.445 * scale);
-                            this.arc(x + 2.5 * scale, y - 3.1 * scale, 2.325 * scale, Math.PI, 0);
-                            this.lineTo(x + 4.825 * scale, y - 2.445 * scale);
-                            if (isCondition) {
-                                this.moveTo(x + 5.65 * scale, y - 1.5825 * scale);
-                                this.lineTo(x + 5.65 * scale, y + 0.525 * scale);
-                                this.lineTo(x + 4.85 * scale, y + 1.2375 * scale);
-                                this.lineTo(x + 4.85 * scale, y - 1.5825 * scale);
-                            }
-                            break;
-                        case "🔑":
-                            this.moveTo(x + 3.75 * scale, y - 2.9 * scale);
-                            this.lineTo(x + 6.5 * scale, y - 0.15 * scale);
-                            this.lineTo(x + 6.5 * scale, y + 1.2 * scale);
-                            this.lineTo(x + 4.85 * scale, y + 1.2 * scale);
-                            this.lineTo(x + 4.85 * scale, y + 0.6 * scale);
-                            this.lineTo(x + 4.15 * scale, y + 0.6 * scale);
-                            this.lineTo(x + 4.15 * scale, y);
-                            this.lineTo(x + 3.5 * scale, y);
-                            this.lineTo(x + 3.5 * scale, y - 0.6 * scale);
-                            this.lineTo(x + 3.1 * scale, y - 0.6 * scale);
-                            this.lineTo(x + 2.4 * scale, y - 1.4 * scale);
-                            this.arc(x + 1.85 * scale, y - 3.35 * scale, 2.1 * scale, 0.4 * Math.PI, 2.4 * Math.PI)
-                            break;
-                        case "🚩":
-                            this.moveTo(x - 0.05 * scale, y + 1.25 * scale);
-                            this.lineTo(x - 0.05 * scale, y - 4.25 * scale);
-                            this.arc(x + 0.475 * scale, y - 4.75 * scale, 0.725 * scale, 0.75 * Math.PI, 2.05 * Math.PI);
-                            this.lineTo(x + 5.9 * scale, y - 3.1 * scale);
-                            this.arc(x + 5.675 * scale, y - 2.775 * scale, 0.375 * scale, 1.5 * Math.PI, 0.4 * Math.PI);
-                            this.lineTo(x + 1 * scale, y - 0.8 * scale);
-                            this.lineTo(x + 1 * scale, y + 1.25 * scale);
-                            break;
-                        case "↩️":
-                            this.rect(x - 0.2 * scale, y - 5.425 * scale, 6.675 * scale, 6.675 * scale);
-                            break;
-                        case "✨":
-                            this.moveTo(x + 1.5 * scale, y - 2.64 * scale);
-                            this.bezierCurveTo(x + 3.6 * scale, y - 2.15 * scale, x + 3.35 * scale, y - 4.7 * scale, x + 3.35 * scale, y - 4.7 * scale);
-                            this.arc(x + 3.85 * scale, y - 4.8 * scale, 0.5 * scale, Math.PI, 2 * Math.PI);
-                            this.bezierCurveTo(x + 4.05 * scale, y - 2.25 * scale, x + 6 * scale, y - 2.5 * scale, x + 6 * scale, y - 2.5 * scale);
-                            this.arc(x + 6 * scale, y - 2 * scale, 0.5 * scale, 1.5 * Math.PI, 0.5 * Math.PI);
-                            this.bezierCurveTo(x + 4.05 * scale, y - 1.75 * scale, x + 4.35 * scale, y + 0.7 * scale, x + 4.35 * scale, y + 0.7 * scale);
-                            this.arc(x + 3.85 * scale, y + 0.8 * scale, 0.5 * scale, 0, Math.PI);
-                            this.bezierCurveTo(x + 3.6 * scale, y - 1.75 * scale, x + 1.5 * scale, y - 1.5 * scale, x + 1.5 * scale, y - 1.5 * scale);
-                            this.roundRect(x - 0.2 * scale, y - 3.35 * scale, 2.65 * scale, scale, 0.5 * scale);
-                            this.roundRect(x + 0.6 * scale, y - 4.4 * scale, 1.05 * scale, 3.1 * scale, 0.5 * scale);
-                            this.rect(x + 2.6 * scale, y - 1.2 * scale, 0.4 * scale, 0.4 * scale);
-                            this.roundRect(x + 0.85 * scale, y - 0.85 * scale, 2.65 * scale, scale, 0.5 * scale);
-                            this.roundRect(x + 1.65 * scale, y - 1.9 * scale, 1.05 * scale, 3.1 * scale, 0.5 * scale);
-                            break;
-                        case "🍀":
-                            this.arc(x + 1 * scale, y - 3.325 * scale, 1.1 * scale, 0, 2 * Math.PI);
-                            this.arc(x + 2.125 * scale, y - 4.4 * scale, 1.1 * scale, 0, 2 * Math.PI);
-                            this.arc(x + 4.1 * scale, y - 4.4 * scale, 1.1 * scale, 0, 2 * Math.PI);
-                            this.arc(x + 5.225 * scale, y - 3.325 * scale, 1.1 * scale, 0, 2 * Math.PI);
-                            this.arc(x + 0.875 * scale, y - 1.375 * scale, 1.1 * scale, 0, 2 * Math.PI);
-                            this.arc(x + 1.975 * scale, y - 0.275 * scale, 1.1 * scale, 0, 2 * Math.PI);
-                            this.arc(x + 3.125 * scale, y + 0.7 * scale, 0.575 * scale, 0, 2 * Math.PI);
-                            this.arc(x + 5.375 * scale, y - 1.375 * scale, 1.1 * scale, 0, 2 * Math.PI);
-                            this.arc(x + 4.225 * scale, y - 0.275 * scale, 1.1 * scale, 0, 2 * Math.PI);
-                            this.lineTo(x + 3.5 * scale, y + 0.85 * scale);
-                            this.lineTo(x + 2 * scale, y + 0.85 * scale);
-                            this.rect(x + 1.5 * scale, y - 3.5 * scale, 3.25 * scale, 4 * scale);
-                            break;
-                    }
-                    this.closePath();
-                };
 
                 function hueToRGBA(h, a) {
                     let s = 1, v = 1, r, g, b, i, f, p, q, t;
@@ -614,6 +646,9 @@
                                         case "fontStyle":
                                             $(".js--font-style").val(value);
                                             break;
+                                        case "renderMode":
+                                            $(".js--render-mode").val(value);
+                                            break;
                                         case "displayMode":
                                             $(".js--display-mode").val(value);
                                             if (parseInt(value) >= 2)
@@ -647,25 +682,59 @@
                 }
 
                 function updateControlsContainer(updateTabMargin) {
-                    const controlsHeight = $(".controls-bottom").outerHeight();
-                    $(".controls--container").css({ "height": controlsHeight + "px", "margin-top": "-" + (controlsHeight + 20) + "px" });
-                    $(".controls--container--tab").css({ "height": controlsHeight + "px", "left": "calc(50% - " + (($(".controls--container--tab").outerWidth() - 16) / 2) + "px)" });
+                    const controlsHeight = $(".controls-top").outerHeight();
+                    const settingsHeight = $(".controls-bottom").outerHeight();
+                    $(".controls--container").css({ "height": settingsHeight + "px", "margin-top": "-" + (settingsHeight + 20) + "px" });
+                    $(".controls--container--tab").css({ "height": settingsHeight + "px", "left": "calc(50% - " + (($(".controls--container--tab").outerWidth() - 16) / 2) + "px)" });
                     if (updateTabMargin && $(".controls-bottom").hasClass("visible"))
-                        $(".controls--container--tab, .footer").css("margin-top", "-" + (controlsHeight + 8) + "px");
+                        $(".controls--container--tab, .footer").css("margin-top", "-" + (settingsHeight + 8) + "px");
+                    $(".js--help-modal").css({
+                        "margin-top": (controlsHeight + 16) + "px",
+                        "height": "calc(100% - " + (controlsHeight + 16 + ($(".controls-bottom").hasClass("visible") ? settingsHeight + 8 : 0)) + "px)"
+                    });
                 }
 
                 function loadWorldData(update, success, fail) {
-                    $.get("/worlds" + (update ? "?update=true" : ""), success).fail(fail);
+                    $.get("/worlds" + (update ? "?update=true" : ""), function (data) {
+                        if (document.fonts.check("12px MS Gothic")) {
+                            fontsLoaded = true;
+                            success(data);
+                        } else {
+                            document.fonts.onloadingdone = e => fontsLoaded = true;
+                            const fontsLoadedCheck = window.setInterval(function () {
+                                if (fontsLoaded) {
+                                    window.clearInterval(fontsLoadedCheck);
+                                    success(data);
+                                }
+                            }, 100);
+                        }
+                    }).fail(fail);
                 }
 
                 let graph;
                 
-                let contextWorldId = null, startWorldId = null, endWorldId = null, selectedWorldId = null, selectedWorldZoomCheck;
+                let contextWorldId = null, startWorldId = null, endWorldId = null, selectedWorldId = null;
 
                 let searchWorldIds = [], visibleWorldIds = [];
+                
+                let visibleTwoWayLinks = [];
+                let visibleOneWayLinks = [];
+                let linksTwoWayBuffered;
+                let linksOneWayBuffered;
+
+                let nodeObject;
+                let iconObject;
+
+                let icons3D;
+
+                const colorLinkSelected = new THREE.Color('red');
+
+                let iconLabel;
+
+                let raycaster, mousePos = { x: 0, y: 0 };
 
                 let localizedConns;
-                
+
                 let effectsJP;
 
                 let uiThemeBgColors = {};
@@ -676,6 +745,7 @@
                     lang: "en",
                     uiTheme: "Default_Custom",
                     fontStyle: 0,
+                    renderMode: 0,
                     displayMode: 0,
                     connMode: 0,
                     labelMode: 1,
@@ -683,28 +753,29 @@
                     stackSize: 20
                 };
 
-                function initGraph(displayMode, paths) {
+                let worldImageData = [];
+
+                function initGraph(renderMode, displayMode, paths) {
+
+                    is2d = !renderMode;
 
                     const links = [];
 
-                    const oneWayLinks = [];
-
-                    let lastOneWayLinkKey;
-
-                    let dashOffset = 0;
-
                     const addedLinks = [];
 
-                    const worldScales = {};
-
                     const dagIgnore = {};
+
+                    iconTexts = [];
 
                     _.each(worldData, w => {
                         worldScales[w.id] = 1 + (Math.round((w.size - minSize) / (maxSize - minSize) * 10 * (config.sizeDiff - 1)) / 10);
                     });
 
+                    const maxDepth =  _.max(worldData.map(w => w.depth));
+
                     if (paths) {
                         visibleWorldIds = _.uniq(_.flatten(paths).map(p => p.id));
+
                         const pathScores = [];
                         let minPathDepth = paths[0].length - 2;
                         let maxPathDepth;
@@ -740,27 +811,21 @@
                                         key: linkId,
                                         source: sourceId,
                                         target: targetId,
-                                        sourceScale: worldScales[sourceId],
-                                        targetScale: worldScales[targetId],
                                         connType: path[w - 1].connType,
                                         typeParams: path[w - 1].typeParams,
                                         icons: [],
                                         hidden: false,
                                         defaultColor: hueToRGBA(hue, 1),
                                         defaultColorFade: hueToRGBA(hue, 0.1),
-                                        connTypeCheck: path[w - 1].connType ? 'replace' : undefined
+                                        connTypeCheck: 'replace'
                                     };
                                     links.push(link);
                                     addedLinks.push(linkId);
-                                    if (path[w - 1].connType & ConnType.ONE_WAY)
-                                        oneWayLinks.push(link);
                                 }
                             }
                         }
                     } else {
                         visibleWorldIds = Object.keys(worldData).map(id => parseInt(id));
-
-                        const maxDepth =  _.max(worldData.map(w => w.depth));
 
                         for (let w in visibleWorldIds) {
                             const world = worldData[visibleWorldIds[w]];
@@ -781,31 +846,25 @@
                                 }
                                 if (hidden)
                                     dagIgnoreIds.push(connWorld.id);
-                                const hue = 0.6666 - ((world.depth / (maxDepth - 1)) * 0.6666);
+                                const hue = Math.max(0.6666 - ((world.depth / (maxDepth - 1)) * 0.6666), 0);
                                 const link = {
                                     key: `${world.id}_${connWorld.id}`,
                                     source: world.id,
                                     target: connWorld.id,
-                                    sourceScale: worldScales[world.id],
-                                    targetScale: worldScales[connWorld.id],
                                     connType: conn.type,
                                     typeParams: conn.typeParams,
                                     icons: [],
                                     hidden: hidden,
                                     defaultColor: hueToRGBA(hue, 1),
                                     defaultColorFade: hueToRGBA(hue, 0.1),
-                                    connTypeCheck: conn.type ? hidden ? 'after' : 'replace' : undefined
+                                    connTypeCheck: hidden ? 'after' : 'replace'
                                 };
                                 links.push(link);
-                                if (!hidden && conn.type & ConnType.ONE_WAY)
-                                    oneWayLinks.push(link);
                             }
                         }
                     }
 
                     initWorldSearch();
-
-                    oneWayLinks.length && (lastOneWayLinkKey = oneWayLinks[oneWayLinks.length - 1].key);
 
                     links.forEach(l => {
                         const icons = l.icons;
@@ -858,121 +917,181 @@
                 
                     const gData = {
                         nodes: nodes,
-                        links: links
+                        links: _.sortBy(links, l => {
+                            const world = worldData[l.source];
+                            return world.depth + (maxDepth + 1) * (l.connType & ConnType.ONE_WAY ? 1 : 0);
+                        })
                     };
 
-                    let nodeDepths;
+                    icons3D = [];
 
-                    let depthDistances;
+                    visibleTwoWayLinks = [];
+                    visibleOneWayLinks = [];
+
+                    const rendererConfig = isWebGL2
+                        ? {
+                            antialias: true,
+                            alpha: true,
+                            canvas: graphCanvas,
+                            context: graphContext
+                        }
+                        : {
+                            antialias: true,
+                            alpha: true
+                        };
 
                     const elem = document.getElementById('graph');
-                
-                    graph = ForceGraph()(elem);
-                    if (displayMode < 4) {
+
+                    graph = Y2E.ForceGraph3D({
+                        rendererConfig: rendererConfig,
+                        controlType: 'orbit',
+                        numDimensions: is2d ? 2 : 3
+                    })(elem);
+
+                    const maxAnisotropy = graph.renderer().capabilities.getMaxAnisotropy();
+
+                    if (displayMode < 4)
                         graph = graph
                             .dagMode(displayMode === 0 ? 'td' : displayMode === 1 ? 'lr' : displayMode === 2 ? 'radialin' : 'radialout')
                             .dagLevelDistance(displayMode < 2 ? 12 : 24 + radius * (config.sizeDiff + 1));
-                    }
-                    graph
-                        .nodeCanvasObject(({ id, img, x, y, scale, width, height, isHover }, ctx, globalScale) => {
-                            ctx.globalAlpha = (selectedWorldId == null || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1) ? 1 : selectedWorldId != null && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length ? 0.625 : 0.1;
-                            ctx.imageSmoothingEnabled = false;
-                            ctx.drawImage(img, 0, 0, img.width, img.height, x - width / 2, y - height / 2, width, height);
-                            if (config.labelMode === 3 || (config.labelMode === 1 && isHover) || (config.labelMode === 2 && id === selectedWorldId)) {
-                                ctx.lineWidth = 0.25 * scale;
-                                ctx.strokeStyle = "#000000";
-                                ctx.fillStyle = "rgba(216, 216, 216, 1)";
-                                ctx.font = (2 * scale) + "px 'MS Gothic'";
-                                const world = worldData[id];
+
+                    linksTwoWayBuffered = undefined;
+                    linksOneWayBuffered = undefined;
+
+                    const dummyLinkObject = new THREE.Line();
+                    dummyLinkObject.visible = false;
+
+                    graph = graph
+                        .numDimensions(is2d ? 2 : 3)
+                        .backgroundColor('#00000000')
+                        .linkOpacity(1)
+                        .nodeThreeObject(node => {
+                            let ret;
+                            const scale = worldScales[node.id];
+                            const world = worldData[node.id];
+                            const box = new THREE.BoxGeometry(13 * scale, 9.75 * scale, is2d ? 0.1 : 13 * scale);
+                            let material;
+                            if (isWebGL2) {
+                                material = new THREE.MeshBasicMaterial();
+                                material.visible = false;
+                                ret = new THREE.Mesh(box, material);
+                            } else {
+                                const texture = new THREE.TextureLoader().load(world.filename);
+                                texture.anisotropy = maxAnisotropy;
+                                texture.minFilter = THREE.NearestFilter; // disables mipmaps (eliminates blur)
+                                material = new THREE.MeshBasicMaterial({ map: texture });
+                                ret = new THREE.Mesh(box, material);
+                                ret.material.transparent = true;
+                                if (is2d) {
+                                    ret.material.depthTest = false;
+                                    ret.renderOrder = world.id;
+                                }
+                                ret.material.opacity = getNodeOpacity(node);
+                            }
+
+                            if (!(isWebGL2 && is2d)) {
                                 const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
+                                const text = new SpriteText(worldName, 1.5, 'white');
+                                text.__graphObjType = 'label';
+                                text.fontFace = 'MS Gothic';
+                                text.fontSize = 80;
+                                text.strokeWidth = is2d ? 1.5 : 2;
+                                text.strokeColor = '#000000';
+                                text.backgroundColor = false;
+                                if (is2d) {
+                                    text.material.depthTest = false;
+                                    text.renderOrder = world.id;
+                                } else {
+                                    text.borderWidth = 1;
+                                    text.borderColor = 'transparent';
+                                }
+                                if (isWebGL2) {
+                                    text.renderOrder = 2;
+                                    text.material.depthWrite = false;
+                                }
                                 let textLines = worldName.split(" ");
                                 for (let l = 0; l < textLines.length; l++) {
-                                    if (ctx.measureText(textLines[l]).width < width) {
+                                    text.text = textLines[l];
+                                    if (text.scale.x * scale < 13 * scale) {
                                         let mergeIndex = 0;
                                         for (let l2 = l + 1; l2 < textLines.length; l2++) {
                                             const mergedLine = textLines.slice(l, l2 + 1).join(" ");
-                                            if (ctx.measureText(mergedLine).width < width) {
+                                            text.text = mergedLine;
+                                            if (text.scale.x * scale < 13 * scale)
                                                 mergeIndex = l2;
-                                            } else
+                                            else
                                                 break;
                                         }
-                                        if (mergeIndex) {
+                                        if (mergeIndex)
                                             textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
-                                        }
                                     } else if (textLines[l].indexOf("：") > -1)
                                         textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
                                 }
-                                for (let l in textLines) {
-                                    const textLine = textLines[l];
-                                    const lineWidth = ctx.measureText(textLine).width;
-                                    const lineX = x - lineWidth / 2;
-                                    const lineY = (y + 0.5 * scale) - (textLines.length - 1) + l * 2 * scale;
-                                    ctx.strokeText(textLine, lineX, lineY);
-                                    ctx.fillText(textLine, lineX, lineY);
+                                text.text = textLines.join('\n');
+                                text.defaultScale = { "x": text.scale.x, "y": text.scale.y };
+                                text.material.transparent = true;
+                                text.material.opacity = ret.material.opacity;
+                                if (config.labelMode < 3)
+                                    text.visible = false;
+
+                                ret.add(text);
+                            }
+                            return ret;
+                        })
+                        .onEngineTick(() => {
+                            updateLinkObjects(visibleTwoWayLinks, linksTwoWayBuffered, is2d);
+                            updateLinkObjects(visibleOneWayLinks, linksOneWayBuffered, is2d);
+                            updateLinkDistances();
+                            if (isWebGL2) {
+                                updateNodePositions(is2d);
+                                updateIconPositions(is2d);
+                            }
+                        })
+                        .linkThreeObject(link => {
+                            return dummyLinkObject;
+                        })
+                        .linkPositionUpdate((linkObject, { start, end }, link) => {
+                            if (!isWebGL2 && icons3D[link.key] !== undefined) {
+                                const linkIcons = icons3D[link.key];
+                                const dist = is2d
+                                    ? new THREE.Vector2(start.x, start.y).distanceTo(new THREE.Vector2(end.x, end.y))
+                                    : new THREE.Vector3(start.x, start.y, start.z).distanceTo(new THREE.Vector3(end.x, end.y, end.z));
+                                const spacing = Math.min(((dist / 2) / dist) / (linkIcons.length + 1), 16 / dist);
+                                if (is2d) {
+                                    for (let i in linkIcons) {
+                                        const icon = linkIcons[i];
+                                        let resX, resY;
+                                        const rat = ((dist / 4) / dist) + i * spacing;
+                                        resX = (1 - rat) * start.x + rat * end.x;
+                                        resY = (1 - rat) * start.y + rat * end.y;
+                                        icon.position.set(resX, resY, 0);
+                                    }
+                                } else {
+                                    for (let i in linkIcons) {
+                                        const icon = linkIcons[i];
+                                        let resX, resY, resZ;
+                                        const rat = ((dist / 4) / dist) + i * spacing;
+                                        resX = (1 - rat) * start.x + rat * end.x;
+                                        resY = (1 - rat) * start.y + rat * end.y;
+                                        resZ = (1 - rat) * start.z + rat * end.z;
+                                        icon.position.set(resX, resY, is2d ? 0 : resZ);
+                                    }
+                                }
+                                if (link.connType & ConnType.ONE_WAY) {
+                                    const oneWayIcon = linkIcons.filter(i => i.connType & ConnType.ONE_WAY)[0];
+                                    oneWayIcon.material.map.repeat.x = link.source.x <= link.target.x ? 1 : -1;
                                 }
                             }
-                            if (selectedWorldId === id) {
-                                ctx.strokeStyle = '#f00';
-                                ctx.lineWidth = 1 / globalScale;
-                                ctx.strokeRect(x - width / 2, y - height / 2, width, height);
-                                if (selectedWorldZoomCheck) {
-                                    selectedWorldZoomCheck = false;
-                                    graph.centerAt(x, y, 1000);
-                                    graph.zoom(8, 1000);
-                                }
-                            }
-                            if (isHover && (isShift || isCtrl)) {
-                                ctx.fillText("🔗", x + (width / 2) - 3.5, y - (height / 2) + 2.5);
-                            }
-                            ctx.globalAlpha = 1;
                         })
                         .connMode(() => config.connMode)
-                        .nodeVal(node => node.height)
+                        .nodeVal(node => node.width)
                         .nodeLabel(node => node.img.title)
                         .nodesPerStack(config.stackSize)
-                        .linkWidth(link => selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1)
-                        .linkColor(link => link.hidden ? 'transparent' : selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' :
-                            (selectedWorldId == null || selectedWorldId === link.source.id || selectedWorldId === link.target.id) && (!searchWorldIds.length || searchWorldIds.indexOf(link.source.id) > -1 || searchWorldIds.indexOf(link.target.id) > -1)
-                            ? link.defaultColor : link.defaultColorFade)
-                        .linkCanvasObjectMode('connTypeCheck')
-                        .linkCanvasObject((link, ctx, globalScale) => {
-                            const hidden = link.hidden;
-                            if (hidden && config.connMode === 0)
-                                return;
-                            const connType = link.connType;
-                            const fade = (selectedWorldId != null && link.source.id !== selectedWorldId && link.target.id !== selectedWorldId) || (searchWorldIds.length && searchWorldIds.indexOf(link.source.id) === -1 && searchWorldIds.indexOf(link.target.id) === -1);
-                            if (!hidden) {
-                                ctx.beginPath();
-                                ctx.lineWidth = (selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? 2 : 1) / globalScale;
-                                ctx.strokeStyle = selectedWorldId != null && (link.source.id === selectedWorldId || link.target.id === selectedWorldId) ? '#f00' : !fade ? link.defaultColor : link.defaultColorFade;
-                                if (connType && connType & ConnType.ONE_WAY) {
-                                    let currentDashOffset = dashOffset;
-                                    if (link.key === lastOneWayLinkKey)
-                                        dashOffset = dashOffset < 9.8 ? dashOffset + 0.2 : 0;
-                                    ctx.setLineDash([5, 5]);
-                                    ctx.lineDashOffset = currentDashOffset * -1;
-                                }
-                            }
-                            const sourceX = link.source.x;
-                            const sourceY = link.source.y;
-                            const targetX = link.target.x;
-                            const targetY = link.target.y;
-                            if (!hidden) {
-                                ctx.moveTo(sourceX, sourceY);
-                                ctx.lineTo(targetX, targetY);
-                                ctx.stroke();
-                                ctx.closePath();
-                            }
-                            if (link.icons.length) {
-                                if (fade)
-                                    ctx.globalAlpha = 0.1;
-                                drawLinkIcons(link, ctx, globalScale);
-                                ctx.globalAlpha = 1;
-                            }
-                        })
                         .onNodeDragEnd(node => {
                             node.fx = node.x;
                             node.fy = node.y;
+                            if (!is2d)
+                                node.fz = node.z;
                         })
                         .onNodeHover((node, prevNode) => {
                             elem.style.cursor = node ? 'pointer' : null;
@@ -980,6 +1099,8 @@
                                 node.isHover = true;
                             if (prevNode)
                                 prevNode.isHover = false;
+                            if (isWebGL2 && is2d)
+                                updateNodeLabels2D();
                         })
                         .onNodeClick(node => {
                             if (isCtrl || isShift)
@@ -990,7 +1111,8 @@
                                     $(".js--search-world").addClass("selected").val(config.lang === 'en' || !world.titleJP ? world.title : world.titleJP);
                                     selectedWorldId = node.id;
                                 } else
-                                    selectedWorldZoomCheck = true;
+                                    focusNode(node);
+                                highlightWorldSelection();
                             }
                         })
                         .onNodeRightClick((node, ev) => {
@@ -1003,13 +1125,12 @@
                         .onBackgroundClick(node => {
                             $(".js--search-world").removeClass("selected").val("");
                             selectedWorldId = null;
-                            selectedWorldZoomCheck = false;
+                            highlightWorldSelection();
                         })
-                        .iconLabel(icon => icon.text)
-                        .cooldownTime(Infinity)
+                        .cooldownTicks(400)
                         // Deactivate existing forces
                         // Add collision and bounding box forces
-                        .d3Force('collide', d3.forceCollide((node) => radius * worldScales[node.id]))
+                        .d3Force('collide', d3.forceCollide(node => radius * worldScales[node.id]))
                         .d3Force('box', () => {
                             const SQUARE_HALF_SIDE = radius * 50;
 
@@ -1019,9 +1140,835 @@
                                 // bounce on box walls
                                 if (Math.abs(x) > SQUARE_HALF_SIDE) { node.vx += 0.1 * (x > 0 ? -1 : 1); }
                                 if (Math.abs(y) > SQUARE_HALF_SIDE) { node.vy += 0.1 * (y > 0 ? -1 : 1); }
+
+                                if (!is2d) {
+                                    const z = node.z || 0;
+                                    if (Math.abs(z) > SQUARE_HALF_SIDE) { node.vz += 0.1 * (z > 0 ? -1 : 1); }
+                                }
                             });
                         })
                         .graphData(gData);
+
+                    document.removeEventListener('mousemove', onDocumentMouseMove, false);
+                    document.querySelector('#graph canvas').removeEventListener('wheel', clearTweens, false)
+
+                    if (is2d) {
+                        const controls = graph.controls();
+                        controls.minAzimuthAngle = 0;
+                        controls.maxAzimuthAngle = 0;
+                        controls.mouseButtons.PAN = THREE.MOUSE.LEFT;
+                        controls.mouseButtons.ORBIT = THREE.MOUSE.MIDDLE;
+                        controls.enableRotate = false;
+                        controls.update();
+                    }
+
+                     // when the mouse moves, call the given function
+                     document.addEventListener('mousemove', onDocumentMouseMove, false);
+                     document.querySelector('#graph canvas').addEventListener('wheel', clearTweens, false);
+
+                    (function () {
+                        let _animationCycle = graph._animationCycle
+                        graph._animationCycle = function () {
+                            onRender(is2d);
+                            _animationCycle.apply(this)
+                        }
+                    })()
+
+                    if (isWebGL2) {
+                        initNodeObject(is2d);
+                        updateNodeImageData(nodes, paths, is2d);
+                        makeIconObject(is2d);
+                        let index = 0;
+                        graph.graphData().links.forEach(link => {
+                            link.icons.forEach(icon => {
+                                iconTexts[index] = icon.text;
+                                index++;
+                            });
+                        });
+                        updateConnectionModeIcons();
+                        updateNodeLabels2D();
+                    } else
+                        makeLinkIcons(is2d);
+
+                    // initialize object to perform world/screen calculations
+                    raycaster = new THREE.Raycaster();
+
+                    graph.graphData().links.forEach(link => {
+                        if (!link.hidden) {
+                            if (link.connType & ConnType.ONE_WAY)
+                                visibleOneWayLinks.push(link);
+                            else
+                                visibleTwoWayLinks.push(link);
+                        }
+                    })
+
+                    makeLinkIconTooltip();
+                    linksTwoWayBuffered = makeTwoWayLinkObjects(is2d);
+                    linksOneWayBuffered = makeOneWayLinkObjects(is2d);
+                    updateLinkColors(visibleTwoWayLinks, linksTwoWayBuffered);
+                    updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
+                }
+
+                const clock = new THREE.Clock();
+                let time = 0;
+                const dashLineSpeed = 20;
+                function onRender(is2d) {
+                    time -= clock.getDelta() * dashLineSpeed;
+                    if (!(isWebGL2 && is2d))
+                        updateNodeLabels(is2d);
+                    updateLinkAnimation(linksOneWayBuffered, time);
+                }
+
+                // START WEBGL2.0 SPECIFIC CODE
+                function updateNodeImageData(nodes, isPath, is2d) {
+                    nodeObject.count = nodes.length;
+                    if (isPath) {
+                        let index = 0;
+                        const totalNodeCount = nodes.length;
+                        nodes.forEach(node => {
+                            copyImageData(node.id, index, totalNodeCount);
+                            if (is2d)
+                                copyImageData(node.id + worldData.length, index + totalNodeCount);
+                            index++;
+                        });
+                    } else
+                        nodeObject.material.uniforms.diffuse.value.image.data.set(worldImageData, 0);
+                    nodeObject.material.uniforms.diffuse.value.needsUpdate = true;
+                }
+
+                function copyImageData(from, to) {
+                    const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
+                    let offsetFrom = from * dataLength;
+                    let offsetTo = to * dataLength;
+                    nodeObject.material.uniforms.diffuse.value.image.data.set(worldImageData.slice(offsetFrom, offsetFrom + dataLength), offsetTo);
+                }
+
+                const instanceVS = `#version 300 es
+                    precision highp float;
+
+                    uniform mat4 modelViewMatrix;
+                    uniform mat4 projectionMatrix;
+                    in mat4 instanceMatrix;
+                    in vec3 position;
+                    in vec2 uv;
+
+                    in float opacity;
+                    out float vOpacity;
+                    out vec2 vUv;
+                    in float texIndex;
+                    out float vTexIndex;
+                    void main() {
+                        vOpacity = opacity;
+                        vUv = vec2(uv.x, 1.0 - uv.y); // flip texture vertically, because of how it's stored
+                        vTexIndex = texIndex;
+                        vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+                        gl_Position = projectionMatrix * mvPosition;
+                    }
+                `;
+
+                const instanceIconVS = `#version 300 es
+                    precision highp float;
+
+                    uniform mat4 modelViewMatrix;
+                    uniform mat4 projectionMatrix;
+                    in mat4 instanceMatrix;
+                    in vec3 position;
+                    in vec2 uv;
+
+                    in float opacity;
+                    out float vOpacity;
+                    out vec2 vUv;
+                    in float texIndex;
+                    out float vTexIndex;
+                    void main() {
+                        vOpacity = opacity;
+                        vUv = vec2(uv.x, 1.0 - uv.y); // flip texture vertically, because of how it's stored
+                        vTexIndex = texIndex;
+                        vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+                        mvPosition.xy += position.xy;
+                        gl_Position = projectionMatrix * mvPosition;
+                    }
+                `;
+
+                const instanceFS = `#version 300 es
+                    precision highp float;
+                    precision highp sampler2DArray;
+
+                    in float vOpacity;
+                    uniform sampler2DArray diffuse;
+                    in vec2 vUv;
+                    out vec4 fragmentColor;
+                    in float vTexIndex;
+
+                    void main() {
+                        vec4 temp = texture(diffuse, vec3(vUv, int(vTexIndex + 0.1)));
+                        temp.a = vOpacity;
+                        fragmentColor = temp;
+                    }
+                `;
+
+                const instanceIconFS = `#version 300 es
+                    precision highp float;
+                    precision highp int;
+                    precision highp sampler2DArray;
+
+                    in float vOpacity;
+                    uniform sampler2DArray diffuse;
+                    in vec2 vUv;
+                    out vec4 fragmentColor;
+                    in float vTexIndex;
+
+                    void main() {
+                        vec4 temp = texture(diffuse, vec3(vUv, int(vTexIndex + 0.1)));
+                        temp.a = temp.a * vOpacity;
+                        fragmentColor = temp;
+                    }
+                `;
+
+                let unsortedIconTexIndexes = [];
+                let unsortedIconOpacities = [];
+                let sortedIconIds = [];
+                let iconCount;
+                function makeIconObject(is2d) {
+                    const connTypes = [
+                        ConnType.ONE_WAY,
+                        ConnType.NO_ENTRY,
+                        ConnType.UNLOCK,
+                        ConnType.LOCKED,
+                        ConnType.DEAD_END,
+                        ConnType.ISOLATED,
+                        ConnType.EFFECT,
+                        ConnType.CHANCE,
+                        ConnType.LOCKED_CONDITION,
+                        ConnType.INACCESSIBLE
+                    ];
+                    const iconImgDimensions = { x: 64, y: 64 };
+                    const amountTextures = connTypes.length + 1; // 1 reversed one-way arrow
+
+                    const buffer = new ArrayBuffer(iconImgDimensions.x * iconImgDimensions.y * 4 * amountTextures);
+
+                    iconCount = 0;
+                    graph.graphData().links.forEach(link => {
+                        link.icons.forEach(icon => {
+                            iconCount++;
+                        })
+                    });
+                    let iconImgData = new Uint8ClampedArray(buffer);
+                    let index = 0;
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.width = iconImgDimensions.x;
+                    canvas.height = iconImgDimensions.y;
+                    context.font = '50px MS Gothic';
+                    context.fillStyle = 'white';
+                    const dataLength = iconImgDimensions.x * iconImgDimensions.y * 4;
+                    connTypes.forEach(type => {
+                        let char = getConnTypeChar(type);
+                        context.fillText(char, 0, 52);
+                        const imgData = context.getImageData(0, 0, iconImgDimensions.x, iconImgDimensions.y);
+                        const offset = index * dataLength;
+                        iconImgData.set(imgData.data, offset);
+                        context.clearRect(0, 0, canvas.width, canvas.height);
+                        index++;
+                    });
+                    context.scale(-1, 1);
+                    context.fillText(getConnTypeChar(ConnType.ONE_WAY), -canvas.width, 52);
+                    iconImgData.set(context.getImageData(0, 0, iconImgDimensions.x, iconImgDimensions.y).data, index * dataLength);
+
+                    const texture = new THREE.DataTexture2DArray(iconImgData, iconImgDimensions.x, iconImgDimensions.y, amountTextures);
+                    texture.format = THREE.RGBAFormat;
+                    texture.type = THREE.UnsignedByteType;
+                    const material = new THREE.RawShaderMaterial({
+                        uniforms: {
+                            diffuse: { value: texture },
+                        },
+                        vertexShader: instanceIconVS,
+                        fragmentShader: instanceIconFS,
+                        transparent: true,
+                        depthTest: !is2d,
+                        depthWrite: false
+                    });
+
+                    const opacities = [];
+                    const texIndexes = [];
+
+                    let iconIndex = 0;
+                    graph.graphData().links.forEach(link => {
+                        link.icons.forEach(icon => {
+                            texIndexes[iconIndex] = connTypes.findIndex(a => a == icon.type);
+                            opacities[iconIndex] = 1.0;
+                            iconIndex++;
+                        });
+                    });
+
+                    unsortedIconTexIndexes = texIndexes.slice();
+                    unsortedIconOpacities = opacities.slice();
+
+                    const geometry = new THREE.PlaneBufferGeometry(5, 5);
+                    geometry.attributes.opacity = new THREE.InstancedBufferAttribute(new Float32Array(opacities), 1);
+                    geometry.attributes.texIndex = new THREE.InstancedBufferAttribute(new Float32Array(texIndexes), 1);
+
+                    iconObject = new THREE.InstancedMesh(geometry, material, iconCount);
+                    iconObject.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                    iconObject.renderOrder = is2d ? -1 : 3;
+                    graph.scene().add(iconObject);
+                }
+
+                function updateIconPositions(is2d) {
+                    const dummy = new THREE.Object3D();
+                    if (iconObject) {
+                        let index = 0;
+                        const camPos = graph.camera().position;
+                        graph.graphData().links.forEach(link => {
+                            const start = link.source;
+                            const end = link.target;
+                            const dist = is2d
+                                ? new THREE.Vector2(start.x, start.y).distanceTo(new THREE.Vector2(end.x, end.y))
+                                : new THREE.Vector3(start.x, start.y, start.z).distanceTo(new THREE.Vector3(end.x, end.y, end.z));
+                            const spacing = Math.min(((dist / 2) / dist) / (link.icons.length + 1), 16 / dist);
+                            let iconIndex = 0;
+                            link.icons.forEach(icon => {
+                                let pos;
+                                if (is2d) {
+                                    let resX, resY;
+                                    const rat = ((dist / 4) / dist) + iconIndex * spacing;
+                                    resX = (1 - rat) * start.x + rat * end.x;
+                                    resY = (1 - rat) * start.y + rat * end.y;
+                                    pos = new THREE.Vector3(resX, resY, 0);
+                                } else {
+                                    let resX, resY, resZ;
+                                    const rat = ((dist / 4) / dist) + iconIndex * spacing;
+                                    resX = (1 - rat) * start.x + rat * end.x;
+                                    resY = (1 - rat) * start.y + rat * end.y;
+                                    resZ = (1 - rat) * start.z + rat * end.z;
+                                    pos = new THREE.Vector3(resX, resY, is2d ? 0 : resZ);
+                                }
+                                if (pos !== undefined) {
+                                    iconObject.getMatrixAt(index, dummy.matrix);
+                                    if (!is2d)
+                                        dummy.position.set(pos.x, pos.y, pos.z);
+                                    else
+                                        dummy.position.set(pos.x, pos.y, 0);
+                                    dummy.updateMatrix();
+                                    iconObject.setMatrixAt(index, dummy.matrix);
+                                }
+                                const texIndex = unsortedIconTexIndexes[index];
+                                if (texIndex == 0 || texIndex == 10) {
+                                    if (is2d) {
+                                        if (start.x > end.x) {
+                                            if (texIndex == 0)
+                                                unsortedIconTexIndexes[index] = 10;
+                                        } else if (texIndex == 10)
+                                            unsortedIconTexIndexes[index] = 0;
+                                    } else {
+                                        if (graph.graph2ScreenCoords(start.x, start.y, start.z).x > graph.graph2ScreenCoords(end.x, end.y, end.z).x) {
+                                            if (texIndex == 0)
+                                                unsortedIconTexIndexes[index] = 10;
+                                        } else if (texIndex == 10)
+                                            unsortedIconTexIndexes[index] = 0;
+                                    }
+                                }
+                                index++;
+                                iconIndex++;
+                            });
+                        });
+                        sortInstances(iconObject, unsortedIconOpacities, unsortedIconTexIndexes);
+                        iconObject.instanceMatrix.needsUpdate = true;
+                    }
+                }
+
+                function sortInstances(instanceObject, unsortedOpacities, unsortedTexIndexes) {
+                    const camera = graph.camera();
+                    let dummy = new THREE.Object3D();
+                    let index = 0;
+                    let positions = [];
+                    graph.graphData().links.forEach(link => {
+                        link.icons.forEach(icon => {
+                            instanceObject.getMatrixAt(index, dummy.matrix);
+                            positions[index] = new THREE.Vector3(dummy.matrix.elements[12], dummy.matrix.elements[13], dummy.matrix.elements[14]);
+                            index++;
+                        });
+                    });
+
+                    const opacities = instanceObject.geometry.attributes.opacity.array;
+                    const texIndexes = instanceObject.geometry.attributes.texIndex.array;
+                    let vecArray = [];
+                    for (let i = 0; i < iconCount; i++)
+                        vecArray.push({ pos: positions[i], opacity: unsortedOpacities[i], texIndex: unsortedTexIndexes[i], unsortedId: i });
+                    vecArray.sort((a, b) => a.pos.distanceTo(camera.position) > b.pos.distanceTo(camera.position)
+                        ? -1
+                        : a.pos.distanceTo(camera.position) < b.pos.distanceTo(camera.position)
+                        ? 1
+                        : 0
+                    );
+
+                    index = 0;
+                    vecArray.forEach(item => {
+                       sortedIconIds[index] = item.unsortedId;
+                       index++;
+                    });
+
+                    index = 0;
+                    const camPos = graph.camera().position;
+                    graph.graphData().links.forEach(link => {
+                        link.icons.forEach(icon => {
+                            instanceObject.getMatrixAt(index, dummy.matrix);
+                            dummy.position.set(vecArray[index].pos.x, vecArray[index].pos.y, vecArray[index].pos.z);
+                            dummy.lookAt(camPos);
+                            dummy.updateMatrix();
+                            instanceObject.setMatrixAt(index, dummy.matrix);
+                            opacities[index] = vecArray[index].opacity;
+                            texIndexes[index] = vecArray[index].texIndex;
+                            index++;
+                        });
+                    });
+
+                    instanceObject.geometry.attributes.opacity.needsUpdate = true;
+                    instanceObject.geometry.attributes.texIndex.needsUpdate = true;
+                }
+
+                function initNodeObjectMaterial() {
+                    const buffer = new ArrayBuffer(nodeImgDimensions.x * nodeImgDimensions.y * 4 * worldData.length * 2);
+                    const amount = worldData.length;
+                    const texture = new THREE.DataTexture2DArray(new Uint8ClampedArray(buffer), nodeImgDimensions.x, nodeImgDimensions.y, amount * 2);
+                    texture.format = THREE.RGBAFormat;
+                    texture.type = THREE.UnsignedByteType;
+                    nodeObjectMaterial = new THREE.RawShaderMaterial({
+                        uniforms: {
+                            diffuse: { value: texture },
+                        },
+                        vertexShader: instanceVS,
+                        fragmentShader: instanceFS,
+                        transparent: true,
+                        depthTest: !is2d
+                    });
+
+                    const filenames = [];
+                    worldData.forEach(node => {
+                        filenames.push(worldData[node.id].filename);
+                    });
+
+                    Promise.all(getImageRawData(filenames))
+                        .then(images => {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d', { alpha: false });
+                            canvas.width = nodeImgDimensions.x;
+                            canvas.height = nodeImgDimensions.y;
+                            const fontSize = 36;
+                            const halfFontSize = fontSize / 2;
+                            let lineYOffset;
+                            ctx.font = fontSize + 'px MS Gothic';
+                            ctx.fillStyle = 'white';
+                            ctx.strokeStyle = 'black';
+                            ctx.lineWidth = 5;
+                            let index = 0;
+                            const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
+                            const offsetLabels = images.length * dataLength;
+                            images.forEach(img => {
+                                // stretch to fit
+                                ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
+                                let nodeImageData = ctx.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
+                                let offset = index * dataLength;
+                                nodeObjectMaterial.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
+                                const worldId = index;
+                                const world = worldData[worldId];
+                                const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
+                                let textLines = worldName.split(" ");
+                                for (let l = 0; l < textLines.length; l++) {
+                                    if (ctx.measureText(textLines[l]).width < nodeImgDimensions.x) {
+                                        let mergeIndex = 0;
+                                        for (let l2 = l + 1; l2 < textLines.length; l2++) {
+                                            const mergedLine = textLines.slice(l, l2 + 1).join(" ");
+                                            if (ctx.measureText(mergedLine).width < nodeImgDimensions.x)
+                                                mergeIndex = l2;
+                                            else
+                                                break;
+                                        }
+                                        if (mergeIndex)
+                                            textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
+                                    } else if (textLines[l].indexOf("：") > -1)
+                                        textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
+                                }
+                                for (let l in textLines) {
+                                    const textLine = textLines[l];
+                                    const lineWidth = ctx.measureText(textLine).width;
+                                    !lineYOffset && (lineYOffset = ctx.measureText(textLine).actualBoundingBoxAscent / 2);
+                                    const lineX = (nodeImgDimensions.x - lineWidth) / 2;
+                                    const lineY = ((nodeImgDimensions.y / 2) + lineYOffset) - ((textLines.length - 1) * halfFontSize) + l * fontSize;
+                                    ctx.strokeText(textLine, lineX, lineY);
+                                    ctx.fillText(textLine, lineX, lineY);
+                                }
+
+                                nodeImageData = ctx.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
+                                offset = offsetLabels + index * dataLength;
+                                nodeObjectMaterial.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
+                                index++;
+                            });
+                            delete canvas;
+                            worldImageData = nodeObjectMaterial.uniforms.diffuse.value.image.data.slice();
+                            nodeObjectMaterial.uniforms.diffuse.value.needsUpdate = true;
+                        })
+                        .catch(err => console.error(err));
+                }
+
+                function initNodeObject(is2d) {
+                    const amount = worldData.length;
+                    const opacities = [];
+                    const texIndexes = [];
+                    for (let i = 0; i < amount; i++) {
+                        opacities[i] = 1.0;
+                        texIndexes[i] = i;
+                    }
+
+                    let geometry;
+                    if (is2d)
+                        geometry = new THREE.PlaneBufferGeometry(1, 1);
+                    else
+                        geometry = new THREE.BoxBufferGeometry(1, 1, 1);
+                    geometry.attributes.opacity = new THREE.InstancedBufferAttribute(new Float32Array(opacities), 1);
+                    geometry.attributes.texIndex = new THREE.InstancedBufferAttribute(new Float32Array(texIndexes), 1);
+                    nodeObject = new THREE.InstancedMesh(geometry, nodeObjectMaterial, amount);
+                    nodeObject.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                    nodeObject.renderOrder = 1;
+                    graph.scene().add(nodeObject);
+                }
+
+                function updateNodePositions(is2d) {
+                    const dummy = new THREE.Object3D();
+                    if (nodeObject) {
+                        let index = 0;
+                        graph.graphData().nodes.forEach(node => {
+                            nodeObject.getMatrixAt(index, dummy.matrix);
+                            if (!is2d)
+                                dummy.position.set(node.x, node.y, node.z);
+                            else
+                                dummy.position.set(node.x, node.y, 0);
+                            const scale = worldScales[node.id];
+                            dummy.scale.set(13 * scale, 9.75 * scale, is2d ? 0.1 : 13 * scale);
+                            dummy.updateMatrix();
+                            nodeObject.setMatrixAt(index, dummy.matrix);
+                            index++;
+                        });
+                        nodeObject.instanceMatrix.needsUpdate = true;
+                    }
+                }
+
+                function updateNodeLabels2D() {
+                    if (nodeObject) {
+                        let index = 0;
+                        graph.graphData().nodes.forEach(node => {
+                            if (is2d && (config.labelMode === 3 || (config.labelMode === 1 && node.isHover) || (config.labelMode === 2 && node.id === selectedWorldId)))
+                                nodeObject.geometry.attributes.texIndex.array[index] = index + graph.graphData().nodes.length;
+                            else
+                                nodeObject.geometry.attributes.texIndex.array[index] = index;
+                            index++;
+                        });
+                        nodeObject.geometry.attributes.texIndex.needsUpdate = true;
+                    }
+                }
+                // END WEBGL2.0 SPECIFIC CODE
+
+                /**
+                 *
+                 * @param {Array} texturesSources - List of Strings that represent texture sources
+                 * @returns {Array} Array containing a Promise for each source 
+                 */
+                function getImageRawData (imageSources) {
+                    const loader = new THREE.ImageLoader()
+                    return imageSources.map(imageSource => {
+                        return new Promise((resolve, reject) => {
+                            loader.load(
+                                imageSource,
+                                image => resolve(image),
+                                undefined, // onProgress callback not supported from r84
+                                err => reject(err)
+                            );
+                        });
+                    });
+                }
+
+                function updateNodeLabels(is2d) {
+                    if (config.labelMode > 0) {
+                        const camera = graph.camera();
+                        graph.graphData().nodes.forEach(node => {
+                            const obj = node.__threeObj;
+                            if (obj) {
+                                const text = obj.children[0];
+                                if (config.labelMode === 3 || (config.labelMode === 1 && node.isHover) || (config.labelMode === 2 && node.id === selectedWorldId)) {
+                                    const scale = worldScales[node.id];
+                                    if (!is2d) {
+                                        const dist = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z).distanceTo(new THREE.Vector3(node.x, node.y, node.z));
+                                        let resX, resY, resZ;
+                                        const rat = (13 * scale) / dist;
+                                        resX = (1 - rat) * node.x + rat * camera.position.x;
+                                        resY = (1 - rat) * node.y + rat * camera.position.y;
+                                        resZ = (1 - rat) * node.z + rat * camera.position.z;
+                                        text.position.set(resX - node.x, resY - node.y, resZ - node.z);
+                                    }
+                                    text.scale.x = text.defaultScale.x * scale;
+                                    text.scale.y = text.defaultScale.y * scale;
+                                    text.material.opacity = getNodeOpacity(node);
+                                    text.visible = true;
+                                } else
+                                    text.visible = false;
+                            }
+                        });
+                    }
+                }
+
+                function getNodeOpacity(node) {
+                    const id = node.id;
+                    const opacity = (selectedWorldId == null || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1)
+                        ? 1
+                        : selectedWorldId != null && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length
+                        ? 0.625
+                        : 0.1;
+                    return opacity;
+                }
+
+                function makeLinkIcons(is2d) {
+                    graph.graphData().links.forEach(link => {
+                        if (icons3D[link.key] === undefined) {
+                            const linkOpacity = getLinkOpacity(link);
+                            let linkIcons = [];
+                            link.icons.forEach(icon => {
+                                const text = new SpriteText(icon.char, 1, 'white');
+                                text.__graphObjType = 'icon';
+                                text.name = icon.text;
+                                text.connType = icon.type;
+                                text.fontFace = 'MS Gothic';
+                                text.fontSize = 80;
+                                text.borderWidth = 1;
+                                text.borderColor = 'transparent';
+                                if (is2d) {
+                                    text.renderOrder = 0;
+                                    text.material.depthTest = false;
+                                }
+                                text.material.transparent = true;
+                                text.material.opacity = linkOpacity;
+                                if (icon.type & ConnType.ONE_WAY) {
+                                    text.material.map.wrapS = THREE.RepeatWrapping;
+                                    link.source.x > link.target.x && (text.material.map.repeat.x = -1);
+                                }
+                                !config.connMode && link.hidden && (text.visible = false);
+                                linkIcons.push(text);
+                                graph.scene().add(text);
+                            });
+                            icons3D[link.key] = linkIcons;
+                        }
+                    });
+                }
+
+                function makeLinkIconTooltip() {
+                    if (iconLabel) {
+                        const element = document.getElementById("iconLabel");
+                        element.parentNode.removeChild(element);
+                    }
+                    iconLabel = document.createElement('div');
+                    iconLabel.innerHTML = ' ';
+                    iconLabel.id = 'iconLabel';
+                    iconLabel.className = "scene-tooltip";
+                    iconLabel.style.position = 'absolute';
+                    iconLabel.style.top = 0;
+                    iconLabel.style.color = 'transparent';
+                    iconLabel.style.zIndex = 10;
+                    document.body.appendChild(iconLabel);
+                }
+
+                function makeTwoWayLinkObjects(is2d) {
+                    const lineVertShader = `
+                        attribute float opacity;
+                        varying vec3 vColor;
+                        varying float vOpacity;
+
+                        void main() {
+                            vColor = color;
+                            vOpacity = opacity;
+                            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                            gl_Position = projectionMatrix * mvPosition;
+                        }
+                    `;
+                    const lineFragShader = `
+                        varying vec3 vColor;
+                        varying float vOpacity;
+
+                        void main() {
+                            gl_FragColor = vec4(vColor, vOpacity);
+                        }
+                    `;
+                    const size = visibleTwoWayLinks.length;
+                    const geometry = new THREE.BufferGeometry();
+                    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(size * 2 * 3), 3));
+                    geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(size * 2 * 3), 3));
+                    geometry.setAttribute('opacity', new THREE.BufferAttribute(new Float32Array(size * 2), 1));
+                    const material = new THREE.ShaderMaterial({
+                        vertexShader: lineVertShader,
+                        fragmentShader: lineFragShader,
+                        transparent: true,
+                        vertexColors: true,
+                        depthTest: !is2d
+                    });
+                    const bufferedGeometry = new THREE.LineSegments(geometry, material);
+                    if (is2d)
+                        bufferedGeometry.renderOrder = -2;
+                    graph.scene().add(bufferedGeometry);
+                    return bufferedGeometry;
+                }
+
+                function makeOneWayLinkObjects(is2d) {
+                    const lineVertShader = `
+                        attribute float lineDistance;
+                        attribute float opacity;
+                        varying float vLineDistance;
+                        varying vec3 vColor;
+                        varying float vOpacity;
+
+                        void main() {
+                            vColor = color;
+                            vOpacity = opacity;
+                            vLineDistance = lineDistance;
+                            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                            gl_Position = projectionMatrix * mvPosition;
+                        }
+                    `;
+                    const lineFragShader = `
+                        uniform float time;
+
+                        uniform float dashSize;
+                        uniform float gapSize;
+                        varying float vLineDistance;
+                        varying vec3 vColor;
+                        varying float vOpacity;
+
+                        void main() {
+                            float totalSize = dashSize + gapSize;
+                            float modulo = mod(vLineDistance + time, totalSize);
+                            if (modulo > dashSize) {
+                                discard;
+                            }
+                            gl_FragColor = vec4(vColor, vOpacity);
+                        }
+                    `;
+                    const size = visibleOneWayLinks.length;
+                    const geometry = new THREE.BufferGeometry();
+                    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(size * 2 * 3), 3));
+                    geometry.setAttribute('lineDistance', new THREE.BufferAttribute(new Float32Array(size * 2), 1));
+                    geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(size * 2 * 3), 3));
+                    geometry.setAttribute('opacity', new THREE.BufferAttribute(new Float32Array(size * 2), 1));
+                    const material = new THREE.ShaderMaterial({
+                        uniforms: {
+                            dashSize: { value: 10 },
+                            gapSize: { value: 10 },
+                            time: { value: 0 }
+                        },
+                        vertexShader: lineVertShader,
+                        fragmentShader: lineFragShader,
+                        transparent: true,
+                        vertexColors: true,
+                        depthTest: !is2d
+                    });
+                    const bufferedGeometry = new THREE.LineSegments(geometry, material);
+                    if (is2d)
+                        bufferedGeometry.renderOrder = -2;
+                    graph.scene().add(bufferedGeometry);
+                    return bufferedGeometry;
+                }
+
+                function updateLinkObjects(linkData, bufferedObject, is2d) {
+                    const positions = bufferedObject.geometry.attributes.position.array;
+                    let index = 0;
+                    linkData.forEach(link => {
+                        let source, target;
+                        source = link.source;
+                        target = link.target;
+                        positions[index++] = source.x;
+                        positions[index++] = source.y;
+                        positions[index++] = is2d ? 0 : source.z;
+                        positions[index++] = target.x;
+                        positions[index++] = target.y;
+                        positions[index++] = is2d ? 0 : target.z;
+                    })
+                    bufferedObject.geometry.attributes.position.needsUpdate = true;
+                    bufferedObject.geometry.computeBoundingSphere();
+                }
+
+                function updateLinkAnimation(bufferedObject, time) {
+                    bufferedObject.material.uniforms.time.value = time;
+                }
+
+                function updateLinkColors(linkData, bufferedObject) {
+                    const colors = bufferedObject.geometry.attributes.color.array;
+                    const opacities = bufferedObject.geometry.attributes.opacity.array;
+                    let index = 0;
+                    let opacityIndex = 0;
+                    linkData.forEach(link => {
+                        let color;
+                        let opacity;
+                        const sourceId = link.source.id !== undefined ? link.source.id : link.source;
+                        const targetId = link.target.id !== undefined ? link.target.id : link.target;
+                        if (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)) {
+                            opacity = 1.0;
+                            color = colorLinkSelected;
+                        } else if ((selectedWorldId == null || selectedWorldId === sourceId || selectedWorldId === targetId) && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)) {
+                            opacity = 1.0;
+                            color = new THREE.Color(link.defaultColor);
+                        } else {
+                            opacity = 0.1;
+                            color = new THREE.Color(link.defaultColor);
+                        }
+                        colors[index++] = color.r;
+                        colors[index++] = color.g;
+                        colors[index++] = color.b;
+                        colors[index++] = color.r;
+                        colors[index++] = color.g;
+                        colors[index++] = color.b;
+                        opacities[opacityIndex++] = opacity;
+                        opacities[opacityIndex++] = opacity;
+                    });
+                    bufferedObject.geometry.attributes.color.needsUpdate = true;
+                    bufferedObject.geometry.attributes.opacity.needsUpdate = true;
+                }
+
+                function updateLinkDistances() {
+                    const actual = linksOneWayBuffered.geometry.attributes.position.array;
+                    let index = 3;
+                    let d = 0;
+                    for (let i = 0; i < visibleOneWayLinks.length * 2; i++) {
+                        if ((i % 2)) {
+                            const previousPoint = new THREE.Vector3(actual[index - 3], actual[index - 2], actual[index - 1]);
+                            const currentPoint = new THREE.Vector3(actual[index++], actual[index++], actual[index++]);
+                            d = currentPoint.distanceTo(previousPoint);
+                            index += 3;
+                        } else
+                            d = 0;
+                        linksOneWayBuffered.geometry.attributes.lineDistance.array[i] = d;
+                    }
+                    linksOneWayBuffered.geometry.attributes.lineDistance.needsUpdate = true;
+                }
+
+                function getLinkColor(link) {
+                    const sourceId = link.source.id !== undefined ? link.source.id : link.source;
+                    const targetId = link.target.id !== undefined ? link.target.id : link.target;
+                    return link.hidden ? 'transparent' : selectedWorldId != null && (sourceId === selectedWorldId || selectedWorldId === targetId) ? '#f00' :
+                        (selectedWorldId == null || selectedWorldId === sourceId || selectedWorldId === targetId) && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)
+                        ? link.defaultColor : link.defaultColorFade;
+                }
+
+                function getLinkFaded(link) {
+                    const sourceId = link.source.id !== undefined ? link.source.id : link.source;
+                    const targetId = link.target.id !== undefined ? link.target.id : link.target;
+                    return (selectedWorldId != null && sourceId !== selectedWorldId && selectedWorldId !== targetId) || (searchWorldIds.length && searchWorldIds.indexOf(sourceId) === -1 && searchWorldIds.indexOf(targetId) === -1);
+                }
+
+                function getLinkOpacity(link) {
+                    const sourceId = link.source.id !== undefined ? link.source.id : link.source;
+                    const targetId = link.target.id !== undefined ? link.target.id : link.target;
+                    return (selectedWorldId == null || (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)))
+                        && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)
+                        ? 1
+                        : selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)
+                        ? 0.625
+                        : 0.1
                 }
 
                 function getConnTypeIcon(connType, typeParams) {
@@ -1049,6 +1996,7 @@
                         }
                     }
                     return {
+                        type: connType,
                         char: char,
                         text: name + (description ? (config.lang === 'en' ? ' - ' : '：') + description : '')
                     };
@@ -1091,110 +2039,6 @@
                     return char;
                 }
 
-                function drawLinkIcons(link, ctx, globalScale) {
-                    const sourceScale = link.sourceScale;
-                    const targetScale = link.targetScale;
-                    const connType = link.connType;
-                    const icons = link.icons;
-                    let sourceX = link.source.x;
-                    let sourceY = link.source.y;
-                    let targetX = link.target.x;
-                    let targetY = link.target.y;
-                    let tempSourceX = sourceX;
-                    let tempSourceY = sourceY;
-                    let tempTargetX = targetX;
-                    let tempTargetY = targetY;
-                    /*ctx.save();
-                    ctx.beginPath();
-                    var style = ctx.strokeStyle;
-                    var lwidth = ctx.lineWidth;
-                    ctx.strokeStyle = "rgba(255, 0, 0, 1)";
-                    ctx.lineWidth = 0.1;*/
-                    let gapSize;
-                    const scale = globalScale < 24 ? 1 : 24 / globalScale;
-                    const isX = Math.abs(targetX - sourceX) >= Math.abs(targetY - sourceY);
-                    if (isX) {
-                        const addSourceCoord = (sourceX < targetX ? 8 : -8) * sourceScale;
-                        const addTargetCoord = (targetX < sourceX ? 8 : -8) * targetScale;
-                        sourceX += addSourceCoord;
-                        sourceY = sourceY + (tempTargetY - tempSourceY)/(tempTargetX - tempSourceX) * addSourceCoord;
-                        targetX += addTargetCoord;
-                        targetY = targetY + (tempSourceY - tempTargetY)/(tempSourceX - tempTargetX) * addTargetCoord;
-                        gapSize = Math.max(Math.min(((sourceX < targetX ? targetX - sourceX : sourceX - targetX) - 16 * scale) / icons.length - 1, 8 * scale), 0);
-                    } else {
-                        const addSourceCoord = (sourceY < targetY ? 6 : -6) * sourceScale;
-                        const addTargetCoord = (targetY < sourceY ? 6 : -6) * targetScale;
-                        sourceY += addSourceCoord;
-                        sourceX = sourceX + (tempTargetX - tempSourceX)/(tempTargetY - tempSourceY) * addSourceCoord;
-                        targetY += addTargetCoord;
-                        targetX = targetX + (tempSourceX - tempTargetX)/(tempSourceY - tempTargetY) * addTargetCoord;
-                        gapSize = Math.max(Math.min(((sourceY < targetY ? targetY - sourceY : sourceY - targetY) - 16 * scale) / icons.length - 1, 8 * scale), 0);
-                    }
-                    /*ctx.arc(sourceX, sourceY, 0.3, 0, 2 * Math.PI)
-                    ctx.stroke();
-                    ctx.closePath();
-                    ctx.beginPath();
-                    ctx.strokeStyle = "rgba(0, 0, 255, 1)";
-                    ctx.arc(targetX, targetY, 0.3, 0, 2 * Math.PI)
-                    ctx.stroke();
-                    ctx.closePath();
-                    ctx.restore();
-                    ctx.strokeStyle = style;
-                    ctx.lineWidth = lwidth;*/
-                    ctx.fillStyle = "#fff";
-                    ctx.font = (scale * 6) + "px 'MS Gothic'";
-                    const textBaseX = (sourceX * 1.5 + targetX * 0.5) / 2;
-                    const textBaseY = (sourceY * 1.5 + targetY * 0.5) / 2;
-                    for (let e = 0; e < icons.length; e++) {
-                        const emoji = icons[e].char;
-                        let textX, textY;
-                        const addCoord = gapSize * ((icons.length * -0.5) + e + 0.5); //e * gapSize;
-                        if (isX) {
-                            textX = (textBaseX + addCoord) - 3.5 * scale;
-                            textY = textBaseY + (targetY - sourceY)/(targetX - sourceX) * addCoord;
-                        } else {
-                            textY = textBaseY + addCoord;
-                            textX = (textBaseX + (targetX - sourceX)/(targetY - sourceY) * addCoord) - 3.5 * scale;
-                        }
-                        /*if (isX) {
-                            textX = ((sourceX + 8 * scale) + addCoord) - 3.5 * scale;
-                            textY = sourceY + (targetY - sourceY)/(targetX - sourceX) * addCoord;
-                        } else {
-                            textY = ((sourceY + 8 * scale) + addCoord)
-                            textX = (sourceX + (targetX - sourceX)/(targetY - sourceY) * addCoord) - 3.5 * scale;;
-                        }*/
-                        if (e === 0 && connType & ConnType.ONE_WAY) {
-                            ctx.beginPath();
-                            ctx.setLineDash([0, 0]);
-                            if (sourceX >= targetX) {
-                                ctx.save();
-                                ctx.scale(-1, 1);
-                                textX += 7 * scale;
-                                ctx.strokeStyle = "#000";
-                                ctx.lineWidth = 0.2 * scale;
-                                ctx.roundRect(-textX - 0.25 * scale, textY - 5.5 * scale, 6.5 * scale, 6.5 * scale, 0.5 * scale);
-                                ctx.fill();
-                                ctx.stroke();
-                                ctx.fillStyle = "#000";
-                                ctx.fillText(emoji, -textX, textY);
-                                ctx.fillStyle = "#fff";
-                                ctx.restore();
-                            } else {
-                                ctx.strokeStyle = "#000";
-                                ctx.lineWidth = 0.2 * scale;
-                                ctx.roundRect(textX - 0.25 * scale, textY - 5.5 * scale, 6.5 * scale, 6.5 * scale, 0.5 * scale);
-                                ctx.fill();
-                                ctx.stroke();
-                                ctx.fillStyle = "#000";
-                                ctx.fillText(emoji, textX, textY);
-                                ctx.fillStyle = "#fff";
-                            }
-                            ctx.closePath();
-                        } else
-                            ctx.fillText(emoji, textX, textY);
-                    }
-                }
-
                 function reloadGraph() {
                     const startWorld = startWorldId != null ? worldData[startWorldId] : null;
                     const endWorld = endWorldId != null ? worldData[endWorldId] : null;
@@ -1203,10 +2047,8 @@
                         : null;
                     if (graph)
                         graph._destructor();
-                    initGraph(config.displayMode, matchPaths)
+                    initGraph(config.renderMode, config.displayMode, matchPaths);
                 }
-
-                let mult = 1;
 
                 function findPath(s, t, ignoreTypeFlags) {
                     const startTime = performance.now();
@@ -1420,19 +2262,22 @@
                         language: config.lang,
                         pathPrefix: "/lang",
                         callback: function (data, defaultCallback) {
-                            data.footer = data.footer.replace("{VERSION}", "1.4.4");
+                            data.footer = data.footer.replace("{VERSION}", "2.4.2");
                             localizedConns = data.conn;
                             initContextMenu(data.contextMenu);
                             if (isInitial) {
-                                Object.keys(data.uiTheme.values).forEach(t => {
-                                    $(".js--ui-theme").append('<option data-localize="uiTheme.values.' + t + '" value="' + t + '">' + data.uiTheme.values[t] + '</option>');
+                                Object.keys(data.settings.uiTheme.values).forEach(t => {
+                                    $(".js--ui-theme").append('<option data-localize="settings.uiTheme.values.' + t + '" value="' + t + '">' + data.settings.uiTheme.values[t] + '</option>');
                                 });
                                 $(".js--ui-theme").val(config.uiTheme).change();
                             }
-                            updateControlsContainer();
+                            window.setTimeout(() => updateControlsContainer(true), 0);
                             defaultCallback(data);
                         }
                     });
+
+                    $(".js--help-modal__content--localized--en").toggle(isEn);
+                    $(".js--help-modal__content--localized--jp").toggle(!isEn);
 
                     $.localize("conn", {
                         language: config.lang,
@@ -1510,7 +2355,6 @@
                     if (selectedWorldId != null && visibleWorldIds.indexOf(selectedWorldId) === -1) {
                         $search.removeClass("selected").val("");
                         selectedWorldId = null;
-                        selectedWorldZoomCheck = false;
                     }
                     $search.autocomplete({
                         lookup: visibleWorldNames,
@@ -1523,23 +2367,25 @@
                                 $search.removeClass("selected");
                                 selectedWorldId = null;
                             }
+                            highlightWorldSelection();
                         },
                         onSelect: function (selectedWorld) {
                             $search.addClass("selected");
                             selectedWorldId = worldsByName[selectedWorld.value].id;
-                            selectedWorldZoomCheck = true;
+                            focusNode(graph.graphData().nodes[selectedWorldId]);
+                            highlightWorldSelection();
                         },
                         onHide: function () {
-                            if (selectedWorldId != null) {
+                           if (selectedWorldId != null) {
                                 const selectedWorld = worldData[selectedWorldId];
                                 const selectedWorldName = config.lang === 'en' || !selectedWorld.titleJP ? selectedWorld.title : wselectedWorld.titleJP;
                                 if ($(this).val() !== selectedWorldName) {
                                     $search.removeClass("selected");
                                     selectedWorldId = null;
-                                    selectedWorldZoomCheck = false;
                                 }
                             }
                             searchWorldIds = [];
+                            highlightWorldSelection();
                         }
                     });
                 }
@@ -1582,7 +2428,148 @@
                         "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
                 }
 
+                function focusNode(node) {
+                    const scale = worldScales[node.id];
+                    const distance = 50 * scale;
+                    if (!config.renderMode) {
+                        const camera = graph.camera();
+                        graph.cameraPosition({ x: node.x, y: node.y, z: distance }, node, 1000);
+                        const oldZoom = { zoom: camera.zoom };
+                        const newZoom = { zoom: 20 / scale };
+                        new Y2E.TWEEN.Tween(oldZoom).to(newZoom, graph.controls().zoomSpeed * 1000).easing(Y2E.TWEEN.Easing.Quadratic.Out).onUpdate(zoom => {
+                            camera.zoom = zoom.zoom;
+                            camera.updateProjectionMatrix();
+                        }).start();
+                    } else {
+                        const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
+                        graph.cameraPosition({ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, node, 1000);
+                    }
+                }
+
+                function updateConnectionModeIcons() {
+                    if (isWebGL2) {
+                        iconObject.geometry.attributes.opacity.array.set(unsortedIconOpacities, 0);
+                        let opacities = iconObject.geometry.attributes.opacity.array;
+                        let iconIndex = 0;
+                        graph.graphData().links.forEach(link => {
+                            const linkOpacity = getLinkOpacity(link);
+                            link.icons.forEach(icon => {
+                                opacities[iconIndex] = linkOpacity;
+                                config.connMode === 0 && link.hidden && (opacities[iconIndex] = 0);
+                                iconIndex++;
+                            });
+                        });
+                        unsortedIconOpacities = opacities.slice();
+                        iconObject.geometry.attributes.opacity.needsUpdate = true;
+                    } else {
+                        graph.graphData().links.forEach(link => {
+                            if (icons3D[link.key] !== undefined) {
+                                const linkOpacity = getLinkOpacity(link);
+                                icons3D[link.key].forEach(icon => {
+                                    icon.visible = true;
+                                    icon.material.opacity = linkOpacity;
+                                    config.connMode === 0 && link.hidden && (icon.visible = false);
+                                });
+                            }
+                        });
+                    }
+                }
+
+                function highlightWorldSelection() {
+                    updateConnectionModeIcons();
+                    let index = 0;
+                    graph.graphData().nodes.forEach(node => {
+                        const nodeOpacity = getNodeOpacity(node);
+                        if (nodeObject)
+                            nodeObject.geometry.attributes.opacity.array[index] = getNodeOpacity(node);
+                        else
+                            node.__threeObj.material.opacity = nodeOpacity;
+                        index++;
+                    });
+                    nodeObject && (nodeObject.geometry.attributes.opacity.needsUpdate = true);
+                    updateLinkColors(visibleTwoWayLinks, linksTwoWayBuffered);
+                    updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
+                    if (isWebGL2 && is2d)
+                        updateNodeLabels2D();
+                }
+
                 let worldsByName, worldNames, minSize, maxSize;
+
+                function onDocumentMouseMove(event) {
+                    updateRaycast();
+                    // update the mouse variable
+                    mousePos.clientX = event.clientX;
+                    mousePos.clientY = event.clientY;
+                    mousePos.x = (event.clientX / window.innerWidth) * 2 - 1;
+                    mousePos.y = -(event.clientY / window.innerHeight) * 2 + 1;
+                }
+
+                function clearTweens() {
+                    Y2E.TWEEN._tweens = {};
+                }
+
+                function updateRaycast() {
+                    const vector = new THREE.Vector3(mousePos.x, mousePos.y, 1);
+                    let intersects = [];
+
+                    if (!$(".js--help-modal:visible").length) {
+                        raycaster.setFromCamera(vector, graph.camera());
+                        // create an array containing all objects in the scene with which the ray intersects
+                        if (isWebGL2)
+                            intersects = raycaster.intersectObject(iconObject);
+                        else
+                            intersects = raycaster.intersectObjects(graph.graphData().nodes.map(node => node.__threeObj).filter(o => o).concat(graph.scene().children.filter(o => o.__graphObjType === 'icon' && o.visible)));
+                    }
+
+                    // if there are one or more intersections
+                    if (intersects.length)
+                    {
+                        if (isWebGL2) {
+                            const topInstanceId = intersects[0].instanceId;
+                            if (iconObject.geometry.attributes.opacity.array[topInstanceId] < 1)
+                                return;
+                            const index = sortedIconIds[topInstanceId];
+                            const text = iconTexts[index];
+                            $(".graph .scene-tooltip").css("visibility", "hidden");
+                            if (text !== undefined) {
+                                const viewPortCoords = {
+                                    x: mousePos.clientX,
+                                    y: mousePos.clientY
+                                };
+                                iconLabel.innerHTML = text;
+                                iconLabel.style.left = viewPortCoords.x + (mousePos.x + 1) * iconLabel.offsetWidth * -0.5;
+                                iconLabel.style.top = viewPortCoords.y + 21;
+                            }
+                            return;
+                        } else {
+                            const topObj = intersects[0];
+                            if (topObj.object.__graphObjType !== "node") {
+                                $(".graph .scene-tooltip").css("visibility", "hidden"); 
+                                // update text, if it has a "name" field.
+                                if (topObj.object.name) {
+                                    const viewPortCoords = {
+                                        x: mousePos.clientX,
+                                        y: mousePos.clientY
+                                    };
+                                    iconLabel.innerHTML = intersects[0].object.name;
+                                    iconLabel.style.left = viewPortCoords.x + (mousePos.x + 1) * iconLabel.offsetWidth * -0.5;
+                                    iconLabel.style.top = viewPortCoords.y + 21;
+                                }
+                                return;
+                            }
+                        }
+                    }
+                    iconLabel.innerHTML = '';
+                    $(".graph .scene-tooltip").css("visibility", "visible");
+                }
+
+                function openHelpModal() {
+                    $(".js--help-modal").modal({
+                        fadeDuration: 100,
+                        closeClass: 'noselect',
+                        closeText: '✖'
+                    });
+                }
 
                 $(document).ready(function () {
                     let loadingFrameCount = 0;
@@ -1590,14 +2577,13 @@
                         let loadingTextAppend = "";
                         const loadingTextAppendChar = config.lang === "en" ? "." : "．";
                         const loadingTextSpaceChar = config.lang === "en" ? " " : "　";
-                        for (var i = 0; i < 3; i++)
+                        for (let i = 0; i < 3; i++)
                             loadingTextAppend += i < loadingFrameCount ? loadingTextAppendChar : loadingTextSpaceChar;
                         $(".loading-container__text__append").text(loadingTextAppend);
                         loadingFrameCount += loadingFrameCount < 3 ? 1 : -3;
                     }, 300);
                     
                     $(".controls--container--tab__button").click(function() {
-                        updateControlsContainer();
                         if ($(".controls-bottom").hasClass("visible")) {
                             $(".controls-bottom").removeClass("visible").animateCss("slideOutDown", 250, function () {
                                 if (!$(this).hasClass("visible"))
@@ -1608,6 +2594,7 @@
                             $(".controls-bottom").addClass("visible").css("opacity", 1).animateCss("slideInUp", 250);
                             $(".controls--container--tab, .footer").css("margin-top", "-" + ($(".controls-bottom").outerHeight() + 8) + "px").animateCss("slideInUp", 250);
                         }
+                        updateControlsContainer();
                     });
 
                     updateControlsContainer(true);
@@ -1628,8 +2615,8 @@
                         config.uiTheme = $(this).val();
                         const themeStyles = $(".js--theme-styles")[0];
                         getBaseBgColor(config.uiTheme || (config.uiTheme = "Default_Custom"), function (color) {
-                            var bgColorPixel = uiThemeBgColors[config.uiTheme];
-                            var altColor = "rgba(" + Math.min(bgColorPixel[0] + 48, 255) + ", " + Math.min(bgColorPixel[1] + 48, 255) + ", " + Math.min(bgColorPixel[2] + 48, 255) + ", 1)";
+                            const bgColorPixel = uiThemeBgColors[config.uiTheme];
+                            const altColor = "rgba(" + Math.min(bgColorPixel[0] + 48, 255) + ", " + Math.min(bgColorPixel[1] + 48, 255) + ", " + Math.min(bgColorPixel[2] + 48, 255) + ", 1)";
                             themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/[a-zA-Z0-9\_]+\/(containerbg|border(?:2)?|font\d)\.png\)/g, "url(/images/ui/" + config.uiTheme + "/$1.png)")
                                 .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "background-color:$1" + color + "$2;$3/*base*/")
                                 .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "background-color:$1" + altColor + "$2;$3/*alt*/");
@@ -1651,6 +2638,13 @@
                         });
                     });
 
+                    $(".js--render-mode").change(function() {
+                        config.renderMode = parseInt($(this).val());
+                        updateConfig();
+                        if (worldData)
+                            reloadGraph();
+                    });
+
                     $(".js--display-mode").change(function() {
                         config.displayMode = parseInt($(this).val());
                         updateConfig();
@@ -1661,11 +2655,24 @@
 
                     $(".js--conn-mode").change(function() {
                         config.connMode = parseInt($(this).val());
+                        updateConnectionModeIcons();
                         updateConfig();
                     });
 
                     $(".js--label-mode").change(function() {
                         config.labelMode = parseInt($(this).val());
+
+                        if (isWebGL2 && is2d)
+                            updateNodeLabels2D();
+                        if (!config.labelMode) {
+                            if (!isWebGL2 || !is2d) {
+                                graph.graphData().nodes.forEach(node => {
+                                const obj = node.__threeObj;
+                                if (obj)
+                                    obj.children[0].visible = false;
+                                });
+                            }
+                        }
                         updateConfig();
                     });
 
@@ -1688,10 +2695,27 @@
                         startWorldId = null;
                         endWorldId = null;
                         selectedWorldId = null;
-                        selectedWorldZoomCheck = false;
                         if (worldData)
                             reloadGraph();
                     });
+
+                    $(".js--help").click(function() {
+                        if ($(".js--help-modal:visible").length)
+                            $.modal.close();
+                        else if ($(".js--help-modal__content--localized").text())
+                            openHelpModal();
+                        else {
+                            $.get("/help", function (data) {
+                                const md = new Remarkable();
+                                data = data.split('---');
+                                const helpEn = md.render(data[0]);
+                                const helpJp = data.length > 1 ? md.render(data[1]) : helpEn;
+                                $('.js--help-modal__content--localized').html('<div class="js--help-modal__content--localized--en"' + (config.lang === 'en' ? '' : ' style="display: none;"') + '>' + helpEn + '</div>'
+                                    + '<div class="js--help-modal__content--localized--jp"' + (config.lang === 'en' ? ' style="display: none;"' : '') + '>' + helpJp + '</div>');
+                                openHelpModal();
+                            });
+                        }
+                    })
 
                     loadOrInitConfig();
 
@@ -1721,6 +2745,14 @@
 
                         window.clearInterval(loadingTimer);
 
+                        graphCanvas = document.createElement('canvas');
+                        graphContext = graphCanvas.getContext('webgl2');
+
+                        isWebGL2 = (graphContext != null);
+
+                        if (isWebGL2)
+                            initNodeObjectMaterial();
+                            
                         reloadGraph();
                     }, function () {
                         window.clearInterval(loadingTimer);
@@ -1730,6 +2762,12 @@
                     });
                 });
             </script>
+        </div>
+        <div id="helpModal" class="js--help-modal modal">
+            <div class="js--help-modal__content modal__content">
+                <div class="js--help-modal__content--localized modal__content--localized"></div>
+                <a href="https://github.com/Flashfyre/Yume-2kki-Explorer/issues/new" target="_blank" data-localize="helpModal.reportBug">Report a Bug</a>
+            </div>
         </div>
     </body>
 </html>

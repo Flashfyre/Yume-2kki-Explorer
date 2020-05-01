@@ -126,9 +126,11 @@ function getConnPool() {
     });
 }
 
-app.use(express.static('public'))
+app.use(express.static('public'));
 
-app.get('/', (_, res) => res.sendFile('index.html', { root: '.' }))
+app.get('/', (_, res) => res.sendFile('index.html', { root: '.' }));
+
+app.get('/help', (_, res) => res.sendFile('README.md', { root: '.' }));
 
 const startLocation = "Urotsuki's Room";
 
@@ -149,9 +151,8 @@ app.get('/worlds', function(req, res) {
                     });
                 }).catch(err => console.error(err));
             }).catch(err => console.error(err))).catch(err => console.error(err));
-        } else {
+        } else
             checkUpdateData(pool).then(() => getWorldData(pool).then(wd => callback(wd)).catch(err => console.error(err))).catch(err => console.error(err));
-        }
     }).catch(err => console.error(err));
 });
 
@@ -1053,7 +1054,7 @@ function getConnections(html) {
                     if (paramsText === "&#123;&#123;&#123;3}}}")
                         paramsText = "";
                     else {
-                        paramsText = paramsText.replace(/^Requires (to )?/, "").replace(/.$/, "");
+                        paramsText = paramsText.replace(/^Require(s|d) (to )?/, "").replace(/.$/, "");
                         paramsText = paramsText.substring(0, 1).toUpperCase() + paramsText.slice(1);
                     }
                     if (paramsText) {

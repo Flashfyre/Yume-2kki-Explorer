@@ -5,110 +5,129 @@
         "space": "   ",
         "error": "An error occurred: please try again later."
     },
-    "lang": {
-        "name": "Language:",
-        "values": {
-            "english": "English",
-            "japanese": "Japanese"
+    "controls": {
+        "search": {
+            "name": "Search:"
+        },
+        "origin": {
+            "name": "Origin:"
+        },
+        "destination": {
+            "name": "Destination:"
+        },
+        "reset": {
+            "name": "Reset"
+        },
+        "help": {
+            "name": "Help"
         }
     },
-    "uiTheme": {
-        "name": "UI Theme:",
-        "values": {
-            "Default_Custom": "Default (Custom)",
-            "Default": "Default",
-            "Default_2": "Default 2",
-            "Default_3": "Default 3",
-            "Default_4": "Default 4",
-            "Default_5": "Default 5",
-            "Developer_Room": "Developer Room",
-            "Glitch_Ending": "Bleak Future",
-            "Glitch_Ending_2": "Bleak Future 2",
-            "Hidden_Shoal": "Hidden Shoal",
-            "Forest_Pier": "Forest Pier",
-            "Planetarium": "Planetarium",
-            "Industrial_Maze": "Factory Garden",
-            "Rose_Church": "Rose Church",
-            "Bioluminescent_Cavern": "Bioluminescent Cavern",
-            "Depths": "Depths",
-            "Depths_2": "Depths 2",
-            "Guts_World": "Guts World",
-            "Maple_Shrine": "Maple Shrine",
-            "Pencil_World": "Pencil World",
-            "Chocolate_World": "Chocolate World",
-            "Blue_Cactus_Islands": "Blue Cactus Islands",
-            "Stone_Towers": "Stone Towers",
-            "Constellation_World": "Star Building",
-            "Blob_Desert": "Blob Desert",
-            "Matoran_Keyboard": "Matoran Keyboard",
-            "Abandoned_Factory": "Abandoned Factory",
-            "Polluted_Swamp": "Polluted Swamp",
-            "Snowy_Village": "Snowy Village",
-            "Decrepit_Dwellings": "Decrepit Dwellings",
-            "Verdant_Promenade": "Verdant Promenade",
-            "Saturated_Eyeball_Zone": "Saturated Eyeball Zone"
+    "settings": {
+        "lang": {
+            "name": "Language:",
+            "values": {
+                "english": "English",
+                "japanese": "Japanese"
+            }
+        },
+        "uiTheme": {
+            "name": "UI Theme:",
+            "values": {
+                "Default_Custom": "Default (Custom)",
+                "Default": "Default",
+                "Default_2": "Default 2",
+                "Default_3": "Default 3",
+                "Default_4": "Default 4",
+                "Default_5": "Default 5",
+                "Developer_Room": "Developer Room",
+                "Glitch_Ending": "Bleak Future",
+                "Glitch_Ending_2": "Bleak Future 2",
+                "Hidden_Shoal": "Hidden Shoal",
+                "Forest_Pier": "Forest Pier",
+                "Planetarium": "Planetarium",
+                "Industrial_Maze": "Factory Garden",
+                "Rose_Church": "Rose Church",
+                "Bioluminescent_Cavern": "Bioluminescent Cavern",
+                "Depths": "Depths",
+                "Depths_2": "Depths 2",
+                "Guts_World": "Guts World",
+                "Maple_Shrine": "Maple Shrine",
+                "Pencil_World": "Pencil World",
+                "Chocolate_World": "Chocolate World",
+                "Blue_Cactus_Islands": "Blue Cactus Islands",
+                "Stone_Towers": "Stone Towers",
+                "Constellation_World": "Star Building",
+                "Blob_Desert": "Blob Desert",
+                "Matoran_Keyboard": "Matoran Keyboard",
+                "Abandoned_Factory": "Abandoned Factory",
+                "Polluted_Swamp": "Polluted Swamp",
+                "Snowy_Village": "Snowy Village",
+                "Decrepit_Dwellings": "Decrepit Dwellings",
+                "Verdant_Promenade": "Verdant Promenade",
+                "Saturated_Eyeball_Zone": "Saturated Eyeball Zone"
+            }
+        },
+        "fontStyle": {
+            "name": "Font Style:",
+            "values": {
+                "style1": "Style 1",
+                "style2": "Style 2",
+                "style3": "Style 3",
+                "style4": "Style 4",
+                "style5": "Style 5",
+                "style6": "Style 6",
+                "style7": "Style 7"
+            }
+        },
+        "renderMode": {
+            "name": "Render Mode:",
+            "values": {
+                "2d": "2D",
+                "3d": "3D"
+            }
+        },
+        "displayMode": {
+            "name": "Display Mode:",
+            "values": {
+                "vertical": "Vertical",
+                "horizontal": "Horizontal",
+                "radialIn": "Inward",
+                "radialOut": "Outward",
+                "free": "Free"
+            }
+        },
+        "connMode": {
+            "name": "Connection Mode:",
+            "values": {
+                "oneWay": "One-Way",
+                "twoWay": "Two-Way"
+            }
+        },
+        "labelMode": {
+            "name": "Label Display:",
+            "values": {
+                "never": "Never",
+                "hover": "On Hover",
+                "select": "On Select",
+                "always": "Always"
+            }
+        },
+        "sizeDiff": {
+            "name": "Size Difference:"
+        },
+        "stackSize": {
+            "name": "Stack Threshold:"
         }
     },
-    "fontStyle": {
-        "name": "Font Style:",
-        "values": {
-            "style1": "Style 1",
-            "style2": "Style 2",
-            "style3": "Style 3",
-            "style4": "Style 4",
-            "style5": "Style 5",
-            "style6": "Style 6",
-            "style7": "Style 7"
-        }
-    },
-    "displayMode": {
-        "name": "Display Mode:",
-        "values": {
-            "vertical": "Vertical",
-            "horizontal": "Horizontal",
-            "radialIn": "Inward",
-            "radialOut": "Outward",
-            "free": "Free"
-        }
-    },
-    "connMode": {
-        "name": "Connection Mode:",
-        "values": {
-            "oneWay": "One-Way",
-            "twoWay": "Two-Way"
-        }
-    },
-    "labelMode": {
-        "name": "Label Display:",
-        "values": {
-            "never": "Never",
-            "hover": "On Hover",
-            "select": "On Select",
-            "always": "Always"
-        }
-    },
-    "sizeDiff": {
-        "name": "Size Difference:"
-    },
-    "stackSize": {
-        "name": "Stack Threshold:"
-    },
-    "search": {
-        "name": "Search:"
-    },
-    "origin": {
-        "name": "Origin:"
-    },
-    "destination": {
-        "name": "Destination:"
-    },
-    "reset": "Reset",
     "contextMenu": {
         "items": {
             "wiki": "View Wiki Page",
             "start": "Set as Origin",
             "end": "Set as Destination"
         }
+    },
+    "helpModal": {
+        "reportBug": "Report a Bug"
     },
     "footer": "Yume 2kki Explorer v{VERSION} by FlashfyreDev"
 }
