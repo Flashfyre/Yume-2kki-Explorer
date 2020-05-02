@@ -1,4 +1,3 @@
-import ForceGraph3D from '3d-force-graph';
-import TWEEN from '@tweenjs/tween.js';
+import * as app from './app.js';
 
-export { ForceGraph3D, TWEEN };
+export { app };

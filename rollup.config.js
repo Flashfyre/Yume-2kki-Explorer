@@ -1,6 +1,8 @@
 import resolve from '@rollup/plugin-node-resolve';
 import commonJs from '@rollup/plugin-commonjs';
 import { terser } from "rollup-plugin-terser";
+import inject from '@rollup/plugin-inject';
+import visualizer from 'rollup-plugin-visualizer';
 import { name, homepage, version } from './package.json';
 
 const umdConf = {
@@ -33,7 +35,11 @@ export default [
     ],
     plugins: [
       resolve(),
-      commonJs()
+      commonJs(),
+      inject({
+        jQuery: 'jquery'
+      }),
+      visualizer()
     ]
   }
 ];

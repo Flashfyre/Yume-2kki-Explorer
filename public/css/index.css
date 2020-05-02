@@ -1,0 +1,284 @@
+@font-face {
+    font-family: 'MS Gothic';
+    src: url('/fonts/MS Gothic.ttf');
+}
+
+body {
+    font-family: 'MS Gothic';
+    margin: 0;
+    background: url(https://img2.wikia.nocookie.net/__cb20140715140243/yume2kki/images/5/50/Wiki-background) top left repeat;
+    background-blend-mode: screen;
+    overflow: hidden;
+}
+
+.noselect {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.content {
+    background: rgba(0,0,0,0.8);
+    padding-top: 0.1px;
+}
+
+.controls--container {
+    position: absolute;
+    width: 100%;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.controls {
+    position: absolute;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    text-align: right;
+    margin: 10px;
+    margin-top: 10px;
+    width: calc(100% - 40px);
+    min-height: 64px;
+    border: 10px solid transparent;
+}
+
+.controls-top {
+    z-index: 10;
+}
+
+.controls-bottom {
+    pointer-events: none;
+}
+
+.controls-bottom.visible {
+    pointer-events: all !important;
+}
+
+.controls--container--tab {
+    position: absolute;
+    width: 128px;
+    z-index: 5;
+    top: calc(100% - 36px);
+}
+
+.controls--container--tab__button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    height: 16px;
+    padding: 6px 0 24px 0;
+    font-family: 'MS Gothic';
+    font-size: 18px;
+    border: none;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    background-image: none;
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+.control {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+}
+
+.loading-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading-container .loading-container__text {
+    font-size: xx-large;
+    margin-left: 12px;
+}
+
+.loading-container img {
+    -ms-interpolation-mode: nearest-neighbor;
+    image-rendering: pixelated;
+    height: 25%;
+}
+
+.blocker {
+    padding: 24px 24px 32px 24px !important;
+}
+
+.graph {
+    width: 100%;
+    height: 100%;
+}
+
+.footer {
+    position: absolute;
+    padding: 8px;
+    padding-left: 4px;
+    top: calc(100% - 36px);
+    text-align: right;
+    height: 26px;
+    width: calc(100% - 16px);
+    font-family: 'MS Gothic';
+    font-size: 18px;
+}
+
+label {
+    font-size: 18px;
+    margin-left: 16px;
+    font-weight: bold;
+}
+
+button {
+    margin: 8px;
+    padding: 4px;
+    cursor: pointer;
+    font-family: 'MS Gothic';
+    font-size: 18px;
+    border: 6px solid transparent;
+}
+
+a {
+    text-decoration: none;
+    padding: 4px;
+    font-family: 'MS Gothic';
+    font-size: 18px;
+    border: 6px solid transparent;
+}
+
+input[type='text'], select, .slider {
+    margin: 8px;
+    padding: 4px;
+    font-family: 'MS Gothic';
+    font-size: 18px;
+    border: 6px solid transparent;
+}
+
+.slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 128px;
+    height: 2px;
+    padding: 0 4px;
+    outline: none;
+}
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 38px;
+    border: 6px solid transparent;
+    cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+    width: 25px;
+    height: 25px;
+    width: 24px;
+    height: 38px;
+    border: 6px solid transparent;
+    cursor: pointer;
+}
+
+.modal {
+    border: 10px solid transparent;
+    padding: 0 32px 24px 24px !important;
+    max-width: initial !important;
+    vertical-align: top !important;
+    height: 100%;
+    transition: height 0.25s;
+}
+
+.modal__content {
+    margin-right: -32px;
+    overflow-y: scroll;
+    height: calc(100% + 24px);
+}
+
+.modal__content a {
+    display: inline-block;
+    margin-bottom: 24px;
+}
+
+.modal__content::-webkit-scrollbar {
+    width: 18px;
+}
+
+.modal__content::-webkit-scrollbar-track {
+    border: 10px solid transparent;
+    background-color: rgba(255, 255, 255, 0.25);
+    margin-top: 24px;
+}
+
+.modal__content::-webkit-scrollbar-thumb {
+    border: 6px solid transparent;
+}
+
+.modal__content::-webkit-scrollbar-button {
+    height: 0px !important;
+}
+
+.modal__content--localized {
+    padding-bottom: 16px;
+}
+
+a.close-modal {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-around;
+    text-decoration: none;
+    text-indent: initial !important;
+    padding: 5px;
+    margin: 0;
+    border: none;
+    top: -10px !important;
+    right: -10px !important;
+}
+
+.autocomplete-suggestions {
+    border: 6px solid transparent;
+    overflow: auto;
+}
+
+.autocomplete-suggestion {
+    padding: 2px 5px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.autocomplete-suggestions strong {
+    font-weight: normal;
+}
+
+.autocomplete-group {
+    padding: 2px 5px;
+}
+
+.autocomplete-group strong {
+    display: block;
+    border-bottom: 1px solid #000;
+}
+
+.graph-tooltip, .scene-tooltip {
+    font-family: 'MS Gothic' !important;
+    font-size: 16px !important;
+    padding: 4px;
+    border: 6px solid transparent;
+}
+
+.scene-nav-info {
+    display: none;
+}
+
+.context-menu-list {
+    border: 0 !important;
+    padding: 0 !important;
+}
+
+.context-menu-item {
+    border: 6px solid transparent;
+}
