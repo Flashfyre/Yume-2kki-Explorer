@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import SpriteText from 'three-spritetext';
 import ForceGraph3D from '3d-force-graph';
 import TWEEN from '@tweenjs/tween.js';
-import { hueToRGBA, uiThemeFontColors, uiThemeBgColors, getFontColor, getBaseBgColor } from './display';
+import { hueToRGBA, uiThemeFontColors, uiThemeBgColors, getFontColor, getBaseBgColor } from './utils';
 import { updateConfig } from './config.js';
 import { ConnType } from './conn-type.js';
 
