@@ -68,7 +68,7 @@ $.fn.extend({
     }
 });
 
-let worldData;
+export let worldData;
 
 function loadOrInitConfig() {
     try {
@@ -1490,8 +1490,8 @@ function findPath(s, t, ignoreTypeFlags) {
 
     let genIndex = 0;
 
-    sourcePaths[s] = [{ id: s, connType: null }];
-    targetPaths[t] = [{ id: t, connType: null }];
+    sourcePaths[s] = [{ id: s, connType: null, typeParams: null }];
+    targetPaths[t] = [{ id: t, connType: null, typeParams: null }];
   
     while (genIndex <= 20) {
         let sourceWorlds = nextGenSourceWorlds.slice(0);
@@ -1607,10 +1607,11 @@ function traverseConns(checkedNodes, path, nextGenWorlds, world, ignoreTypeFlags
         const connWorld = worldData[conns[c].targetId];
         const id = connWorld.id;
         if (checkedNodes.indexOf(id) === -1) {
+            const connPath = _.cloneDeep(path);
             // If checking from target
             if (isSource) {
-                path[path.length - 1].connType = connType;
-                path[path.length - 1].typeParams = typeParams;
+                connPath[connPath.length - 1].connType = connType;
+                connPath[connPath.length - 1].typeParams = typeParams;
                 connType = null;
             } else {
                 const reverseConn = connWorld.connections.filter(c => c.targetId === world.id);
@@ -1635,7 +1636,6 @@ function traverseConns(checkedNodes, path, nextGenWorlds, world, ignoreTypeFlags
                 if (connType & ignoreTypeFlags)
                     continue;
             }
-            const connPath = path.slice(0);
             connPath.push({
                 id: id,
                 connType: connType,
@@ -1914,7 +1914,9 @@ function highlightWorldSelection() {
         updateNodeLabels2D();
 }
 
-let worldsByName, worldNames, minSize, maxSize;
+export let worldsByName;
+
+let worldNames, minSize, maxSize;
 
 function onDocumentMouseMove(event) {
     updateRaycast();
@@ -2015,7 +2017,7 @@ function initControls() {
     
     $(".js--lang").change(function() {
         config.lang = $(this).val();
-        updateConfig();
+        updateConfig(config);
         initLocalization();
         if (worldData)
             reloadGraph();
@@ -2031,7 +2033,7 @@ function initControls() {
                 .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "background-color:$1" + color + "$2;$3/*base*/")
                 .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "background-color:$1" + altColor + "$2;$3/*alt*/");
             $(".js--font-style").change();
-            updateConfig();
+            updateConfig(config);
         });
     });
 
@@ -2043,21 +2045,21 @@ function initControls() {
                 themeStyles.textContent = themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/([a-zA-Z0-9\_]+)\/font\d\.png\)/g, "url(/images/ui/$1/font" + (config.fontStyle + 1) + ".png)")
                     .replace(/([^\-])color:( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "$1color:$2" + baseColor + "$3;$4/*base*/")
                     .replace(/([^\-])color:( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "$1color:$2" + altColor + "$3;$4/*alt*/");
-                updateConfig();
+                updateConfig(config);
             });
         });
     });
 
     $(".js--render-mode").change(function() {
         config.renderMode = parseInt($(this).val());
-        updateConfig();
+        updateConfig(config);
         if (worldData)
             reloadGraph();
     });
 
     $(".js--display-mode").change(function() {
         config.displayMode = parseInt($(this).val());
-        updateConfig();
+        updateConfig(config);
         if (worldData)
             reloadGraph();
         $(".js--stack-size--container").css("display", config.displayMode < 2 ? "flex" : "none");
@@ -2066,7 +2068,7 @@ function initControls() {
     $(".js--conn-mode").change(function() {
         config.connMode = parseInt($(this).val());
         updateConnectionModeIcons();
-        updateConfig();
+        updateConfig(config);
     });
 
     $(".js--label-mode").change(function() {
@@ -2083,19 +2085,19 @@ function initControls() {
                 });
             }
         }
-        updateConfig();
+        updateConfig(config);
     });
 
     $(".js--size-diff").change(function() {
         config.sizeDiff = parseFloat($(this).val());
-        updateConfig();
+        updateConfig(config);
         if (worldData)
             reloadGraph();
     });
 
     $(".js--stack-size").change(function() {
         config.stackSize = parseInt($(this).val());
-        updateConfig();
+        updateConfig(config);
         if (worldData)
             reloadGraph();
     });

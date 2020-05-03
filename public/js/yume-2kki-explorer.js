@@ -21529,7 +21529,7 @@
 	 * Preset configs
 	 */
 
-	var config$1 = {
+	var config = {
 	  'default': defaultConfig,
 	  'full': fullConfig,
 	  'commonmark': commonmarkConfig
@@ -21586,7 +21586,7 @@
 	  this.ruler    = new Ruler();
 
 	  this.options  = {};
-	  this.configure(config$1[preset]);
+	  this.configure(config[preset]);
 	  this.set(options || {});
 	}
 
@@ -104029,7 +104029,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    img.src = `./images/ui/${uiTheme}/containerbg.png`;
 	}
 
-	function updateConfig() {
+	function updateConfig(config) {
 	    try {
 	        window.localStorage.config = JSON.stringify(config);
 	    } catch (error) {
@@ -104110,18 +104110,16 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    }
 	});
 
-	let worldData;
-
 	function loadOrInitConfig() {
 	    try {
 	        if (!window.localStorage.hasOwnProperty("config"))
-	            window.localStorage.setItem("config", JSON.stringify(config$2));
+	            window.localStorage.setItem("config", JSON.stringify(config$1));
 	        else {
 	            const savedConfig = JSON.parse(window.localStorage.getItem("config"));
 	            for (let key of Object.keys(savedConfig)) {
-	                if (config$2.hasOwnProperty(key)) {
+	                if (config$1.hasOwnProperty(key)) {
 	                    const value = savedConfig[key];
-	                    config$2[key] = value;
+	                    config$1[key] = value;
 	                    switch (key) {
 	                        case "lang":
 	                            jquery(".js--lang").val(value);
@@ -104217,7 +104215,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	let effectsJP;
 
-	let config$2 = {
+	let config$1 = {
 	    lang: "en",
 	    uiTheme: "Default_Custom",
 	    fontStyle: 0,
@@ -104243,11 +104241,11 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	    iconTexts = [];
 
-	    lodash.each(worldData, w => {
-	        worldScales[w.id] = 1 + (Math.round((w.size - minSize) / (maxSize - minSize) * 10 * (config$2.sizeDiff - 1)) / 10);
+	    lodash.each(exports.worldData, w => {
+	        worldScales[w.id] = 1 + (Math.round((w.size - minSize) / (maxSize - minSize) * 10 * (config$1.sizeDiff - 1)) / 10);
 	    });
 
-	    const maxDepth = lodash.max(worldData.map(w => w.depth));
+	    const maxDepth = lodash.max(exports.worldData.map(w => w.depth));
 
 	    if (paths) {
 	        visibleWorldIds = lodash.uniq(lodash.flatten(paths).map(p => p.id));
@@ -104301,15 +104299,15 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            }
 	        }
 	    } else {
-	        visibleWorldIds = Object.keys(worldData).map(id => parseInt(id));
+	        visibleWorldIds = Object.keys(exports.worldData).map(id => parseInt(id));
 
 	        for (let w in visibleWorldIds) {
-	            const world = worldData[visibleWorldIds[w]];
+	            const world = exports.worldData[visibleWorldIds[w]];
 	            const connections = world.connections;
 	            const dagIgnoreIds = dagIgnore[world.id] = [];
 	            for (let c in connections) {
 	                const conn = connections[c];
-	                const connWorld = worldData[conn.targetId];
+	                const connWorld = exports.worldData[conn.targetId];
 	                let hidden = false;
 	                if (conn.type & connType_1.NO_ENTRY)
 	                    hidden = true;
@@ -104369,11 +104367,11 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        }
 	    });
 
-	    const images = (paths ? worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1) : worldData)
+	    const images = (paths ? exports.worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1) : exports.worldData)
 	        .map(d => {
 	            const img = new Image();
 	            img.id = d.id;
-	            img.title = config$2.lang === "en" || !d.titleJP ? d.title : d.titleJP;
+	            img.title = config$1.lang === "en" || !d.titleJP ? d.title : d.titleJP;
 	            img.src = d.filename;
 	            return img;
 	        });
@@ -104382,7 +104380,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        const id = parseInt(img.id);
 	        const scale = worldScales[id];
 	        const ret = { id: id, img, isHover: false, scale: scale };
-	        ret.globalDepth = worldData[id].depth;
+	        ret.globalDepth = exports.worldData[id].depth;
 	        ret.dagIgnore = dagIgnore[id];
 	        ret.width = 16 * scale;
 	        ret.height = 12 * scale;
@@ -104394,7 +104392,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    const gData = {
 	        nodes: nodes,
 	        links: lodash.sortBy(links, l => {
-	            const world = worldData[l.source];
+	            const world = exports.worldData[l.source];
 	            return world.depth + (maxDepth + 1) * (l.connType & connType_1.ONE_WAY ? 1 : 0);
 	        })
 	    };
@@ -104429,7 +104427,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    if (displayMode < 4)
 	        graph = graph
 	            .dagMode(displayMode === 0 ? 'td' : displayMode === 1 ? 'lr' : displayMode === 2 ? 'radialin' : 'radialout')
-	            .dagLevelDistance(displayMode < 2 ? 12 : 24 + radius * (config$2.sizeDiff + 1));
+	            .dagLevelDistance(displayMode < 2 ? 12 : 24 + radius * (config$1.sizeDiff + 1));
 
 	    linksTwoWayBuffered = undefined;
 	    linksOneWayBuffered = undefined;
@@ -104444,7 +104442,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        .nodeThreeObject(node => {
 	            let ret;
 	            const scale = worldScales[node.id];
-	            const world = worldData[node.id];
+	            const world = exports.worldData[node.id];
 	            const box = new BoxGeometry(13 * scale, 9.75 * scale, is2d ? 0.1 : 13 * scale);
 	            let material;
 	            if (isWebGL2) {
@@ -104466,7 +104464,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            }
 
 	            if (!(isWebGL2 && is2d)) {
-	                const worldName = config$2.lang === "en" || !world.titleJP ? world.title : world.titleJP;
+	                const worldName = config$1.lang === "en" || !world.titleJP ? world.title : world.titleJP;
 	                const text = new _default(worldName, 1.5, 'white');
 	                text.__graphObjType = 'label';
 	                text.fontFace = 'MS Gothic';
@@ -104507,7 +104505,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                text.defaultScale = { "x": text.scale.x, "y": text.scale.y };
 	                text.material.transparent = true;
 	                text.material.opacity = ret.material.opacity;
-	                if (config$2.labelMode < 3)
+	                if (config$1.labelMode < 3)
 	                    text.visible = false;
 
 	                ret.add(text);
@@ -104557,10 +104555,10 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                }
 	            }
 	        })
-	        .connMode(() => config$2.connMode)
+	        .connMode(() => config$1.connMode)
 	        .nodeVal(node => node.width)
 	        .nodeLabel(node => node.img.title)
-	        .nodesPerStack(config$2.stackSize)
+	        .nodesPerStack(config$1.stackSize)
 	        .onNodeDragEnd(node => {
 	            node.fx = node.x;
 	            node.fy = node.y;
@@ -104580,9 +104578,9 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            if (isCtrl || isShift)
 	                openWorldWikiPage(node.id, isShift);
 	            else {
-	                const world = worldData[node.id];
+	                const world = exports.worldData[node.id];
 	                if (node && (selectedWorldId == null || selectedWorldId !== node.id)) {
-	                    jquery(".js--search-world").addClass("selected").val(config$2.lang === 'en' || !world.titleJP ? world.title : world.titleJP);
+	                    jquery(".js--search-world").addClass("selected").val(config$1.lang === 'en' || !world.titleJP ? world.title : world.titleJP);
 	                    selectedWorldId = node.id;
 	                } else
 	                    focusNode(node);
@@ -104704,7 +104702,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        nodes.forEach(node => {
 	            copyImageData(node.id, index);
 	            if (is2d)
-	                copyImageData(node.id + worldData.length, index + totalNodeCount);
+	                copyImageData(node.id + exports.worldData.length, index + totalNodeCount);
 	            index++;
 	        });
 	    } else
@@ -105004,8 +105002,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	}
 
 	function initNodeObjectMaterial() {
-	    const buffer = new ArrayBuffer(nodeImgDimensions.x * nodeImgDimensions.y * 4 * worldData.length * 2);
-	    const amount = worldData.length;
+	    const buffer = new ArrayBuffer(nodeImgDimensions.x * nodeImgDimensions.y * 4 * exports.worldData.length * 2);
+	    const amount = exports.worldData.length;
 	    const texture = new DataTexture2DArray(new Uint8ClampedArray(buffer), nodeImgDimensions.x, nodeImgDimensions.y, amount * 2);
 	    texture.format = RGBAFormat;
 	    texture.type = UnsignedByteType;
@@ -105020,8 +105018,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    });
 
 	    const filenames = [];
-	    worldData.forEach(node => {
-	        filenames.push(worldData[node.id].filename);
+	    exports.worldData.forEach(node => {
+	        filenames.push(exports.worldData[node.id].filename);
 	    });
 
 	    Promise.all(getImageRawData(filenames))
@@ -105047,8 +105045,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                let offset = index * dataLength;
 	                nodeObjectMaterial.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
 	                const worldId = index;
-	                const world = worldData[worldId];
-	                const worldName = config$2.lang === "en" || !world.titleJP ? world.title : world.titleJP;
+	                const world = exports.worldData[worldId];
+	                const worldName = config$1.lang === "en" || !world.titleJP ? world.title : world.titleJP;
 	                let textLines = worldName.split(" ");
 	                for (let l = 0; l < textLines.length; l++) {
 	                    if (ctx.measureText(textLines[l]).width < nodeImgDimensions.x) {
@@ -105088,7 +105086,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	}
 
 	function initNodeObject(is2d) {
-	    const amount = worldData.length;
+	    const amount = exports.worldData.length;
 	    const opacities = [];
 	    const texIndexes = [];
 	    for (let i = 0; i < amount; i++) {
@@ -105133,7 +105131,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    if (nodeObject) {
 	        let index = 0;
 	        graph.graphData().nodes.forEach(node => {
-	            if (is2d && (config$2.labelMode === 3 || (config$2.labelMode === 1 && node.isHover) || (config$2.labelMode === 2 && node.id === selectedWorldId)))
+	            if (is2d && (config$1.labelMode === 3 || (config$1.labelMode === 1 && node.isHover) || (config$1.labelMode === 2 && node.id === selectedWorldId)))
 	                nodeObject.geometry.attributes.texIndex.array[index] = index + graph.graphData().nodes.length;
 	            else
 	                nodeObject.geometry.attributes.texIndex.array[index] = index;
@@ -105164,13 +105162,13 @@ vec4 envMapTexelToLinear(vec4 color) {
 	}
 
 	function updateNodeLabels(is2d) {
-	    if (config$2.labelMode > 0) {
+	    if (config$1.labelMode > 0) {
 	        const camera = graph.camera();
 	        graph.graphData().nodes.forEach(node => {
 	            const obj = node.__threeObj;
 	            if (obj) {
 	                const text = obj.children[0];
-	                if (config$2.labelMode === 3 || (config$2.labelMode === 1 && node.isHover) || (config$2.labelMode === 2 && node.id === selectedWorldId)) {
+	                if (config$1.labelMode === 3 || (config$1.labelMode === 1 && node.isHover) || (config$1.labelMode === 2 && node.id === selectedWorldId)) {
 	                    const scale = worldScales[node.id];
 	                    if (!is2d) {
 	                        const dist = new Vector3(camera.position.x, camera.position.y, camera.position.z).distanceTo(new Vector3(node.x, node.y, node.z));
@@ -105196,7 +105194,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    const id = node.id;
 	    const opacity = (selectedWorldId == null || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1)
 	        ? 1
-	        : selectedWorldId != null && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length
+	        : selectedWorldId != null && exports.worldData[selectedWorldId].connections.filter(c => c.targetId === id).length
 	        ? 0.625
 	        : 0.1;
 	    return opacity;
@@ -105226,7 +105224,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                    text.material.map.wrapS = RepeatWrapping;
 	                    link.source.x > link.target.x && (text.material.map.repeat.x = -1);
 	                }
-	                !config$2.connMode && link.hidden && (text.visible = false);
+	                !config$1.connMode && link.hidden && (text.visible = false);
 	                linkIcons.push(text);
 	                graph.scene().add(text);
 	            });
@@ -105442,18 +105440,18 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    if (description) {
 	        switch (connType) {
 	            case connType_1.EFFECT:
-	                description = typeParams && ((config$2.lang === 'en' && typeParams.params) || (config$2.lang !== 'en' && typeParams.paramsJP))
-	                    ? description.replace('{0}', config$2.lang === 'en' ? typeParams.params : typeParams.paramsJP)
+	                description = typeParams && ((config$1.lang === 'en' && typeParams.params) || (config$1.lang !== 'en' && typeParams.paramsJP))
+	                    ? description.replace('{0}', config$1.lang === 'en' ? typeParams.params : typeParams.paramsJP)
 	                    : null;
 	                break;
 	            case connType_1.CHANCE:
 	                description = typeParams && typeParams.params
-	                    ? description.replace('{0}', config$2.lang === 'en' ? typeParams.params : typeParams.params.replace('%', '％'))
+	                    ? description.replace('{0}', config$1.lang === 'en' ? typeParams.params : typeParams.params.replace('%', '％'))
 	                    : '';
 	                break;
 	            case connType_1.LOCKED_CONDITION:
-	                description = typeParams && ((config$2.lang === 'en' && typeParams.params) || (config$2.lang !== 'en' && typeParams.paramsJP))
-	                    ? description.replace('{0}', config$2.lang === 'en' ? typeParams.params : typeParams.paramsJP)
+	                description = typeParams && ((config$1.lang === 'en' && typeParams.params) || (config$1.lang !== 'en' && typeParams.paramsJP))
+	                    ? description.replace('{0}', config$1.lang === 'en' ? typeParams.params : typeParams.paramsJP)
 	                    : '';
 	                break;
 	        }
@@ -105461,7 +105459,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    return {
 	        type: connType,
 	        char: char,
-	        text: name + (description ? (config$2.lang === 'en' ? ' - ' : '：') + description : '')
+	        text: name + (description ? (config$1.lang === 'en' ? ' - ' : '：') + description : '')
 	    };
 	}
 
@@ -105503,14 +105501,14 @@ vec4 envMapTexelToLinear(vec4 color) {
 	}
 
 	function reloadGraph() {
-	    const startWorld = startWorldId != null ? worldData[startWorldId] : null;
-	    const endWorld = endWorldId != null ? worldData[endWorldId] : null;
+	    const startWorld = startWorldId != null ? exports.worldData[startWorldId] : null;
+	    const endWorld = endWorldId != null ? exports.worldData[endWorldId] : null;
 	    const matchPaths = startWorld && endWorld && startWorld != endWorld
 	        ? findPath(startWorld.id, endWorld.id, connType_1.NO_ENTRY | connType_1.DEAD_END | connType_1.ISOLATED)
 	        : null;
 	    if (graph)
 	        graph._destructor();
-	    initGraph(config$2.renderMode, config$2.displayMode, matchPaths);
+	    initGraph(config$1.renderMode, config$1.displayMode, matchPaths);
 	}
 
 	function findPath(s, t, ignoreTypeFlags) {
@@ -105519,8 +105517,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    const checkedSourceNodes = [s];
 	    const checkedTargetNodes = [t];
 
-	    const source = worldData[s];
-	    const target = worldData[t];
+	    const source = exports.worldData[s];
+	    const target = exports.worldData[t];
 
 	    let matchPaths = [];
 
@@ -105532,8 +105530,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	    let genIndex = 0;
 
-	    sourcePaths[s] = [{ id: s, connType: null }];
-	    targetPaths[t] = [{ id: t, connType: null }];
+	    sourcePaths[s] = [{ id: s, connType: null, typeParams: null }];
+	    targetPaths[t] = [{ id: t, connType: null, typeParams: null }];
 	  
 	    while (genIndex <= 20) {
 	        let sourceWorlds = nextGenSourceWorlds.slice(0);
@@ -105646,13 +105644,14 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        const typeParams = conns[c].typeParams;
 	        if (isSource && connType & ignoreTypeFlags)
 	            continue;
-	        const connWorld = worldData[conns[c].targetId];
+	        const connWorld = exports.worldData[conns[c].targetId];
 	        const id = connWorld.id;
 	        if (checkedNodes.indexOf(id) === -1) {
+	            const connPath = lodash.cloneDeep(path);
 	            // If checking from target
 	            if (isSource) {
-	                path[path.length - 1].connType = connType;
-	                path[path.length - 1].typeParams = typeParams;
+	                connPath[connPath.length - 1].connType = connType;
+	                connPath[connPath.length - 1].typeParams = typeParams;
 	                connType = null;
 	            } else {
 	                const reverseConn = connWorld.connections.filter(c => c.targetId === world.id);
@@ -105677,7 +105676,6 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                if (connType & ignoreTypeFlags)
 	                    continue;
 	            }
-	            const connPath = path.slice(0);
 	            connPath.push({
 	                id: id,
 	                connType: connType,
@@ -105685,17 +105683,17 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            });
 	            ret[id] = connPath;
 	            checkedNodes.push(id);
-	            nextGenWorlds.push(worldData[id]);
+	            nextGenWorlds.push(exports.worldData[id]);
 	        }
 	    }
 	    return ret;
 	}
 
 	function initLocalization(isInitial) {
-	    const isEn = config$2.lang === "en";
+	    const isEn = config$1.lang === "en";
 
 	    jquery("[data-localize]").localize("ui", {
-	        language: config$2.lang,
+	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
 	            data.footer = data.footer.replace("{VERSION}", "2.4.4");
@@ -105705,7 +105703,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                Object.keys(data.settings.uiTheme.values).forEach(t => {
 	                    jquery(".js--ui-theme").append('<option data-localize="settings.uiTheme.values.' + t + '" value="' + t + '">' + data.settings.uiTheme.values[t] + '</option>');
 	                });
-	                jquery(".js--ui-theme").val(config$2.uiTheme).change();
+	                jquery(".js--ui-theme").val(config$1.uiTheme).change();
 	            }
 	            window.setTimeout(() => updateControlsContainer(true), 0);
 	            defaultCallback(data);
@@ -105716,7 +105714,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    jquery(".js--help-modal__content--localized--jp").toggle(!isEn);
 
 	    jquery.localize("conn", {
-	        language: config$2.lang,
+	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data) {
 	            localizedConns = data;
@@ -105736,21 +105734,21 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    jquery(".js--world-input").each(function() {
 	        const val = jquery(this).val();
 	        if (val && worldNames.indexOf(val) > -1) {
-	            const world = worldsByName[worldNames[worldNames.indexOf(val)]];
+	            const world = exports.worldsByName[worldNames[worldNames.indexOf(val)]];
 	            jquery(this).val(isEn || !world.titleJP ? world.title : world.titleJP);
 	        }
 	    });
 
-	    worldsByName = isEn ? lodash.keyBy(worldData, w => w.title) : lodash.keyBy(worldData, w => w.titleJP || w.title);
+	    exports.worldsByName = isEn ? lodash.keyBy(exports.worldData, w => w.title) : lodash.keyBy(exports.worldData, w => w.titleJP || w.title);
 
-	    worldNames = Object.keys(worldsByName);
+	    worldNames = Object.keys(exports.worldsByName);
 
 	    jquery(".js--path--world-input").each(function () {
 	        jquery(this).off("change").devbridgeAutocomplete("destroy");
 	        jquery(this).on("change", function () {
 	            const currentWorldId = jquery(this).is(".js--start-world") ? startWorldId : endWorldId;
-	            const currentWorld = worldData[currentWorldId];
-	            if (currentWorld != null && jquery(this).val() !== (config$2.lang === 'en' || !currentWorld.titleJP ? currentWorld.title : currentWorld.titleJP)) {
+	            const currentWorld = exports.worldData[currentWorldId];
+	            if (currentWorld != null && jquery(this).val() !== (config$1.lang === 'en' || !currentWorld.titleJP ? currentWorld.title : currentWorld.titleJP)) {
 	                let isReloadGraph;
 	                jquery(this).removeClass("selected");
 	                if (jquery(this).is(".js--start-world")) {
@@ -105768,7 +105766,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            triggerSelectOnValidInput: false,
 	            onSelect: function (selectedWorld) {
 	                let isReloadGraph;
-	                const worldId = worldsByName[selectedWorld.value].id;
+	                const worldId = exports.worldsByName[selectedWorld.value].id;
 	                jquery(this).addClass("selected");
 	                if (jquery(this).is(".js--start-world")) {
 	                    startWorldId = worldId;
@@ -105787,7 +105785,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	function initWorldSearch() {
 	    const $search = jquery(".js--search-world");
 	    $search.devbridgeAutocomplete("destroy");
-	    const visibleWorldNames = worldData ? worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1).map(w => config$2.lang === 'en' || !w.titleJP ? w.title : w.titleJP) : [];
+	    const visibleWorldNames = exports.worldData ? exports.worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1).map(w => config$1.lang === 'en' || !w.titleJP ? w.title : w.titleJP) : [];
 	    if (selectedWorldId != null && visibleWorldIds.indexOf(selectedWorldId) === -1) {
 	        $search.removeClass("selected").val("");
 	        selectedWorldId = null;
@@ -105796,9 +105794,9 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        lookup: visibleWorldNames,
 	        triggerSelectOnValidInput: false,
 	        onSearchComplete: function (query, searchWorlds) {
-	            const selectedWorld = selectedWorldId != null ? worldData[selectedWorldId] : null;
-	            const selectedWorldName = selectedWorld ? config$2.lang === 'en' || !selectedWorld.titleJP ? selectedWorld.title : selectedWorld.titleJP : null;
-	            searchWorldIds = searchWorlds.length && (!selectedWorld || (searchWorlds.length > 1 || searchWorlds.filter(w => w.value !== selectedWorldName).length)) ? searchWorlds.map(w => worldsByName[w.value].id) : [];
+	            const selectedWorld = selectedWorldId != null ? exports.worldData[selectedWorldId] : null;
+	            const selectedWorldName = selectedWorld ? config$1.lang === 'en' || !selectedWorld.titleJP ? selectedWorld.title : selectedWorld.titleJP : null;
+	            searchWorldIds = searchWorlds.length && (!selectedWorld || (searchWorlds.length > 1 || searchWorlds.filter(w => w.value !== selectedWorldName).length)) ? searchWorlds.map(w => exports.worldsByName[w.value].id) : [];
 	            if (searchWorldIds.length && selectedWorld && (searchWorldIds.length !== 1 || selectedWorldId !== searchWorldIds[0])) {
 	                $search.removeClass("selected");
 	                selectedWorldId = null;
@@ -105807,14 +105805,14 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        },
 	        onSelect: function (selectedWorld) {
 	            $search.addClass("selected");
-	            selectedWorldId = worldsByName[selectedWorld.value].id;
+	            selectedWorldId = exports.worldsByName[selectedWorld.value].id;
 	            focusNode(graph.graphData().nodes[selectedWorldId]);
 	            highlightWorldSelection();
 	        },
 	        onHide: function () {
 	           if (selectedWorldId != null) {
-	                const selectedWorld = worldData[selectedWorldId];
-	                const selectedWorldName = config$2.lang === 'en' || !selectedWorld.titleJP ? selectedWorld.title : wselectedWorld.titleJP;
+	                const selectedWorld = exports.worldData[selectedWorldId];
+	                const selectedWorldName = config$1.lang === 'en' || !selectedWorld.titleJP ? selectedWorld.title : wselectedWorld.titleJP;
 	                if (jquery(this).val() !== selectedWorldName) {
 	                    $search.removeClass("selected");
 	                    selectedWorldId = null;
@@ -105839,16 +105837,16 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            "start": {
 	                name: () => localizedContextMenu.items.start,
 	                callback: function () {
-	                    const world = worldData[contextWorldId];
-	                    const worldName = config$2.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
+	                    const world = exports.worldData[contextWorldId];
+	                    const worldName = config$1.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
 	                    jquery(".js--start-world").val(worldName).change().devbridgeAutocomplete().select(0);
 	                }
 	            },
 	            "end": {
 	                name: () => localizedContextMenu.items.end,
 	                callback: function () {
-	                    const world = worldData[contextWorldId];
-	                    const worldName = config$2.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
+	                    const world = exports.worldData[contextWorldId];
+	                    const worldName = config$1.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
 	                    jquery(".js--end-world").val(worldName).change().devbridgeAutocomplete().select(0);
 	                }
 	            }
@@ -105857,8 +105855,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	}
 
 	function openWorldWikiPage(worldId, newWindow) {
-	    const world = worldData[worldId];
-	    window.open(config$2.lang === 'en' || !world.titleJP
+	    const world = exports.worldData[worldId];
+	    window.open(config$1.lang === 'en' || !world.titleJP
 	        ? 'https://yume2kki.fandom.com/wiki/' + world.title
 	        : ('https://wikiwiki.jp/yume2kki-t/' + (world.titleJP.indexOf("：") > -1 ? world.titleJP.slice(0, world.titleJP.indexOf("：")) : world.titleJP)),
 	        "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
@@ -105867,7 +105865,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	function focusNode(node) {
 	    const scale = worldScales[node.id];
 	    const distance = 50 * scale;
-	    if (!config$2.renderMode) {
+	    if (!config$1.renderMode) {
 	        const camera = graph.camera();
 	        graph.cameraPosition({ x: node.x, y: node.y, z: distance }, node, 1000);
 	        const oldZoom = { zoom: camera.zoom };
@@ -105891,7 +105889,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            const linkOpacity = getLinkOpacity(link);
 	            link.icons.forEach(icon => {
 	                opacities[iconIndex] = linkOpacity;
-	                config$2.connMode === 0 && link.hidden && (opacities[iconIndex] = 0);
+	                config$1.connMode === 0 && link.hidden && (opacities[iconIndex] = 0);
 	                iconIndex++;
 	            });
 	        });
@@ -105904,7 +105902,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                icons3D[link.key].forEach(icon => {
 	                    icon.visible = true;
 	                    icon.material.opacity = linkOpacity;
-	                    config$2.connMode === 0 && link.hidden && (icon.visible = false);
+	                    config$1.connMode === 0 && link.hidden && (icon.visible = false);
 	                });
 	            }
 	        });
@@ -105929,7 +105927,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        updateNodeLabels2D();
 	}
 
-	let worldsByName, worldNames, minSize, maxSize;
+	let worldNames, minSize, maxSize;
 
 	function onDocumentMouseMove(event) {
 	    updateRaycast();
@@ -106029,67 +106027,67 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    });
 	    
 	    jquery(".js--lang").change(function() {
-	        config$2.lang = jquery(this).val();
-	        updateConfig();
+	        config$1.lang = jquery(this).val();
+	        updateConfig(config$1);
 	        initLocalization();
-	        if (worldData)
+	        if (exports.worldData)
 	            reloadGraph();
 	    });
 
 	    jquery(".js--ui-theme").change(function() {
-	        config$2.uiTheme = jquery(this).val();
+	        config$1.uiTheme = jquery(this).val();
 	        const themeStyles = jquery(".js--theme-styles")[0];
-	        getBaseBgColor(config$2.uiTheme || (config$2.uiTheme = "Default_Custom"), function (color) {
-	            const bgColorPixel = uiThemeBgColors[config$2.uiTheme];
+	        getBaseBgColor(config$1.uiTheme || (config$1.uiTheme = "Default_Custom"), function (color) {
+	            const bgColorPixel = uiThemeBgColors[config$1.uiTheme];
 	            const altColor = "rgba(" + Math.min(bgColorPixel[0] + 48, 255) + ", " + Math.min(bgColorPixel[1] + 48, 255) + ", " + Math.min(bgColorPixel[2] + 48, 255) + ", 1)";
-	            themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/[a-zA-Z0-9\_]+\/(containerbg|border(?:2)?|font\d)\.png\)/g, "url(/images/ui/" + config$2.uiTheme + "/$1.png)")
+	            themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/[a-zA-Z0-9\_]+\/(containerbg|border(?:2)?|font\d)\.png\)/g, "url(/images/ui/" + config$1.uiTheme + "/$1.png)")
 	                .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "background-color:$1" + color + "$2;$3/*base*/")
 	                .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "background-color:$1" + altColor + "$2;$3/*alt*/");
 	            jquery(".js--font-style").change();
-	            updateConfig();
+	            updateConfig(config$1);
 	        });
 	    });
 
 	    jquery(".js--font-style").change(function() {
-	        config$2.fontStyle = parseInt(jquery(this).val());
+	        config$1.fontStyle = parseInt(jquery(this).val());
 	        const themeStyles = jquery(".js--theme-styles")[0];
-	        getFontColor(config$2.uiTheme, config$2.fontStyle, function (baseColor) {
-	            getFontColor(config$2.uiTheme, config$2.fontStyle !== 4 ? 4 : 0, function (altColor) {
-	                themeStyles.textContent = themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/([a-zA-Z0-9\_]+)\/font\d\.png\)/g, "url(/images/ui/$1/font" + (config$2.fontStyle + 1) + ".png)")
+	        getFontColor(config$1.uiTheme, config$1.fontStyle, function (baseColor) {
+	            getFontColor(config$1.uiTheme, config$1.fontStyle !== 4 ? 4 : 0, function (altColor) {
+	                themeStyles.textContent = themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/([a-zA-Z0-9\_]+)\/font\d\.png\)/g, "url(/images/ui/$1/font" + (config$1.fontStyle + 1) + ".png)")
 	                    .replace(/([^\-])color:( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "$1color:$2" + baseColor + "$3;$4/*base*/")
 	                    .replace(/([^\-])color:( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "$1color:$2" + altColor + "$3;$4/*alt*/");
-	                updateConfig();
+	                updateConfig(config$1);
 	            });
 	        });
 	    });
 
 	    jquery(".js--render-mode").change(function() {
-	        config$2.renderMode = parseInt(jquery(this).val());
-	        updateConfig();
-	        if (worldData)
+	        config$1.renderMode = parseInt(jquery(this).val());
+	        updateConfig(config$1);
+	        if (exports.worldData)
 	            reloadGraph();
 	    });
 
 	    jquery(".js--display-mode").change(function() {
-	        config$2.displayMode = parseInt(jquery(this).val());
-	        updateConfig();
-	        if (worldData)
+	        config$1.displayMode = parseInt(jquery(this).val());
+	        updateConfig(config$1);
+	        if (exports.worldData)
 	            reloadGraph();
-	        jquery(".js--stack-size--container").css("display", config$2.displayMode < 2 ? "flex" : "none");
+	        jquery(".js--stack-size--container").css("display", config$1.displayMode < 2 ? "flex" : "none");
 	    });
 
 	    jquery(".js--conn-mode").change(function() {
-	        config$2.connMode = parseInt(jquery(this).val());
+	        config$1.connMode = parseInt(jquery(this).val());
 	        updateConnectionModeIcons();
-	        updateConfig();
+	        updateConfig(config$1);
 	    });
 
 	    jquery(".js--label-mode").change(function() {
-	        config$2.labelMode = parseInt(jquery(this).val());
+	        config$1.labelMode = parseInt(jquery(this).val());
 
 	        if (isWebGL2 && is2d)
 	            updateNodeLabels2D();
-	        if (!config$2.labelMode) {
+	        if (!config$1.labelMode) {
 	            if (!isWebGL2 || !is2d) {
 	                graph.graphData().nodes.forEach(node => {
 	                const obj = node.__threeObj;
@@ -106098,20 +106096,20 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                });
 	            }
 	        }
-	        updateConfig();
+	        updateConfig(config$1);
 	    });
 
 	    jquery(".js--size-diff").change(function() {
-	        config$2.sizeDiff = parseFloat(jquery(this).val());
-	        updateConfig();
-	        if (worldData)
+	        config$1.sizeDiff = parseFloat(jquery(this).val());
+	        updateConfig(config$1);
+	        if (exports.worldData)
 	            reloadGraph();
 	    });
 
 	    jquery(".js--stack-size").change(function() {
-	        config$2.stackSize = parseInt(jquery(this).val());
-	        updateConfig();
-	        if (worldData)
+	        config$1.stackSize = parseInt(jquery(this).val());
+	        updateConfig(config$1);
+	        if (exports.worldData)
 	            reloadGraph();
 	    });
 
@@ -106120,7 +106118,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        startWorldId = null;
 	        endWorldId = null;
 	        selectedWorldId = null;
-	        if (worldData)
+	        if (exports.worldData)
 	            reloadGraph();
 	    });
 
@@ -106135,8 +106133,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                data = data.split('---');
 	                const helpEn = md.render(data[0]);
 	                const helpJp = data.length > 1 ? md.render(data[1]) : helpEn;
-	                jquery('.js--help-modal__content--localized').html('<div class="js--help-modal__content--localized--en"' + (config$2.lang === 'en' ? '' : ' style="display: none;"') + '>' + helpEn + '</div>'
-	                    + '<div class="js--help-modal__content--localized--jp"' + (config$2.lang === 'en' ? ' style="display: none;"' : '') + '>' + helpJp + '</div>');
+	                jquery('.js--help-modal__content--localized').html('<div class="js--help-modal__content--localized--en"' + (config$1.lang === 'en' ? '' : ' style="display: none;"') + '>' + helpEn + '</div>'
+	                    + '<div class="js--help-modal__content--localized--jp"' + (config$1.lang === 'en' ? ' style="display: none;"' : '') + '>' + helpJp + '</div>');
 	                openHelpModal();
 	            });
 	        }
@@ -106147,8 +106145,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    let loadingFrameCount = 0;
 	    const loadingTimer = window.setInterval(function () {
 	        let loadingTextAppend = "";
-	        const loadingTextAppendChar = config$2.lang === "en" ? "." : "．";
-	        const loadingTextSpaceChar = config$2.lang === "en" ? " " : "　";
+	        const loadingTextAppendChar = config$1.lang === "en" ? "." : "．";
+	        const loadingTextSpaceChar = config$1.lang === "en" ? " " : "　";
 	        for (let i = 0; i < 3; i++)
 	            loadingTextAppend += i < loadingFrameCount ? loadingTextAppendChar : loadingTextSpaceChar;
 	        jquery(".loading-container__text__append").text(loadingTextAppend);
@@ -106162,10 +106160,10 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    initLocalization(true);
 
 	    loadWorldData(false, function (data) {
-	        worldData = data;
+	        exports.worldData = data;
 
-	        for (let d in Object.keys(worldData)) {
-	            const world = worldData[d];
+	        for (let d in Object.keys(exports.worldData)) {
+	            const world = exports.worldData[d];
 	            world.id = parseInt(d);
 	            world.connections.forEach(conn => {
 	                const effectParams = conn.typeParams[connType_1.EFFECT];
@@ -106178,7 +106176,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	        initLocalization();
 
-	        const worldSizes = worldData.map(w => w.size); 
+	        const worldSizes = exports.worldData.map(w => w.size); 
 
 	        minSize = lodash.min(worldSizes);
 	        maxSize = lodash.max(worldSizes);
@@ -106201,12 +106199,6 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        jquery(".loading-container img").attr("src", "images/urofaint.gif");
 	    });
 	});
-
-	var app = /*#__PURE__*/Object.freeze({
-		__proto__: null
-	});
-
-	exports.app = app;
 
 	Object.defineProperty(exports, '__esModule', { value: true });
 

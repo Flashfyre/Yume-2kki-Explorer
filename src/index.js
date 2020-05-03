@@ -1,3 +1,1 @@
-import * as app from './app.js';
-
-export { app };
+export { worldData, worldsByName } from './app.js';

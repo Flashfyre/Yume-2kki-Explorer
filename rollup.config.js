@@ -15,7 +15,7 @@ export default [
   { // UMD
     input: 'src/index.js',
     output: [
-      {
+      /*{
         ...umdConf,
         file: `dist/${name}.js`,
         sourcemap: true
@@ -26,7 +26,7 @@ export default [
         plugins: [terser({
           output: { comments: '/Version/' }
         })]
-      },
+      },*/
       {
         ...umdConf,
         file: `public/js/${name}.js`,
