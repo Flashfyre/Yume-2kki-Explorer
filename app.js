@@ -6,7 +6,7 @@ const superagent = require('superagent');
 const fs = require('fs');
 const download = require('image-downloader');
 const mysql = require("mysql");
-const ConnType = require("./public/js/conn-type.js").ConnType;
+const ConnType = require("./src/conn-type").ConnType;
 const isRemote = Boolean(process.env.DATABASE_URL);
 const defaultPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION;
 
@@ -1054,7 +1054,7 @@ function getConnections(html) {
                     if (paramsText === "&#123;&#123;&#123;3}}}")
                         paramsText = "";
                     else {
-                        paramsText = paramsText.replace(/^Require(s|d) (to )?/, "").replace(/.$/, "");
+                        paramsText = paramsText.replace(/^Require(s|d) (to )?/, "").replace(/\.$/, "");
                         paramsText = paramsText.substring(0, 1).toUpperCase() + paramsText.slice(1);
                     }
                     if (paramsText) {

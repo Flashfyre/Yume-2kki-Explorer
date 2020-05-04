@@ -113,3 +113,6 @@ config/db.config.js
 
 # World images
 public/images/worlds/
+
+# Rollup Visualizer Stats
+stats.html
