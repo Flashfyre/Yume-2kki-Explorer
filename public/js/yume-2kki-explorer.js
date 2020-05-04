@@ -105696,7 +105696,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer = data.footer.replace("{VERSION}", "2.4.4");
+	            data.footer = data.footer.replace("{VERSION}", "2.5.0");
 	            localizedConns = data.conn;
 	            initContextMenu(data.contextMenu);
 	            if (isInitial) {
