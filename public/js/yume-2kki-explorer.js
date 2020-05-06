@@ -1,4 +1,4 @@
-// Version 2.4.4 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 2.5.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -104189,8 +104189,6 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    }).fail(fail);
 	}
 
-	let graph;
-
 	let contextWorldId = null, startWorldId = null, endWorldId = null, selectedWorldId = null;
 
 	let searchWorldIds = [], visibleWorldIds = [];
@@ -104416,16 +104414,16 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	    const elem = document.getElementById('graph');
 
-	    graph = _3dForceGraph({
+	    exports.graph = _3dForceGraph({
 	        rendererConfig: rendererConfig,
 	        controlType: 'orbit',
 	        numDimensions: is2d ? 2 : 3
 	    })(elem);
 
-	    const maxAnisotropy = graph.renderer().capabilities.getMaxAnisotropy();
+	    const maxAnisotropy = exports.graph.renderer().capabilities.getMaxAnisotropy();
 
 	    if (displayMode < 4)
-	        graph = graph
+	        exports.graph = exports.graph
 	            .dagMode(displayMode === 0 ? 'td' : displayMode === 1 ? 'lr' : displayMode === 2 ? 'radialin' : 'radialout')
 	            .dagLevelDistance(displayMode < 2 ? 12 : 24 + radius * (config$1.sizeDiff + 1));
 
@@ -104435,7 +104433,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    const dummyLinkObject = new Line();
 	    dummyLinkObject.visible = false;
 
-	    graph = graph
+	    exports.graph = exports.graph
 	        .numDimensions(is2d ? 2 : 3)
 	        .backgroundColor('#00000000')
 	        .linkOpacity(1)
@@ -104625,7 +104623,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    document.querySelector('#graph canvas').removeEventListener('wheel', clearTweens, false);
 
 	    if (is2d) {
-	        const controls = graph.controls();
+	        const controls = exports.graph.controls();
 	        controls.minAzimuthAngle = 0;
 	        controls.maxAzimuthAngle = 0;
 	        controls.mouseButtons.PAN = MOUSE.LEFT;
@@ -104639,8 +104637,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	     document.querySelector('#graph canvas').addEventListener('wheel', clearTweens, false);
 
 	    (function () {
-	        let _animationCycle = graph._animationCycle;
-	        graph._animationCycle = function () {
+	        let _animationCycle = exports.graph._animationCycle;
+	        exports.graph._animationCycle = function () {
 	            onRender(is2d);
 	            _animationCycle.apply(this);
 	        };
@@ -104651,7 +104649,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        updateNodeImageData(nodes, paths, is2d);
 	        makeIconObject(is2d);
 	        let index = 0;
-	        graph.graphData().links.forEach(link => {
+	        exports.graph.graphData().links.forEach(link => {
 	            link.icons.forEach(icon => {
 	                iconTexts[index] = icon.text;
 	                index++;
@@ -104665,7 +104663,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    // initialize object to perform world/screen calculations
 	    raycaster = new Raycaster();
 
-	    graph.graphData().links.forEach(link => {
+	    exports.graph.graphData().links.forEach(link => {
 	        if (!link.hidden) {
 	            if (link.connType & connType_1.ONE_WAY)
 	                visibleOneWayLinks.push(link);
@@ -104822,7 +104820,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    const buffer = new ArrayBuffer(iconImgDimensions.x * iconImgDimensions.y * 4 * amountTextures);
 
 	    iconCount = 0;
-	    graph.graphData().links.forEach(link => {
+	    exports.graph.graphData().links.forEach(link => {
 	        link.icons.forEach(icon => {
 	            iconCount++;
 	        });
@@ -104867,7 +104865,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    const texIndexes = [];
 
 	    let iconIndex = 0;
-	    graph.graphData().links.forEach(link => {
+	    exports.graph.graphData().links.forEach(link => {
 	        link.icons.forEach(icon => {
 	            texIndexes[iconIndex] = connTypes.findIndex(a => a == icon.type);
 	            opacities[iconIndex] = 1.0;
@@ -104885,15 +104883,15 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    iconObject = new InstancedMesh(geometry, material, iconCount);
 	    iconObject.instanceMatrix.setUsage(DynamicDrawUsage);
 	    iconObject.renderOrder = is2d ? -1 : 3;
-	    graph.scene().add(iconObject);
+	    exports.graph.scene().add(iconObject);
 	}
 
 	function updateIconPositions(is2d) {
 	    const dummy = new Object3D();
 	    if (iconObject) {
 	        let index = 0;
-	        const camPos = graph.camera().position;
-	        graph.graphData().links.forEach(link => {
+	        const camPos = exports.graph.camera().position;
+	        exports.graph.graphData().links.forEach(link => {
 	            const start = link.source;
 	            const end = link.target;
 	            const dist = is2d
@@ -104935,7 +104933,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                        } else if (texIndex == 10)
 	                            unsortedIconTexIndexes[index] = 0;
 	                    } else {
-	                        if (graph.graph2ScreenCoords(start.x, start.y, start.z).x > graph.graph2ScreenCoords(end.x, end.y, end.z).x) {
+	                        if (exports.graph.graph2ScreenCoords(start.x, start.y, start.z).x > exports.graph.graph2ScreenCoords(end.x, end.y, end.z).x) {
 	                            if (texIndex == 0)
 	                                unsortedIconTexIndexes[index] = 10;
 	                        } else if (texIndex == 10)
@@ -104952,11 +104950,11 @@ vec4 envMapTexelToLinear(vec4 color) {
 	}
 
 	function sortInstances(instanceObject, unsortedOpacities, unsortedTexIndexes) {
-	    const camera = graph.camera();
+	    const camera = exports.graph.camera();
 	    let dummy = new Object3D();
 	    let index = 0;
 	    let positions = [];
-	    graph.graphData().links.forEach(link => {
+	    exports.graph.graphData().links.forEach(link => {
 	        link.icons.forEach(icon => {
 	            instanceObject.getMatrixAt(index, dummy.matrix);
 	            positions[index] = new Vector3(dummy.matrix.elements[12], dummy.matrix.elements[13], dummy.matrix.elements[14]);
@@ -104983,8 +104981,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    });
 
 	    index = 0;
-	    const camPos = graph.camera().position;
-	    graph.graphData().links.forEach(link => {
+	    const camPos = exports.graph.camera().position;
+	    exports.graph.graphData().links.forEach(link => {
 	        link.icons.forEach(icon => {
 	            instanceObject.getMatrixAt(index, dummy.matrix);
 	            dummy.position.set(vecArray[index].pos.x, vecArray[index].pos.y, vecArray[index].pos.z);
@@ -105104,14 +105102,14 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    nodeObject = new InstancedMesh(geometry, nodeObjectMaterial, amount);
 	    nodeObject.instanceMatrix.setUsage(DynamicDrawUsage);
 	    nodeObject.renderOrder = 1;
-	    graph.scene().add(nodeObject);
+	    exports.graph.scene().add(nodeObject);
 	}
 
 	function updateNodePositions(is2d) {
 	    const dummy = new Object3D();
 	    if (nodeObject) {
 	        let index = 0;
-	        graph.graphData().nodes.forEach(node => {
+	        exports.graph.graphData().nodes.forEach(node => {
 	            nodeObject.getMatrixAt(index, dummy.matrix);
 	            if (!is2d)
 	                dummy.position.set(node.x, node.y, node.z);
@@ -105130,9 +105128,9 @@ vec4 envMapTexelToLinear(vec4 color) {
 	function updateNodeLabels2D() {
 	    if (nodeObject) {
 	        let index = 0;
-	        graph.graphData().nodes.forEach(node => {
+	        exports.graph.graphData().nodes.forEach(node => {
 	            if (is2d && (config$1.labelMode === 3 || (config$1.labelMode === 1 && node.isHover) || (config$1.labelMode === 2 && node.id === selectedWorldId)))
-	                nodeObject.geometry.attributes.texIndex.array[index] = index + graph.graphData().nodes.length;
+	                nodeObject.geometry.attributes.texIndex.array[index] = index + exports.graph.graphData().nodes.length;
 	            else
 	                nodeObject.geometry.attributes.texIndex.array[index] = index;
 	            index++;
@@ -105163,8 +105161,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	function updateNodeLabels(is2d) {
 	    if (config$1.labelMode > 0) {
-	        const camera = graph.camera();
-	        graph.graphData().nodes.forEach(node => {
+	        const camera = exports.graph.camera();
+	        exports.graph.graphData().nodes.forEach(node => {
 	            const obj = node.__threeObj;
 	            if (obj) {
 	                const text = obj.children[0];
@@ -105201,7 +105199,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	}
 
 	function makeLinkIcons(is2d) {
-	    graph.graphData().links.forEach(link => {
+	    exports.graph.graphData().links.forEach(link => {
 	        if (icons3D[link.key] === undefined) {
 	            const linkOpacity = getLinkOpacity(link);
 	            let linkIcons = [];
@@ -105226,7 +105224,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                }
 	                !config$1.connMode && link.hidden && (text.visible = false);
 	                linkIcons.push(text);
-	                graph.scene().add(text);
+	                exports.graph.scene().add(text);
 	            });
 	            icons3D[link.key] = linkIcons;
 	        }
@@ -105285,7 +105283,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    const bufferedGeometry = new LineSegments(geometry, material);
 	    if (is2d)
 	        bufferedGeometry.renderOrder = -2;
-	    graph.scene().add(bufferedGeometry);
+	    exports.graph.scene().add(bufferedGeometry);
 	    return bufferedGeometry;
 	}
 
@@ -105344,7 +105342,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    const bufferedGeometry = new LineSegments(geometry, material);
 	    if (is2d)
 	        bufferedGeometry.renderOrder = -2;
-	    graph.scene().add(bufferedGeometry);
+	    exports.graph.scene().add(bufferedGeometry);
 	    return bufferedGeometry;
 	}
 
@@ -105506,8 +105504,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    const matchPaths = startWorld && endWorld && startWorld != endWorld
 	        ? findPath(startWorld.id, endWorld.id, connType_1.NO_ENTRY | connType_1.DEAD_END | connType_1.ISOLATED)
 	        : null;
-	    if (graph)
-	        graph._destructor();
+	    if (exports.graph)
+	        exports.graph._destructor();
 	    initGraph(config$1.renderMode, config$1.displayMode, matchPaths);
 	}
 
@@ -105566,9 +105564,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                let sourcePath = lodash.cloneDeep(sourcePaths[id]);
 	                let targetPath = lodash.cloneDeep(targetPaths[id]);
 
-	                if (sourcePath[sourcePath.length - 1].id === id && targetPath[targetPath.length - 1].id === id) {
+	                if (sourcePath[sourcePath.length - 1].id === id && targetPath[targetPath.length - 1].id === id)
 	                    sourcePath = sourcePath.slice(0, -1);
-	                }
 
 	                let loopWorldIds, sourcePathIds, targetPathIds;
 	                while ((loopWorldIds = lodash.intersectionWith((sourcePathIds = sourcePath.map(sp => sp.id)), (targetPathIds = targetPath.map(tp => tp.id)), lodash.isEqual)).length) {
@@ -105580,20 +105577,18 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                
 	                const matchPath = sourcePath.concat(targetPath.reverse());
 	                for (let p in matchPaths) {
-	                    for (let w = 1; w < matchPaths[p].length; w++) {
-	                        const linkId = `${matchPaths[p][w - 1].id}_${matchPaths[p][w].id}`;
+	                    if (matchPaths[p].length === matchPath.length) {
 	                        for (let m = 1; m < matchPath.length; m++) {
+	                            const linkId = `${matchPaths[p][m - 1].id}_${matchPaths[p][m].id}`;
 	                            const matchLinkId = `${matchPath[m - 1].id}_${matchPath[m].id}`;
-	                            if (linkId === matchLinkId) {
-	                                skip = true;
+	                            if (linkId !== matchLinkId)
 	                                break;
-	                            }
+	                            if (m === matchPath.length - 1)
+	                                skip = true;
 	                        }
 	                        if (skip)
 	                            break;
 	                    }
-	                    if (skip)
-	                        break;
 	                }
 	                if (skip)
 	                    return false;
@@ -105608,7 +105603,6 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    const endTime = performance.now();
 
 	    console.log("Found", matchPaths.length, "matching path(s) in", Math.round((endTime - startTime) * 10) / 10, "ms");
-
 	    if (!matchPaths.length) {
 	        if (ignoreTypeFlags & connType_1.DEAD_END)
 	            ignoreTypeFlags ^= (connType_1.DEAD_END | connType_1.ISOLATED);
@@ -105641,7 +105635,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    const conns = world.connections;
 	    for (let c in conns) {
 	        let connType = conns[c].type;
-	        const typeParams = conns[c].typeParams;
+	        let typeParams = conns[c].typeParams;
 	        if (isSource && connType & ignoreTypeFlags)
 	            continue;
 	        const connWorld = exports.worldData[conns[c].targetId];
@@ -105656,9 +105650,11 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            } else {
 	                const reverseConn = connWorld.connections.filter(c => c.targetId === world.id);
 	                let reverseConnType = 0;
-	                if (reverseConn.length)
+	                let reverseConnTypeParams = {};
+	                if (reverseConn.length) {
 	                    reverseConnType = reverseConn[0].type;
-	                else {
+	                    reverseConnTypeParams = reverseConn[0].typeParams;
+	                } else {
 	                    if (connType & connType_1.ONE_WAY)
 	                        reverseConnType |= connType_1.NO_ENTRY;
 	                    else if (connType & connType_1.NO_ENTRY)
@@ -105675,6 +105671,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                connType = reverseConnType;
 	                if (connType & ignoreTypeFlags)
 	                    continue;
+	                typeParams = reverseConnTypeParams;
 	            }
 	            connPath.push({
 	                id: id,
@@ -105689,6 +105686,33 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    return ret;
 	}
 
+	function findConnectionAnomalies() {
+	    const connData = {};
+	    exports.worldData.forEach(w => {
+	        connData[w.id] = [];
+	        exports.worldData[w.id].connections.map(c => exports.worldData[c.targetId]).forEach(c => {
+	            connData[w.id].push(c.id);
+	        });
+	    }); 
+	    Object.keys(connData).forEach(id => {
+	        let connIds = connData[id].slice(0);
+	        connIds.forEach(c => {
+	            const index = connData[c].indexOf(parseInt(id));
+	            if (index > -1) {
+	                connData[id].splice(connData[id].indexOf(c), 1);
+	                connData[c].splice(index, 1);
+	            }
+	        });
+	    });
+	    Object.keys(connData).forEach(id => {
+	        if (connData[id].length) {
+	            connData[id].forEach(c => {
+	                console.log(exports.worldData[c].title, "is missing a connection to", exports.worldData[id].title);
+	            });
+	        }
+	    });
+	}
+
 	function initLocalization(isInitial) {
 	    const isEn = config$1.lang === "en";
 
@@ -105696,7 +105720,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer = data.footer.replace("{VERSION}", "2.5.0");
+	            data.footer = data.footer.replace("{VERSION}", "2.5.1");
 	            localizedConns = data.conn;
 	            initContextMenu(data.contextMenu);
 	            if (isInitial) {
@@ -105806,7 +105830,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        onSelect: function (selectedWorld) {
 	            $search.addClass("selected");
 	            selectedWorldId = exports.worldsByName[selectedWorld.value].id;
-	            focusNode(graph.graphData().nodes[selectedWorldId]);
+	            focusNode(exports.graph.graphData().nodes[selectedWorldId]);
 	            highlightWorldSelection();
 	        },
 	        onHide: function () {
@@ -105866,17 +105890,17 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    const scale = worldScales[node.id];
 	    const distance = 50 * scale;
 	    if (!config$1.renderMode) {
-	        const camera = graph.camera();
-	        graph.cameraPosition({ x: node.x, y: node.y, z: distance }, node, 1000);
+	        const camera = exports.graph.camera();
+	        exports.graph.cameraPosition({ x: node.x, y: node.y, z: distance }, node, 1000);
 	        const oldZoom = { zoom: camera.zoom };
 	        const newZoom = { zoom: 20 / scale };
-	        new TWEEN.Tween(oldZoom).to(newZoom, graph.controls().zoomSpeed * 1000).easing(TWEEN.Easing.Quadratic.Out).onUpdate(zoom => {
+	        new TWEEN.Tween(oldZoom).to(newZoom, exports.graph.controls().zoomSpeed * 1000).easing(TWEEN.Easing.Quadratic.Out).onUpdate(zoom => {
 	            camera.zoom = zoom.zoom;
 	            camera.updateProjectionMatrix();
 	        }).start();
 	    } else {
 	        const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
-	        graph.cameraPosition({ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, node, 1000);
+	        exports.graph.cameraPosition({ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, node, 1000);
 	    }
 	}
 
@@ -105885,7 +105909,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        iconObject.geometry.attributes.opacity.array.set(unsortedIconOpacities, 0);
 	        let opacities = iconObject.geometry.attributes.opacity.array;
 	        let iconIndex = 0;
-	        graph.graphData().links.forEach(link => {
+	        exports.graph.graphData().links.forEach(link => {
 	            const linkOpacity = getLinkOpacity(link);
 	            link.icons.forEach(icon => {
 	                opacities[iconIndex] = linkOpacity;
@@ -105896,7 +105920,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        unsortedIconOpacities = opacities.slice();
 	        iconObject.geometry.attributes.opacity.needsUpdate = true;
 	    } else {
-	        graph.graphData().links.forEach(link => {
+	        exports.graph.graphData().links.forEach(link => {
 	            if (icons3D[link.key] !== undefined) {
 	                const linkOpacity = getLinkOpacity(link);
 	                icons3D[link.key].forEach(icon => {
@@ -105912,7 +105936,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	function highlightWorldSelection() {
 	    updateConnectionModeIcons();
 	    let index = 0;
-	    graph.graphData().nodes.forEach(node => {
+	    exports.graph.graphData().nodes.forEach(node => {
 	        const nodeOpacity = getNodeOpacity(node);
 	        if (nodeObject)
 	            nodeObject.geometry.attributes.opacity.array[index] = getNodeOpacity(node);
@@ -105947,12 +105971,12 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    let intersects = [];
 
 	    if (!jquery(".js--help-modal:visible").length) {
-	        raycaster.setFromCamera(vector, graph.camera());
+	        raycaster.setFromCamera(vector, exports.graph.camera());
 	        // create an array containing all objects in the scene with which the ray intersects
 	        if (isWebGL2)
 	            intersects = raycaster.intersectObject(iconObject);
 	        else
-	            intersects = raycaster.intersectObjects(graph.graphData().nodes.map(node => node.__threeObj).filter(o => o).concat(graph.scene().children.filter(o => o.__graphObjType === 'icon' && o.visible)));
+	            intersects = raycaster.intersectObjects(exports.graph.graphData().nodes.map(node => node.__threeObj).filter(o => o).concat(exports.graph.scene().children.filter(o => o.__graphObjType === 'icon' && o.visible)));
 	    }
 
 	    // if there are one or more intersections
@@ -106089,7 +106113,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            updateNodeLabels2D();
 	        if (!config$1.labelMode) {
 	            if (!isWebGL2 || !is2d) {
-	                graph.graphData().nodes.forEach(node => {
+	                exports.graph.graphData().nodes.forEach(node => {
 	                const obj = node.__threeObj;
 	                if (obj)
 	                    obj.children[0].visible = false;
@@ -106199,6 +106223,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        jquery(".loading-container img").attr("src", "images/urofaint.gif");
 	    });
 	});
+
+	exports.findConnectionAnomalies = findConnectionAnomalies;
 
 	Object.defineProperty(exports, '__esModule', { value: true });
 

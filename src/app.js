@@ -149,7 +149,7 @@ function loadWorldData(update, success, fail) {
     }).fail(fail);
 }
 
-let graph;
+export let graph;
 
 let contextWorldId = null, startWorldId = null, endWorldId = null, selectedWorldId = null;
 
@@ -1526,9 +1526,8 @@ function findPath(s, t, ignoreTypeFlags) {
                 let sourcePath = _.cloneDeep(sourcePaths[id]);
                 let targetPath = _.cloneDeep(targetPaths[id]);
 
-                if (sourcePath[sourcePath.length - 1].id === id && targetPath[targetPath.length - 1].id === id) {
+                if (sourcePath[sourcePath.length - 1].id === id && targetPath[targetPath.length - 1].id === id)
                     sourcePath = sourcePath.slice(0, -1);
-                }
 
                 let loopWorldIds, sourcePathIds, targetPathIds;
                 while ((loopWorldIds = _.intersectionWith((sourcePathIds = sourcePath.map(sp => sp.id)), (targetPathIds = targetPath.map(tp => tp.id)), _.isEqual)).length) {
@@ -1540,20 +1539,18 @@ function findPath(s, t, ignoreTypeFlags) {
                 
                 const matchPath = sourcePath.concat(targetPath.reverse());
                 for (let p in matchPaths) {
-                    for (let w = 1; w < matchPaths[p].length; w++) {
-                        const linkId = `${matchPaths[p][w - 1].id}_${matchPaths[p][w].id}`;
+                    if (matchPaths[p].length === matchPath.length) {
                         for (let m = 1; m < matchPath.length; m++) {
+                            const linkId = `${matchPaths[p][m - 1].id}_${matchPaths[p][m].id}`;
                             const matchLinkId = `${matchPath[m - 1].id}_${matchPath[m].id}`;
-                            if (linkId === matchLinkId) {
-                                skip = true;
+                            if (linkId !== matchLinkId)
                                 break;
-                            }
+                            if (m === matchPath.length - 1)
+                                skip = true;
                         }
                         if (skip)
                             break;
                     }
-                    if (skip)
-                        break;
                 }
                 if (skip)
                     return false;
@@ -1568,7 +1565,6 @@ function findPath(s, t, ignoreTypeFlags) {
     const endTime = performance.now();
 
     console.log("Found", matchPaths.length, "matching path(s) in", Math.round((endTime - startTime) * 10) / 10, "ms");
-
     if (!matchPaths.length) {
         if (ignoreTypeFlags & ConnType.DEAD_END)
             ignoreTypeFlags ^= (ConnType.DEAD_END | ConnType.ISOLATED);
@@ -1601,7 +1597,7 @@ function traverseConns(checkedNodes, path, nextGenWorlds, world, ignoreTypeFlags
     const conns = world.connections;
     for (let c in conns) {
         let connType = conns[c].type;
-        const typeParams = conns[c].typeParams;
+        let typeParams = conns[c].typeParams;
         if (isSource && connType & ignoreTypeFlags)
             continue;
         const connWorld = worldData[conns[c].targetId];
@@ -1616,9 +1612,11 @@ function traverseConns(checkedNodes, path, nextGenWorlds, world, ignoreTypeFlags
             } else {
                 const reverseConn = connWorld.connections.filter(c => c.targetId === world.id);
                 let reverseConnType = 0;
-                if (reverseConn.length)
+                let reverseConnTypeParams = {};
+                if (reverseConn.length) {
                     reverseConnType = reverseConn[0].type;
-                else {
+                    reverseConnTypeParams = reverseConn[0].typeParams;
+                } else {
                     if (connType & ConnType.ONE_WAY)
                         reverseConnType |= ConnType.NO_ENTRY;
                     else if (connType & ConnType.NO_ENTRY)
@@ -1635,6 +1633,7 @@ function traverseConns(checkedNodes, path, nextGenWorlds, world, ignoreTypeFlags
                 connType = reverseConnType;
                 if (connType & ignoreTypeFlags)
                     continue;
+                typeParams = reverseConnTypeParams;
             }
             connPath.push({
                 id: id,
@@ -1649,7 +1648,7 @@ function traverseConns(checkedNodes, path, nextGenWorlds, world, ignoreTypeFlags
     return ret;
 }
 
-function findConnectionAnomalies() {
+export function findConnectionAnomalies() {
     const connData = {};
     worldData.forEach(w => {
         connData[w.id] = [];
@@ -1683,7 +1682,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer = data.footer.replace("{VERSION}", "2.5.0");
+            data.footer = data.footer.replace("{VERSION}", "2.5.1");
             localizedConns = data.conn;
             initContextMenu(data.contextMenu);
             if (isInitial) {
