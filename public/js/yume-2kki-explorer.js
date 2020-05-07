@@ -1,4 +1,4 @@
-// Version 2.5.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 2.5.2 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -105509,7 +105509,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    initGraph(config$1.renderMode, config$1.displayMode, matchPaths);
 	}
 
-	function findPath(s, t, ignoreTypeFlags) {
+	function findPath(s, t, ignoreTypeFlags, existingMatchPaths) {
 	    const startTime = performance.now();
 
 	    const checkedSourceNodes = [s];
@@ -105518,6 +105518,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    const source = exports.worldData[s];
 	    const target = exports.worldData[t];
 
+	    if (!existingMatchPaths)
+	        existingMatchPaths = [];
 	    let matchPaths = [];
 
 	    let sourcePaths = {};
@@ -105576,10 +105578,11 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                }
 	                
 	                const matchPath = sourcePath.concat(targetPath.reverse());
-	                for (let p in matchPaths) {
-	                    if (matchPaths[p].length === matchPath.length) {
+	                const allMatchPaths = existingMatchPaths.concat(matchPaths);
+	                for (let p in allMatchPaths) {
+	                    if (allMatchPaths[p].length === matchPath.length) {
 	                        for (let m = 1; m < matchPath.length; m++) {
-	                            const linkId = `${matchPaths[p][m - 1].id}_${matchPaths[p][m].id}`;
+	                            const linkId = `${allMatchPaths[p][m - 1].id}_${allMatchPaths[p][m].id}`;
 	                            const matchLinkId = `${matchPath[m - 1].id}_${matchPath[m].id}`;
 	                            if (linkId !== matchLinkId)
 	                                break;
@@ -105609,17 +105612,22 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        else
 	            ignoreTypeFlags = 0;
 	        if (ignoreTypeFlags)
-	            return findPath(s, t, ignoreTypeFlags);
+	            return findPath(s, t, ignoreTypeFlags, existingMatchPaths.concat(matchPaths));
 	        else {
 	            matchPaths = [ [ { id: s, connType: connType_1.INACCESSIBLE }, { id: t, connType: null } ] ];
 	            return matchPaths;
 	        }
 	    } else {
-	        if ((!(ignoreTypeFlags & connType_1.LOCKED) && lodash.every(matchPaths, mp => mp.filter(p => p.connType && p.connType & (connType_1.LOCKED | connType_1.LOCKED_CONDITION).length)))) {
-	            const additionalPaths = findPath(s, t, (ignoreTypeFlags = ignoreTypeFlags | connType_1.LOCKED | connType_1.LOCKED_CONDITION));
-	            if (additionalPaths.length && !(additionalPaths[0][0].connType & connType_1.INACCESSIBLE)) {
-	                for (let ap in additionalPaths)
-	                    matchPaths.push(additionalPaths[ap]);
+	        const ignoreTypesList = [connType_1.CHANCE, connType_1.EFFECT, connType_1.LOCKED | connType_1.LOCKED_CONDITION];
+	        for (let it in ignoreTypesList) {
+	            const ignoreTypes = ignoreTypesList[it];
+	            if ((!(ignoreTypeFlags & ignoreTypes) && lodash.every(matchPaths, mp => mp.filter(p => p.connType && p.connType & ignoreTypes).length))) {
+	                const additionalPaths = findPath(s, t, (ignoreTypeFlags = ignoreTypeFlags | ignoreTypes), existingMatchPaths.concat(matchPaths));
+	                if (additionalPaths.length && !(additionalPaths[0][0].connType & connType_1.INACCESSIBLE)) {
+	                    for (let ap in additionalPaths)
+	                        matchPaths.push(additionalPaths[ap]);
+	                    break;
+	                }
 	            }
 	        }
 	        matchPaths = lodash.sortBy(matchPaths, [ 'length' ]);
@@ -105720,7 +105728,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer = data.footer.replace("{VERSION}", "2.5.1");
+	            data.footer = data.footer.replace("{VERSION}", "2.5.2");
 	            localizedConns = data.conn;
 	            initContextMenu(data.contextMenu);
 	            if (isInitial) {

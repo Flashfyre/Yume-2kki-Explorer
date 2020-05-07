@@ -1471,7 +1471,7 @@ function reloadGraph() {
     initGraph(config.renderMode, config.displayMode, matchPaths);
 }
 
-function findPath(s, t, ignoreTypeFlags) {
+function findPath(s, t, ignoreTypeFlags, existingMatchPaths) {
     const startTime = performance.now();
 
     const checkedSourceNodes = [s];
@@ -1480,6 +1480,8 @@ function findPath(s, t, ignoreTypeFlags) {
     const source = worldData[s];
     const target = worldData[t];
 
+    if (!existingMatchPaths)
+        existingMatchPaths = [];
     let matchPaths = [];
 
     let sourcePaths = {};
@@ -1538,10 +1540,11 @@ function findPath(s, t, ignoreTypeFlags) {
                 }
                 
                 const matchPath = sourcePath.concat(targetPath.reverse());
-                for (let p in matchPaths) {
-                    if (matchPaths[p].length === matchPath.length) {
+                const allMatchPaths = existingMatchPaths.concat(matchPaths);
+                for (let p in allMatchPaths) {
+                    if (allMatchPaths[p].length === matchPath.length) {
                         for (let m = 1; m < matchPath.length; m++) {
-                            const linkId = `${matchPaths[p][m - 1].id}_${matchPaths[p][m].id}`;
+                            const linkId = `${allMatchPaths[p][m - 1].id}_${allMatchPaths[p][m].id}`;
                             const matchLinkId = `${matchPath[m - 1].id}_${matchPath[m].id}`;
                             if (linkId !== matchLinkId)
                                 break;
@@ -1571,17 +1574,22 @@ function findPath(s, t, ignoreTypeFlags) {
         else
             ignoreTypeFlags = 0;
         if (ignoreTypeFlags)
-            return findPath(s, t, ignoreTypeFlags);
+            return findPath(s, t, ignoreTypeFlags, existingMatchPaths.concat(matchPaths));
         else {
             matchPaths = [ [ { id: s, connType: ConnType.INACCESSIBLE }, { id: t, connType: null } ] ];
             return matchPaths;
         }
     } else {
-        if ((!(ignoreTypeFlags & ConnType.LOCKED) && _.every(matchPaths, mp => mp.filter(p => p.connType && p.connType & (ConnType.LOCKED | ConnType.LOCKED_CONDITION).length)))) {
-            const additionalPaths = findPath(s, t, (ignoreTypeFlags = ignoreTypeFlags | ConnType.LOCKED | ConnType.LOCKED_CONDITION));
-            if (additionalPaths.length && !(additionalPaths[0][0].connType & ConnType.INACCESSIBLE)) {
-                for (let ap in additionalPaths)
-                    matchPaths.push(additionalPaths[ap]);
+        const ignoreTypesList = [ConnType.CHANCE, ConnType.EFFECT, ConnType.LOCKED | ConnType.LOCKED_CONDITION];
+        for (let it in ignoreTypesList) {
+            const ignoreTypes = ignoreTypesList[it];
+            if ((!(ignoreTypeFlags & ignoreTypes) && _.every(matchPaths, mp => mp.filter(p => p.connType && p.connType & ignoreTypes).length))) {
+                const additionalPaths = findPath(s, t, (ignoreTypeFlags = ignoreTypeFlags | ignoreTypes), existingMatchPaths.concat(matchPaths));
+                if (additionalPaths.length && !(additionalPaths[0][0].connType & ConnType.INACCESSIBLE)) {
+                    for (let ap in additionalPaths)
+                        matchPaths.push(additionalPaths[ap]);
+                    break;
+                }
             }
         }
         matchPaths = _.sortBy(matchPaths, [ 'length' ]);
@@ -1682,7 +1690,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer = data.footer.replace("{VERSION}", "2.5.1");
+            data.footer = data.footer.replace("{VERSION}", "2.5.2");
             localizedConns = data.conn;
             initContextMenu(data.contextMenu);
             if (isInitial) {
