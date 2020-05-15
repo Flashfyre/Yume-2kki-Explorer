@@ -132,7 +132,7 @@ function updateControlsContainer(updateTabMargin) {
     });
 }
 
-function loadWorldData(update, success, fail) {
+export function loadWorldData(update, success, fail) {
     $.get("/worlds" + (update ? "?update=true" : ""), function (data) {
         if (document.fonts.check("12px MS Gothic")) {
             fontsLoaded = true;
@@ -1690,7 +1690,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer = data.footer.replace("{VERSION}", "2.5.2");
+            data.footer = data.footer.replace("{VERSION}", "2.5.3");
             localizedConns = data.conn;
             initContextMenu(data.contextMenu);
             if (isInitial) {

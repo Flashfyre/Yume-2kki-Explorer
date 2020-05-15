@@ -335,7 +335,7 @@ function populateWorldData(pool, worldData, updatedWorldNames) {
                 const callback = function (updatedWorldData) {
                     updateConns(pool, worldDataByName).then(() => {
                         updateConnTypeParams(pool, worldData).then(() => {
-                            updateWorldDepths(pool, worldData).then(() => {
+                            updateWorldDepths(pool, _.sortBy(worldData, [ 'id' ])).then(() => {
                                 deleteRemovedWorlds(pool);
                                 resolve(worldData);
                             }).catch(err => reject(err));
@@ -707,25 +707,7 @@ function updateWorldDepths(pool, worldData) {
 
         calcDepth(worldData, worldDataById, depthMap, null, 0, defaultPathIgnoreConnTypeFlags);
 
-        const worldNames = Object.keys(worldDataByName);
-
-        worldData.filter(w => depthMap[w.title] === -1).forEach(w => {
-            w.connections.filter(c => worldNames.indexOf(c.location) > -1).forEach(c => {
-                let sourceWorld = worldDataByName[c.location];
-                let ignoreTypeFlags = defaultPathIgnoreConnTypeFlags;
-                if (sourceWorld.depth !== undefined) {
-                    do {
-                        if (ignoreTypeFlags & ConnType.LOCKED || ignoreTypeFlags & ConnType.LOCKED_CONDITION)
-                            ignoreTypeFlags ^= ConnType.LOCKED | ConnType.LOCKED_CONDITION;
-                        else if (ignoreTypeFlags & ConnType.DEAD_END)
-                            ignoreTypeFlags ^= ConnType.DEAD_END | ConnType.ISOLATED;
-                        else
-                            break;
-                        calcDepth(worldData, worldDataById, depthMap, sourceWorld, sourceWorld.depth, ignoreTypeFlags, w.title);
-                    } while (depthMap[w.title] === -1);
-                }
-            });
-        });
+        worldData.filter(w => depthMap[w.title] === -1).forEach(w => resolveMissingDepths(worldData, worldDataById, worldDataByName, depthMap, w));
 
         for (let w in worldData) {
             if (worldData[w].depth === undefined)
@@ -775,6 +757,30 @@ function calcDepth(worldData, worldDataById, depthMap, world, depth, ignoreTypeF
         }*/
     }
     return depth;
+}
+
+function resolveMissingDepths(worldData, worldDataById, worldDataByName, depthMap, world) {
+    const worldNames = Object.keys(worldDataByName);
+    const conns = world.connections.filter(c => worldNames.indexOf(c.location) > -1);
+    conns.forEach(c => {
+        let sourceWorld = worldDataByName[c.location];
+        let ignoreTypeFlags = defaultPathIgnoreConnTypeFlags;
+        if (sourceWorld.depth !== undefined) {
+            do {
+                if (ignoreTypeFlags & ConnType.LOCKED || ignoreTypeFlags & ConnType.LOCKED_CONDITION)
+                    ignoreTypeFlags ^= ConnType.LOCKED | ConnType.LOCKED_CONDITION;
+                else if (ignoreTypeFlags & ConnType.DEAD_END)
+                    ignoreTypeFlags ^= ConnType.DEAD_END | ConnType.ISOLATED;
+                else
+                    break;
+                calcDepth(worldData, worldDataById, depthMap, sourceWorld, sourceWorld.depth, ignoreTypeFlags, world.title);
+            } while (depthMap[world.title] === -1);
+        }
+    });
+    if (world.depth !== undefined) {
+        conns.filter(c => depthMap[c.location] === -1 && worldDataByName[c.location].id < world.id)
+            .forEach(c => resolveMissingDepths(worldData, worldDataById, worldDataByName, depthMap, worldDataByName[c.location]));
+    }
 }
 
 function updateWorldsOfDepth(pool, depth, worlds) {

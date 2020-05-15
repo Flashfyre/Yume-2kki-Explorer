@@ -1,4 +1,4 @@
-// Version 2.5.2 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 2.5.3 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -105728,7 +105728,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer = data.footer.replace("{VERSION}", "2.5.2");
+	            data.footer = data.footer.replace("{VERSION}", "2.5.3");
 	            localizedConns = data.conn;
 	            initContextMenu(data.contextMenu);
 	            if (isInitial) {
@@ -106233,6 +106233,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	});
 
 	exports.findConnectionAnomalies = findConnectionAnomalies;
+	exports.loadWorldData = loadWorldData;
 
 	Object.defineProperty(exports, '__esModule', { value: true });
 
