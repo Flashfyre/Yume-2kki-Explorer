@@ -1,4 +1,4 @@
-// Version 2.5.3 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 2.5.4 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -104251,11 +104251,29 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        const pathScores = [];
 	        let minPathDepth = paths[0].length - 2;
 	        let maxPathDepth;
+	        let pathDepthLimit;
 	        let depthDiff;
 	        let maxPathScore;
+	        let filteredPathConnTypes = connType_1.LOCKED | connType_1.EFFECT | connType_1.CHANCE | connType_1.LOCKED_CONDITION;
+	        do {
+	            const filteredPaths = paths.filter(p => !p.filter(pi => filteredPathConnTypes & pi.connType).length);
+	            if (filteredPaths.length)
+	                pathDepthLimit = filteredPaths[0].length;
+	            else {
+	                if (filteredPathConnTypes & connType_1.EFFECT)
+	                    filteredPathConnTypes ^= connType_1.EFFECT;
+	                else if (filteredPathConnTypes & connType_1.CHANCE)
+	                    filteredPathConnTypes ^= connType_1.CHANCE;
+	                else {
+	                    pathDepthLimit = paths[0].length;
+	                    break;
+	                }
+	            }
+	        } while (!pathDepthLimit);
+	        pathDepthLimit = Math.max(0, pathDepthLimit - 2) * 2;
 	        for (let pi in paths) {
 	            const path = paths[pi];
-	            if (path.length - 2 > minPathDepth * 2) {
+	            if (path.length - 2 > pathDepthLimit) {
 	                let visibleWorldIdRemovalCandidates = lodash.uniq(lodash.flatten(paths.slice(pi)).map(p => p.id));
 	                paths = paths.slice(0, pi);
 	                let requiredWorldIds = lodash.uniq(lodash.flatten(paths).map(p => p.id));
@@ -105728,7 +105746,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer = data.footer.replace("{VERSION}", "2.5.3");
+	            data.footer = data.footer.replace("{VERSION}", "2.5.4");
 	            localizedConns = data.conn;
 	            initContextMenu(data.contextMenu);
 	            if (isInitial) {

@@ -213,11 +213,29 @@ function initGraph(renderMode, displayMode, paths) {
         const pathScores = [];
         let minPathDepth = paths[0].length - 2;
         let maxPathDepth;
+        let pathDepthLimit;
         let depthDiff;
         let maxPathScore;
+        let filteredPathConnTypes = ConnType.LOCKED | ConnType.EFFECT | ConnType.CHANCE | ConnType.LOCKED_CONDITION;
+        do {
+            const filteredPaths = paths.filter(p => !p.filter(pi => filteredPathConnTypes & pi.connType).length);
+            if (filteredPaths.length)
+                pathDepthLimit = filteredPaths[0].length;
+            else {
+                if (filteredPathConnTypes & ConnType.EFFECT)
+                    filteredPathConnTypes ^= ConnType.EFFECT;
+                else if (filteredPathConnTypes & ConnType.CHANCE)
+                    filteredPathConnTypes ^= ConnType.CHANCE;
+                else {
+                    pathDepthLimit = paths[0].length;
+                    break;
+                }
+            }
+        } while (!pathDepthLimit);
+        pathDepthLimit = Math.max(0, pathDepthLimit - 2) * 2;
         for (let pi in paths) {
             const path = paths[pi];
-            if (path.length - 2 > minPathDepth * 2) {
+            if (path.length - 2 > pathDepthLimit) {
                 let visibleWorldIdRemovalCandidates = _.uniq(_.flatten(paths.slice(pi)).map(p => p.id));
                 paths = paths.slice(0, pi);
                 let requiredWorldIds = _.uniq(_.flatten(paths).map(p => p.id));
@@ -1690,7 +1708,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer = data.footer.replace("{VERSION}", "2.5.3");
+            data.footer = data.footer.replace("{VERSION}", "2.5.4");
             localizedConns = data.conn;
             initContextMenu(data.contextMenu);
             if (isInitial) {
