@@ -1531,14 +1531,14 @@ function reloadGraph() {
     const startWorld = startWorldId != null ? worldData[startWorldId] : null;
     const endWorld = endWorldId != null ? worldData[endWorldId] : null;
     const matchPaths = startWorld && endWorld && startWorld != endWorld
-        ? findPath(startWorld.id, endWorld.id, config.pathMode, true, ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED, config.pathMode === 0 ? 3 : config.pathMode === 1 ? 5 : 15)
+        ? findPath(startWorld.id, endWorld.id, true, ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED, config.pathMode === 0 ? 3 : config.pathMode === 1 ? 5 : 20)
         : null;
     if (graph)
         graph._destructor();
     initGraph(config.renderMode, config.displayMode, config.pathMode, matchPaths);
 }
 
-function findPath(s, t, pathMode, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
+function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
     const startTime = performance.now();
 
     const checkedSourceNodes = [s];
@@ -1640,49 +1640,59 @@ function findPath(s, t, pathMode, isRoot, ignoreTypeFlags, limit, existingMatchP
         } else
             ignoreTypeFlags = 0;
         if (ignoreTypeFlags)
-            return findPath(s, t, pathMode, isRoot, ignoreTypeFlags, limit, existingMatchPaths);
+            return findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths);
         else {
             isDebug && console.log("Marking route as inaccessible");
             matchPaths = [ [ { id: s, connType: ConnType.INACCESSIBLE }, { id: t, connType: null } ] ];
             return matchPaths;
         }
     } else if (isRoot) {
+        const rootLimit = Math.min(10, limit);
         const ignoreTypesList = [ConnType.CHANCE, ConnType.EFFECT, ConnType.LOCKED | ConnType.LOCKED_CONDITION];
-        const pathCount = Math.min(matchPaths.length, limit);
+        const pathCount = Math.min(matchPaths.length, rootLimit);
         let ignoreTypes = 0;
         for (let ignoreType of ignoreTypesList)
             ignoreTypes |= ignoreType;
-        if (matchPaths.length > limit)
-            matchPaths = _.sortBy(matchPaths, [ 'length' ]);
+        matchPaths = _.sortBy(matchPaths, [ 'length' ]);
         isDebug && console.log("Looking for unconditionally accessible path...");
+        let accessiblePathIndex = -1;
         for (let it = 0; it <= ignoreTypesList.length; it++) {
             const ignoreType = it < ignoreTypesList.length ? ignoreTypesList[it] : 0;
             if (matchPaths.slice(0, pathCount).filter(mp => mp.filter(p => p.connType && (p.connType & ignoreTypes)).length).length === pathCount) {
-                if (matchPaths.length > limit) {
-                    let accessiblePathIndex = -1;
-                    for (let mp = limit + 1; mp < matchPaths.length; mp++) {
+                if (matchPaths.length > rootLimit) {
+                    for (let mp = rootLimit + 1; mp < matchPaths.length; mp++) {
                         const path = matchPaths[mp];
                         if (!path.filter(p => p.connType && (p.connType & ignoreTypes)).length) {
                             isDebug && console.log("Found unconditionally accessible path at index", mp);
-                            if (mp >= limit) {
+                            if (mp >= rootLimit) {
                                 isDebug && console.log("Truncating paths to limit of", limit, "with unconditionally accessible path as last element");
-                                matchPaths = matchPaths.slice(0, limit - 1).concat([path]);
+                                matchPaths = matchPaths.slice(0, rootLimit - 1).concat([path]);
                             }
-                            accessiblePathIndex = mp;
+                            accessiblePathIndex = rootLimit - 1;
                             break;
                         }
                     }
                     if (accessiblePathIndex > -1)
                         break;
                 }
-                const additionalPaths = findPath(s, t, pathMode, false, ignoreTypeFlags | ignoreTypes, Math.min(5, limit), matchPaths);
+                let additionalPaths = findPath(s, t, false, ignoreTypeFlags | ignoreTypes, Math.max(1, Math.min(rootLimit, rootLimit - pathCount)), matchPaths);
                 if (additionalPaths.length && !(additionalPaths[0][0].connType & ConnType.INACCESSIBLE)) {
+                    additionalPaths = _.sortBy(additionalPaths, [ 'length' ]);
                     if (isDebug) {
                         const ignoreTypeNames = ["chance", "effect", "locked/locked condition"];
                         console.log("Found", additionalPaths.length, "additional path(s) by ignoring", ignoreType ? ignoreTypeNames.slice(it).join(", ") : "none");
                     }
-                    for (let ap of additionalPaths)
-                        matchPaths.push(ap);
+                    for (let ap of additionalPaths) {
+                        if (matchPaths.length < rootLimit) {
+                            if (accessiblePathIndex === -1)
+                                accessiblePathIndex = matchPaths.length;
+                            matchPaths.push(ap);
+                        } else if (accessiblePathIndex === -1)
+                            matchPaths = matchPaths.slice(0, rootLimit - 1).concat([additionalPaths[ap]]);
+                        else
+                            // shouldn't happen
+                            break;
+                    }
                     break;
                 }
             } else
@@ -1690,15 +1700,15 @@ function findPath(s, t, pathMode, isRoot, ignoreTypeFlags, limit, existingMatchP
             ignoreTypes ^= ignoreType;
         }
 
-        const addAdditionalPaths = matchPaths.length && pathMode === 2;
-        if (matchPaths.length > limit || addAdditionalPaths) {
-            isDebug && console.log("Searching for additional paths...");
-            const mainLimit = pathMode === 2 ? Math.floor(limit / 3) : limit;
-            matchPaths = _.sortBy(matchPaths, [ 'length' ]);
-            if (matchPaths.length > mainLimit)
-                matchPaths = matchPaths.slice(0, mainLimit);
+        const addAdditionalPaths = matchPaths.length && limit > rootLimit;
+        if (addAdditionalPaths || matchPaths.length > limit) {
+            if (matchPaths.length > rootLimit) {
+                isDebug && console.log("Truncating array of", matchPaths.length, "paths to root limit of", rootLimit);
+                matchPaths = matchPaths.slice(0, rootLimit);
+            }
             if (addAdditionalPaths) {
-                const additionalPaths = findPath(s, t, pathMode, false, ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION, limit - mainLimit, existingMatchPaths.concat(matchPaths));
+                isDebug && console.log("Searching for additional paths...");
+                const additionalPaths = findPath(s, t, false, ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION, limit - rootLimit, existingMatchPaths.concat(matchPaths));
                 if (additionalPaths.length && !(additionalPaths[0][0].connType & ConnType.INACCESSIBLE)) {
                     for (let ap of additionalPaths)
                         matchPaths.push(ap);
