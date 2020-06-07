@@ -28,6 +28,7 @@ $(document).keyup(function (event) {
         isCtrl = false;
 });
 
+let isDebug = false;
 let isShift = false;
 let isCtrl = false;
 let fontsLoaded = false;
@@ -81,6 +82,9 @@ function loadOrInitConfig() {
                     const value = savedConfig[key];
                     config[key] = value;
                     switch (key) {
+                        case "debug":
+                            isDebug = value;
+                            break;
                         case "lang":
                             $(".js--lang").val(value);
                             break;
@@ -104,6 +108,9 @@ function loadOrInitConfig() {
                         case "labelMode":
                             $(".js--label-mode").val(value);
                             break;
+                        case "pathMode":
+                            $(".js--path-mode").val(value);
+                            break;
                         case "sizeDiff":
                             $(".js--size-diff").val(value);
                             break;
@@ -115,7 +122,7 @@ function loadOrInitConfig() {
             }
         }
     } catch (error) {
-        console.log(error)
+        console.log(error);
     }
 }
 
@@ -155,6 +162,8 @@ let contextWorldId = null, startWorldId = null, endWorldId = null, selectedWorld
 
 let searchWorldIds = [], visibleWorldIds = [];
 
+let selectedAuthor = null;
+
 let visibleTwoWayLinks = [];
 let visibleOneWayLinks = [];
 let linksTwoWayBuffered;
@@ -176,6 +185,7 @@ let localizedConns;
 let effectsJP;
 
 let config = {
+    debug: false,
     lang: "en",
     uiTheme: "Default_Custom",
     fontStyle: 0,
@@ -183,13 +193,14 @@ let config = {
     displayMode: 0,
     connMode: 0,
     labelMode: 1,
+    pathMode: 1,
     sizeDiff: 1,
     stackSize: 20
 };
 
 let worldImageData = [];
 
-function initGraph(renderMode, displayMode, paths) {
+function initGraph(renderMode, displayMode, pathMode, paths) {
 
     is2d = !renderMode;
 
@@ -199,13 +210,14 @@ function initGraph(renderMode, displayMode, paths) {
 
     const dagIgnore = {};
 
+    const worldDepths = {};
+
     iconTexts = [];
 
-    _.each(worldData, w => {
+    for (let w of worldData)
         worldScales[w.id] = 1 + (Math.round((w.size - minSize) / (maxSize - minSize) * 10 * (config.sizeDiff - 1)) / 10);
-    });
 
-    const maxDepth = _.max(worldData.map(w => w.depth));
+    let maxDepth;
 
     if (paths) {
         visibleWorldIds = _.uniq(_.flatten(paths).map(p => p.id));
@@ -232,10 +244,11 @@ function initGraph(renderMode, displayMode, paths) {
                 }
             }
         } while (!pathDepthLimit);
-        pathDepthLimit = Math.max(0, pathDepthLimit - 2) * 2;
+        pathDepthLimit = Math.max(0, pathDepthLimit - 2) * (pathMode < 2 ? 2 : 3);
         for (let pi in paths) {
             const path = paths[pi];
             if (path.length - 2 > pathDepthLimit) {
+                isDebug && console.log("Removing path of length", path.length, "as it is too far from minimum length of", pathDepthLimit + 2);
                 let visibleWorldIdRemovalCandidates = _.uniq(_.flatten(paths.slice(pi)).map(p => p.id));
                 paths = paths.slice(0, pi);
                 let requiredWorldIds = _.uniq(_.flatten(paths).map(p => p.id));
@@ -245,11 +258,14 @@ function initGraph(renderMode, displayMode, paths) {
             }
             pathScores[pi] = parseInt(pi) + 3 * ((path.length - 2) - minPathDepth);
         }
+        
         maxPathDepth = paths[paths.length - 1].length;
         depthDiff = maxPathDepth - minPathDepth;
         maxPathScore = ((paths.length - 1) + (3 * depthDiff)) * (depthDiff > 0 ? 1 : 2) || 1;
         if (paths.length === 1 && paths[0][0].connType & ConnType.INACCESSIBLE)
             pathScores[0] = maxPathScore;
+        const pathWorldIds = paths.map(p => p.map(w => w.id));
+
         for (let p in paths) {
             const path = paths[p];
             for (let w = 1; w < path.length; w++) {
@@ -258,7 +274,6 @@ function initGraph(renderMode, displayMode, paths) {
                 const linkId = `${sourceId}_${targetId}`;
                 const hue = 0.6666 - ((pathScores[p] / maxPathScore) * 0.6666);
                 if (addedLinks.indexOf(linkId) === -1) {
-                    dagIgnore[sourceId] = [];
                     const link = {
                         key: linkId,
                         source: sourceId,
@@ -268,7 +283,6 @@ function initGraph(renderMode, displayMode, paths) {
                         icons: [],
                         hidden: false,
                         defaultColor: hueToRGBA(hue, 1),
-                        defaultColorFade: hueToRGBA(hue, 0.1),
                         connTypeCheck: 'replace'
                     };
                     links.push(link);
@@ -276,23 +290,61 @@ function initGraph(renderMode, displayMode, paths) {
                 }
             }
         }
-    } else {
-        visibleWorldIds = Object.keys(worldData).map(id => parseInt(id));
 
-        for (let w in visibleWorldIds) {
-            const world = worldData[visibleWorldIds[w]];
+        for (let w of visibleWorldIds)
+            worldDepths[w] = _.min(pathWorldIds.map(p => p.indexOf(w)).filter(d => d > -1));
+
+        maxDepth = _.max(Object.values(worldDepths));
+
+        if (worldDepths[endWorldId] <= maxDepth)
+            worldDepths[endWorldId] = ++maxDepth;
+        
+        for (let w of visibleWorldIds) {
+            const world = worldData[w];
             const connections = world.connections;
-            const dagIgnoreIds = dagIgnore[world.id] = [];
-            for (let c in connections) {
-                const conn = connections[c];
+            const dagIgnoreIds = dagIgnore[w] = [];
+            for (let conn of connections) {
+                const linkId = `${w}_${conn.targetId}`;
+                const matchingLink =  links.filter(l => l.key === linkId);
+                if (!matchingLink.length)
+                    continue;
+                const link = matchingLink[0];
+                const connWorld = worldData[conn.targetId];
+                let hidden = false;
+                if (conn.type & ConnType.NO_ENTRY)
+                    hidden = true;
+                else if (worldDepths[w] >= worldDepths[connWorld.id]) {
+                    const sameDepth = worldDepths[w] === worldDepths[connWorld.id];
+                    const reverseConn = connWorld.connections.filter(c => c.targetId === w);
+                    hidden = (!sameDepth && !reverseConn.length) || (reverseConn.length && !(reverseConn[0].type & ConnType.NO_ENTRY) && (!sameDepth || (!(conn.type & ConnType.ONE_WAY) && w > connWorld.id)));
+                    if (!hidden)
+                        dagIgnoreIds.push(connWorld.id);
+                }
+                if (hidden) {
+                    link.hidden = addedLinks.indexOf(`${connWorld.id}_${w}`) > -1;
+                    dagIgnoreIds.push(connWorld.id);
+                }
+            }
+        }
+    } else {
+        visibleWorldIds = worldData.map(w => w.id);
+
+        maxDepth = _.max(worldData.map(w => w.depth));
+        
+        for (let w of visibleWorldIds) {
+            const world = worldData[w];
+            const connections = world.connections;
+            const dagIgnoreIds = dagIgnore[w] = [];
+            worldDepths[w] = world.depth;
+            for (let conn of connections) {
                 const connWorld = worldData[conn.targetId];
                 let hidden = false;
                 if (conn.type & ConnType.NO_ENTRY)
                     hidden = true;
                 else if (world.depth >= connWorld.depth) {
                     const sameDepth = world.depth === connWorld.depth;
-                    const reverseConn = connWorld.connections.filter(c => c.targetId === world.id);
-                    hidden = (!sameDepth && !reverseConn.length) || (reverseConn.length && !(reverseConn[0].type & ConnType.NO_ENTRY) && (!sameDepth || (!(conn.type & ConnType.ONE_WAY) && world.id > connWorld.id)));
+                    const reverseConn = connWorld.connections.filter(c => c.targetId === w);
+                    hidden = (!sameDepth && !reverseConn.length) || (reverseConn.length && !(reverseConn[0].type & ConnType.NO_ENTRY) && (!sameDepth || (!(conn.type & ConnType.ONE_WAY) && w > connWorld.id)));
                     if (!hidden)
                         dagIgnoreIds.push(connWorld.id);
                 }
@@ -300,15 +352,14 @@ function initGraph(renderMode, displayMode, paths) {
                     dagIgnoreIds.push(connWorld.id);
                 const hue = Math.max(0.6666 - ((world.depth / (maxDepth - 1)) * 0.6666), 0);
                 const link = {
-                    key: `${world.id}_${connWorld.id}`,
-                    source: world.id,
+                    key: `${w}_${connWorld.id}`,
+                    source: w,
                     target: connWorld.id,
                     connType: conn.type,
                     typeParams: conn.typeParams,
                     icons: [],
                     hidden: hidden,
                     defaultColor: hueToRGBA(hue, 1),
-                    defaultColorFade: hueToRGBA(hue, 0.1),
                     connTypeCheck: hidden ? 'after' : 'replace'
                 };
                 links.push(link);
@@ -345,8 +396,7 @@ function initGraph(renderMode, displayMode, paths) {
         }
     });
 
-    const images = (paths ? worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1) : worldData)
-        .map(d => {
+    const images = (paths ? worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1) : worldData).map(d => {
             const img = new Image();
             img.id = d.id;
             img.title = config.lang === "en" || !d.titleJP ? d.title : d.titleJP;
@@ -358,7 +408,6 @@ function initGraph(renderMode, displayMode, paths) {
         const id = parseInt(img.id);
         const scale = worldScales[id];
         const ret = { id: id, img, isHover: false, scale: scale };
-        ret.globalDepth = worldData[id].depth;
         ret.dagIgnore = dagIgnore[id];
         ret.width = 16 * scale;
         ret.height = 12 * scale;
@@ -369,10 +418,7 @@ function initGraph(renderMode, displayMode, paths) {
 
     const gData = {
         nodes: nodes,
-        links: _.sortBy(links, l => {
-            const world = worldData[l.source];
-            return world.depth + (maxDepth + 1) * (l.connType & ConnType.ONE_WAY ? 1 : 0);
-        })
+        links: _.sortBy(links, l => worldDepths[l.source] + (maxDepth + 1) * (l.connType & ConnType.ONE_WAY ? 1 : 0))
     };
 
     icons3D = [];
@@ -672,9 +718,9 @@ function onRender(is2d) {
 }
 
 // START WEBGL2.0 SPECIFIC CODE
-function updateNodeImageData(nodes, isPath, is2d) {
+function updateNodeImageData(nodes, isSubset, is2d) {
     nodeObject.count = nodes.length;
-    if (isPath) {
+    if (isSubset) {
         let index = 0;
         const totalNodeCount = nodes.length;
         nodes.forEach(node => {
@@ -870,7 +916,6 @@ function updateIconPositions(is2d) {
     const dummy = new THREE.Object3D();
     if (iconObject) {
         let index = 0;
-        const camPos = graph.camera().position;
         graph.graphData().links.forEach(link => {
             const start = link.source;
             const end = link.target;
@@ -1170,7 +1215,9 @@ function updateNodeLabels(is2d) {
 
 function getNodeOpacity(node) {
     const id = node.id;
-    const opacity = (selectedWorldId == null || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1)
+    const filterForAuthor = selectedAuthor != null && worldData[id].author !== selectedAuthor;
+    const opacity = ((selectedWorldId == null && !filterForAuthor)
+        || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1)
         ? 1
         : selectedWorldId != null && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length
         ? 0.625
@@ -1359,10 +1406,11 @@ function updateLinkColors(linkData, bufferedObject) {
         let opacity;
         const sourceId = link.source.id !== undefined ? link.source.id : link.source;
         const targetId = link.target.id !== undefined ? link.target.id : link.target;
+        const filterForAuthor = selectedAuthor != null && (worldData[sourceId].author !== selectedAuthor || worldData[targetId].author !== selectedAuthor);
         if (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)) {
             opacity = 1.0;
             color = colorLinkSelected;
-        } else if ((selectedWorldId == null || selectedWorldId === sourceId || selectedWorldId === targetId) && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)) {
+        } else if (((selectedWorldId == null && !filterForAuthor) || selectedWorldId === sourceId || selectedWorldId === targetId) && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)) {
             opacity = 1.0;
             color = new THREE.Color(link.defaultColor);
         } else {
@@ -1402,7 +1450,8 @@ function updateLinkDistances() {
 function getLinkOpacity(link) {
     const sourceId = link.source.id !== undefined ? link.source.id : link.source;
     const targetId = link.target.id !== undefined ? link.target.id : link.target;
-    return (selectedWorldId == null || (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)))
+    const filterForAuthor = selectedAuthor != null && (worldData[sourceId].author !== selectedAuthor || worldData[targetId].author !== selectedAuthor);
+    return ((selectedWorldId == null && !filterForAuthor) || (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)))
         && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)
         ? 1
         : selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)
@@ -1482,14 +1531,14 @@ function reloadGraph() {
     const startWorld = startWorldId != null ? worldData[startWorldId] : null;
     const endWorld = endWorldId != null ? worldData[endWorldId] : null;
     const matchPaths = startWorld && endWorld && startWorld != endWorld
-        ? findPath(startWorld.id, endWorld.id, ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED)
+        ? findPath(startWorld.id, endWorld.id, config.pathMode, true, ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED, config.pathMode === 0 ? 3 : config.pathMode === 1 ? 5 : 15)
         : null;
     if (graph)
         graph._destructor();
-    initGraph(config.renderMode, config.displayMode, matchPaths);
+    initGraph(config.renderMode, config.displayMode, config.pathMode, matchPaths);
 }
 
-function findPath(s, t, ignoreTypeFlags, existingMatchPaths) {
+function findPath(s, t, pathMode, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
     const startTime = performance.now();
 
     const checkedSourceNodes = [s];
@@ -1518,15 +1567,13 @@ function findPath(s, t, ignoreTypeFlags, existingMatchPaths) {
         let targetWorlds = nextGenTargetWorlds.slice(0);
         nextGenSourceWorlds = [];
         nextGenTargetWorlds = [];
-        for (let sw in sourceWorlds) {
-            const sourceWorld = sourceWorlds[sw];
+        for (let sourceWorld of sourceWorlds) {
             const sourcePath = sourcePaths[sourceWorld.id];
             //delete sourcePaths[sourceWorld.id];
             const sourceConns = traverseConns(checkedSourceNodes, sourcePath, nextGenSourceWorlds, sourceWorld, ignoreTypeFlags, true);
             $.extend(sourcePaths, sourceConns);
         }
-        for (let tw in targetWorlds) {
-            const targetWorld = targetWorlds[tw];
+        for (let targetWorld of targetWorlds) {
             const targetPath = targetPaths[targetWorld.id];
             //delete targetPaths[targetWorld.id];
             const targetConns = traverseConns(checkedTargetNodes, targetPath, nextGenTargetWorlds, targetWorld, ignoreTypeFlags, false);
@@ -1559,10 +1606,10 @@ function findPath(s, t, ignoreTypeFlags, existingMatchPaths) {
                 
                 const matchPath = sourcePath.concat(targetPath.reverse());
                 const allMatchPaths = existingMatchPaths.concat(matchPaths);
-                for (let p in allMatchPaths) {
-                    if (allMatchPaths[p].length === matchPath.length) {
+                for (let p of allMatchPaths) {
+                    if (p.length === matchPath.length) {
                         for (let m = 1; m < matchPath.length; m++) {
-                            const linkId = `${allMatchPaths[p][m - 1].id}_${allMatchPaths[p][m].id}`;
+                            const linkId = `${p[m - 1].id}_${p[m].id}`;
                             const matchLinkId = `${matchPath[m - 1].id}_${matchPath[m].id}`;
                             if (linkId !== matchLinkId)
                                 break;
@@ -1585,34 +1632,110 @@ function findPath(s, t, ignoreTypeFlags, existingMatchPaths) {
 
     const endTime = performance.now();
 
-    console.log("Found", matchPaths.length, "matching path(s) in", Math.round((endTime - startTime) * 10) / 10, "ms");
+    isDebug && console.log("Found", matchPaths.length, "matching path(s) in", Math.round((endTime - startTime) * 10) / 10, "ms");
     if (!matchPaths.length) {
-        if (ignoreTypeFlags & ConnType.DEAD_END)
+        if (ignoreTypeFlags & ConnType.DEAD_END) {
+            isDebug && console.log("Allowing dead end and isolated connections and retrying...");
             ignoreTypeFlags ^= (ConnType.DEAD_END | ConnType.ISOLATED);
-        else
+        } else
             ignoreTypeFlags = 0;
         if (ignoreTypeFlags)
-            return findPath(s, t, ignoreTypeFlags, existingMatchPaths.concat(matchPaths));
+            return findPath(s, t, pathMode, isRoot, ignoreTypeFlags, limit, existingMatchPaths);
         else {
+            isDebug && console.log("Marking route as inaccessible");
             matchPaths = [ [ { id: s, connType: ConnType.INACCESSIBLE }, { id: t, connType: null } ] ];
             return matchPaths;
         }
-    } else {
+    } else if (isRoot) {
         const ignoreTypesList = [ConnType.CHANCE, ConnType.EFFECT, ConnType.LOCKED | ConnType.LOCKED_CONDITION];
-        for (let it in ignoreTypesList) {
-            const ignoreTypes = ignoreTypesList[it];
-            if ((!(ignoreTypeFlags & ignoreTypes) && _.every(matchPaths, mp => mp.filter(p => p.connType && p.connType & ignoreTypes).length))) {
-                const additionalPaths = findPath(s, t, (ignoreTypeFlags = ignoreTypeFlags | ignoreTypes), existingMatchPaths.concat(matchPaths));
+        const pathCount = Math.min(matchPaths.length, limit);
+        let ignoreTypes = 0;
+        for (let ignoreType of ignoreTypesList)
+            ignoreTypes |= ignoreType;
+        if (matchPaths.length > limit)
+            matchPaths = _.sortBy(matchPaths, [ 'length' ]);
+        isDebug && console.log("Looking for unconditionally accessible path...");
+        for (let it = 0; it <= ignoreTypesList.length; it++) {
+            const ignoreType = it < ignoreTypesList.length ? ignoreTypesList[it] : 0;
+            if (matchPaths.slice(0, pathCount).filter(mp => mp.filter(p => p.connType && (p.connType & ignoreTypes)).length).length === pathCount) {
+                if (matchPaths.length > limit) {
+                    let accessiblePathIndex = -1;
+                    for (let mp = limit + 1; mp < matchPaths.length; mp++) {
+                        const path = matchPaths[mp];
+                        if (!path.filter(p => p.connType && (p.connType & ignoreTypes)).length) {
+                            isDebug && console.log("Found unconditionally accessible path at index", mp);
+                            if (mp >= limit) {
+                                isDebug && console.log("Truncating paths to limit of", limit, "with unconditionally accessible path as last element");
+                                matchPaths = matchPaths.slice(0, limit - 1).concat([path]);
+                            }
+                            accessiblePathIndex = mp;
+                            break;
+                        }
+                    }
+                    if (accessiblePathIndex > -1)
+                        break;
+                }
+                const additionalPaths = findPath(s, t, pathMode, false, ignoreTypeFlags | ignoreTypes, Math.min(5, limit), matchPaths);
                 if (additionalPaths.length && !(additionalPaths[0][0].connType & ConnType.INACCESSIBLE)) {
-                    for (let ap in additionalPaths)
-                        matchPaths.push(additionalPaths[ap]);
+                    if (isDebug) {
+                        const ignoreTypeNames = ["chance", "effect", "locked/locked condition"];
+                        console.log("Found", additionalPaths.length, "additional path(s) by ignoring", ignoreType ? ignoreTypeNames.slice(it).join(", ") : "none");
+                    }
+                    for (let ap of additionalPaths)
+                        matchPaths.push(ap);
                     break;
+                }
+            } else
+                break;
+            ignoreTypes ^= ignoreType;
+        }
+
+        const addAdditionalPaths = matchPaths.length && pathMode === 2;
+        if (matchPaths.length > limit || addAdditionalPaths) {
+            isDebug && console.log("Searching for additional paths...");
+            const mainLimit = pathMode === 2 ? Math.floor(limit / 3) : limit;
+            matchPaths = _.sortBy(matchPaths, [ 'length' ]);
+            if (matchPaths.length > mainLimit)
+                matchPaths = matchPaths.slice(0, mainLimit);
+            if (addAdditionalPaths) {
+                const additionalPaths = findPath(s, t, pathMode, false, ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION, limit - mainLimit, existingMatchPaths.concat(matchPaths));
+                if (additionalPaths.length && !(additionalPaths[0][0].connType & ConnType.INACCESSIBLE)) {
+                    for (let ap of additionalPaths)
+                        matchPaths.push(ap);
+                    matchPaths = _.sortBy(matchPaths, [ 'length' ]);
                 }
             }
         }
-        matchPaths = _.sortBy(matchPaths, [ 'length' ]);
-        if (matchPaths.length > 5)
-            matchPaths = matchPaths.slice(0, 5);
+
+        const nexusWorldName = 'The Nexus';
+        const nexusWorldId = worldData.filter(w => w.title === nexusWorldName)[0].id;
+
+        if (s !== nexusWorldId) {
+            isDebug && console.log("Searching for paths eligible for Eyeball Bomb Nexus shortcut...");
+            const nexusPaths = existingMatchPaths.concat(matchPaths).filter(p => (p.length > t !== nexusWorldId ? 2 : 3) && p.filter(w => w.id === nexusWorldId).length);
+            if (nexusPaths.length) {
+                isDebug && console.log("Found", nexusPaths.length, "paths eligible for Eyeball Bomb Nexus shortcut: creating shortcut paths");
+                for (let nexusPath of nexusPaths) {
+                    const nexusWorldIndex = nexusPath.indexOf(nexusPath.filter(w => w.id === nexusWorldId)[0]);
+                    const nexusShortcutPath = _.cloneDeep([nexusPath[0]].concat(nexusPath.slice(nexusWorldIndex)));
+                    const nexusSource = nexusShortcutPath[0];
+                    nexusSource.connType = (nexusWorldIndex > 1 ? ConnType.ONE_WAY : 0) | ConnType.EFFECT;
+                    nexusSource.typeParams = {};
+                    nexusSource.typeParams[ConnType.EFFECT] = {
+                        params: 'Eyeball Bomb',
+                        paramsJP: effectsJP['Eyeball Bomb']
+                    };
+                    matchPaths.push(nexusShortcutPath);
+                    limit++;
+                }
+            }
+        }
+    }
+
+    matchPaths = _.sortBy(matchPaths, [ 'length' ]);
+    if (matchPaths.length > limit) {
+        isDebug && console.log("Truncating array of", matchPaths.length, "paths to limit of", limit);
+        matchPaths = matchPaths.slice(0, limit);
     }
 
     return matchPaths;
@@ -1621,12 +1744,12 @@ function findPath(s, t, ignoreTypeFlags, existingMatchPaths) {
 function traverseConns(checkedNodes, path, nextGenWorlds, world, ignoreTypeFlags, isSource) {
     const ret = {};
     const conns = world.connections;
-    for (let c in conns) {
-        let connType = conns[c].type;
-        let typeParams = conns[c].typeParams;
+    for (let conn of conns) {
+        let connType = conn.type;
+        let typeParams = conn.typeParams;
         if (isSource && connType & ignoreTypeFlags)
             continue;
-        const connWorld = worldData[conns[c].targetId];
+        const connWorld = worldData[conn.targetId];
         const id = connWorld.id;
         if (checkedNodes.indexOf(id) === -1) {
             const connPath = _.cloneDeep(path);
@@ -1708,7 +1831,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer = data.footer.replace("{VERSION}", "2.5.4");
+            data.footer = data.footer.replace("{VERSION}", "2.6.0");
             localizedConns = data.conn;
             initContextMenu(data.contextMenu);
             if (isInitial) {
@@ -1716,7 +1839,8 @@ function initLocalization(isInitial) {
                     $(".js--ui-theme").append('<option data-localize="settings.uiTheme.values.' + t + '" value="' + t + '">' + data.settings.uiTheme.values[t] + '</option>');
                 });
                 $(".js--ui-theme").val(config.uiTheme).change();
-            }
+            } else
+                initAuthorSelectOptions(data.controls.author.values['']);
             window.setTimeout(() => updateControlsContainer(true), 0);
             defaultCallback(data);
         }
@@ -1818,7 +1942,7 @@ function initWorldSearch() {
         onSelect: function (selectedWorld) {
             $search.addClass("selected");
             selectedWorldId = worldsByName[selectedWorld.value].id;
-            focusNode(graph.graphData().nodes[selectedWorldId]);
+            focusNode(graph.graphData().nodes.filter(n => n.id === selectedWorldId)[0]);
             highlightWorldSelection();
         },
         onHide: function () {
@@ -1833,6 +1957,24 @@ function initWorldSearch() {
             searchWorldIds = [];
             highlightWorldSelection();
         }
+    });
+}
+
+function initAuthorSelectOptions(localizedEmptyAuthor) {
+    const authors = _.uniq(worldData.map(w => w.author)).sort((a, b) => {
+        const authorA = a ? a.toUpperCase() : 'ZZZ';
+        const authorB = b ? b.toUpperCase() : 'ZZZ';
+        return (authorA < authorB) ? -1 : (authorA > authorB) ? 1 : 0;
+    });
+    const $authorSelect = $(".js--author");
+    authors.forEach(a => {
+        const $opt = $('<option>');
+        $opt.val(a || '');
+        if (a !== '')
+            $opt.text(a || localizedEmptyAuthor);
+        else
+            $opt.text('N/A').data('localize', 'controls.author.values.');
+        $authorSelect.append($opt);
     });
 }
 
@@ -2092,13 +2234,13 @@ function initControls() {
 
     $(".js--conn-mode").change(function() {
         config.connMode = parseInt($(this).val());
-        updateConnectionModeIcons();
         updateConfig(config);
+        updateConnectionModeIcons();
     });
 
     $(".js--label-mode").change(function() {
         config.labelMode = parseInt($(this).val());
-
+        updateConfig(config);
         if (isWebGL2 && is2d)
             updateNodeLabels2D();
         if (!config.labelMode) {
@@ -2110,7 +2252,13 @@ function initControls() {
                 });
             }
         }
+    });
+
+    $(".js--path-mode").change(function() {
+        config.pathMode = parseInt($(this).val());
         updateConfig(config);
+        if (worldData && startWorldId != null && endWorldId != null)
+            reloadGraph();
     });
 
     $(".js--size-diff").change(function() {
@@ -2127,11 +2275,19 @@ function initControls() {
             reloadGraph();
     });
 
+    $(".js--author").change(function() {
+        selectedAuthor = $(this).val() !== "null" ? $(this).val() || "" : null;
+        if (worldData)
+            highlightWorldSelection();
+    });
+
     $(".js--reset").click(function() {
         $(".js--world-input").removeClass("selected").val("");
+        $(".js--author").val("null");
         startWorldId = null;
         endWorldId = null;
         selectedWorldId = null;
+        selectedAuthor = null;
         if (worldData)
             reloadGraph();
     });

@@ -104070,6 +104070,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        isCtrl = false;
 	});
 
+	let isDebug = false;
 	let isShift = false;
 	let isCtrl = false;
 	let fontsLoaded = false;
@@ -104121,6 +104122,9 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                    const value = savedConfig[key];
 	                    config$1[key] = value;
 	                    switch (key) {
+	                        case "debug":
+	                            isDebug = value;
+	                            break;
 	                        case "lang":
 	                            jquery(".js--lang").val(value);
 	                            break;
@@ -104143,6 +104147,9 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                            break;
 	                        case "labelMode":
 	                            jquery(".js--label-mode").val(value);
+	                            break;
+	                        case "pathMode":
+	                            jquery(".js--path-mode").val(value);
 	                            break;
 	                        case "sizeDiff":
 	                            jquery(".js--size-diff").val(value);
@@ -104193,6 +104200,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	let searchWorldIds = [], visibleWorldIds = [];
 
+	let selectedAuthor = null;
+
 	let visibleTwoWayLinks = [];
 	let visibleOneWayLinks = [];
 	let linksTwoWayBuffered;
@@ -104214,6 +104223,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	let effectsJP;
 
 	let config$1 = {
+	    debug: false,
 	    lang: "en",
 	    uiTheme: "Default_Custom",
 	    fontStyle: 0,
@@ -104221,13 +104231,14 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    displayMode: 0,
 	    connMode: 0,
 	    labelMode: 1,
+	    pathMode: 1,
 	    sizeDiff: 1,
 	    stackSize: 20
 	};
 
 	let worldImageData = [];
 
-	function initGraph(renderMode, displayMode, paths) {
+	function initGraph(renderMode, displayMode, pathMode, paths) {
 
 	    is2d = !renderMode;
 
@@ -104237,13 +104248,14 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	    const dagIgnore = {};
 
+	    const worldDepths = {};
+
 	    iconTexts = [];
 
-	    lodash.each(exports.worldData, w => {
+	    for (let w of exports.worldData)
 	        worldScales[w.id] = 1 + (Math.round((w.size - minSize) / (maxSize - minSize) * 10 * (config$1.sizeDiff - 1)) / 10);
-	    });
 
-	    const maxDepth = lodash.max(exports.worldData.map(w => w.depth));
+	    let maxDepth;
 
 	    if (paths) {
 	        visibleWorldIds = lodash.uniq(lodash.flatten(paths).map(p => p.id));
@@ -104270,10 +104282,11 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                }
 	            }
 	        } while (!pathDepthLimit);
-	        pathDepthLimit = Math.max(0, pathDepthLimit - 2) * 2;
+	        pathDepthLimit = Math.max(0, pathDepthLimit - 2) * (pathMode < 2 ? 2 : 3);
 	        for (let pi in paths) {
 	            const path = paths[pi];
 	            if (path.length - 2 > pathDepthLimit) {
+	                isDebug && console.log("Removing path of length", path.length, "as it is too far from minimum length of", pathDepthLimit + 2);
 	                let visibleWorldIdRemovalCandidates = lodash.uniq(lodash.flatten(paths.slice(pi)).map(p => p.id));
 	                paths = paths.slice(0, pi);
 	                let requiredWorldIds = lodash.uniq(lodash.flatten(paths).map(p => p.id));
@@ -104283,11 +104296,14 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            }
 	            pathScores[pi] = parseInt(pi) + 3 * ((path.length - 2) - minPathDepth);
 	        }
+	        
 	        maxPathDepth = paths[paths.length - 1].length;
 	        depthDiff = maxPathDepth - minPathDepth;
 	        maxPathScore = ((paths.length - 1) + (3 * depthDiff)) * (depthDiff > 0 ? 1 : 2) || 1;
 	        if (paths.length === 1 && paths[0][0].connType & connType_1.INACCESSIBLE)
 	            pathScores[0] = maxPathScore;
+	        const pathWorldIds = paths.map(p => p.map(w => w.id));
+
 	        for (let p in paths) {
 	            const path = paths[p];
 	            for (let w = 1; w < path.length; w++) {
@@ -104296,7 +104312,6 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                const linkId = `${sourceId}_${targetId}`;
 	                const hue = 0.6666 - ((pathScores[p] / maxPathScore) * 0.6666);
 	                if (addedLinks.indexOf(linkId) === -1) {
-	                    dagIgnore[sourceId] = [];
 	                    const link = {
 	                        key: linkId,
 	                        source: sourceId,
@@ -104306,7 +104321,6 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                        icons: [],
 	                        hidden: false,
 	                        defaultColor: hueToRGBA(hue, 1),
-	                        defaultColorFade: hueToRGBA(hue, 0.1),
 	                        connTypeCheck: 'replace'
 	                    };
 	                    links.push(link);
@@ -104314,23 +104328,61 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                }
 	            }
 	        }
-	    } else {
-	        visibleWorldIds = Object.keys(exports.worldData).map(id => parseInt(id));
 
-	        for (let w in visibleWorldIds) {
-	            const world = exports.worldData[visibleWorldIds[w]];
+	        for (let w of visibleWorldIds)
+	            worldDepths[w] = lodash.min(pathWorldIds.map(p => p.indexOf(w)).filter(d => d > -1));
+
+	        maxDepth = lodash.max(Object.values(worldDepths));
+
+	        if (worldDepths[endWorldId] <= maxDepth)
+	            worldDepths[endWorldId] = ++maxDepth;
+	        
+	        for (let w of visibleWorldIds) {
+	            const world = exports.worldData[w];
 	            const connections = world.connections;
-	            const dagIgnoreIds = dagIgnore[world.id] = [];
-	            for (let c in connections) {
-	                const conn = connections[c];
+	            const dagIgnoreIds = dagIgnore[w] = [];
+	            for (let conn of connections) {
+	                const linkId = `${w}_${conn.targetId}`;
+	                const matchingLink =  links.filter(l => l.key === linkId);
+	                if (!matchingLink.length)
+	                    continue;
+	                const link = matchingLink[0];
+	                const connWorld = exports.worldData[conn.targetId];
+	                let hidden = false;
+	                if (conn.type & connType_1.NO_ENTRY)
+	                    hidden = true;
+	                else if (worldDepths[w] >= worldDepths[connWorld.id]) {
+	                    const sameDepth = worldDepths[w] === worldDepths[connWorld.id];
+	                    const reverseConn = connWorld.connections.filter(c => c.targetId === w);
+	                    hidden = (!sameDepth && !reverseConn.length) || (reverseConn.length && !(reverseConn[0].type & connType_1.NO_ENTRY) && (!sameDepth || (!(conn.type & connType_1.ONE_WAY) && w > connWorld.id)));
+	                    if (!hidden)
+	                        dagIgnoreIds.push(connWorld.id);
+	                }
+	                if (hidden) {
+	                    link.hidden = addedLinks.indexOf(`${connWorld.id}_${w}`) > -1;
+	                    dagIgnoreIds.push(connWorld.id);
+	                }
+	            }
+	        }
+	    } else {
+	        visibleWorldIds = exports.worldData.map(w => w.id);
+
+	        maxDepth = lodash.max(exports.worldData.map(w => w.depth));
+	        
+	        for (let w of visibleWorldIds) {
+	            const world = exports.worldData[w];
+	            const connections = world.connections;
+	            const dagIgnoreIds = dagIgnore[w] = [];
+	            worldDepths[w] = world.depth;
+	            for (let conn of connections) {
 	                const connWorld = exports.worldData[conn.targetId];
 	                let hidden = false;
 	                if (conn.type & connType_1.NO_ENTRY)
 	                    hidden = true;
 	                else if (world.depth >= connWorld.depth) {
 	                    const sameDepth = world.depth === connWorld.depth;
-	                    const reverseConn = connWorld.connections.filter(c => c.targetId === world.id);
-	                    hidden = (!sameDepth && !reverseConn.length) || (reverseConn.length && !(reverseConn[0].type & connType_1.NO_ENTRY) && (!sameDepth || (!(conn.type & connType_1.ONE_WAY) && world.id > connWorld.id)));
+	                    const reverseConn = connWorld.connections.filter(c => c.targetId === w);
+	                    hidden = (!sameDepth && !reverseConn.length) || (reverseConn.length && !(reverseConn[0].type & connType_1.NO_ENTRY) && (!sameDepth || (!(conn.type & connType_1.ONE_WAY) && w > connWorld.id)));
 	                    if (!hidden)
 	                        dagIgnoreIds.push(connWorld.id);
 	                }
@@ -104338,15 +104390,14 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                    dagIgnoreIds.push(connWorld.id);
 	                const hue = Math.max(0.6666 - ((world.depth / (maxDepth - 1)) * 0.6666), 0);
 	                const link = {
-	                    key: `${world.id}_${connWorld.id}`,
-	                    source: world.id,
+	                    key: `${w}_${connWorld.id}`,
+	                    source: w,
 	                    target: connWorld.id,
 	                    connType: conn.type,
 	                    typeParams: conn.typeParams,
 	                    icons: [],
 	                    hidden: hidden,
 	                    defaultColor: hueToRGBA(hue, 1),
-	                    defaultColorFade: hueToRGBA(hue, 0.1),
 	                    connTypeCheck: hidden ? 'after' : 'replace'
 	                };
 	                links.push(link);
@@ -104383,8 +104434,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        }
 	    });
 
-	    const images = (paths ? exports.worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1) : exports.worldData)
-	        .map(d => {
+	    const images = (paths ? exports.worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1) : exports.worldData).map(d => {
 	            const img = new Image();
 	            img.id = d.id;
 	            img.title = config$1.lang === "en" || !d.titleJP ? d.title : d.titleJP;
@@ -104396,7 +104446,6 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        const id = parseInt(img.id);
 	        const scale = worldScales[id];
 	        const ret = { id: id, img, isHover: false, scale: scale };
-	        ret.globalDepth = exports.worldData[id].depth;
 	        ret.dagIgnore = dagIgnore[id];
 	        ret.width = 16 * scale;
 	        ret.height = 12 * scale;
@@ -104407,10 +104456,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	    const gData = {
 	        nodes: nodes,
-	        links: lodash.sortBy(links, l => {
-	            const world = exports.worldData[l.source];
-	            return world.depth + (maxDepth + 1) * (l.connType & connType_1.ONE_WAY ? 1 : 0);
-	        })
+	        links: lodash.sortBy(links, l => worldDepths[l.source] + (maxDepth + 1) * (l.connType & connType_1.ONE_WAY ? 1 : 0))
 	    };
 
 	    icons3D = [];
@@ -104710,9 +104756,9 @@ vec4 envMapTexelToLinear(vec4 color) {
 	}
 
 	// START WEBGL2.0 SPECIFIC CODE
-	function updateNodeImageData(nodes, isPath, is2d) {
+	function updateNodeImageData(nodes, isSubset, is2d) {
 	    nodeObject.count = nodes.length;
-	    if (isPath) {
+	    if (isSubset) {
 	        let index = 0;
 	        const totalNodeCount = nodes.length;
 	        nodes.forEach(node => {
@@ -104908,7 +104954,6 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    const dummy = new Object3D();
 	    if (iconObject) {
 	        let index = 0;
-	        const camPos = exports.graph.camera().position;
 	        exports.graph.graphData().links.forEach(link => {
 	            const start = link.source;
 	            const end = link.target;
@@ -105208,7 +105253,9 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	function getNodeOpacity(node) {
 	    const id = node.id;
-	    const opacity = (selectedWorldId == null || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1)
+	    const filterForAuthor = selectedAuthor != null && exports.worldData[id].author !== selectedAuthor;
+	    const opacity = ((selectedWorldId == null && !filterForAuthor)
+	        || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1)
 	        ? 1
 	        : selectedWorldId != null && exports.worldData[selectedWorldId].connections.filter(c => c.targetId === id).length
 	        ? 0.625
@@ -105397,10 +105444,11 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        let opacity;
 	        const sourceId = link.source.id !== undefined ? link.source.id : link.source;
 	        const targetId = link.target.id !== undefined ? link.target.id : link.target;
+	        const filterForAuthor = selectedAuthor != null && (exports.worldData[sourceId].author !== selectedAuthor || exports.worldData[targetId].author !== selectedAuthor);
 	        if (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)) {
 	            opacity = 1.0;
 	            color = colorLinkSelected;
-	        } else if ((selectedWorldId == null || selectedWorldId === sourceId || selectedWorldId === targetId) && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)) {
+	        } else if (((selectedWorldId == null && !filterForAuthor) || selectedWorldId === sourceId || selectedWorldId === targetId) && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)) {
 	            opacity = 1.0;
 	            color = new Color(link.defaultColor);
 	        } else {
@@ -105440,7 +105488,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	function getLinkOpacity(link) {
 	    const sourceId = link.source.id !== undefined ? link.source.id : link.source;
 	    const targetId = link.target.id !== undefined ? link.target.id : link.target;
-	    return (selectedWorldId == null || (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)))
+	    const filterForAuthor = selectedAuthor != null && (exports.worldData[sourceId].author !== selectedAuthor || exports.worldData[targetId].author !== selectedAuthor);
+	    return ((selectedWorldId == null && !filterForAuthor) || (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)))
 	        && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)
 	        ? 1
 	        : selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)
@@ -105520,14 +105569,14 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    const startWorld = startWorldId != null ? exports.worldData[startWorldId] : null;
 	    const endWorld = endWorldId != null ? exports.worldData[endWorldId] : null;
 	    const matchPaths = startWorld && endWorld && startWorld != endWorld
-	        ? findPath(startWorld.id, endWorld.id, connType_1.NO_ENTRY | connType_1.DEAD_END | connType_1.ISOLATED)
+	        ? findPath(startWorld.id, endWorld.id, config$1.pathMode, true, connType_1.NO_ENTRY | connType_1.DEAD_END | connType_1.ISOLATED, config$1.pathMode === 0 ? 3 : config$1.pathMode === 1 ? 5 : 15)
 	        : null;
 	    if (exports.graph)
 	        exports.graph._destructor();
-	    initGraph(config$1.renderMode, config$1.displayMode, matchPaths);
+	    initGraph(config$1.renderMode, config$1.displayMode, config$1.pathMode, matchPaths);
 	}
 
-	function findPath(s, t, ignoreTypeFlags, existingMatchPaths) {
+	function findPath(s, t, pathMode, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
 	    const startTime = performance.now();
 
 	    const checkedSourceNodes = [s];
@@ -105556,15 +105605,13 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        let targetWorlds = nextGenTargetWorlds.slice(0);
 	        nextGenSourceWorlds = [];
 	        nextGenTargetWorlds = [];
-	        for (let sw in sourceWorlds) {
-	            const sourceWorld = sourceWorlds[sw];
+	        for (let sourceWorld of sourceWorlds) {
 	            const sourcePath = sourcePaths[sourceWorld.id];
 	            //delete sourcePaths[sourceWorld.id];
 	            const sourceConns = traverseConns(checkedSourceNodes, sourcePath, nextGenSourceWorlds, sourceWorld, ignoreTypeFlags, true);
 	            jquery.extend(sourcePaths, sourceConns);
 	        }
-	        for (let tw in targetWorlds) {
-	            const targetWorld = targetWorlds[tw];
+	        for (let targetWorld of targetWorlds) {
 	            const targetPath = targetPaths[targetWorld.id];
 	            //delete targetPaths[targetWorld.id];
 	            const targetConns = traverseConns(checkedTargetNodes, targetPath, nextGenTargetWorlds, targetWorld, ignoreTypeFlags, false);
@@ -105597,10 +105644,10 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                
 	                const matchPath = sourcePath.concat(targetPath.reverse());
 	                const allMatchPaths = existingMatchPaths.concat(matchPaths);
-	                for (let p in allMatchPaths) {
-	                    if (allMatchPaths[p].length === matchPath.length) {
+	                for (let p of allMatchPaths) {
+	                    if (p.length === matchPath.length) {
 	                        for (let m = 1; m < matchPath.length; m++) {
-	                            const linkId = `${allMatchPaths[p][m - 1].id}_${allMatchPaths[p][m].id}`;
+	                            const linkId = `${p[m - 1].id}_${p[m].id}`;
 	                            const matchLinkId = `${matchPath[m - 1].id}_${matchPath[m].id}`;
 	                            if (linkId !== matchLinkId)
 	                                break;
@@ -105623,34 +105670,110 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	    const endTime = performance.now();
 
-	    console.log("Found", matchPaths.length, "matching path(s) in", Math.round((endTime - startTime) * 10) / 10, "ms");
+	    isDebug && console.log("Found", matchPaths.length, "matching path(s) in", Math.round((endTime - startTime) * 10) / 10, "ms");
 	    if (!matchPaths.length) {
-	        if (ignoreTypeFlags & connType_1.DEAD_END)
+	        if (ignoreTypeFlags & connType_1.DEAD_END) {
+	            isDebug && console.log("Allowing dead end and isolated connections and retrying...");
 	            ignoreTypeFlags ^= (connType_1.DEAD_END | connType_1.ISOLATED);
-	        else
+	        } else
 	            ignoreTypeFlags = 0;
 	        if (ignoreTypeFlags)
-	            return findPath(s, t, ignoreTypeFlags, existingMatchPaths.concat(matchPaths));
+	            return findPath(s, t, pathMode, isRoot, ignoreTypeFlags, limit, existingMatchPaths);
 	        else {
+	            isDebug && console.log("Marking route as inaccessible");
 	            matchPaths = [ [ { id: s, connType: connType_1.INACCESSIBLE }, { id: t, connType: null } ] ];
 	            return matchPaths;
 	        }
-	    } else {
+	    } else if (isRoot) {
 	        const ignoreTypesList = [connType_1.CHANCE, connType_1.EFFECT, connType_1.LOCKED | connType_1.LOCKED_CONDITION];
-	        for (let it in ignoreTypesList) {
-	            const ignoreTypes = ignoreTypesList[it];
-	            if ((!(ignoreTypeFlags & ignoreTypes) && lodash.every(matchPaths, mp => mp.filter(p => p.connType && p.connType & ignoreTypes).length))) {
-	                const additionalPaths = findPath(s, t, (ignoreTypeFlags = ignoreTypeFlags | ignoreTypes), existingMatchPaths.concat(matchPaths));
+	        const pathCount = Math.min(matchPaths.length, limit);
+	        let ignoreTypes = 0;
+	        for (let ignoreType of ignoreTypesList)
+	            ignoreTypes |= ignoreType;
+	        if (matchPaths.length > limit)
+	            matchPaths = lodash.sortBy(matchPaths, [ 'length' ]);
+	        isDebug && console.log("Looking for unconditionally accessible path...");
+	        for (let it = 0; it <= ignoreTypesList.length; it++) {
+	            const ignoreType = it < ignoreTypesList.length ? ignoreTypesList[it] : 0;
+	            if (matchPaths.slice(0, pathCount).filter(mp => mp.filter(p => p.connType && (p.connType & ignoreTypes)).length).length === pathCount) {
+	                if (matchPaths.length > limit) {
+	                    let accessiblePathIndex = -1;
+	                    for (let mp = limit + 1; mp < matchPaths.length; mp++) {
+	                        const path = matchPaths[mp];
+	                        if (!path.filter(p => p.connType && (p.connType & ignoreTypes)).length) {
+	                            isDebug && console.log("Found unconditionally accessible path at index", mp);
+	                            if (mp >= limit) {
+	                                isDebug && console.log("Truncating paths to limit of", limit, "with unconditionally accessible path as last element");
+	                                matchPaths = matchPaths.slice(0, limit - 1).concat([path]);
+	                            }
+	                            accessiblePathIndex = mp;
+	                            break;
+	                        }
+	                    }
+	                    if (accessiblePathIndex > -1)
+	                        break;
+	                }
+	                const additionalPaths = findPath(s, t, pathMode, false, ignoreTypeFlags | ignoreTypes, Math.min(5, limit), matchPaths);
 	                if (additionalPaths.length && !(additionalPaths[0][0].connType & connType_1.INACCESSIBLE)) {
-	                    for (let ap in additionalPaths)
-	                        matchPaths.push(additionalPaths[ap]);
+	                    if (isDebug) {
+	                        const ignoreTypeNames = ["chance", "effect", "locked/locked condition"];
+	                        console.log("Found", additionalPaths.length, "additional path(s) by ignoring", ignoreType ? ignoreTypeNames.slice(it).join(", ") : "none");
+	                    }
+	                    for (let ap of additionalPaths)
+	                        matchPaths.push(ap);
 	                    break;
+	                }
+	            } else
+	                break;
+	            ignoreTypes ^= ignoreType;
+	        }
+
+	        const addAdditionalPaths = matchPaths.length && pathMode === 2;
+	        if (matchPaths.length > limit || addAdditionalPaths) {
+	            isDebug && console.log("Searching for additional paths...");
+	            const mainLimit = pathMode === 2 ? Math.floor(limit / 3) : limit;
+	            matchPaths = lodash.sortBy(matchPaths, [ 'length' ]);
+	            if (matchPaths.length > mainLimit)
+	                matchPaths = matchPaths.slice(0, mainLimit);
+	            if (addAdditionalPaths) {
+	                const additionalPaths = findPath(s, t, pathMode, false, connType_1.NO_ENTRY | connType_1.LOCKED | connType_1.DEAD_END | connType_1.ISOLATED | connType_1.LOCKED_CONDITION, limit - mainLimit, existingMatchPaths.concat(matchPaths));
+	                if (additionalPaths.length && !(additionalPaths[0][0].connType & connType_1.INACCESSIBLE)) {
+	                    for (let ap of additionalPaths)
+	                        matchPaths.push(ap);
+	                    matchPaths = lodash.sortBy(matchPaths, [ 'length' ]);
 	                }
 	            }
 	        }
-	        matchPaths = lodash.sortBy(matchPaths, [ 'length' ]);
-	        if (matchPaths.length > 5)
-	            matchPaths = matchPaths.slice(0, 5);
+
+	        const nexusWorldName = 'The Nexus';
+	        const nexusWorldId = exports.worldData.filter(w => w.title === nexusWorldName)[0].id;
+
+	        if (s !== nexusWorldId) {
+	            isDebug && console.log("Searching for paths eligible for Eyeball Bomb Nexus shortcut...");
+	            const nexusPaths = existingMatchPaths.concat(matchPaths).filter(p => (p.length > t !== nexusWorldId ? 2 : 3) && p.filter(w => w.id === nexusWorldId).length);
+	            if (nexusPaths.length) {
+	                isDebug && console.log("Found", nexusPaths.length, "paths eligible for Eyeball Bomb Nexus shortcut: creating shortcut paths");
+	                for (let nexusPath of nexusPaths) {
+	                    const nexusWorldIndex = nexusPath.indexOf(nexusPath.filter(w => w.id === nexusWorldId)[0]);
+	                    const nexusShortcutPath = lodash.cloneDeep([nexusPath[0]].concat(nexusPath.slice(nexusWorldIndex)));
+	                    const nexusSource = nexusShortcutPath[0];
+	                    nexusSource.connType = (nexusWorldIndex > 1 ? connType_1.ONE_WAY : 0) | connType_1.EFFECT;
+	                    nexusSource.typeParams = {};
+	                    nexusSource.typeParams[connType_1.EFFECT] = {
+	                        params: 'Eyeball Bomb',
+	                        paramsJP: effectsJP['Eyeball Bomb']
+	                    };
+	                    matchPaths.push(nexusShortcutPath);
+	                    limit++;
+	                }
+	            }
+	        }
+	    }
+
+	    matchPaths = lodash.sortBy(matchPaths, [ 'length' ]);
+	    if (matchPaths.length > limit) {
+	        isDebug && console.log("Truncating array of", matchPaths.length, "paths to limit of", limit);
+	        matchPaths = matchPaths.slice(0, limit);
 	    }
 
 	    return matchPaths;
@@ -105659,12 +105782,12 @@ vec4 envMapTexelToLinear(vec4 color) {
 	function traverseConns(checkedNodes, path, nextGenWorlds, world, ignoreTypeFlags, isSource) {
 	    const ret = {};
 	    const conns = world.connections;
-	    for (let c in conns) {
-	        let connType = conns[c].type;
-	        let typeParams = conns[c].typeParams;
+	    for (let conn of conns) {
+	        let connType = conn.type;
+	        let typeParams = conn.typeParams;
 	        if (isSource && connType & ignoreTypeFlags)
 	            continue;
-	        const connWorld = exports.worldData[conns[c].targetId];
+	        const connWorld = exports.worldData[conn.targetId];
 	        const id = connWorld.id;
 	        if (checkedNodes.indexOf(id) === -1) {
 	            const connPath = lodash.cloneDeep(path);
@@ -105746,7 +105869,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer = data.footer.replace("{VERSION}", "2.5.4");
+	            data.footer = data.footer.replace("{VERSION}", "2.6.0");
 	            localizedConns = data.conn;
 	            initContextMenu(data.contextMenu);
 	            if (isInitial) {
@@ -105754,7 +105877,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                    jquery(".js--ui-theme").append('<option data-localize="settings.uiTheme.values.' + t + '" value="' + t + '">' + data.settings.uiTheme.values[t] + '</option>');
 	                });
 	                jquery(".js--ui-theme").val(config$1.uiTheme).change();
-	            }
+	            } else
+	                initAuthorSelectOptions(data.controls.author.values['']);
 	            window.setTimeout(() => updateControlsContainer(true), 0);
 	            defaultCallback(data);
 	        }
@@ -105856,7 +105980,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        onSelect: function (selectedWorld) {
 	            $search.addClass("selected");
 	            selectedWorldId = exports.worldsByName[selectedWorld.value].id;
-	            focusNode(exports.graph.graphData().nodes[selectedWorldId]);
+	            focusNode(exports.graph.graphData().nodes.filter(n => n.id === selectedWorldId)[0]);
 	            highlightWorldSelection();
 	        },
 	        onHide: function () {
@@ -105871,6 +105995,24 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            searchWorldIds = [];
 	            highlightWorldSelection();
 	        }
+	    });
+	}
+
+	function initAuthorSelectOptions(localizedEmptyAuthor) {
+	    const authors = lodash.uniq(exports.worldData.map(w => w.author)).sort((a, b) => {
+	        const authorA = a ? a.toUpperCase() : 'ZZZ';
+	        const authorB = b ? b.toUpperCase() : 'ZZZ';
+	        return (authorA < authorB) ? -1 : (authorA > authorB) ? 1 : 0;
+	    });
+	    const $authorSelect = jquery(".js--author");
+	    authors.forEach(a => {
+	        const $opt = jquery('<option>');
+	        $opt.val(a || '');
+	        if (a !== '')
+	            $opt.text(a || localizedEmptyAuthor);
+	        else
+	            $opt.text('N/A').data('localize', 'controls.author.values.');
+	        $authorSelect.append($opt);
 	    });
 	}
 
@@ -106128,13 +106270,13 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	    jquery(".js--conn-mode").change(function() {
 	        config$1.connMode = parseInt(jquery(this).val());
-	        updateConnectionModeIcons();
 	        updateConfig(config$1);
+	        updateConnectionModeIcons();
 	    });
 
 	    jquery(".js--label-mode").change(function() {
 	        config$1.labelMode = parseInt(jquery(this).val());
-
+	        updateConfig(config$1);
 	        if (isWebGL2 && is2d)
 	            updateNodeLabels2D();
 	        if (!config$1.labelMode) {
@@ -106146,7 +106288,13 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                });
 	            }
 	        }
+	    });
+
+	    jquery(".js--path-mode").change(function() {
+	        config$1.pathMode = parseInt(jquery(this).val());
 	        updateConfig(config$1);
+	        if (exports.worldData && startWorldId != null && endWorldId != null)
+	            reloadGraph();
 	    });
 
 	    jquery(".js--size-diff").change(function() {
@@ -106163,11 +106311,19 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            reloadGraph();
 	    });
 
+	    jquery(".js--author").change(function() {
+	        selectedAuthor = jquery(this).val() !== "null" ? jquery(this).val() || "" : null;
+	        if (exports.worldData)
+	            highlightWorldSelection();
+	    });
+
 	    jquery(".js--reset").click(function() {
 	        jquery(".js--world-input").removeClass("selected").val("");
+	        jquery(".js--author").val("null");
 	        startWorldId = null;
 	        endWorldId = null;
 	        selectedWorldId = null;
+	        selectedAuthor = null;
 	        if (exports.worldData)
 	            reloadGraph();
 	    });

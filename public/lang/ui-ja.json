@@ -9,6 +9,13 @@
         "search": {
             "name": "検索"
         },
+        "author": {
+            "name": "作者",
+            "values": {
+                "null": "全員",
+                "": "不明"
+            }
+        },
         "origin": {
             "name": "原点"
         },
@@ -110,6 +117,14 @@
                 "hover": "マウスオーバー ",
                 "select": "セレクト",
                 "always": "いつも"
+            }
+        },
+        "pathMode": {
+            "name": "ルーティングモード",
+            "values": {
+                "simple": "簡単",
+                "normal": "普通",
+                "detailed": "詳しい"
             }
         },
         "sizeDiff": {

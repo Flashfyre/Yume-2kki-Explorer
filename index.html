@@ -121,6 +121,12 @@
                     <input name="searchWorld" type="text" class="js--world-input js--search-world" />
                 </div>
                 <div class="control">
+                    <label data-localize="controls.author.name" class="noselect">Author:</label>
+                    <select name="author" class="js--author">
+                        <option data-localize="controls.author.values.null" value="null"></option>
+                    </select>
+                </div>
+                <div class="control">
                     <label data-localize="controls.origin.name" class="noselect">Origin:</label>
                     <input name="startWorld" type="text" class="js--world-input js--path--world-input js--start-world" />
                     <label data-localize="controls.destination.name" class="noselect">Destination:</label>
@@ -196,6 +202,14 @@
                             <option data-localize="settings.labelMode.values.hover" value="1" selected>On Hover</option>
                             <option data-localize="settings.labelMode.values.select" value="2">On Select</option>
                             <option data-localize="settings.labelMode.values.always" value="3">Always</option>
+                        </select>
+                    </div>
+                    <div class="control">
+                        <label data-localize="settings.pathMode.name" class="noselect">Routing Mode:</label>
+                        <select name="pathMode" class="js--path-mode">
+                            <option data-localize="settings.pathMode.values.simple" value="0">Simple</option>
+                            <option data-localize="settings.pathMode.values.normal" value="1" selected>Normal</option>
+                            <option data-localize="settings.pathMode.values.detailed" value="2">Detailed</option>
                         </select>
                     </div>
                     <div class="control">

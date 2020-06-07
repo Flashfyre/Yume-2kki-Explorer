@@ -52,6 +52,10 @@ SHIFT + left click on world node
 
 Quickly find a world by searching for it by name. When searching, worlds not included in the results will become transparent. Selecting a world from the results will select and zoom into it.
 
+### Author
+
+By selecting an author, worlds by other authors will appear faded to emphasize the worlds created by the selected author.
+
 ### Origin and Destination
 
 By selecting a world in both fields, the graph will load routes from the origin to the destination. If there are many routes, inefficient routes will be ignored. Note that connections of individual routes are color-coded from blue (shortest) to red (longest). Routes without locked connections will be prioritized.
@@ -97,6 +101,10 @@ Select whether to display connection icons for connections going backwards in de
 ### Label Display
 
 Select when to show labels on world nodes.
+
+### Routing Mode
+
+Select the complexity to use when mapping paths between origin and destination world. More complex means more paths will be shown.
 
 ### Size Difference
 
