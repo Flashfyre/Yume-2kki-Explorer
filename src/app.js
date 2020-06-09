@@ -244,7 +244,7 @@ function initGraph(renderMode, displayMode, pathMode, paths) {
                 }
             }
         } while (!pathDepthLimit);
-        pathDepthLimit = Math.max(0, pathDepthLimit - 2) * (pathMode < 2 ? 2 : 3);
+        pathDepthLimit = Math.max(0, pathDepthLimit - 2) * 2;
         for (let pi in paths) {
             const path = paths[pi];
             if (path.length - 2 > pathDepthLimit) {
@@ -1531,7 +1531,7 @@ function reloadGraph() {
     const startWorld = startWorldId != null ? worldData[startWorldId] : null;
     const endWorld = endWorldId != null ? worldData[endWorldId] : null;
     const matchPaths = startWorld && endWorld && startWorld != endWorld
-        ? findPath(startWorld.id, endWorld.id, true, ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED, config.pathMode === 0 ? 3 : config.pathMode === 1 ? 5 : 20)
+        ? findPath(startWorld.id, endWorld.id, true, ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED, config.pathMode === 0 ? 3 : config.pathMode === 1 ? 5 : 10)
         : null;
     if (graph)
         graph._destructor();
@@ -1647,7 +1647,7 @@ function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
             return matchPaths;
         }
     } else if (isRoot) {
-        const rootLimit = Math.min(10, limit);
+        const rootLimit = Math.min(5, limit);
         const ignoreTypesList = [ConnType.CHANCE, ConnType.EFFECT, ConnType.LOCKED | ConnType.LOCKED_CONDITION];
         const pathCount = Math.min(matchPaths.length, rootLimit);
         let ignoreTypes = 0;
@@ -2196,6 +2196,8 @@ function initControls() {
         config.lang = $(this).val();
         updateConfig(config);
         initLocalization();
+        if (isWebGL2)
+            initNodeObjectMaterial();
         if (worldData)
             reloadGraph();
     });

@@ -10,7 +10,7 @@
             "name": "検索"
         },
         "author": {
-            "name": "作者",
+            "name": "ツクラー",
             "values": {
                 "null": "全員",
                 "": "不明"
@@ -120,9 +120,9 @@
             }
         },
         "pathMode": {
-            "name": "ルーティングモード",
+            "name": "ルート表示モード",
             "values": {
-                "simple": "簡単",
+                "simple": "単純",
                 "normal": "普通",
                 "detailed": "詳しい"
             }

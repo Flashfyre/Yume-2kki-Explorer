@@ -1,4 +1,4 @@
-// Version 2.5.4 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 2.6.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -104282,7 +104282,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                }
 	            }
 	        } while (!pathDepthLimit);
-	        pathDepthLimit = Math.max(0, pathDepthLimit - 2) * (pathMode < 2 ? 2 : 3);
+	        pathDepthLimit = Math.max(0, pathDepthLimit - 2) * 2;
 	        for (let pi in paths) {
 	            const path = paths[pi];
 	            if (path.length - 2 > pathDepthLimit) {
@@ -105569,7 +105569,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    const startWorld = startWorldId != null ? exports.worldData[startWorldId] : null;
 	    const endWorld = endWorldId != null ? exports.worldData[endWorldId] : null;
 	    const matchPaths = startWorld && endWorld && startWorld != endWorld
-	        ? findPath(startWorld.id, endWorld.id, true, connType_1.NO_ENTRY | connType_1.DEAD_END | connType_1.ISOLATED, config$1.pathMode === 0 ? 3 : config$1.pathMode === 1 ? 5 : 20)
+	        ? findPath(startWorld.id, endWorld.id, true, connType_1.NO_ENTRY | connType_1.DEAD_END | connType_1.ISOLATED, config$1.pathMode === 0 ? 3 : config$1.pathMode === 1 ? 5 : 10)
 	        : null;
 	    if (exports.graph)
 	        exports.graph._destructor();
@@ -105685,7 +105685,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            return matchPaths;
 	        }
 	    } else if (isRoot) {
-	        const rootLimit = Math.min(10, limit);
+	        const rootLimit = Math.min(5, limit);
 	        const ignoreTypesList = [connType_1.CHANCE, connType_1.EFFECT, connType_1.LOCKED | connType_1.LOCKED_CONDITION];
 	        const pathCount = Math.min(matchPaths.length, rootLimit);
 	        let ignoreTypes = 0;
@@ -106232,6 +106232,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        config$1.lang = jquery(this).val();
 	        updateConfig(config$1);
 	        initLocalization();
+	        if (isWebGL2)
+	            initNodeObjectMaterial();
 	        if (exports.worldData)
 	            reloadGraph();
 	    });
