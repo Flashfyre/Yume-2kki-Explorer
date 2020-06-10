@@ -200,7 +200,7 @@ let config = {
 
 let worldImageData = [];
 
-function initGraph(renderMode, displayMode, pathMode, paths) {
+function initGraph(renderMode, displayMode, paths) {
 
     is2d = !renderMode;
 
@@ -292,11 +292,13 @@ function initGraph(renderMode, displayMode, pathMode, paths) {
         }
 
         for (let w of visibleWorldIds)
-            worldDepths[w] = _.min(pathWorldIds.map(p => p.indexOf(w)).filter(d => d > -1));
+            worldDepths[w] = _.max(pathWorldIds.map(p => p.indexOf(w)).filter(d => d > -1));
 
-        maxDepth = _.max(Object.values(worldDepths));
+        const depths = Object.values(worldDepths);
 
-        if (worldDepths[endWorldId] <= maxDepth)
+        maxDepth = _.max(depths);
+
+        if (worldDepths[endWorldId] < maxDepth || (worldDepths[endWorldId] === maxDepth && depths.filter(d => d === maxDepth).length > 1))
             worldDepths[endWorldId] = ++maxDepth;
         
         for (let w of visibleWorldIds) {
@@ -317,11 +319,11 @@ function initGraph(renderMode, displayMode, pathMode, paths) {
                     const sameDepth = worldDepths[w] === worldDepths[connWorld.id];
                     const reverseConn = connWorld.connections.filter(c => c.targetId === w);
                     hidden = (!sameDepth && !reverseConn.length) || (reverseConn.length && !(reverseConn[0].type & ConnType.NO_ENTRY) && (!sameDepth || (!(conn.type & ConnType.ONE_WAY) && w > connWorld.id)));
-                    if (!hidden)
-                        dagIgnoreIds.push(connWorld.id);
                 }
+                const reverseLinkId = `${connWorld.id}_${w}`;
+                hidden &= addedLinks.indexOf(reverseLinkId) > -1;
                 if (hidden) {
-                    link.hidden = addedLinks.indexOf(`${connWorld.id}_${w}`) > -1;
+                    link.hidden = true;
                     dagIgnoreIds.push(connWorld.id);
                 }
             }
@@ -415,10 +417,9 @@ function initGraph(renderMode, displayMode, pathMode, paths) {
     });
 
     const radius = 12;
-
     const gData = {
         nodes: nodes,
-        links: _.sortBy(links, l => worldDepths[l.source] + (maxDepth + 1) * (l.connType & ConnType.ONE_WAY ? 1 : 0))
+        links: _.sortBy(links, l => (endWorldId == null || l.target !== endWorldId ? worldDepths[l.source] : maxDepth) + (maxDepth + 1) * (l.connType & ConnType.ONE_WAY ? 1 : 0))
     };
 
     icons3D = [];
@@ -484,7 +485,7 @@ function initGraph(renderMode, displayMode, pathMode, paths) {
                     ret.material.depthTest = false;
                     ret.renderOrder = world.id;
                 }
-                ret.material.opacity = getNodeOpacity(node);
+                ret.material.opacity = getNodeOpacity(node.id);
             }
 
             if (!(isWebGL2 && is2d)) {
@@ -1113,7 +1114,7 @@ function initNodeObject(is2d) {
     const opacities = [];
     const texIndexes = [];
     for (let i = 0; i < amount; i++) {
-        opacities[i] = 1.0;
+        opacities[i] = getNodeOpacity(worldData[i].id);
         texIndexes[i] = i;
     }
 
@@ -1204,7 +1205,7 @@ function updateNodeLabels(is2d) {
                     }
                     text.scale.x = text.defaultScale.x * scale;
                     text.scale.y = text.defaultScale.y * scale;
-                    text.material.opacity = getNodeOpacity(node);
+                    text.material.opacity = getNodeOpacity(node.id);
                     text.visible = true;
                 } else
                     text.visible = false;
@@ -1213,8 +1214,7 @@ function updateNodeLabels(is2d) {
     }
 }
 
-function getNodeOpacity(node) {
-    const id = node.id;
+function getNodeOpacity(id) {
     const filterForAuthor = selectedAuthor != null && worldData[id].author !== selectedAuthor;
     const opacity = ((selectedWorldId == null && !filterForAuthor)
         || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1)
@@ -1535,7 +1535,7 @@ function reloadGraph() {
         : null;
     if (graph)
         graph._destructor();
-    initGraph(config.renderMode, config.displayMode, config.pathMode, matchPaths);
+    initGraph(config.renderMode, config.displayMode, matchPaths);
 }
 
 function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
@@ -1688,7 +1688,7 @@ function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
                                 accessiblePathIndex = matchPaths.length;
                             matchPaths.push(ap);
                         } else if (accessiblePathIndex === -1)
-                            matchPaths = matchPaths.slice(0, rootLimit - 1).concat([additionalPaths[ap]]);
+                            matchPaths = matchPaths.slice(0, rootLimit - 1).concat([ap]);
                         else
                             // shouldn't happen
                             break;
@@ -1841,7 +1841,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer = data.footer.replace("{VERSION}", "2.6.0");
+            data.footer = data.footer.replace("{VERSION}", "2.6.1");
             localizedConns = data.conn;
             initContextMenu(data.contextMenu);
             if (isInitial) {
@@ -1976,16 +1976,16 @@ function initAuthorSelectOptions(localizedEmptyAuthor) {
         const authorB = b ? b.toUpperCase() : 'ZZZ';
         return (authorA < authorB) ? -1 : (authorA > authorB) ? 1 : 0;
     });
-    const $authorSelect = $(".js--author");
+    const $authorSelect = $('.js--author');
+    $authorSelect.find('option:not(:first-child)').remove();
     authors.forEach(a => {
         const $opt = $('<option>');
         $opt.val(a || '');
-        if (a !== '')
-            $opt.text(a || localizedEmptyAuthor);
-        else
-            $opt.text('N/A').data('localize', 'controls.author.values.');
+        $opt.text(a || localizedEmptyAuthor);
         $authorSelect.append($opt);
     });
+    if (selectedAuthor === '')
+        $authorSelect.val('');
 }
 
 function initContextMenu(localizedContextMenu) {
@@ -2077,9 +2077,9 @@ function highlightWorldSelection() {
     updateConnectionModeIcons();
     let index = 0;
     graph.graphData().nodes.forEach(node => {
-        const nodeOpacity = getNodeOpacity(node);
+        const nodeOpacity = getNodeOpacity(node.id);
         if (nodeObject)
-            nodeObject.geometry.attributes.opacity.array[index] = getNodeOpacity(node);
+            nodeObject.geometry.attributes.opacity.array[index] = nodeOpacity;
         else
             node.__threeObj.material.opacity = nodeOpacity;
         index++;

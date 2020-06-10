@@ -1,4 +1,4 @@
-// Version 2.6.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 2.6.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -104238,7 +104238,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	let worldImageData = [];
 
-	function initGraph(renderMode, displayMode, pathMode, paths) {
+	function initGraph(renderMode, displayMode, paths) {
 
 	    is2d = !renderMode;
 
@@ -104330,11 +104330,13 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        }
 
 	        for (let w of visibleWorldIds)
-	            worldDepths[w] = lodash.min(pathWorldIds.map(p => p.indexOf(w)).filter(d => d > -1));
+	            worldDepths[w] = lodash.max(pathWorldIds.map(p => p.indexOf(w)).filter(d => d > -1));
 
-	        maxDepth = lodash.max(Object.values(worldDepths));
+	        const depths = Object.values(worldDepths);
 
-	        if (worldDepths[endWorldId] <= maxDepth)
+	        maxDepth = lodash.max(depths);
+
+	        if (worldDepths[endWorldId] < maxDepth || (worldDepths[endWorldId] === maxDepth && depths.filter(d => d === maxDepth).length > 1))
 	            worldDepths[endWorldId] = ++maxDepth;
 	        
 	        for (let w of visibleWorldIds) {
@@ -104355,11 +104357,11 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                    const sameDepth = worldDepths[w] === worldDepths[connWorld.id];
 	                    const reverseConn = connWorld.connections.filter(c => c.targetId === w);
 	                    hidden = (!sameDepth && !reverseConn.length) || (reverseConn.length && !(reverseConn[0].type & connType_1.NO_ENTRY) && (!sameDepth || (!(conn.type & connType_1.ONE_WAY) && w > connWorld.id)));
-	                    if (!hidden)
-	                        dagIgnoreIds.push(connWorld.id);
 	                }
+	                const reverseLinkId = `${connWorld.id}_${w}`;
+	                hidden &= addedLinks.indexOf(reverseLinkId) > -1;
 	                if (hidden) {
-	                    link.hidden = addedLinks.indexOf(`${connWorld.id}_${w}`) > -1;
+	                    link.hidden = true;
 	                    dagIgnoreIds.push(connWorld.id);
 	                }
 	            }
@@ -104453,10 +104455,9 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    });
 
 	    const radius = 12;
-
 	    const gData = {
 	        nodes: nodes,
-	        links: lodash.sortBy(links, l => worldDepths[l.source] + (maxDepth + 1) * (l.connType & connType_1.ONE_WAY ? 1 : 0))
+	        links: lodash.sortBy(links, l => (endWorldId == null || l.target !== endWorldId ? worldDepths[l.source] : maxDepth) + (maxDepth + 1) * (l.connType & connType_1.ONE_WAY ? 1 : 0))
 	    };
 
 	    icons3D = [];
@@ -104522,7 +104523,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                    ret.material.depthTest = false;
 	                    ret.renderOrder = world.id;
 	                }
-	                ret.material.opacity = getNodeOpacity(node);
+	                ret.material.opacity = getNodeOpacity(node.id);
 	            }
 
 	            if (!(isWebGL2 && is2d)) {
@@ -105151,7 +105152,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    const opacities = [];
 	    const texIndexes = [];
 	    for (let i = 0; i < amount; i++) {
-	        opacities[i] = 1.0;
+	        opacities[i] = getNodeOpacity(exports.worldData[i].id);
 	        texIndexes[i] = i;
 	    }
 
@@ -105242,7 +105243,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                    }
 	                    text.scale.x = text.defaultScale.x * scale;
 	                    text.scale.y = text.defaultScale.y * scale;
-	                    text.material.opacity = getNodeOpacity(node);
+	                    text.material.opacity = getNodeOpacity(node.id);
 	                    text.visible = true;
 	                } else
 	                    text.visible = false;
@@ -105251,8 +105252,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    }
 	}
 
-	function getNodeOpacity(node) {
-	    const id = node.id;
+	function getNodeOpacity(id) {
 	    const filterForAuthor = selectedAuthor != null && exports.worldData[id].author !== selectedAuthor;
 	    const opacity = ((selectedWorldId == null && !filterForAuthor)
 	        || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1)
@@ -105573,7 +105573,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        : null;
 	    if (exports.graph)
 	        exports.graph._destructor();
-	    initGraph(config$1.renderMode, config$1.displayMode, config$1.pathMode, matchPaths);
+	    initGraph(config$1.renderMode, config$1.displayMode, matchPaths);
 	}
 
 	function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
@@ -105726,7 +105726,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                                accessiblePathIndex = matchPaths.length;
 	                            matchPaths.push(ap);
 	                        } else if (accessiblePathIndex === -1)
-	                            matchPaths = matchPaths.slice(0, rootLimit - 1).concat([additionalPaths[ap]]);
+	                            matchPaths = matchPaths.slice(0, rootLimit - 1).concat([ap]);
 	                        else
 	                            // shouldn't happen
 	                            break;
@@ -105879,7 +105879,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer = data.footer.replace("{VERSION}", "2.6.0");
+	            data.footer = data.footer.replace("{VERSION}", "2.6.1");
 	            localizedConns = data.conn;
 	            initContextMenu(data.contextMenu);
 	            if (isInitial) {
@@ -106014,16 +106014,16 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        const authorB = b ? b.toUpperCase() : 'ZZZ';
 	        return (authorA < authorB) ? -1 : (authorA > authorB) ? 1 : 0;
 	    });
-	    const $authorSelect = jquery(".js--author");
+	    const $authorSelect = jquery('.js--author');
+	    $authorSelect.find('option:not(:first-child)').remove();
 	    authors.forEach(a => {
 	        const $opt = jquery('<option>');
 	        $opt.val(a || '');
-	        if (a !== '')
-	            $opt.text(a || localizedEmptyAuthor);
-	        else
-	            $opt.text('N/A').data('localize', 'controls.author.values.');
+	        $opt.text(a || localizedEmptyAuthor);
 	        $authorSelect.append($opt);
 	    });
+	    if (selectedAuthor === '')
+	        $authorSelect.val('');
 	}
 
 	function initContextMenu(localizedContextMenu) {
@@ -106115,9 +106115,9 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    updateConnectionModeIcons();
 	    let index = 0;
 	    exports.graph.graphData().nodes.forEach(node => {
-	        const nodeOpacity = getNodeOpacity(node);
+	        const nodeOpacity = getNodeOpacity(node.id);
 	        if (nodeObject)
-	            nodeObject.geometry.attributes.opacity.array[index] = getNodeOpacity(node);
+	            nodeObject.geometry.attributes.opacity.array[index] = nodeOpacity;
 	        else
 	            node.__threeObj.material.opacity = nodeOpacity;
 	        index++;
