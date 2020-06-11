@@ -291,8 +291,13 @@ function initGraph(renderMode, displayMode, paths) {
             }
         }
 
-        for (let w of visibleWorldIds)
-            worldDepths[w] = _.max(pathWorldIds.map(p => p.indexOf(w)).filter(d => d > -1));
+        const worldMinDepths = {};
+
+        for (let w of visibleWorldIds) {
+            const worldDepthsMap = pathWorldIds.map(p => p.indexOf(w)).filter(d => d > -1);
+            worldDepths[w] = _.max(worldDepthsMap);
+            worldMinDepths[w] = _.min(worldDepthsMap);
+        }
 
         const depths = Object.values(worldDepths);
 
@@ -300,31 +305,71 @@ function initGraph(renderMode, displayMode, paths) {
 
         if (worldDepths[endWorldId] < maxDepth || (worldDepths[endWorldId] === maxDepth && depths.filter(d => d === maxDepth).length > 1))
             worldDepths[endWorldId] = ++maxDepth;
+
+        const nexusWorldId = worldsByName['The Nexus'].id;
+        const nexusShortcutLinks = links.filter(l => l.target === nexusWorldId && l.connType & ConnType.EFFECT && !worldData[l.source].connections.filter(c => c.targetId === nexusWorldId).length);
+        const nexusShortcutWorldIds = nexusShortcutLinks.map(l => l.source);
         
         for (let w of visibleWorldIds) {
             const world = worldData[w];
-            const connections = world.connections;
-            const dagIgnoreIds = dagIgnore[w] = [];
+            let connections = world.connections;
+            const dagIgnoreIds = dagIgnore[w] || (dagIgnore[w] = []);
+            if (nexusShortcutWorldIds.indexOf(w) > -1) {
+                const nexusShortcutLink = nexusShortcutLinks.filter(l => l.source === w)[0];
+                connections = connections.concat([{
+                    targetId: nexusShortcutLink.target,
+                    type: nexusShortcutLink.connType,
+                    typeParams: nexusShortcutLink.typeParams
+                }]);
+            }
             for (let conn of connections) {
                 const linkId = `${w}_${conn.targetId}`;
-                const matchingLink =  links.filter(l => l.key === linkId);
-                if (!matchingLink.length)
+                if (addedLinks.indexOf(linkId) === -1)
                     continue;
-                const link = matchingLink[0];
+                const link = links.filter(l => l.key === linkId)[0];
                 const connWorld = worldData[conn.targetId];
-                let hidden = false;
-                if (conn.type & ConnType.NO_ENTRY)
-                    hidden = true;
-                else if (worldDepths[w] >= worldDepths[connWorld.id]) {
-                    const sameDepth = worldDepths[w] === worldDepths[connWorld.id];
-                    const reverseConn = connWorld.connections.filter(c => c.targetId === w);
-                    hidden = (!sameDepth && !reverseConn.length) || (reverseConn.length && !(reverseConn[0].type & ConnType.NO_ENTRY) && (!sameDepth || (!(conn.type & ConnType.ONE_WAY) && w > connWorld.id)));
-                }
                 const reverseLinkId = `${connWorld.id}_${w}`;
-                hidden &= addedLinks.indexOf(reverseLinkId) > -1;
+                const reverseConn = connWorld.connections.filter(c => c.targetId === w);
+                let hidden = false;
+                if (conn.type & ConnType.NO_ENTRY) {
+                    hidden = true;
+                    dagIgnoreIds.push(connWorld.id);
+                } else if (worldMinDepths[w] >= worldMinDepths[connWorld.id]) {
+                    dagIgnoreIds.push(connWorld.id);
+                    if (worldDepths[w] >= worldDepths[connWorld.id]) {
+                        const sameDepth = worldDepths[w] === worldDepths[connWorld.id];
+                        hidden = (!sameDepth && !reverseConn.length) || (reverseConn.length && !(reverseConn[0].type & ConnType.NO_ENTRY) && (!sameDepth || (!(conn.type & ConnType.ONE_WAY) && w > connWorld.id)));
+                    }
+                }
                 if (hidden) {
                     link.hidden = true;
-                    dagIgnoreIds.push(connWorld.id);
+                    link.connTypeCheck = 'after';
+                }
+                if (addedLinks.indexOf(reverseLinkId) === -1) {
+                    const reverseLink = {
+                        key: reverseLinkId,
+                        source: connWorld.id,
+                        target: w,
+                        connType: reverseConn.length
+                            ? reverseConn[0].type
+                            : conn.type & ConnType.ONE_WAY
+                            ? ConnType.NO_ENTRY
+                            : conn.type & ConnType.NO_ENTRY
+                            ? ConnType.ONE_WAY
+                            : 0,
+                        typeParams: reverseConn.length ? reverseConn[0].typeParams : {},
+                        icons: [],
+                        hidden: !hidden,
+                        defaultColor: link.defaultColor,
+                        connTypeCheck: hidden ? 'replace' : 'after'
+                    };
+                    links.push(reverseLink);
+                    if (dagIgnoreIds.indexOf(connWorld.id) === -1) {
+                        let reverseDagIgnoreIds = dagIgnore[connWorld.id];
+                        if (!reverseDagIgnoreIds)
+                            reverseDagIgnoreIds = dagIgnore[connWorld.id] = [];
+                        reverseDagIgnoreIds.push(w);
+                    }
                 }
             }
         }
@@ -410,6 +455,8 @@ function initGraph(renderMode, displayMode, paths) {
         const id = parseInt(img.id);
         const scale = worldScales[id];
         const ret = { id: id, img, isHover: false, scale: scale };
+        if (paths)
+            ret.depthOverride = worldDepths[id];
         ret.dagIgnore = dagIgnore[id];
         ret.width = 16 * scale;
         ret.height = 12 * scale;
@@ -1841,7 +1888,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer = data.footer.replace("{VERSION}", "2.6.1");
+            data.footer = data.footer.replace("{VERSION}", "2.6.2");
             localizedConns = data.conn;
             initContextMenu(data.contextMenu);
             if (isInitial) {

@@ -1,4 +1,4 @@
-// Version 2.6.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 2.6.2 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -98236,14 +98236,15 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	      if (nodeStack.indexOf(node) !== -1) {
 	        var loop = [].concat(_toConsumableArray$3(nodeStack.slice(nodeStack.indexOf(node))), [node]).map(function (d) {
-	          return idAccessor(d.data);
+	          var nodeId = idAccessor(d.data);
+	          return d.data.img ? "".concat(d.data.img.title, " (").concat(nodeId, ")") : nodeId;
 	        });
 	        throw "Invalid DAG structure! Found cycle in node path: ".concat(loop.join(' -> '), ".");
 	      }
 
 	      if (currentDepth > node.depth) {
 	        // Don't unnecessarily revisit chunks of the graph
-	        node.depth = currentDepth;
+	        node.depth = node.data.depthOverride || currentDepth;
 	        traverse(node.out.filter(function (n) {
 	          return node.data.dagIgnore.indexOf(n.data.id) === -1;
 	        }), [].concat(_toConsumableArray$3(nodeStack), [node]));
@@ -104329,8 +104330,13 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            }
 	        }
 
-	        for (let w of visibleWorldIds)
-	            worldDepths[w] = lodash.max(pathWorldIds.map(p => p.indexOf(w)).filter(d => d > -1));
+	        const worldMinDepths = {};
+
+	        for (let w of visibleWorldIds) {
+	            const worldDepthsMap = pathWorldIds.map(p => p.indexOf(w)).filter(d => d > -1);
+	            worldDepths[w] = lodash.max(worldDepthsMap);
+	            worldMinDepths[w] = lodash.min(worldDepthsMap);
+	        }
 
 	        const depths = Object.values(worldDepths);
 
@@ -104338,31 +104344,71 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	        if (worldDepths[endWorldId] < maxDepth || (worldDepths[endWorldId] === maxDepth && depths.filter(d => d === maxDepth).length > 1))
 	            worldDepths[endWorldId] = ++maxDepth;
+
+	        const nexusWorldId = exports.worldsByName['The Nexus'].id;
+	        const nexusShortcutLinks = links.filter(l => l.target === nexusWorldId && l.connType & connType_1.EFFECT && !exports.worldData[l.source].connections.filter(c => c.targetId === nexusWorldId).length);
+	        const nexusShortcutWorldIds = nexusShortcutLinks.map(l => l.source);
 	        
 	        for (let w of visibleWorldIds) {
 	            const world = exports.worldData[w];
-	            const connections = world.connections;
-	            const dagIgnoreIds = dagIgnore[w] = [];
+	            let connections = world.connections;
+	            const dagIgnoreIds = dagIgnore[w] || (dagIgnore[w] = []);
+	            if (nexusShortcutWorldIds.indexOf(w) > -1) {
+	                const nexusShortcutLink = nexusShortcutLinks.filter(l => l.source === w)[0];
+	                connections = connections.concat([{
+	                    targetId: nexusShortcutLink.target,
+	                    type: nexusShortcutLink.connType,
+	                    typeParams: nexusShortcutLink.typeParams
+	                }]);
+	            }
 	            for (let conn of connections) {
 	                const linkId = `${w}_${conn.targetId}`;
-	                const matchingLink =  links.filter(l => l.key === linkId);
-	                if (!matchingLink.length)
+	                if (addedLinks.indexOf(linkId) === -1)
 	                    continue;
-	                const link = matchingLink[0];
+	                const link = links.filter(l => l.key === linkId)[0];
 	                const connWorld = exports.worldData[conn.targetId];
-	                let hidden = false;
-	                if (conn.type & connType_1.NO_ENTRY)
-	                    hidden = true;
-	                else if (worldDepths[w] >= worldDepths[connWorld.id]) {
-	                    const sameDepth = worldDepths[w] === worldDepths[connWorld.id];
-	                    const reverseConn = connWorld.connections.filter(c => c.targetId === w);
-	                    hidden = (!sameDepth && !reverseConn.length) || (reverseConn.length && !(reverseConn[0].type & connType_1.NO_ENTRY) && (!sameDepth || (!(conn.type & connType_1.ONE_WAY) && w > connWorld.id)));
-	                }
 	                const reverseLinkId = `${connWorld.id}_${w}`;
-	                hidden &= addedLinks.indexOf(reverseLinkId) > -1;
+	                const reverseConn = connWorld.connections.filter(c => c.targetId === w);
+	                let hidden = false;
+	                if (conn.type & connType_1.NO_ENTRY) {
+	                    hidden = true;
+	                    dagIgnoreIds.push(connWorld.id);
+	                } else if (worldMinDepths[w] >= worldMinDepths[connWorld.id]) {
+	                    dagIgnoreIds.push(connWorld.id);
+	                    if (worldDepths[w] >= worldDepths[connWorld.id]) {
+	                        const sameDepth = worldDepths[w] === worldDepths[connWorld.id];
+	                        hidden = (!sameDepth && !reverseConn.length) || (reverseConn.length && !(reverseConn[0].type & connType_1.NO_ENTRY) && (!sameDepth || (!(conn.type & connType_1.ONE_WAY) && w > connWorld.id)));
+	                    }
+	                }
 	                if (hidden) {
 	                    link.hidden = true;
-	                    dagIgnoreIds.push(connWorld.id);
+	                    link.connTypeCheck = 'after';
+	                }
+	                if (addedLinks.indexOf(reverseLinkId) === -1) {
+	                    const reverseLink = {
+	                        key: reverseLinkId,
+	                        source: connWorld.id,
+	                        target: w,
+	                        connType: reverseConn.length
+	                            ? reverseConn[0].type
+	                            : conn.type & connType_1.ONE_WAY
+	                            ? connType_1.NO_ENTRY
+	                            : conn.type & connType_1.NO_ENTRY
+	                            ? connType_1.ONE_WAY
+	                            : 0,
+	                        typeParams: reverseConn.length ? reverseConn[0].typeParams : {},
+	                        icons: [],
+	                        hidden: !hidden,
+	                        defaultColor: link.defaultColor,
+	                        connTypeCheck: hidden ? 'replace' : 'after'
+	                    };
+	                    links.push(reverseLink);
+	                    if (dagIgnoreIds.indexOf(connWorld.id) === -1) {
+	                        let reverseDagIgnoreIds = dagIgnore[connWorld.id];
+	                        if (!reverseDagIgnoreIds)
+	                            reverseDagIgnoreIds = dagIgnore[connWorld.id] = [];
+	                        reverseDagIgnoreIds.push(w);
+	                    }
 	                }
 	            }
 	        }
@@ -104448,6 +104494,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        const id = parseInt(img.id);
 	        const scale = worldScales[id];
 	        const ret = { id: id, img, isHover: false, scale: scale };
+	        if (paths)
+	            ret.depthOverride = worldDepths[id];
 	        ret.dagIgnore = dagIgnore[id];
 	        ret.width = 16 * scale;
 	        ret.height = 12 * scale;
@@ -105879,7 +105927,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer = data.footer.replace("{VERSION}", "2.6.1");
+	            data.footer = data.footer.replace("{VERSION}", "2.6.2");
 	            localizedConns = data.conn;
 	            initContextMenu(data.contextMenu);
 	            if (isInitial) {
