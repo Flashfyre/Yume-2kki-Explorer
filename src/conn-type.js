@@ -8,7 +8,9 @@ const ConnType = {
     EFFECT: 64,
     CHANCE: 128,
     LOCKED_CONDITION: 256,
-    INACCESSIBLE: 512
+    SHORTCUT: 512,
+    EXIT_POINT: 1024,
+    INACCESSIBLE: 2048
 };
 
 if (typeof exports === "object")

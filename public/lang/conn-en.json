@@ -36,6 +36,14 @@
         "description": "Unlocked with the following condition: {0}"
     },
     "512": {
+        "name": "Shortcut",
+        "description": "Telephone serves as a shortcut back to the area when used."
+    },
+    "1024": {
+        "name": "Exit Point",
+        "description": "Telephone takes you here when used from the opposite area."
+    },
+    "2048": {
         "name": "Inaccessible",
         "description": ""
     }

@@ -228,7 +228,7 @@ function initGraph(renderMode, displayMode, paths) {
         let pathDepthLimit;
         let depthDiff;
         let maxPathScore;
-        let filteredPathConnTypes = ConnType.LOCKED | ConnType.EFFECT | ConnType.CHANCE | ConnType.LOCKED_CONDITION;
+        let filteredPathConnTypes = ConnType.LOCKED | ConnType.EFFECT | ConnType.CHANCE | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT;
         do {
             const filteredPaths = paths.filter(p => !p.filter(pi => filteredPathConnTypes & pi.connType).length);
             if (filteredPaths.length)
@@ -432,6 +432,10 @@ function initGraph(renderMode, displayMode, paths) {
                 icons.push(getConnTypeIcon(ConnType.LOCKED));
             else if (connType & ConnType.LOCKED_CONDITION)
                 icons.push(getConnTypeIcon(ConnType.LOCKED_CONDITION, l.typeParams[ConnType.LOCKED_CONDITION]));
+            else if (connType & ConnType.SHORTCUT)
+                icons.push(getConnTypeIcon(ConnType.SHORTCUT));
+            else if (connType & ConnType.EXIT_POINT)
+                icons.push(getConnTypeIcon(ConnType.EXIT_POINT));
             if (connType & ConnType.DEAD_END)
                 icons.push(getConnTypeIcon(ConnType.DEAD_END));
             else if (connType & ConnType.ISOLATED)
@@ -886,6 +890,8 @@ function makeIconObject(is2d) {
         ConnType.EFFECT,
         ConnType.CHANCE,
         ConnType.LOCKED_CONDITION,
+        ConnType.SHORTCUT,
+        ConnType.EXIT_POINT,
         ConnType.INACCESSIBLE
     ];
     const iconImgDimensions = { x: 64, y: 64 };
@@ -998,18 +1004,18 @@ function updateIconPositions(is2d) {
                     iconObject.setMatrixAt(index, dummy.matrix);
                 }
                 const texIndex = unsortedIconTexIndexes[index];
-                if (texIndex == 0 || texIndex == 10) {
+                if (texIndex == 0 || texIndex == 12) {
                     if (is2d) {
                         if (start.x > end.x) {
                             if (texIndex == 0)
-                                unsortedIconTexIndexes[index] = 10;
-                        } else if (texIndex == 10)
+                                unsortedIconTexIndexes[index] = 12;
+                        } else if (texIndex == 12)
                             unsortedIconTexIndexes[index] = 0;
                     } else {
                         if (graph.graph2ScreenCoords(start.x, start.y, start.z).x > graph.graph2ScreenCoords(end.x, end.y, end.z).x) {
                             if (texIndex == 0)
-                                unsortedIconTexIndexes[index] = 10;
-                        } else if (texIndex == 10)
+                                unsortedIconTexIndexes[index] = 12;
+                        } else if (texIndex == 12)
                             unsortedIconTexIndexes[index] = 0;
                     }
                 }
@@ -1567,6 +1573,12 @@ function getConnTypeChar(connType) {
         case ConnType.LOCKED_CONDITION:
             char = "🔐";
             break;
+        case ConnType.SHORTCUT:
+            char = "📞";
+            break;
+        case ConnType.EXIT_POINT:
+            char = "☎️";
+            break;
         case ConnType.INACCESSIBLE:
             char = "🚫";
             break;
@@ -1695,7 +1707,7 @@ function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
         }
     } else if (isRoot) {
         const rootLimit = Math.min(5, limit);
-        const ignoreTypesList = [ConnType.CHANCE, ConnType.EFFECT, ConnType.LOCKED | ConnType.LOCKED_CONDITION];
+        const ignoreTypesList = [ConnType.CHANCE, ConnType.EFFECT, ConnType.LOCKED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT];
         const pathCount = Math.min(matchPaths.length, rootLimit);
         let ignoreTypes = 0;
         for (let ignoreType of ignoreTypesList)
@@ -1726,7 +1738,7 @@ function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
                 if (additionalPaths.length && !(additionalPaths[0][0].connType & ConnType.INACCESSIBLE)) {
                     additionalPaths = _.sortBy(additionalPaths, [ 'length' ]);
                     if (isDebug) {
-                        const ignoreTypeNames = ["chance", "effect", "locked/locked condition"];
+                        const ignoreTypeNames = ["chance", "effect", "locked/locked condition", "phone locked"];
                         console.log("Found", additionalPaths.length, "additional path(s) by ignoring", ignoreType ? ignoreTypeNames.slice(it).join(", ") : "none");
                     }
                     for (let ap of additionalPaths) {
@@ -1755,7 +1767,7 @@ function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
             }
             if (addAdditionalPaths) {
                 isDebug && console.log("Searching for additional paths...");
-                const additionalPaths = findPath(s, t, false, ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION, limit - rootLimit, existingMatchPaths.concat(matchPaths));
+                const additionalPaths = findPath(s, t, false, ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT, limit - rootLimit, existingMatchPaths.concat(matchPaths));
                 if (additionalPaths.length && !(additionalPaths[0][0].connType & ConnType.INACCESSIBLE)) {
                     for (let ap of additionalPaths)
                         matchPaths.push(ap);
@@ -1831,6 +1843,10 @@ function traverseConns(checkedNodes, path, nextGenWorlds, world, ignoreTypeFlags
                         reverseConnType |= ConnType.UNLOCK;
                     else if (connType & ConnType.UNLOCK)
                         reverseConnType |= ConnType.LOCKED;
+                    else if (connType & ConnType.EXIT_POINT)
+                        reverseConnType |= ConnType.SHORTCUT;
+                    else if (connType & ConnType.SHORTCUT)
+                        reverseConnType |= ConnType.EXIT_POINT;
                     if (connType & ConnType.DEAD_END)
                         reverseConnType |= ConnType.ISOLATED;
                     else if (connType & ConnType.ISOLATED)
@@ -1888,7 +1904,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer = data.footer.replace("{VERSION}", "2.6.2");
+            data.footer = data.footer.replace("{VERSION}", "2.7.0");
             localizedConns = data.conn;
             initContextMenu(data.contextMenu);
             if (isInitial) {

@@ -8,7 +8,7 @@ const download = require('image-downloader');
 const mysql = require('mysql');
 const ConnType = require('./src/conn-type').ConnType;
 const isRemote = Boolean(process.env.DATABASE_URL);
-const defaultPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION;
+const defaultPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT;
 
 let dbInitialized = false;
 
@@ -757,8 +757,8 @@ function resolveMissingDepths(worldData, worldDataById, worldDataByName, depthMa
         let ignoreTypeFlags = defaultPathIgnoreConnTypeFlags;
         if (sourceWorld.depth !== undefined) {
             do {
-                if (ignoreTypeFlags & ConnType.LOCKED || ignoreTypeFlags & ConnType.LOCKED_CONDITION)
-                    ignoreTypeFlags ^= ConnType.LOCKED | ConnType.LOCKED_CONDITION;
+                if (ignoreTypeFlags & ConnType.LOCKED || ignoreTypeFlags & ConnType.LOCKED_CONDITION || ignoreTypeFlags & ConnType.EXIT_POINT)
+                    ignoreTypeFlags ^= ConnType.LOCKED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT;
                 else if (ignoreTypeFlags & ConnType.DEAD_END)
                     ignoreTypeFlags ^= ConnType.DEAD_END | ConnType.ISOLATED;
                 else
@@ -1072,7 +1072,10 @@ function getConnections(html) {
                         }
                     }
                 }
-            }
+            } else if (areaText.indexOf(">Shortcut<") > -1)
+                connType |= ConnType.SHORTCUT;
+            else if (areaText.indexOf(">ExitPoint<") > -1)
+                connType |= ConnType.EXIT_POINT;
             if (areaText.indexOf(">DeadEnd<") > -1)
                 connType |= ConnType.DEAD_END;
             else if (areaText.indexOf(">Return<") > -1)

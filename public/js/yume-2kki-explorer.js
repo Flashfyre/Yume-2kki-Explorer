@@ -1,4 +1,4 @@
-// Version 2.6.2 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 2.7.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -104048,7 +104048,9 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    EFFECT: 64,
 	    CHANCE: 128,
 	    LOCKED_CONDITION: 256,
-	    INACCESSIBLE: 512
+	    SHORTCUT: 512,
+	    EXIT_POINT: 1024,
+	    INACCESSIBLE: 2048
 	};
 
 	module.exports = {
@@ -104267,7 +104269,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        let pathDepthLimit;
 	        let depthDiff;
 	        let maxPathScore;
-	        let filteredPathConnTypes = connType_1.LOCKED | connType_1.EFFECT | connType_1.CHANCE | connType_1.LOCKED_CONDITION;
+	        let filteredPathConnTypes = connType_1.LOCKED | connType_1.EFFECT | connType_1.CHANCE | connType_1.LOCKED_CONDITION | connType_1.EXIT_POINT;
 	        do {
 	            const filteredPaths = paths.filter(p => !p.filter(pi => filteredPathConnTypes & pi.connType).length);
 	            if (filteredPaths.length)
@@ -104471,6 +104473,10 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                icons.push(getConnTypeIcon(connType_1.LOCKED));
 	            else if (connType & connType_1.LOCKED_CONDITION)
 	                icons.push(getConnTypeIcon(connType_1.LOCKED_CONDITION, l.typeParams[connType_1.LOCKED_CONDITION]));
+	            else if (connType & connType_1.SHORTCUT)
+	                icons.push(getConnTypeIcon(connType_1.SHORTCUT));
+	            else if (connType & connType_1.EXIT_POINT)
+	                icons.push(getConnTypeIcon(connType_1.EXIT_POINT));
 	            if (connType & connType_1.DEAD_END)
 	                icons.push(getConnTypeIcon(connType_1.DEAD_END));
 	            else if (connType & connType_1.ISOLATED)
@@ -104925,6 +104931,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        connType_1.EFFECT,
 	        connType_1.CHANCE,
 	        connType_1.LOCKED_CONDITION,
+	        connType_1.SHORTCUT,
+	        connType_1.EXIT_POINT,
 	        connType_1.INACCESSIBLE
 	    ];
 	    const iconImgDimensions = { x: 64, y: 64 };
@@ -105037,18 +105045,18 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                    iconObject.setMatrixAt(index, dummy.matrix);
 	                }
 	                const texIndex = unsortedIconTexIndexes[index];
-	                if (texIndex == 0 || texIndex == 10) {
+	                if (texIndex == 0 || texIndex == 12) {
 	                    if (is2d) {
 	                        if (start.x > end.x) {
 	                            if (texIndex == 0)
-	                                unsortedIconTexIndexes[index] = 10;
-	                        } else if (texIndex == 10)
+	                                unsortedIconTexIndexes[index] = 12;
+	                        } else if (texIndex == 12)
 	                            unsortedIconTexIndexes[index] = 0;
 	                    } else {
 	                        if (exports.graph.graph2ScreenCoords(start.x, start.y, start.z).x > exports.graph.graph2ScreenCoords(end.x, end.y, end.z).x) {
 	                            if (texIndex == 0)
-	                                unsortedIconTexIndexes[index] = 10;
-	                        } else if (texIndex == 10)
+	                                unsortedIconTexIndexes[index] = 12;
+	                        } else if (texIndex == 12)
 	                            unsortedIconTexIndexes[index] = 0;
 	                    }
 	                }
@@ -105606,6 +105614,12 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        case connType_1.LOCKED_CONDITION:
 	            char = "🔐";
 	            break;
+	        case connType_1.SHORTCUT:
+	            char = "📞";
+	            break;
+	        case connType_1.EXIT_POINT:
+	            char = "☎️";
+	            break;
 	        case connType_1.INACCESSIBLE:
 	            char = "🚫";
 	            break;
@@ -105734,7 +105748,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        }
 	    } else if (isRoot) {
 	        const rootLimit = Math.min(5, limit);
-	        const ignoreTypesList = [connType_1.CHANCE, connType_1.EFFECT, connType_1.LOCKED | connType_1.LOCKED_CONDITION];
+	        const ignoreTypesList = [connType_1.CHANCE, connType_1.EFFECT, connType_1.LOCKED | connType_1.LOCKED_CONDITION | connType_1.EXIT_POINT];
 	        const pathCount = Math.min(matchPaths.length, rootLimit);
 	        let ignoreTypes = 0;
 	        for (let ignoreType of ignoreTypesList)
@@ -105765,7 +105779,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                if (additionalPaths.length && !(additionalPaths[0][0].connType & connType_1.INACCESSIBLE)) {
 	                    additionalPaths = lodash.sortBy(additionalPaths, [ 'length' ]);
 	                    if (isDebug) {
-	                        const ignoreTypeNames = ["chance", "effect", "locked/locked condition"];
+	                        const ignoreTypeNames = ["chance", "effect", "locked/locked condition", "phone locked"];
 	                        console.log("Found", additionalPaths.length, "additional path(s) by ignoring", ignoreType ? ignoreTypeNames.slice(it).join(", ") : "none");
 	                    }
 	                    for (let ap of additionalPaths) {
@@ -105794,7 +105808,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            }
 	            if (addAdditionalPaths) {
 	                isDebug && console.log("Searching for additional paths...");
-	                const additionalPaths = findPath(s, t, false, connType_1.NO_ENTRY | connType_1.LOCKED | connType_1.DEAD_END | connType_1.ISOLATED | connType_1.LOCKED_CONDITION, limit - rootLimit, existingMatchPaths.concat(matchPaths));
+	                const additionalPaths = findPath(s, t, false, connType_1.NO_ENTRY | connType_1.LOCKED | connType_1.DEAD_END | connType_1.ISOLATED | connType_1.LOCKED_CONDITION | connType_1.EXIT_POINT, limit - rootLimit, existingMatchPaths.concat(matchPaths));
 	                if (additionalPaths.length && !(additionalPaths[0][0].connType & connType_1.INACCESSIBLE)) {
 	                    for (let ap of additionalPaths)
 	                        matchPaths.push(ap);
@@ -105870,6 +105884,10 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                        reverseConnType |= connType_1.UNLOCK;
 	                    else if (connType & connType_1.UNLOCK)
 	                        reverseConnType |= connType_1.LOCKED;
+	                    else if (connType & connType_1.EXIT_POINT)
+	                        reverseConnType |= connType_1.SHORTCUT;
+	                    else if (connType & connType_1.SHORTCUT)
+	                        reverseConnType |= connType_1.EXIT_POINT;
 	                    if (connType & connType_1.DEAD_END)
 	                        reverseConnType |= connType_1.ISOLATED;
 	                    else if (connType & connType_1.ISOLATED)
@@ -105927,7 +105945,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer = data.footer.replace("{VERSION}", "2.6.2");
+	            data.footer = data.footer.replace("{VERSION}", "2.7.0");
 	            localizedConns = data.conn;
 	            initContextMenu(data.contextMenu);
 	            if (isInitial) {
