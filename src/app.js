@@ -1904,7 +1904,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer = data.footer.replace("{VERSION}", "2.7.2");
+            data.footer = data.footer.replace("{VERSION}", "2.7.3");
             localizedConns = data.conn;
             initContextMenu(data.contextMenu);
             if (isInitial) {
