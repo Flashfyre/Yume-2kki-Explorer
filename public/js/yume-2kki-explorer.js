@@ -1,4 +1,4 @@
-// Version 2.7.3 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 2.7.5 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -104059,14 +104059,14 @@ vec4 envMapTexelToLinear(vec4 color) {
 	});
 	var connType_1 = connType.ConnType;
 
-	jquery(document).keydown(function (event) {
+	jquery(document).on("keydown", function (event) {
 	    if (event.which === 16)
 	        isShift = true;
 	    else if (event.which === 17)
 	        isCtrl = true;
 	});
 
-	jquery(document).keyup(function (event) {
+	jquery(document).on("keyup", function (event) {
 	    if (event.which === 16)
 	        isShift = false;
 	    else if (event.which === 17)
@@ -104942,7 +104942,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	    iconCount = 0;
 	    exports.graph.graphData().links.forEach(link => {
-	        link.icons.forEach(icon => {
+	        link.icons.forEach(_ => {
 	            iconCount++;
 	        });
 	    });
@@ -105103,7 +105103,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    index = 0;
 	    const camPos = exports.graph.camera().position;
 	    exports.graph.graphData().links.forEach(link => {
-	        link.icons.forEach(icon => {
+	        link.icons.forEach(_ => {
 	            instanceObject.getMatrixAt(index, dummy.matrix);
 	            dummy.position.set(vecArray[index].pos.x, vecArray[index].pos.y, vecArray[index].pos.z);
 	            dummy.lookAt(camPos);
@@ -105945,14 +105945,14 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer = data.footer.replace("{VERSION}", "2.7.3");
+	            data.footer = data.footer.replace("{VERSION}", "2.7.5");
 	            localizedConns = data.conn;
 	            initContextMenu(data.contextMenu);
 	            if (isInitial) {
 	                Object.keys(data.settings.uiTheme.values).forEach(t => {
 	                    jquery(".js--ui-theme").append('<option data-localize="settings.uiTheme.values.' + t + '" value="' + t + '">' + data.settings.uiTheme.values[t] + '</option>');
 	                });
-	                jquery(".js--ui-theme").val(config$1.uiTheme).change();
+	                jquery(".js--ui-theme").val(config$1.uiTheme).trigger("change");
 	            } else
 	                initAuthorSelectOptions(data.controls.author.values['']);
 	            window.setTimeout(() => updateControlsContainer(true), 0);
@@ -106107,7 +106107,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                callback: function () {
 	                    const world = exports.worldData[contextWorldId];
 	                    const worldName = config$1.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
-	                    jquery(".js--start-world").val(worldName).change().devbridgeAutocomplete().select(0);
+	                    jquery(".js--start-world").val(worldName).trigger("change").devbridgeAutocomplete().select(0);
 	                }
 	            },
 	            "end": {
@@ -106115,7 +106115,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                callback: function () {
 	                    const world = exports.worldData[contextWorldId];
 	                    const worldName = config$1.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
-	                    jquery(".js--end-world").val(worldName).change().devbridgeAutocomplete().select(0);
+	                    jquery(".js--end-world").val(worldName).trigger("change").devbridgeAutocomplete().select(0);
 	                }
 	            }
 	        }
@@ -106274,7 +106274,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	}
 
 	function initControls() {
-	    jquery(".controls--container--tab__button").click(function() {
+	    jquery(".controls--container--tab__button").on("click", function() {
 	        if (jquery(".controls-bottom").hasClass("visible")) {
 	            jquery(".controls-bottom").removeClass("visible").animateCss("slideOutDown", 250, function () {
 	                if (!jquery(this).hasClass("visible"))
@@ -106289,12 +106289,13 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    });
 
 	    updateControlsContainer(true);
-	    jquery(window).resize(updateControlsContainer).blur(function() {
+	    
+	    jquery(window).on("resize", updateControlsContainer).blur(function() {
 	        isShift = false;
 	        isCtrl = false;
 	    });
 	    
-	    jquery(".js--lang").change(function() {
+	    jquery(".js--lang").on("change", function() {
 	        config$1.lang = jquery(this).val();
 	        updateConfig(config$1);
 	        initLocalization();
@@ -106304,7 +106305,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            reloadGraph();
 	    });
 
-	    jquery(".js--ui-theme").change(function() {
+	    jquery(".js--ui-theme").on("change", function() {
 	        config$1.uiTheme = jquery(this).val();
 	        const themeStyles = jquery(".js--theme-styles")[0];
 	        getBaseBgColor(config$1.uiTheme || (config$1.uiTheme = "Default_Custom"), function (color) {
@@ -106313,12 +106314,12 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/[a-zA-Z0-9\_]+\/(containerbg|border(?:2)?|font\d)\.png\)/g, "url(/images/ui/" + config$1.uiTheme + "/$1.png)")
 	                .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "background-color:$1" + color + "$2;$3/*base*/")
 	                .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "background-color:$1" + altColor + "$2;$3/*alt*/");
-	            jquery(".js--font-style").change();
+	            jquery(".js--font-style").trigger("change");
 	            updateConfig(config$1);
 	        });
 	    });
 
-	    jquery(".js--font-style").change(function() {
+	    jquery(".js--font-style").on("change", function() {
 	        config$1.fontStyle = parseInt(jquery(this).val());
 	        const themeStyles = jquery(".js--theme-styles")[0];
 	        getFontColor(config$1.uiTheme, config$1.fontStyle, function (baseColor) {
@@ -106331,14 +106332,14 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        });
 	    });
 
-	    jquery(".js--render-mode").change(function() {
+	    jquery(".js--render-mode").on("change", function() {
 	        config$1.renderMode = parseInt(jquery(this).val());
 	        updateConfig(config$1);
 	        if (exports.worldData)
 	            reloadGraph();
 	    });
 
-	    jquery(".js--display-mode").change(function() {
+	    jquery(".js--display-mode").on("change", function() {
 	        config$1.displayMode = parseInt(jquery(this).val());
 	        updateConfig(config$1);
 	        if (exports.worldData)
@@ -106346,13 +106347,13 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        jquery(".js--stack-size--container").css("display", config$1.displayMode < 2 ? "flex" : "none");
 	    });
 
-	    jquery(".js--conn-mode").change(function() {
+	    jquery(".js--conn-mode").on("change", function() {
 	        config$1.connMode = parseInt(jquery(this).val());
 	        updateConfig(config$1);
 	        updateConnectionModeIcons();
 	    });
 
-	    jquery(".js--label-mode").change(function() {
+	    jquery(".js--label-mode").on("change", function() {
 	        config$1.labelMode = parseInt(jquery(this).val());
 	        updateConfig(config$1);
 	        if (isWebGL2 && is2d)
@@ -106368,34 +106369,34 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        }
 	    });
 
-	    jquery(".js--path-mode").change(function() {
+	    jquery(".js--path-mode").on("change", function() {
 	        config$1.pathMode = parseInt(jquery(this).val());
 	        updateConfig(config$1);
 	        if (exports.worldData && startWorldId != null && endWorldId != null)
 	            reloadGraph();
 	    });
 
-	    jquery(".js--size-diff").change(function() {
+	    jquery(".js--size-diff").on("change", function() {
 	        config$1.sizeDiff = parseFloat(jquery(this).val());
 	        updateConfig(config$1);
 	        if (exports.worldData)
 	            reloadGraph();
 	    });
 
-	    jquery(".js--stack-size").change(function() {
+	    jquery(".js--stack-size").on("change", function() {
 	        config$1.stackSize = parseInt(jquery(this).val());
 	        updateConfig(config$1);
 	        if (exports.worldData)
 	            reloadGraph();
 	    });
 
-	    jquery(".js--author").change(function() {
+	    jquery(".js--author").on("change", function() {
 	        selectedAuthor = jquery(this).val() !== "null" ? jquery(this).val() || "" : null;
 	        if (exports.worldData)
 	            highlightWorldSelection();
 	    });
 
-	    jquery(".js--reset").click(function() {
+	    jquery(".js--reset").on("click", function() {
 	        jquery(".js--world-input").removeClass("selected").val("");
 	        jquery(".js--author").val("null");
 	        startWorldId = null;
@@ -106406,7 +106407,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            reloadGraph();
 	    });
 
-	    jquery(".js--help").click(function() {
+	    jquery(".js--help").on("click", function() {
 	        if (jquery(".js--help-modal:visible").length)
 	            jquery.modal.close();
 	        else if (jquery(".js--help-modal__content--localized").text())
@@ -106425,7 +106426,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    });
 	}
 
-	jquery(document).ready(function () {
+	jquery(function () {
 	    let loadingFrameCount = 0;
 	    const loadingTimer = window.setInterval(function () {
 	        let loadingTextAppend = "";
