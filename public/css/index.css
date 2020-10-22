@@ -118,7 +118,7 @@ body {
     position: absolute;
     padding: 8px;
     padding-left: 4px;
-    top: calc(100% - 36px);
+    top: calc(100% - 72px);
     text-align: right;
     height: 26px;
     width: calc(100% - 16px);
