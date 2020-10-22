@@ -14,14 +14,14 @@ import { hueToRGBA, uiThemeFontColors, uiThemeBgColors, getFontColor, getBaseBgC
 import { updateConfig } from './config.js';
 import { ConnType } from './conn-type.js';
 
-$(document).keydown(function (event) {
+$(document).on("keydown", function (event) {
     if (event.which === 16)
         isShift = true;
     else if (event.which === 17)
         isCtrl = true;
 });
 
-$(document).keyup(function (event) {
+$(document).on("keyup", function (event) {
     if (event.which === 16)
         isShift = false;
     else if (event.which === 17)
@@ -903,7 +903,7 @@ function makeIconObject(is2d) {
 
     iconCount = 0;
     graph.graphData().links.forEach(link => {
-        link.icons.forEach(icon => {
+        link.icons.forEach(_ => {
             iconCount++;
         })
     });
@@ -1064,7 +1064,7 @@ function sortInstances(instanceObject, unsortedOpacities, unsortedTexIndexes) {
     index = 0;
     const camPos = graph.camera().position;
     graph.graphData().links.forEach(link => {
-        link.icons.forEach(icon => {
+        link.icons.forEach(_ => {
             instanceObject.getMatrixAt(index, dummy.matrix);
             dummy.position.set(vecArray[index].pos.x, vecArray[index].pos.y, vecArray[index].pos.z);
             dummy.lookAt(camPos);
@@ -1916,7 +1916,7 @@ function initLocalization(isInitial) {
                 Object.keys(data.settings.uiTheme.values).forEach(t => {
                     $(".js--ui-theme").append('<option data-localize="settings.uiTheme.values.' + t + '" value="' + t + '">' + data.settings.uiTheme.values[t] + '</option>');
                 });
-                $(".js--ui-theme").val(config.uiTheme).change();
+                $(".js--ui-theme").val(config.uiTheme).trigger("change");
             } else
                 initAuthorSelectOptions(data.controls.author.values['']);
             window.setTimeout(() => updateControlsContainer(true), 0);
@@ -2071,7 +2071,7 @@ function initContextMenu(localizedContextMenu) {
                 callback: function () {
                     const world = worldData[contextWorldId];
                     const worldName = config.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
-                    $(".js--start-world").val(worldName).change().devbridgeAutocomplete().select(0);
+                    $(".js--start-world").val(worldName).trigger("change").devbridgeAutocomplete().select(0);
                 }
             },
             "end": {
@@ -2079,7 +2079,7 @@ function initContextMenu(localizedContextMenu) {
                 callback: function () {
                     const world = worldData[contextWorldId];
                     const worldName = config.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
-                    $(".js--end-world").val(worldName).change().devbridgeAutocomplete().select(0);
+                    $(".js--end-world").val(worldName).trigger("change").devbridgeAutocomplete().select(0);
                 }
             }
         }
@@ -2240,7 +2240,7 @@ function openHelpModal() {
 }
 
 function initControls() {
-    $(".controls--container--tab__button").click(function() {
+    $(".controls--container--tab__button").on("click", function() {
         if ($(".controls-bottom").hasClass("visible")) {
             $(".controls-bottom").removeClass("visible").animateCss("slideOutDown", 250, function () {
                 if (!$(this).hasClass("visible"))
@@ -2255,13 +2255,13 @@ function initControls() {
     });
 
     updateControlsContainer(true);
-    
-    $(window).resize(updateControlsContainer).blur(function() {
+
+    $(window).on("resize", updateControlsContainer).blur(function() {
         isShift = false;
         isCtrl = false;
     });
     
-    $(".js--lang").change(function() {
+    $(".js--lang").on("change", function() {
         config.lang = $(this).val();
         updateConfig(config);
         initLocalization();
@@ -2271,7 +2271,7 @@ function initControls() {
             reloadGraph();
     });
 
-    $(".js--ui-theme").change(function() {
+    $(".js--ui-theme").on("change", function() {
         config.uiTheme = $(this).val();
         const themeStyles = $(".js--theme-styles")[0];
         getBaseBgColor(config.uiTheme || (config.uiTheme = "Default_Custom"), function (color) {
@@ -2280,12 +2280,12 @@ function initControls() {
             themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/[a-zA-Z0-9\_]+\/(containerbg|border(?:2)?|font\d)\.png\)/g, "url(/images/ui/" + config.uiTheme + "/$1.png)")
                 .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "background-color:$1" + color + "$2;$3/*base*/")
                 .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "background-color:$1" + altColor + "$2;$3/*alt*/");
-            $(".js--font-style").change();
+            $(".js--font-style").trigger("change");
             updateConfig(config);
         });
     });
 
-    $(".js--font-style").change(function() {
+    $(".js--font-style").on("change", function() {
         config.fontStyle = parseInt($(this).val());
         const themeStyles = $(".js--theme-styles")[0];
         getFontColor(config.uiTheme, config.fontStyle, function (baseColor) {
@@ -2298,14 +2298,14 @@ function initControls() {
         });
     });
 
-    $(".js--render-mode").change(function() {
+    $(".js--render-mode").on("change", function() {
         config.renderMode = parseInt($(this).val());
         updateConfig(config);
         if (worldData)
             reloadGraph();
     });
 
-    $(".js--display-mode").change(function() {
+    $(".js--display-mode").on("change", function() {
         config.displayMode = parseInt($(this).val());
         updateConfig(config);
         if (worldData)
@@ -2313,13 +2313,13 @@ function initControls() {
         $(".js--stack-size--container").css("display", config.displayMode < 2 ? "flex" : "none");
     });
 
-    $(".js--conn-mode").change(function() {
+    $(".js--conn-mode").on("change", function() {
         config.connMode = parseInt($(this).val());
         updateConfig(config);
         updateConnectionModeIcons();
     });
 
-    $(".js--label-mode").change(function() {
+    $(".js--label-mode").on("change", function() {
         config.labelMode = parseInt($(this).val());
         updateConfig(config);
         if (isWebGL2 && is2d)
@@ -2335,34 +2335,34 @@ function initControls() {
         }
     });
 
-    $(".js--path-mode").change(function() {
+    $(".js--path-mode").on("change", function() {
         config.pathMode = parseInt($(this).val());
         updateConfig(config);
         if (worldData && startWorldId != null && endWorldId != null)
             reloadGraph();
     });
 
-    $(".js--size-diff").change(function() {
+    $(".js--size-diff").on("change", function() {
         config.sizeDiff = parseFloat($(this).val());
         updateConfig(config);
         if (worldData)
             reloadGraph();
     });
 
-    $(".js--stack-size").change(function() {
+    $(".js--stack-size").on("change", function() {
         config.stackSize = parseInt($(this).val());
         updateConfig(config);
         if (worldData)
             reloadGraph();
     });
 
-    $(".js--author").change(function() {
+    $(".js--author").on("change", function() {
         selectedAuthor = $(this).val() !== "null" ? $(this).val() || "" : null;
         if (worldData)
             highlightWorldSelection();
     });
 
-    $(".js--reset").click(function() {
+    $(".js--reset").on("click", function() {
         $(".js--world-input").removeClass("selected").val("");
         $(".js--author").val("null");
         startWorldId = null;
@@ -2373,7 +2373,7 @@ function initControls() {
             reloadGraph();
     });
 
-    $(".js--help").click(function() {
+    $(".js--help").on("click", function() {
         if ($(".js--help-modal:visible").length)
             $.modal.close();
         else if ($(".js--help-modal__content--localized").text())
@@ -2392,7 +2392,7 @@ function initControls() {
     });
 }
 
-$(document).ready(function () {
+$(function () {
     let loadingFrameCount = 0;
     const loadingTimer = window.setInterval(function () {
         let loadingTextAppend = "";
