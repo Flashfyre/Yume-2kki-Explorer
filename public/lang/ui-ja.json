@@ -148,5 +148,9 @@
     "helpModal": {
         "reportBug": "バグを報告"
     },
-    "footer": "ゆめ２っきエクスプローラver{VERSION} by FlashfyreDev"
+    "footer": {
+        "about": "ゆめ２っきエクスプローラver{VERSION} by FlashfyreDev",
+        "lastUpdate": "データ最終更新日：{LAST_UPDATE}",
+        "lastFullUpdate": "データ最終置換日：{LAST_FULL_UPDATE}"
+    }
 }

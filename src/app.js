@@ -145,7 +145,7 @@ export function loadWorldData(update, success, fail) {
             fontsLoaded = true;
             success(data);
         } else {
-            document.fonts.onloadingdone = e => fontsLoaded = true;
+            document.fonts.onloadingdone = _ => fontsLoaded = true;
             const fontsLoadedCheck = window.setInterval(function () {
                 if (fontsLoaded) {
                     window.clearInterval(fontsLoadedCheck);
@@ -197,6 +197,8 @@ let config = {
     sizeDiff: 1,
     stackSize: 20
 };
+
+let lastUpdate, lastFullUpdate;
 
 let worldImageData = [];
 
@@ -1904,7 +1906,10 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer = data.footer.replace("{VERSION}", "2.7.5");
+            data.footer.about = data.footer.about.replace("{VERSION}", "2.7.5");
+            const formatDate = (date) => date.toLocaleString(isEn ? "en-US" : "ja-JP", { timeZoneName: "short" });
+            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate));
+            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate));
             localizedConns = data.conn;
             initContextMenu(data.contextMenu);
             if (isInitial) {
@@ -2250,7 +2255,7 @@ function initControls() {
     });
 
     updateControlsContainer(true);
-    
+
     $(window).on("resize", updateControlsContainer).blur(function() {
         isShift = false;
         isCtrl = false;
@@ -2406,7 +2411,9 @@ $(function () {
     initLocalization(true);
 
     loadWorldData(false, function (data) {
-        worldData = data;
+        worldData = data.worldData;
+        lastUpdate = new Date(data.lastUpdate);
+        lastFullUpdate = new Date(data.lastFullUpdate);
 
         for (let d in Object.keys(worldData)) {
             const world = worldData[d];

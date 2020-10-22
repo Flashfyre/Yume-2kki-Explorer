@@ -140,8 +140,18 @@ const batchSize = 20;
 app.get('/worlds', function(req, res) {
     getConnPool().then(pool => {
         const callback = function (worldData) {
-            res.json(worldData);
-            pool.end();
+            pool.query('SELECT lastUpdate, lastFullUpdate FROM updates', (err, rows) => {
+                if (err) console.error(err);
+                const row = rows.length ? rows[0] : null;
+                const lastUpdate = row ? row.lastUpdate : null;
+                const lastFullUpdate = row ? row.lastFullUpdate : null;
+                res.json({
+                    worldData: worldData,
+                    lastUpdate: lastUpdate,
+                    lastFullUpdate: lastFullUpdate
+                });
+                pool.end();
+            });
         };
         if (req.query.hasOwnProperty("update") && req.query.update) {
             populateWorldData(pool).then(() => getWorldData(pool, true).then(worldData => {
