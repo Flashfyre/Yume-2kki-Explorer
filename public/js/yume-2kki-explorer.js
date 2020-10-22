@@ -1,4 +1,4 @@
-// Version 2.7.3 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 2.7.5 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -104188,7 +104188,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            fontsLoaded = true;
 	            success(data);
 	        } else {
-	            document.fonts.onloadingdone = e => fontsLoaded = true;
+	            document.fonts.onloadingdone = _ => fontsLoaded = true;
 	            const fontsLoadedCheck = window.setInterval(function () {
 	                if (fontsLoaded) {
 	                    window.clearInterval(fontsLoadedCheck);
@@ -104238,6 +104238,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    sizeDiff: 1,
 	    stackSize: 20
 	};
+
+	let lastUpdate, lastFullUpdate;
 
 	let worldImageData = [];
 
@@ -105945,7 +105947,10 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer = data.footer.replace("{VERSION}", "2.7.3");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "2.7.5");
+	            const formatDate = (date) => date.toLocaleString(isEn ? "en-US" : "ja-JP", { timeZoneName: "short" });
+	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate));
+	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate));
 	            localizedConns = data.conn;
 	            initContextMenu(data.contextMenu);
 	            if (isInitial) {
@@ -106289,6 +106294,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    });
 
 	    updateControlsContainer(true);
+	    
 	    jquery(window).resize(updateControlsContainer).blur(function() {
 	        isShift = false;
 	        isCtrl = false;
@@ -106444,7 +106450,9 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    initLocalization(true);
 
 	    loadWorldData(false, function (data) {
-	        exports.worldData = data;
+	        exports.worldData = data.worldData;
+	        lastUpdate = new Date(data.lastUpdate);
+	        lastFullUpdate = new Date(data.lastFullUpdate);
 
 	        for (let d in Object.keys(exports.worldData)) {
 	            const world = exports.worldData[d];

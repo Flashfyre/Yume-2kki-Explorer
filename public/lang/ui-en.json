@@ -148,5 +148,9 @@
     "helpModal": {
         "reportBug": "Report a Bug"
     },
-    "footer": "Yume 2kki Explorer v{VERSION} by FlashfyreDev"
+    "footer": {
+        "about": "Yume 2kki Explorer v{VERSION} by FlashfyreDev",
+        "lastUpdate": "Data updated on {LAST_UPDATE}",
+        "lastFullUpdate": "Data reset on {LAST_FULL_UPDATE}"
+    }
 }
