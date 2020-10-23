@@ -699,6 +699,8 @@ function initGraph(renderMode, displayMode, paths) {
         })
         .graphData(gData);
 
+    document.querySelector(".controls--container--tab").style.display = '';
+
     document.removeEventListener('mousemove', onDocumentMouseMove, false);
     document.querySelector('#graph canvas').removeEventListener('wheel', clearTweens, false)
 
@@ -1906,7 +1908,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "2.7.5");
+            data.footer.about = data.footer.about.replace("{VERSION}", "2.7.6");
             const formatDate = (date) => date.toLocaleString(isEn ? "en-US" : "ja-JP", { timeZoneName: "short" });
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate));
@@ -2256,7 +2258,7 @@ function initControls() {
 
     updateControlsContainer(true);
 
-    $(window).on("resize", updateControlsContainer).blur(function() {
+    $(window).on("resize", updateControlsContainer).on("blur", function() {
         isShift = false;
         isCtrl = false;
     });

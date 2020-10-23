@@ -1,4 +1,4 @@
-// Version 2.7.5 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 2.7.6 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -104740,6 +104740,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        })
 	        .graphData(gData);
 
+	    document.querySelector(".controls--container--tab").style.display = '';
+
 	    document.removeEventListener('mousemove', onDocumentMouseMove, false);
 	    document.querySelector('#graph canvas').removeEventListener('wheel', clearTweens, false);
 
@@ -105947,7 +105949,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "2.7.5");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "2.7.6");
 	            const formatDate = (date) => date.toLocaleString(isEn ? "en-US" : "ja-JP", { timeZoneName: "short" });
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate));
@@ -106295,7 +106297,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	    updateControlsContainer(true);
 
-	    jquery(window).on("resize", updateControlsContainer).blur(function() {
+	    jquery(window).on("resize", updateControlsContainer).on("blur", function() {
 	        isShift = false;
 	        isCtrl = false;
 	    });
