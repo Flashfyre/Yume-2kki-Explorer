@@ -1908,7 +1908,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "2.7.7");
+            data.footer.about = data.footer.about.replace("{VERSION}", "2.7.8");
             const formatDate = (date) => date.toLocaleString(isEn ? "en-US" : "ja-JP", { timeZoneName: "short" });
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate));
@@ -2028,7 +2028,7 @@ function initWorldSearch() {
         onHide: function () {
            if (selectedWorldId != null) {
                 const selectedWorld = worldData[selectedWorldId];
-                const selectedWorldName = config.lang === 'en' || !selectedWorld.titleJP ? selectedWorld.title : wselectedWorld.titleJP;
+                const selectedWorldName = config.lang === 'en' || !selectedWorld.titleJP ? selectedWorld.title : selectedWorld.titleJP;
                 if ($(this).val() !== selectedWorldName) {
                     $search.removeClass("selected");
                     selectedWorldId = null;

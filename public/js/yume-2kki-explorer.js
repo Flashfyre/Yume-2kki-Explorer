@@ -1,4 +1,4 @@
-// Version 2.7.7 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 2.7.8 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -105949,7 +105949,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "2.7.7");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "2.7.8");
 	            const formatDate = (date) => date.toLocaleString(isEn ? "en-US" : "ja-JP", { timeZoneName: "short" });
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate));
@@ -106069,7 +106069,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        onHide: function () {
 	           if (selectedWorldId != null) {
 	                const selectedWorld = exports.worldData[selectedWorldId];
-	                const selectedWorldName = config$1.lang === 'en' || !selectedWorld.titleJP ? selectedWorld.title : wselectedWorld.titleJP;
+	                const selectedWorldName = config$1.lang === 'en' || !selectedWorld.titleJP ? selectedWorld.title : selectedWorld.titleJP;
 	                if (jquery(this).val() !== selectedWorldName) {
 	                    $search.removeClass("selected");
 	                    selectedWorldId = null;
