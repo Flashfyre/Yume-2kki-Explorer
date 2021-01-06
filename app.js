@@ -877,7 +877,7 @@ function getMapData(worldData) {
             const worldDataByName = _.keyBy(worldData, w => w.title);
             const mapIdTablesHtml = res.text.slice(res.text.indexOf('<table '), res.text.lastIndexOf('</table>'));
             const rawMapData = mapIdTablesHtml.split('<td>#').slice(1).map(t => {
-                const ret = t.split('</td><td>').slice(0, 6);
+                const ret = t.replace(/\n/g, '').split('</td><td>').slice(0, 6);
                 ret[5] = ret[5].slice(0, ret[5].indexOf('</td>'));
                 return ret;
             });
