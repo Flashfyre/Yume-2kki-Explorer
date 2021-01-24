@@ -326,53 +326,64 @@ function checkUpdateMapData(pool, worldData, lastUpdate) {
     });
 }
 
-function populateWorldData(pool, worldData, updatedWorldNames) {
+function populateWorldData(pool, worldData, updatedWorldNames, continueKey, worlds) {
     if (!worldData)
         worldData = [];
-    const newWorldNames = [];
     return new Promise((resolve, reject) => {
+        const query = { action: 'query', list: 'categorymembers', cmtitle: 'Category:Locations', cmlimit: 500, format: 'json' };
+        if (continueKey)
+            query.cmcontinue = continueKey;
         superagent.get('https://yume2kki.fandom.com/api.php')
-            .query({ action: 'query', list: 'categorymembers', cmtitle: 'Category:Locations', cmlimit: 500, format: 'json' })
+            .query(query)
             .end((err, res) => {
-            if (err) return reject(err)
+            if (err) return reject(err);
             const data = JSON.parse(res.text);
-            const worlds = data.query.categorymembers;
-            const batches = [];
-            for (let b = 0; b * batchSize < worlds.length; b++)
-                batches.push(populateWorldDataSub(pool, worldData, worlds, b, updatedWorldNames, newWorldNames));
-            Promise.all(batches).then(() => {
-                const worldDataByName = _.keyBy(worldData, w => w.title);
-                const callback = function (updatedWorldData) {
-                    updateConns(pool, worldDataByName).then(() => {
-                        updateConnTypeParams(pool, worldData).then(() => {
-                            updateWorldDepths(pool, _.sortBy(worldData, [ 'id' ])).then(() => {
-                                deleteRemovedWorlds(pool);
-                                resolve(worldData);
+            const locations = data.query.categorymembers;
+
+            worlds = worlds ? worlds.concat(locations) : locations;
+
+            if (data.continue)
+                populateWorldData(pool, worldData, updatedWorldNames, data.continue.cmcontinue, worlds).then(wd => resolve(wd)).catch(err => reject(err));
+            else
+            {
+                const newWorldNames = [];
+                const batches = [];
+                for (let b = 0; b * batchSize < worlds.length; b++)
+                    batches.push(populateWorldDataSub(pool, worldData, worlds, b, updatedWorldNames, newWorldNames));
+                Promise.all(batches).then(() => {
+                    const worldDataByName = _.keyBy(worldData, w => w.title);
+                    const callback = function (updatedWorldData) {
+                        updateConns(pool, worldDataByName).then(() => {
+                            updateConnTypeParams(pool, worldData).then(() => {
+                                updateWorldDepths(pool, _.sortBy(worldData, [ 'id' ])).then(() => {
+                                    deleteRemovedWorlds(pool);
+                                    resolve(worldData);
+                                }).catch(err => reject(err));
                             }).catch(err => reject(err));
                         }).catch(err => reject(err));
-                    }).catch(err => reject(err));
-                };
-                if (newWorldNames.length) {
-                    const newWorldBatches = [];
-                    const newWorldConnWorldNames = [];
-                    for (let newWorldName of newWorldNames) {
-                        const newWorld = worldDataByName[newWorldName];
-                        const newWorldConns = newWorld.connections;
-                        for (let newWorldConn of newWorldConns) {
-                            const newWorldConnTargetName = newWorldConn.location;
-                            if (updatedWorldNames.indexOf(newWorldConnTargetName) === -1 && newWorldConnWorldNames.indexOf(newWorldConnTargetName) === -1)
-                                newWorldConnWorldNames.push(newWorldConnTargetName);
+                    };
+                    if (newWorldNames.length) {
+                        const newWorldBatches = [];
+                        const newWorldConnWorldNames = [];
+                        for (let newWorldName of newWorldNames) {
+                            const newWorld = worldDataByName[newWorldName];
+                            const newWorldConns = newWorld.connections;
+                            for (let newWorldConn of newWorldConns) {
+                                const newWorldConnTargetName = newWorldConn.location;
+                                if (updatedWorldNames.indexOf(newWorldConnTargetName) === -1 && newWorldConnWorldNames.indexOf(newWorldConnTargetName) === -1)
+                                    newWorldConnWorldNames.push(newWorldConnTargetName);
+                            }
                         }
-                    }
-                    for (let b = 0; b * batchSize < worlds.length; b++)
-                        newWorldBatches.push(populateWorldDataSub(pool, worldData, worlds, b, newWorldConnWorldNames, []));
-                    Promise.all(newWorldBatches).then(() => {
-                        const allUpdatedWorldNames = updatedWorldNames.concat(newWorldConnWorldNames);
-                        callback(worldData.filter(w => allUpdatedWorldNames.indexOf(w.title) > -1));
-                    }).catch(err => reject(err));
-                } else
-                    callback(updatedWorldNames ? worldData.filter(w => updatedWorldNames.indexOf(w.title) > -1) : worldData);
-            }).catch(err => reject(err));
+                        for (let b = 0; b * batchSize < worlds.length; b++)
+                            newWorldBatches.push(populateWorldDataSub(pool, worldData, worlds, b, newWorldConnWorldNames, []));
+                        Promise.all(newWorldBatches).then(() => {
+                            const allUpdatedWorldNames = updatedWorldNames.concat(newWorldConnWorldNames);
+                            callback(worldData.filter(w => allUpdatedWorldNames.indexOf(w.title) > -1));
+                        }).catch(err => reject(err));
+                    } else
+                        callback(updatedWorldNames ? worldData.filter(w => updatedWorldNames.indexOf(w.title) > -1) : worldData);
+                }).catch(err => reject(err));
+            }
         });
     });
 }
