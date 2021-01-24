@@ -176,9 +176,13 @@ let icons3D;
 
 const colorLinkSelected = new THREE.Color('red');
 
+let localizedNodeLabel;
+
 let iconLabel;
 
 let raycaster, mousePos = { x: 0, y: 0 };
+
+let localizedUnknownAuthor;
 
 let localizedConns;
 
@@ -450,19 +454,27 @@ function initGraph(renderMode, displayMode, paths) {
     });
 
     const images = (paths ? worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1) : worldData).map(d => {
-            const img = new Image();
-            img.id = d.id;
-            img.title = config.lang === "en" || !d.titleJP ? d.title : d.titleJP;
-            img.src = d.filename;
-            return img;
-        });
+        const img = new Image();
+        img.id = d.id;
+        img.title = config.lang === "en" || !d.titleJP ? d.title : d.titleJP;
+        img.src = d.filename;
+        return img;
+    });
+    
+    const depthColors = [];
+    const depthHueIncrement = (1 / maxDepth) * 0.6666;
+    
+    for (let d = 0; d <= maxDepth; d++)
+        depthColors.push(hueToRGBA(0.6666 - depthHueIncrement * d, 1));
 
     const nodes = images.map(img => {
         const id = parseInt(img.id);
         const scale = worldScales[id];
         const ret = { id: id, img, isHover: false, scale: scale };
+        ret.depth = worldDepths[id];
+        ret.depthColor = depthColors[ret.depth];
         if (paths)
-            ret.depthOverride = worldDepths[id];
+            ret.depthOverride = ret.depth;
         ret.dagIgnore = dagIgnore[id];
         ret.width = 16 * scale;
         ret.height = 12 * scale;
@@ -635,7 +647,7 @@ function initGraph(renderMode, displayMode, paths) {
         })
         .connMode(() => config.connMode)
         .nodeVal(node => node.width)
-        .nodeLabel(node => node.img.title)
+        .nodeLabel(node => localizedNodeLabel.replace('{WORLD}', node.img.title).replace('{DEPTH}', node.depth).replace('{DEPTH_COLOR}', node.depthColor).replace('{AUTHOR}', worldData[node.id].author || localizedUnknownAuthor))
         .nodesPerStack(config.stackSize)
         .onNodeDragEnd(node => {
             node.fx = node.x;
@@ -1908,19 +1920,23 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "2.7.9");
+            data.footer.about = data.footer.about.replace("{VERSION}", "2.8.0");
             const formatDate = (date) => date.toLocaleString(isEn ? "en-US" : "ja-JP", { timeZoneName: "short" });
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate));
             localizedConns = data.conn;
             initContextMenu(data.contextMenu);
+            localizedNodeLabel = `<span class='node-label__world node-label__value'>{WORLD}</span><br>`
+                + `${data.nodeLabel.depth}<span class='node-label__value' style='color:{DEPTH_COLOR}'>{DEPTH}</span><br>`
+                + `${data.nodeLabel.author}<span class='node-label__value'>{AUTHOR}</span>`;
+            localizedUnknownAuthor = data.controls.author.values[''];
             if (isInitial) {
                 Object.keys(data.settings.uiTheme.values).forEach(t => {
                     $(".js--ui-theme").append('<option data-localize="settings.uiTheme.values.' + t + '" value="' + t + '">' + data.settings.uiTheme.values[t] + '</option>');
                 });
                 $(".js--ui-theme").val(config.uiTheme).trigger("change");
             } else
-                initAuthorSelectOptions(data.controls.author.values['']);
+                initAuthorSelectOptions(localizedUnknownAuthor);
             window.setTimeout(() => updateControlsContainer(true), 0);
             defaultCallback(data);
         }
@@ -2329,9 +2345,9 @@ function initControls() {
         if (!config.labelMode) {
             if (!isWebGL2 || !is2d) {
                 graph.graphData().nodes.forEach(node => {
-                const obj = node.__threeObj;
-                if (obj)
-                    obj.children[0].visible = false;
+                    const obj = node.__threeObj;
+                    if (obj)
+                        obj.children[0].visible = false;
                 });
             }
         }

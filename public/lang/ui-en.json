@@ -145,6 +145,10 @@
             "end": "Set as Destination"
         }
     },
+    "nodeLabel": {
+        "depth": "Depth: ",
+        "author": "Author: "
+    },
     "helpModal": {
         "reportBug": "Report a Bug"
     },

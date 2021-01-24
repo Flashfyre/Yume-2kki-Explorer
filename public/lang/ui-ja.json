@@ -145,6 +145,10 @@
             "end": "行先として設定"
         }
     },
+    "nodeLabel": {
+        "depth": "深度：",
+        "author": "ツクラー："
+    },
     "helpModal": {
         "reportBug": "バグを報告"
     },
