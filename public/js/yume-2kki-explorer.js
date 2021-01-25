@@ -1,4 +1,4 @@
-// Version 2.8.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 2.8.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -104085,6 +104085,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	let nodeObjectMaterial;
 	let iconTexts = [];
 	const worldScales = {};
+	const defaultPathIgnoreConnTypeFlags = connType_1.NO_ENTRY | connType_1.LOCKED | connType_1.DEAD_END | connType_1.ISOLATED | connType_1.LOCKED_CONDITION | connType_1.EXIT_POINT;
 
 	jquery.fn.extend({
 	    animateCss: function (animation, duration, endCallback) {
@@ -104218,6 +104219,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	const colorLinkSelected = new Color('red');
 
 	let localizedNodeLabel;
+	let localizedPathNodeLabel;
 
 	let iconLabel;
 
@@ -104258,6 +104260,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    const dagIgnore = {};
 
 	    const worldDepths = {};
+	    const worldRealDepths = {};
 
 	    iconTexts = [];
 
@@ -104341,9 +104344,10 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        const worldMinDepths = {};
 
 	        for (let w of visibleWorldIds) {
-	            const worldDepthsMap = pathWorldIds.map(p => p.indexOf(w)).filter(d => d > -1);
+	            const worldDepthsMap = pathWorldIds.map(p => p.indexOf(w));
 	            worldDepths[w] = lodash.max(worldDepthsMap);
-	            worldMinDepths[w] = lodash.min(worldDepthsMap);
+	            worldMinDepths[w] = lodash.min(worldDepthsMap.filter(d => d > -1));
+	            worldRealDepths[w] = findRealPathDepth(paths, w, pathWorldIds, worldDepthsMap, worldDepths[w], worldMinDepths[w]);
 	        }
 
 	        const depths = Object.values(worldDepths);
@@ -104515,7 +104519,11 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        ret.depth = worldDepths[id];
 	        ret.depthColor = depthColors[ret.depth];
 	        if (paths)
+	        {
 	            ret.depthOverride = ret.depth;
+	            ret.minDepth = worldRealDepths[id];
+	            ret.minDepthColor = depthColors[ret.minDepth];
+	        }
 	        ret.dagIgnore = dagIgnore[id];
 	        ret.width = 16 * scale;
 	        ret.height = 12 * scale;
@@ -104688,7 +104696,13 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        })
 	        .connMode(() => config$1.connMode)
 	        .nodeVal(node => node.width)
-	        .nodeLabel(node => localizedNodeLabel.replace('{WORLD}', node.img.title).replace('{DEPTH}', node.depth).replace('{DEPTH_COLOR}', node.depthColor).replace('{AUTHOR}', exports.worldData[node.id].author || localizedUnknownAuthor))
+	        .nodeLabel(node => {
+	            let ret = (paths && node.depth !== node.minDepth ? localizedPathNodeLabel : localizedNodeLabel)
+	                .replace('{WORLD}', node.img.title).replace('{DEPTH}', node.depth).replace('{DEPTH_COLOR}', node.depthColor).replace('{AUTHOR}', exports.worldData[node.id].author || localizedUnknownAuthor);
+	            if (paths)
+	                ret = ret.replace('{MIN_DEPTH}', node.minDepth).replace('{MIN_DEPTH_COLOR}', node.minDepthColor);
+	            return ret;
+	        })
 	        .nodesPerStack(config$1.stackSize)
 	        .onNodeDragEnd(node => {
 	            node.fx = node.x;
@@ -105276,6 +105290,14 @@ vec4 envMapTexelToLinear(vec4 color) {
 	}
 	// END WEBGL2.0 SPECIFIC CODE
 
+	function getLocalizedNodeLabel(localizedNodeLabel, forPath)
+	{
+	    return `<span class='node-label__world node-label__value'>{WORLD}</span><br>`
+	        + `${localizedNodeLabel.depth}<span class='node-label__value' style='color:{DEPTH_COLOR}'>{DEPTH}</span>`
+	        + `${forPath ? " <span class='node-label__value' style='color:{MIN_DEPTH_COLOR}'>({MIN_DEPTH})</span>" : ""}<br>`
+	        + `${localizedNodeLabel.author}<span class='node-label__value'>{AUTHOR}</span>`
+	}
+
 	/**
 	 *
 	 * @param {Array} texturesSources - List of Strings that represent texture sources
@@ -105824,7 +105846,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            }
 	            if (addAdditionalPaths) {
 	                isDebug && console.log("Searching for additional paths...");
-	                const additionalPaths = findPath(s, t, false, connType_1.NO_ENTRY | connType_1.LOCKED | connType_1.DEAD_END | connType_1.ISOLATED | connType_1.LOCKED_CONDITION | connType_1.EXIT_POINT, limit - rootLimit, existingMatchPaths.concat(matchPaths));
+	                const additionalPaths = findPath(s, t, false, defaultPathIgnoreConnTypeFlags, limit - rootLimit, existingMatchPaths.concat(matchPaths));
 	                if (additionalPaths.length && !(additionalPaths[0][0].connType & connType_1.INACCESSIBLE)) {
 	                    for (let ap of additionalPaths)
 	                        matchPaths.push(ap);
@@ -105927,6 +105949,45 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    return ret;
 	}
 
+	function findRealPathDepth(paths, worldId, pathWorldIds, worldDepthsMap, maxDepth, minDepth, ignoreTypeFlags)
+	{
+	    let ret = -1;
+
+	    if (minDepth == maxDepth)
+	        return minDepth;
+
+	    if (!ignoreTypeFlags)
+	        ignoreTypeFlags = defaultPathIgnoreConnTypeFlags;
+	    else if (ignoreTypeFlags & connType_1.LOCKED || ignoreTypeFlags & connType_1.LOCKED_CONDITION || ignoreTypeFlags & connType_1.EXIT_POINT)
+	        ignoreTypeFlags ^= connType_1.LOCKED | connType_1.LOCKED_CONDITION | connType_1.EXIT_POINT;
+	    else if (ignoreTypeFlags & connType_1.DEAD_END)
+	        ignoreTypeFlags ^= connType_1.DEAD_END | connType_1.ISOLATED;
+	    else
+	        return minDepth;
+	    
+	    for (let p in paths)
+	    {
+	        if (worldDepthsMap[p] === -1)
+	             continue;
+
+	        const path = paths[p];
+	        const pathWorldDepth = pathWorldIds[p].indexOf(worldId);
+
+	        if (pathWorldDepth)
+	        {
+	            let skipPath = pathWorldDepth > 0 && path.slice(0, pathWorldDepth).filter(w => w.connType & ignoreTypeFlags).length;
+	            if (skipPath)
+	                continue;
+	        }
+
+	        if (ret === -1 || pathWorldDepth < ret)
+	            ret = pathWorldDepth;
+	    }
+
+	    return ret > -1 ? ret : findRealPathDepth(paths, worldId, pathWorldIds, worldDepthsMap, maxDepth, minDepth, ignoreTypeFlags);
+	}
+	        
+
 	function findConnectionAnomalies() {
 	    const connData = {};
 	    exports.worldData.forEach(w => {
@@ -105961,15 +106022,14 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "2.8.0");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "2.8.1");
 	            const formatDate = (date) => date.toLocaleString(isEn ? "en-US" : "ja-JP", { timeZoneName: "short" });
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate));
 	            localizedConns = data.conn;
 	            initContextMenu(data.contextMenu);
-	            localizedNodeLabel = `<span class='node-label__world node-label__value'>{WORLD}</span><br>`
-	                + `${data.nodeLabel.depth}<span class='node-label__value' style='color:{DEPTH_COLOR}'>{DEPTH}</span><br>`
-	                + `${data.nodeLabel.author}<span class='node-label__value'>{AUTHOR}</span>`;
+	            localizedNodeLabel = getLocalizedNodeLabel(data.nodeLabel);
+	            localizedPathNodeLabel = getLocalizedNodeLabel(data.nodeLabel, true);
 	            localizedUnknownAuthor = data.controls.author.values[''];
 	            if (isInitial) {
 	                Object.keys(data.settings.uiTheme.values).forEach(t => {

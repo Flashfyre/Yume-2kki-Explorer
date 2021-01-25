@@ -40,6 +40,7 @@ const nodeImgDimensions = { x: 320, y: 240 };
 let nodeObjectMaterial;
 let iconTexts = [];
 const worldScales = {};
+const defaultPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT;
 
 $.fn.extend({
     animateCss: function (animation, duration, endCallback) {
@@ -177,6 +178,7 @@ let icons3D;
 const colorLinkSelected = new THREE.Color('red');
 
 let localizedNodeLabel;
+let localizedPathNodeLabel;
 
 let iconLabel;
 
@@ -217,6 +219,7 @@ function initGraph(renderMode, displayMode, paths) {
     const dagIgnore = {};
 
     const worldDepths = {};
+    const worldRealDepths = {};
 
     iconTexts = [];
 
@@ -300,9 +303,10 @@ function initGraph(renderMode, displayMode, paths) {
         const worldMinDepths = {};
 
         for (let w of visibleWorldIds) {
-            const worldDepthsMap = pathWorldIds.map(p => p.indexOf(w)).filter(d => d > -1);
+            const worldDepthsMap = pathWorldIds.map(p => p.indexOf(w));
             worldDepths[w] = _.max(worldDepthsMap);
-            worldMinDepths[w] = _.min(worldDepthsMap);
+            worldMinDepths[w] = _.min(worldDepthsMap.filter(d => d > -1));
+            worldRealDepths[w] = findRealPathDepth(paths, w, pathWorldIds, worldDepthsMap, worldDepths[w], worldMinDepths[w]);
         }
 
         const depths = Object.values(worldDepths);
@@ -474,7 +478,11 @@ function initGraph(renderMode, displayMode, paths) {
         ret.depth = worldDepths[id];
         ret.depthColor = depthColors[ret.depth];
         if (paths)
+        {
             ret.depthOverride = ret.depth;
+            ret.minDepth = worldRealDepths[id];
+            ret.minDepthColor = depthColors[ret.minDepth];
+        }
         ret.dagIgnore = dagIgnore[id];
         ret.width = 16 * scale;
         ret.height = 12 * scale;
@@ -647,7 +655,13 @@ function initGraph(renderMode, displayMode, paths) {
         })
         .connMode(() => config.connMode)
         .nodeVal(node => node.width)
-        .nodeLabel(node => localizedNodeLabel.replace('{WORLD}', node.img.title).replace('{DEPTH}', node.depth).replace('{DEPTH_COLOR}', node.depthColor).replace('{AUTHOR}', worldData[node.id].author || localizedUnknownAuthor))
+        .nodeLabel(node => {
+            let ret = (paths && node.depth !== node.minDepth ? localizedPathNodeLabel : localizedNodeLabel)
+                .replace('{WORLD}', node.img.title).replace('{DEPTH}', node.depth).replace('{DEPTH_COLOR}', node.depthColor).replace('{AUTHOR}', worldData[node.id].author || localizedUnknownAuthor);
+            if (paths)
+                ret = ret.replace('{MIN_DEPTH}', node.minDepth).replace('{MIN_DEPTH_COLOR}', node.minDepthColor);
+            return ret;
+        })
         .nodesPerStack(config.stackSize)
         .onNodeDragEnd(node => {
             node.fx = node.x;
@@ -1235,6 +1249,14 @@ function updateNodeLabels2D() {
 }
 // END WEBGL2.0 SPECIFIC CODE
 
+function getLocalizedNodeLabel(localizedNodeLabel, forPath)
+{
+    return `<span class='node-label__world node-label__value'>{WORLD}</span><br>`
+        + `${localizedNodeLabel.depth}<span class='node-label__value' style='color:{DEPTH_COLOR}'>{DEPTH}</span>`
+        + `${forPath ? " <span class='node-label__value' style='color:{MIN_DEPTH_COLOR}'>({MIN_DEPTH})</span>" : ""}<br>`
+        + `${localizedNodeLabel.author}<span class='node-label__value'>{AUTHOR}</span>`
+}
+
 /**
  *
  * @param {Array} texturesSources - List of Strings that represent texture sources
@@ -1783,7 +1805,7 @@ function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
             }
             if (addAdditionalPaths) {
                 isDebug && console.log("Searching for additional paths...");
-                const additionalPaths = findPath(s, t, false, ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT, limit - rootLimit, existingMatchPaths.concat(matchPaths));
+                const additionalPaths = findPath(s, t, false, defaultPathIgnoreConnTypeFlags, limit - rootLimit, existingMatchPaths.concat(matchPaths));
                 if (additionalPaths.length && !(additionalPaths[0][0].connType & ConnType.INACCESSIBLE)) {
                     for (let ap of additionalPaths)
                         matchPaths.push(ap);
@@ -1886,6 +1908,45 @@ function traverseConns(checkedNodes, path, nextGenWorlds, world, ignoreTypeFlags
     return ret;
 }
 
+function findRealPathDepth(paths, worldId, pathWorldIds, worldDepthsMap, maxDepth, minDepth, ignoreTypeFlags)
+{
+    let ret = -1;
+
+    if (minDepth == maxDepth)
+        return minDepth;
+
+    if (!ignoreTypeFlags)
+        ignoreTypeFlags = defaultPathIgnoreConnTypeFlags;
+    else if (ignoreTypeFlags & ConnType.LOCKED || ignoreTypeFlags & ConnType.LOCKED_CONDITION || ignoreTypeFlags & ConnType.EXIT_POINT)
+        ignoreTypeFlags ^= ConnType.LOCKED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT;
+    else if (ignoreTypeFlags & ConnType.DEAD_END)
+        ignoreTypeFlags ^= ConnType.DEAD_END | ConnType.ISOLATED;
+    else
+        return minDepth;
+    
+    for (let p in paths)
+    {
+        if (worldDepthsMap[p] === -1)
+             continue;
+
+        const path = paths[p];
+        const pathWorldDepth = pathWorldIds[p].indexOf(worldId);
+
+        if (pathWorldDepth)
+        {
+            let skipPath = pathWorldDepth > 0 && path.slice(0, pathWorldDepth).filter(w => w.connType & ignoreTypeFlags).length;
+            if (skipPath)
+                continue;
+        }
+
+        if (ret === -1 || pathWorldDepth < ret)
+            ret = pathWorldDepth;
+    }
+
+    return ret > -1 ? ret : findRealPathDepth(paths, worldId, pathWorldIds, worldDepthsMap, maxDepth, minDepth, ignoreTypeFlags);
+}
+        
+
 export function findConnectionAnomalies() {
     const connData = {};
     worldData.forEach(w => {
@@ -1920,15 +1981,14 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "2.8.0");
+            data.footer.about = data.footer.about.replace("{VERSION}", "2.8.1");
             const formatDate = (date) => date.toLocaleString(isEn ? "en-US" : "ja-JP", { timeZoneName: "short" });
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate));
             localizedConns = data.conn;
             initContextMenu(data.contextMenu);
-            localizedNodeLabel = `<span class='node-label__world node-label__value'>{WORLD}</span><br>`
-                + `${data.nodeLabel.depth}<span class='node-label__value' style='color:{DEPTH_COLOR}'>{DEPTH}</span><br>`
-                + `${data.nodeLabel.author}<span class='node-label__value'>{AUTHOR}</span>`;
+            localizedNodeLabel = getLocalizedNodeLabel(data.nodeLabel);
+            localizedPathNodeLabel = getLocalizedNodeLabel(data.nodeLabel, true)
             localizedUnknownAuthor = data.controls.author.values[''];
             if (isInitial) {
                 Object.keys(data.settings.uiTheme.values).forEach(t => {
