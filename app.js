@@ -788,10 +788,9 @@ function resolveMissingDepths(worldData, worldDataById, worldDataByName, depthMa
             } while (depthMap[world.title] === -1);
         }
     });
-    if (world.depth !== undefined) {
-        conns.filter(c => depthMap[c.location] === -1 && worldDataByName[c.location].id < world.id)
+    if (depthMap[world.title] > -1)
+        conns.filter(c => depthMap[c.location] === -1)
             .forEach(c => resolveMissingDepths(worldData, worldDataById, worldDataByName, depthMap, worldDataByName[c.location]));
-    }
 }
 
 function updateWorldsOfDepth(pool, depth, worlds) {
