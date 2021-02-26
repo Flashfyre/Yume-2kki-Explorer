@@ -461,6 +461,7 @@ function initGraph(renderMode, displayMode, paths) {
         const img = new Image();
         img.id = d.id;
         img.title = config.lang === "en" || !d.titleJP ? d.title : d.titleJP;
+        img.referrerPolicy = "no-referrer";
         img.src = d.filename;
         return img;
     });
@@ -1981,7 +1982,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "2.8.2");
+            data.footer.about = data.footer.about.replace("{VERSION}", "2.8.3");
             const formatDate = (date) => date.toLocaleString(isEn ? "en-US" : "ja-JP", { timeZoneName: "short" });
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate));
