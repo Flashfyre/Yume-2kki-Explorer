@@ -153973,6 +153973,16 @@ vec4 envMapTexelToLinear(vec4 color) {
 	const worldScales = {};
 	const defaultPathIgnoreConnTypeFlags = connType_1.NO_ENTRY | connType_1.LOCKED | connType_1.DEAD_END | connType_1.ISOLATED | connType_1.LOCKED_CONDITION | connType_1.EXIT_POINT;
 
+	const defaultLoadImage = ImageLoader.prototype.load;
+	ImageLoader.prototype.load = function (url, onLoad, onProgress, onError) {
+	    const image = defaultLoadImage.apply(this, [url, onLoad, onProgress, onError]);
+	    image.referrerPolicy = "no-referrer";
+
+	    return image;
+	};
+
+	const imageLoader = new ImageLoader();
+
 	jquery.fn.extend({
 	    animateCss: function (animation, duration, endCallback) {
 	        const animationEnd = "webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend";
@@ -154385,11 +154395,9 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    });
 
 	    const images = (paths ? exports.worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1) : exports.worldData).map(d => {
-	        const img = new Image();
+	        const img = imageLoader.load(d.filename);
 	        img.id = d.id;
 	        img.title = config$1.lang === "en" || !d.titleJP ? d.title : d.titleJP;
-	        img.referrerPolicy = "no-referrer";
-	        img.src = d.filename;
 	        return img;
 	    });
 	    
@@ -155190,11 +155198,10 @@ vec4 envMapTexelToLinear(vec4 color) {
 	 * @param {Array} texturesSources - List of Strings that represent texture sources
 	 * @returns {Array} Array containing a Promise for each source 
 	 */
-	function getImageRawData (imageSources) {
-	    const loader = new ImageLoader();
+	function getImageRawData(imageSources) {
 	    return imageSources.map(imageSource => {
 	        return new Promise((resolve, reject) => {
-	            loader.load(
+	            imageLoader.load(
 	                imageSource,
 	                image => resolve(image),
 	                undefined, // onProgress callback not supported from r84

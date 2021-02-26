@@ -42,6 +42,16 @@ let iconTexts = [];
 const worldScales = {};
 const defaultPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT;
 
+const defaultLoadImage = THREE.ImageLoader.prototype.load;
+THREE.ImageLoader.prototype.load = function (url, onLoad, onProgress, onError) {
+    const image = defaultLoadImage.apply(this, [url, onLoad, onProgress, onError]);
+    image.referrerPolicy = "no-referrer";
+
+    return image;
+};
+
+const imageLoader = new THREE.ImageLoader();
+
 $.fn.extend({
     animateCss: function (animation, duration, endCallback) {
         const animationEnd = "webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend";
@@ -458,11 +468,9 @@ function initGraph(renderMode, displayMode, paths) {
     });
 
     const images = (paths ? worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1) : worldData).map(d => {
-        const img = new Image();
+        const img = imageLoader.load(d.filename);
         img.id = d.id;
         img.title = config.lang === "en" || !d.titleJP ? d.title : d.titleJP;
-        img.referrerPolicy = "no-referrer";
-        img.src = d.filename;
         return img;
     });
     
@@ -1263,11 +1271,10 @@ function getLocalizedNodeLabel(localizedNodeLabel, forPath)
  * @param {Array} texturesSources - List of Strings that represent texture sources
  * @returns {Array} Array containing a Promise for each source 
  */
-function getImageRawData (imageSources) {
-    const loader = new THREE.ImageLoader()
+function getImageRawData(imageSources) {
     return imageSources.map(imageSource => {
         return new Promise((resolve, reject) => {
-            loader.load(
+            imageLoader.load(
                 imageSource,
                 image => resolve(image),
                 undefined, // onProgress callback not supported from r84
