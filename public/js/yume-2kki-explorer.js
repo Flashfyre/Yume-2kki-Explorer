@@ -1,4 +1,4 @@
-// Version 2.8.5 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 2.8.6 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -154253,7 +154253,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        if (worldDepths[endWorldId] < maxDepth || (worldDepths[endWorldId] === maxDepth && depths.filter(d => d === maxDepth).length > 1))
 	            worldDepths[endWorldId] = ++maxDepth;
 
-	        const nexusWorldId = exports.worldsByName['The Nexus'].id;
+	        const nexusWorldName = "The Nexus";
+	        const nexusWorldId = exports.worldData.filter(w => w.title === nexusWorldName)[0].id;
 	        const nexusShortcutLinks = links.filter(l => l.target === nexusWorldId && l.connType & connType_1.EFFECT && !exports.worldData[l.source].connections.filter(c => c.targetId === nexusWorldId).length);
 	        const nexusShortcutWorldIds = nexusShortcutLinks.map(l => l.source);
 	        
@@ -155749,7 +155750,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            }
 	        }
 
-	        const nexusWorldName = 'The Nexus';
+	        const nexusWorldName = "The Nexus";
 	        const nexusWorldId = exports.worldData.filter(w => w.title === nexusWorldName)[0].id;
 
 	        if (s !== nexusWorldId) {
@@ -155916,7 +155917,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "2.8.5");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "2.8.6");
 	            const formatDate = (date) => date.toLocaleString(isEn ? "en-US" : "ja-JP", { timeZoneName: "short" });
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate));

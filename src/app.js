@@ -326,7 +326,8 @@ function initGraph(renderMode, displayMode, paths) {
         if (worldDepths[endWorldId] < maxDepth || (worldDepths[endWorldId] === maxDepth && depths.filter(d => d === maxDepth).length > 1))
             worldDepths[endWorldId] = ++maxDepth;
 
-        const nexusWorldId = worldsByName['The Nexus'].id;
+        const nexusWorldName = "The Nexus";
+        const nexusWorldId = worldData.filter(w => w.title === nexusWorldName)[0].id;
         const nexusShortcutLinks = links.filter(l => l.target === nexusWorldId && l.connType & ConnType.EFFECT && !worldData[l.source].connections.filter(c => c.targetId === nexusWorldId).length);
         const nexusShortcutWorldIds = nexusShortcutLinks.map(l => l.source);
         
@@ -1822,7 +1823,7 @@ function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
             }
         }
 
-        const nexusWorldName = 'The Nexus';
+        const nexusWorldName = "The Nexus";
         const nexusWorldId = worldData.filter(w => w.title === nexusWorldName)[0].id;
 
         if (s !== nexusWorldId) {
@@ -1989,7 +1990,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "2.8.5");
+            data.footer.about = data.footer.about.replace("{VERSION}", "2.8.6");
             const formatDate = (date) => date.toLocaleString(isEn ? "en-US" : "ja-JP", { timeZoneName: "short" });
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate));
