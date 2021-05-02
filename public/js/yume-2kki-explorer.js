@@ -1,4 +1,4 @@
-// Version 2.8.6 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 2.9.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -154073,14 +154073,18 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    jquery(".controls--container--tab").css({ "height": `${settingsHeight}px`, "left": `calc(50% - ${((jquery(".controls--container--tab").outerWidth() - 16) / 2)}px)` });
 	    if (updateTabMargin && jquery(".controls-bottom").hasClass("visible"))
 	        jquery(".controls--container--tab, .footer").css("margin-top", `-${(settingsHeight + 8)}px`);
-	    jquery(".js--help-modal").css({
+	    jquery(".modal").css({
 	        "margin-top": `${(controlsHeight + 16)}px`,
-	        "height": `calc(100% - ${(controlsHeight + 16 + (jquery(".controls-bottom").hasClass("visible") ? settingsHeight + 8 : 0))} + "px)`
+	        "height": `calc(100% - ${(controlsHeight + 16 + (jquery(".controls-bottom").hasClass("visible") ? settingsHeight + 8 : 0))}px)`
 	    });
 	}
 
 	function loadWorldData(update, success, fail) {
-	    jquery.get("/worlds" + (update ? "?update=true" : ""), function (data) {
+	    let queryString = update ? "?update=" + update : "";
+	    const urlSearchParams = new URLSearchParams(window.location.search);
+	    if (urlSearchParams.has("adminKey"))
+	        queryString += (queryString.length ? "&" : "?") + "adminKey=" + urlSearchParams.get("adminKey");
+	    jquery.get("/worlds" + queryString, function (data) {
 	        if (document.fonts.check("12px MS Gothic")) {
 	            fontsLoaded = true;
 	            success(data);
@@ -155881,16 +155885,18 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	    return ret > -1 ? ret : findRealPathDepth(paths, worldId, pathWorldIds, worldDepthsMap, maxDepth, minDepth, ignoreTypeFlags);
 	}
-	        
 
-	function findConnectionAnomalies() {
+	function getMissingConnections() {
+	    const ret = [];
 	    const connData = {};
+	    
 	    exports.worldData.forEach(w => {
 	        connData[w.id] = [];
 	        exports.worldData[w.id].connections.map(c => exports.worldData[c.targetId]).forEach(c => {
 	            connData[w.id].push(c.id);
 	        });
-	    }); 
+	    });
+
 	    Object.keys(connData).forEach(id => {
 	        let connIds = connData[id].slice(0);
 	        connIds.forEach(c => {
@@ -155901,13 +155907,49 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            }
 	        });
 	    });
+
 	    Object.keys(connData).forEach(id => {
 	        if (connData[id].length) {
 	            connData[id].forEach(c => {
-	                console.log(exports.worldData[c].title, "is missing a connection to", exports.worldData[id].title);
+	                ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${c}">${exports.worldData[c].title}</a> is missing a connection to <a class="world-link" href="javascript:void(0);" data-world-id="${id}">${exports.worldData[id].title}</a>`);
 	            });
 	        }
 	    });
+
+	    return ret;
+	}
+
+	function getMissingLocationParams() {
+	    const ret = [];
+
+	    exports.worldData.forEach(w => {
+	        if (!w.titleJP || w.titleJP === "None")
+	            ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> is missing its Japanese name parameter`);
+	            
+	        w.connections.forEach(conn => {
+	            const connWorld = exports.worldData[conn.targetId];
+	            if (conn.type & connType_1.EFFECT) {
+	                if (!conn.typeParams || !conn.typeParams[connType_1.EFFECT] || !conn.typeParams[connType_1.EFFECT].params)
+	                    ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> is missing the effects parameter for its connection to <a class="world-link" href="javascript:void(0);" data-world-id="${connWorld.id}">${connWorld.title}</a>`);
+	            }
+	            if (conn.type & connType_1.CHANCE) {
+	                if (!conn.typeParams || !conn.typeParams[connType_1.CHANCE] || !conn.typeParams[connType_1.CHANCE].params)
+	                    ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> is missing the chance percentage parameter for its connection to <a class="world-link" href="javascript:void(0);" data-world-id="${connWorld.id}">${connWorld.title}</a>`);
+	            }
+	            if (conn.type & connType_1.LOCKED_CONDITION) {
+	                if (!conn.typeParams || !conn.typeParams[connType_1.LOCKED_CONDITION] || !conn.typeParams[connType_1.LOCKED_CONDITION].params)
+	                    ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> is missing the lock condition parameter for its connection to <a class="world-link" href="javascript:void(0);" data-world-id="${connWorld.id}">${connWorld.title}</a>`);
+	                if (!conn.typeParamsJP || !conn.typeParams[connType_1.LOCKED_CONDITION] || !conn.typeParams[connType_1.LOCKED_CONDITION].paramsJP)
+	                    ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> is missing the Japanese lock condition parameter for its connection to <a class="world-link" href="javascript:void(0);" data-world-id="${connWorld.id}">${connWorld.title}</a>`);
+	            }
+	        });
+	    });
+
+	    return ret;
+	}
+
+	function getMissingMapIds() {
+	    return exports.worldData.filter(w => w.noMaps).map(w => `<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> has no associated Map IDs`);
 	}
 
 	function initLocalization(isInitial) {
@@ -155917,7 +155959,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "2.8.6");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "2.9.0");
 	            const formatDate = (date) => date.toLocaleString(isEn ? "en-US" : "ja-JP", { timeZoneName: "short" });
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate));
@@ -156192,7 +156234,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    const vector = new Vector3(mousePos.x, mousePos.y, 1);
 	    let intersects = [];
 
-	    if (!jquery(".js--help-modal:visible").length) {
+	    if (!jquery(".modal:visible").length) {
 	        raycaster.setFromCamera(vector, exports.graph.camera());
 	        // create an array containing all objects in the scene with which the ray intersects
 	        if (isWebGL2)
@@ -156301,8 +156343,11 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        config$1.fontStyle = parseInt(jquery(this).val());
 	        const themeStyles = jquery(".js--theme-styles")[0];
 	        getFontColor(config$1.uiTheme, config$1.fontStyle, function (baseColor) {
-	            getFontColor(config$1.uiTheme, config$1.fontStyle !== 4 ? 4 : 0, function (altColor) {
-	                themeStyles.textContent = themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/([a-zA-Z0-9\_]+)\/font\d\.png\)/g, "url(/images/ui/$1/font" + (config$1.fontStyle + 1) + ".png)")
+	            const altFontStyle = config$1.fontStyle !== 4 ? 4 : 0;
+	            getFontColor(config$1.uiTheme, altFontStyle, function (altColor) {
+	                themeStyles.textContent = themeStyles.textContent = themeStyles.textContent = themeStyles.textContent
+	                    .replace(/url\(\/images\/ui\/([a-zA-Z0-9\_]+)\/font\d\.png\)( *!important)?;( *)\/\*base\*\//g, "url(/images/ui/$1/font" + (config$1.fontStyle + 1) + ".png)$2;$3/*base*/")
+	                    .replace(/url\(\/images\/ui\/([a-zA-Z0-9\_]+)\/font\d\.png\)( *!important)?;( *)\/\*alt\*\//g, "url(/images/ui/$1/font" + (altFontStyle + 1) + ".png)$2;$3/*alt*/")
 	                    .replace(/([^\-])color:( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "$1color:$2" + baseColor + "$3;$4/*base*/")
 	                    .replace(/([^\-])color:( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "$1color:$2" + altColor + "$3;$4/*alt*/");
 	                updateConfig(config$1);
@@ -156404,7 +156449,78 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    });
 	}
 
-	jquery(function () {
+	function initAdminControls() {
+	    jquery(".js--check-data-issues").on("click", function() {
+	        if (jquery(".js--data-issues-modal:visible").length) {
+	            jquery.modal.close();
+	            return;
+	        }
+
+	        jquery(".js--data-issues-modal").modal({
+	            fadeDuration: 100,
+	            closeClass: 'noselect',
+	            closeText: '✖'
+	        });
+
+	        const loadCallback = displayLoadingAnim(jquery(".js--data-issues-modal__content"), true);
+
+	        const dataIssues = {
+	            "missing-conns": {
+	                data: getMissingConnections(),
+	                emptyMessage: "No missing connections found"
+	            },
+	            "missing-location-params": {
+	                data: getMissingLocationParams(),
+	                emptyMessage: "No missing location parameters found"
+	            },
+	            "missing-map-ids": {
+	                data: getMissingMapIds(),
+	                emptyMessage: "No locations with missing map IDs found"
+	            }
+	        };
+
+	        loadCallback();
+
+	        Object.keys(dataIssues).forEach(di => {
+	            const data = dataIssues[di].data;
+	            const $dataList = jquery("<ul></ul>");
+	            if (data.length) {
+	                for (let d of data)
+	                    $dataList.append(`<li>${d}</li>`);
+	            } else
+	                $dataList.append(`<li>${dataIssues[di].emptyMessage}</li>`);
+	            jquery(".js--data-issues__" + di).html($dataList);
+	        });
+	    });
+
+	    jquery(".js--update-data, .js--reset-data").on("click", function() {
+	        if (jquery(".modal:visible").length)
+	            jquery.modal.close();
+
+	        const isReset = jquery(this).hasClass("js--reset-data");
+	        const loadCallback = displayLoadingAnim(jquery("#graph"));
+
+	        loadWorldData(isReset ? "reset" : true, function () {
+	            window.location.reload();
+	        }, function () {
+	            loadCallback(true);
+	        });
+	    });
+
+	    jquery(document).on("click", "a.world-link", function () {
+	        openWorldWikiPage(jquery(this).data("worldId"), isShift);
+	    });
+	}
+
+	function displayLoadingAnim($container, restoreContent) {
+	    const containerContent = $container.html();
+	    $container.html(
+	        `<div class="loading-container">
+            <span class="loading-container__text loading-container__text--loading"><span data-localize="loading.label" class="loading-container__text__main">Loading</span><span data-localize="loading.space" class="loading-container__text__append"></span></span>
+            <span class="loading-container__text loading-container__text--error" data-localize="loading.error" style="display: none;"></span>
+            <img src="images/urowalk.gif" />
+        </div>`);
+
 	    let loadingFrameCount = 0;
 	    const loadingTimer = window.setInterval(function () {
 	        let loadingTextAppend = "";
@@ -156412,10 +156528,25 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        const loadingTextSpaceChar = config$1.lang === "en" ? " " : "　";
 	        for (let i = 0; i < 3; i++)
 	            loadingTextAppend += i < loadingFrameCount ? loadingTextAppendChar : loadingTextSpaceChar;
-	        jquery(".loading-container__text__append").text(loadingTextAppend);
+	        $container.find(".loading-container__text__append").text(loadingTextAppend);
 	        loadingFrameCount += loadingFrameCount < 3 ? 1 : -3;
 	    }, 300);
-	    
+
+	    return function (error) {
+	        window.clearInterval(loadingTimer);
+	        if (restoreContent)
+	            $container.html(containerContent);
+	        if (error) {
+	            $container.find(".loading-container .loading-container__text--loading").hide();
+	            $container.find(".loading-container .loading-container__text--error").show();
+	            $container.find(".loading-container img").attr("src", "images/urofaint.gif");
+	        }
+	    };
+	}
+
+	jquery(function () {
+	    const loadCallback = displayLoadingAnim(jquery("#graph"));
+
 	    initControls();
 
 	    loadOrInitConfig();
@@ -156426,6 +156557,11 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        exports.worldData = data.worldData;
 	        lastUpdate = new Date(data.lastUpdate);
 	        lastFullUpdate = new Date(data.lastFullUpdate);
+
+	        if (data.isAdmin) {
+	            initAdminControls();
+	            jquery('.admin-only').removeClass('admin-only');
+	        }
 
 	        for (let d in Object.keys(exports.worldData)) {
 	            const world = exports.worldData[d];
@@ -156446,7 +156582,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        minSize = lodash.min(worldSizes);
 	        maxSize = lodash.max(worldSizes);
 
-	        window.clearInterval(loadingTimer);
+	        loadCallback();
 
 	        graphCanvas = document.createElement('canvas');
 	        graphContext = graphCanvas.getContext('webgl2');
@@ -156457,15 +156593,9 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            initNodeObjectMaterial();
 	            
 	        reloadGraph();
-	    }, function () {
-	        window.clearInterval(loadingTimer);
-	        jquery(".loading-container .loading-container__text--loading").hide();
-	        jquery(".loading-container .loading-container__text--error").show();
-	        jquery(".loading-container img").attr("src", "images/urofaint.gif");
-	    });
+	    }, loadCallback);
 	});
 
-	exports.findConnectionAnomalies = findConnectionAnomalies;
 	exports.loadWorldData = loadWorldData;
 
 	Object.defineProperty(exports, '__esModule', { value: true });

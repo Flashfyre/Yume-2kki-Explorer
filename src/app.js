@@ -144,14 +144,18 @@ function updateControlsContainer(updateTabMargin) {
     $(".controls--container--tab").css({ "height": `${settingsHeight}px`, "left": `calc(50% - ${(($(".controls--container--tab").outerWidth() - 16) / 2)}px)` });
     if (updateTabMargin && $(".controls-bottom").hasClass("visible"))
         $(".controls--container--tab, .footer").css("margin-top", `-${(settingsHeight + 8)}px`);
-    $(".js--help-modal").css({
+    $(".modal").css({
         "margin-top": `${(controlsHeight + 16)}px`,
-        "height": `calc(100% - ${(controlsHeight + 16 + ($(".controls-bottom").hasClass("visible") ? settingsHeight + 8 : 0))} + "px)`
+        "height": `calc(100% - ${(controlsHeight + 16 + ($(".controls-bottom").hasClass("visible") ? settingsHeight + 8 : 0))}px)`
     });
 }
 
 export function loadWorldData(update, success, fail) {
-    $.get("/worlds" + (update ? "?update=true" : ""), function (data) {
+    let queryString = update ? "?update=" + update : "";
+    const urlSearchParams = new URLSearchParams(window.location.search);
+    if (urlSearchParams.has("adminKey"))
+        queryString += (queryString.length ? "&" : "?") + "adminKey=" + urlSearchParams.get("adminKey");
+    $.get("/worlds" + queryString, function (data) {
         if (document.fonts.check("12px MS Gothic")) {
             fontsLoaded = true;
             success(data);
@@ -1954,16 +1958,18 @@ function findRealPathDepth(paths, worldId, pathWorldIds, worldDepthsMap, maxDept
 
     return ret > -1 ? ret : findRealPathDepth(paths, worldId, pathWorldIds, worldDepthsMap, maxDepth, minDepth, ignoreTypeFlags);
 }
-        
 
-export function findConnectionAnomalies() {
+function getMissingConnections() {
+    const ret = [];
     const connData = {};
+    
     worldData.forEach(w => {
         connData[w.id] = [];
         worldData[w.id].connections.map(c => worldData[c.targetId]).forEach(c => {
             connData[w.id].push(c.id);
         });
-    }); 
+    });
+
     Object.keys(connData).forEach(id => {
         let connIds = connData[id].slice(0);
         connIds.forEach(c => {
@@ -1974,13 +1980,49 @@ export function findConnectionAnomalies() {
             }
         });
     });
+
     Object.keys(connData).forEach(id => {
         if (connData[id].length) {
             connData[id].forEach(c => {
-                console.log(worldData[c].title, "is missing a connection to", worldData[id].title);
+                ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${c}">${worldData[c].title}</a> is missing a connection to <a class="world-link" href="javascript:void(0);" data-world-id="${id}">${worldData[id].title}</a>`);
             });
         }
     });
+
+    return ret;
+}
+
+function getMissingLocationParams() {
+    const ret = [];
+
+    worldData.forEach(w => {
+        if (!w.titleJP || w.titleJP === "None")
+            ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> is missing its Japanese name parameter`);
+            
+        w.connections.forEach(conn => {
+            const connWorld = worldData[conn.targetId];
+            if (conn.type & ConnType.EFFECT) {
+                if (!conn.typeParams || !conn.typeParams[ConnType.EFFECT] || !conn.typeParams[ConnType.EFFECT].params)
+                    ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> is missing the effects parameter for its connection to <a class="world-link" href="javascript:void(0);" data-world-id="${connWorld.id}">${connWorld.title}</a>`);
+            }
+            if (conn.type & ConnType.CHANCE) {
+                if (!conn.typeParams || !conn.typeParams[ConnType.CHANCE] || !conn.typeParams[ConnType.CHANCE].params)
+                    ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> is missing the chance percentage parameter for its connection to <a class="world-link" href="javascript:void(0);" data-world-id="${connWorld.id}">${connWorld.title}</a>`);
+            }
+            if (conn.type & ConnType.LOCKED_CONDITION) {
+                if (!conn.typeParams || !conn.typeParams[ConnType.LOCKED_CONDITION] || !conn.typeParams[ConnType.LOCKED_CONDITION].params)
+                    ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> is missing the lock condition parameter for its connection to <a class="world-link" href="javascript:void(0);" data-world-id="${connWorld.id}">${connWorld.title}</a>`);
+                if (!conn.typeParamsJP || !conn.typeParams[ConnType.LOCKED_CONDITION] || !conn.typeParams[ConnType.LOCKED_CONDITION].paramsJP)
+                    ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> is missing the Japanese lock condition parameter for its connection to <a class="world-link" href="javascript:void(0);" data-world-id="${connWorld.id}">${connWorld.title}</a>`);
+            }
+        });
+    });
+
+    return ret;
+}
+
+function getMissingMapIds() {
+    return worldData.filter(w => w.noMaps).map(w => `<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> has no associated Map IDs`);
 }
 
 function initLocalization(isInitial) {
@@ -1990,7 +2032,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "2.8.6");
+            data.footer.about = data.footer.about.replace("{VERSION}", "2.9.0");
             const formatDate = (date) => date.toLocaleString(isEn ? "en-US" : "ja-JP", { timeZoneName: "short" });
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate));
@@ -2267,7 +2309,7 @@ function updateRaycast() {
     const vector = new THREE.Vector3(mousePos.x, mousePos.y, 1);
     let intersects = [];
 
-    if (!$(".js--help-modal:visible").length) {
+    if (!$(".modal:visible").length) {
         raycaster.setFromCamera(vector, graph.camera());
         // create an array containing all objects in the scene with which the ray intersects
         if (isWebGL2)
@@ -2376,8 +2418,11 @@ function initControls() {
         config.fontStyle = parseInt($(this).val());
         const themeStyles = $(".js--theme-styles")[0];
         getFontColor(config.uiTheme, config.fontStyle, function (baseColor) {
-            getFontColor(config.uiTheme, config.fontStyle !== 4 ? 4 : 0, function (altColor) {
-                themeStyles.textContent = themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/([a-zA-Z0-9\_]+)\/font\d\.png\)/g, "url(/images/ui/$1/font" + (config.fontStyle + 1) + ".png)")
+            const altFontStyle = config.fontStyle !== 4 ? 4 : 0;
+            getFontColor(config.uiTheme, altFontStyle, function (altColor) {
+                themeStyles.textContent = themeStyles.textContent = themeStyles.textContent = themeStyles.textContent
+                    .replace(/url\(\/images\/ui\/([a-zA-Z0-9\_]+)\/font\d\.png\)( *!important)?;( *)\/\*base\*\//g, "url(/images/ui/$1/font" + (config.fontStyle + 1) + ".png)$2;$3/*base*/")
+                    .replace(/url\(\/images\/ui\/([a-zA-Z0-9\_]+)\/font\d\.png\)( *!important)?;( *)\/\*alt\*\//g, "url(/images/ui/$1/font" + (altFontStyle + 1) + ".png)$2;$3/*alt*/")
                     .replace(/([^\-])color:( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "$1color:$2" + baseColor + "$3;$4/*base*/")
                     .replace(/([^\-])color:( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "$1color:$2" + altColor + "$3;$4/*alt*/");
                 updateConfig(config);
@@ -2479,7 +2524,78 @@ function initControls() {
     });
 }
 
-$(function () {
+function initAdminControls() {
+    $(".js--check-data-issues").on("click", function() {
+        if ($(".js--data-issues-modal:visible").length) {
+            $.modal.close();
+            return;
+        }
+
+        $(".js--data-issues-modal").modal({
+            fadeDuration: 100,
+            closeClass: 'noselect',
+            closeText: '✖'
+        });
+
+        const loadCallback = displayLoadingAnim($(".js--data-issues-modal__content"), true);
+
+        const dataIssues = {
+            "missing-conns": {
+                data: getMissingConnections(),
+                emptyMessage: "No missing connections found"
+            },
+            "missing-location-params": {
+                data: getMissingLocationParams(),
+                emptyMessage: "No missing location parameters found"
+            },
+            "missing-map-ids": {
+                data: getMissingMapIds(),
+                emptyMessage: "No locations with missing map IDs found"
+            }
+        };
+
+        loadCallback();
+
+        Object.keys(dataIssues).forEach(di => {
+            const data = dataIssues[di].data;
+            const $dataList = $("<ul></ul>");
+            if (data.length) {
+                for (let d of data)
+                    $dataList.append(`<li>${d}</li>`);
+            } else
+                $dataList.append(`<li>${dataIssues[di].emptyMessage}</li>`);
+            $(".js--data-issues__" + di).html($dataList);
+        });
+    });
+
+    $(".js--update-data, .js--reset-data").on("click", function() {
+        if ($(".modal:visible").length)
+            $.modal.close();
+
+        const isReset = $(this).hasClass("js--reset-data");
+        const loadCallback = displayLoadingAnim($("#graph"));
+
+        loadWorldData(isReset ? "reset" : true, function () {
+            window.location.reload();
+        }, function () {
+            loadCallback(true);
+        });
+    });
+
+    $(document).on("click", "a.world-link", function () {
+        openWorldWikiPage($(this).data("worldId"), isShift);
+    });
+}
+
+function displayLoadingAnim($container, restoreContent) {
+    const containerContent = $container.html();
+    $container.html(
+        `<div class="loading-container">
+            <span class="loading-container__text loading-container__text--loading"><span data-localize="loading.label" class="loading-container__text__main">Loading</span><span data-localize="loading.space" class="loading-container__text__append"></span></span>
+            <span class="loading-container__text loading-container__text--error" data-localize="loading.error" style="display: none;"></span>
+            <img src="images/urowalk.gif" />
+        </div>`);
+
     let loadingFrameCount = 0;
     const loadingTimer = window.setInterval(function () {
         let loadingTextAppend = "";
@@ -2487,10 +2603,25 @@ $(function () {
         const loadingTextSpaceChar = config.lang === "en" ? " " : "　";
         for (let i = 0; i < 3; i++)
             loadingTextAppend += i < loadingFrameCount ? loadingTextAppendChar : loadingTextSpaceChar;
-        $(".loading-container__text__append").text(loadingTextAppend);
+        $container.find(".loading-container__text__append").text(loadingTextAppend);
         loadingFrameCount += loadingFrameCount < 3 ? 1 : -3;
     }, 300);
-    
+
+    return function (error) {
+        window.clearInterval(loadingTimer);
+        if (restoreContent)
+            $container.html(containerContent);
+        if (error) {
+            $container.find(".loading-container .loading-container__text--loading").hide();
+            $container.find(".loading-container .loading-container__text--error").show();
+            $container.find(".loading-container img").attr("src", "images/urofaint.gif");
+        }
+    };
+}
+
+$(function () {
+    const loadCallback = displayLoadingAnim($("#graph"));
+
     initControls();
 
     loadOrInitConfig();
@@ -2501,6 +2632,11 @@ $(function () {
         worldData = data.worldData;
         lastUpdate = new Date(data.lastUpdate);
         lastFullUpdate = new Date(data.lastFullUpdate);
+
+        if (data.isAdmin) {
+            initAdminControls();
+            $('.admin-only').removeClass('admin-only');
+        }
 
         for (let d in Object.keys(worldData)) {
             const world = worldData[d];
@@ -2521,7 +2657,7 @@ $(function () {
         minSize = _.min(worldSizes);
         maxSize = _.max(worldSizes);
 
-        window.clearInterval(loadingTimer);
+        loadCallback();
 
         graphCanvas = document.createElement('canvas');
         graphContext = graphCanvas.getContext('webgl2');
@@ -2532,10 +2668,5 @@ $(function () {
             initNodeObjectMaterial();
             
         reloadGraph();
-    }, function () {
-        window.clearInterval(loadingTimer);
-        $(".loading-container .loading-container__text--loading").hide();
-        $(".loading-container .loading-container__text--error").show();
-        $(".loading-container img").attr("src", "images/urofaint.gif");
-    });
+    }, loadCallback);
 });

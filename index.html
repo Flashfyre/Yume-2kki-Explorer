@@ -17,8 +17,15 @@
                 color: rgba(216, 216, 216, 1); /*base*/
             }
 
-            label, h1, h2, h3, h4, p, .close-modal, .loading-container .loading-container__text {
-                background-image: url(/images/ui/Default_Custom/font1.png) !important;
+            label, h1, h2, h3, h4, p, li, .close-modal, .loading-container .loading-container__text {
+                background-image: url(/images/ui/Default_Custom/font1.png) !important; /*base*/
+                -webkit-background-clip: text;
+	            -webkit-text-fill-color: transparent;
+                background-clip: text;
+            }
+
+            a.world-link {
+                background-image: url(/images/ui/Default_Custom/font4.png) !important; /*alt*/
                 -webkit-background-clip: text;
 	            -webkit-text-fill-color: transparent;
                 background-clip: text;
@@ -40,7 +47,7 @@
                 background-size: 18.67px;
             }
 
-            p, h4 {
+            p, li, h4 {
                 background-size: 16px;
             }
 
@@ -57,7 +64,7 @@
                 color: rgba(216, 216, 216, 1); /*base*/
             }
 
-            button, a {
+            button, a:not(.world-link) {
                 color: rgba(216, 216, 216, 1); /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
                 background-image: url(/images/ui/Default_Custom/containerbg.png);
@@ -116,32 +123,35 @@
     <body>
         <div class="content">
             <div class="controls controls-top">
-                <div class="control">
-                    <label data-localize="controls.search.name" class="noselect">Search:</label>
-                    <input name="searchWorld" type="text" class="js--world-input js--search-world" />
+                <div class="controls__container">
+                    <div class="control">
+                        <label data-localize="controls.search.name" class="noselect">Search:</label>
+                        <input name="searchWorld" type="text" class="js--world-input js--search-world" />
+                    </div>
+                    <div class="control">
+                        <label data-localize="controls.author.name" class="noselect">Author:</label>
+                        <select name="author" class="js--author">
+                            <option data-localize="controls.author.values.null" value="null"></option>
+                        </select>
+                    </div>
+                    <div class="control">
+                        <label data-localize="controls.origin.name" class="noselect">Origin:</label>
+                        <input name="startWorld" type="text" class="js--world-input js--path--world-input js--start-world" />
+                        <label data-localize="controls.destination.name" class="noselect">Destination:</label>
+                        <input name="endWorld" type="text" class="js--world-input js--path--world-input js--end-world" />
+                        <button data-localize="controls.reset.name" class="js--reset noselect">Reset</button>
+                        <button data-localize="controls.help.name" class="js--help noselect">Help</button>
+                    </div>
                 </div>
-                <div class="control">
-                    <label data-localize="controls.author.name" class="noselect">Author:</label>
-                    <select name="author" class="js--author">
-                        <option data-localize="controls.author.values.null" value="null"></option>
-                    </select>
-                </div>
-                <div class="control">
-                    <label data-localize="controls.origin.name" class="noselect">Origin:</label>
-                    <input name="startWorld" type="text" class="js--world-input js--path--world-input js--start-world" />
-                    <label data-localize="controls.destination.name" class="noselect">Destination:</label>
-                    <input name="endWorld" type="text" class="js--world-input js--path--world-input js--end-world" />
-                    <button data-localize="controls.reset.name" class="js--reset noselect">Reset</button>
-                    <button data-localize="controls.help.name" class="js--help noselect">Help</button>
+                <div class="admin-controls controls__container admin-only">
+                    <div class="control">
+                        <button class="js--check-data-issues noselect">Check for Data Issues</button>
+                        <button class="js--update-data noselect">Update Data</button>
+                        <button class="js--reset-data noselect">Emergency Data Reset</button>
+                    </div>
                 </div>
             </div>
-            <div id="graph" class="graph">
-                <div class="loading-container">
-                    <span class="loading-container__text loading-container__text--loading"><span data-localize="loading.label" class="loading-container__text__main">Loading</span><span data-localize="loading.space" class="loading-container__text__append">   </span></span>
-                    <span class="loading-container__text loading-container__text--error" data-localize="loading.error" style="display: none;"></span>
-                    <img src="images/urowalk.gif" />
-                </div>
-            </div>
+            <div id="graph" class="graph"></div>
             <div class="controls--container--tab" style="display: none;">
                 <button class="controls--container--tab__button noselect">▲</button>
             </div>
@@ -226,6 +236,24 @@
                 <div data-localize="footer.about"></div>
                 <div data-localize="footer.lastUpdate"></div>
                 <div data-localize="footer.lastFullUpdate"></div>
+            </div>
+        </div>
+        <div id="dataIssuesModal" class="js--data-issues-modal modal">
+            <div class="js--data-issues-modal__content modal__content">
+                <div class="data-issues__container">
+                    <div class="data-issues-module">
+                        <label>Missing Connections</label>
+                        <div class="js--data-issues__missing-conns"></div>
+                    </div>
+                    <div class="data-issues-module">
+                        <label>Missing Location Parameters</label>
+                        <div class="js--data-issues__missing-location-params"></div>
+                    </div>
+                    <div class="data-issues-module">
+                        <label>Locations Missing Map IDs</label>
+                        <div class="js--data-issues__missing-map-ids"></div>
+                    </div>
+                </div>
             </div>
         </div>
         <div id="helpModal" class="js--help-modal modal">

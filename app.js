@@ -7,6 +7,7 @@ const fs = require('fs');
 const download = require('image-downloader');
 const mysql = require('mysql');
 const ConnType = require('./src/conn-type').ConnType;
+const adminKey = process.env.ADMIN_KEY || require("./config/app.config.js").ADMIN_KEY;
 const isRemote = Boolean(process.env.DATABASE_URL);
 const defaultPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT;
 
@@ -139,31 +140,58 @@ const batchSize = 20;
 
 app.get('/worlds', function(req, res) {
     getConnPool().then(pool => {
-        const callback = function (worldData) {
-            pool.query('SELECT lastUpdate, lastFullUpdate FROM updates', (err, rows) => {
-                if (err) console.error(err);
-                const row = rows.length ? rows[0] : null;
-                const lastUpdate = row ? row.lastUpdate : null;
-                const lastFullUpdate = row ? row.lastFullUpdate : null;
-                res.json({
-                    worldData: worldData,
-                    lastUpdate: lastUpdate,
-                    lastFullUpdate: lastFullUpdate
+        const callback = function () {
+            getWorldData(pool).then(worldData => {
+                pool.query('SELECT lastUpdate, lastFullUpdate FROM updates', (err, rows) => {
+                    if (err) console.error(err);
+                    const row = rows.length ? rows[0] : null;
+                    const lastUpdate = row ? row.lastUpdate : null;
+                    const lastFullUpdate = row ? row.lastFullUpdate : null;
+                    const isAdmin = req.query.hasOwnProperty("adminKey") && req.query.adminKey === adminKey;
+    
+                    res.json({
+                        worldData: worldData,
+                        lastUpdate: lastUpdate,
+                        lastFullUpdate: lastFullUpdate,
+                        isAdmin: isAdmin
+                    });
+                    pool.end();
                 });
-                pool.end();
-            });
+            }).catch(err => console.error(err));
         };
         if (req.query.hasOwnProperty("update") && req.query.update) {
-            populateWorldData(pool).then(() => getWorldData(pool, true).then(worldData => {
-                updateMapData(pool, worldData).then(() => {
-                    pool.query("UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()", (err) => {
-                        if (err) console.error(err);
-                        getWorldData(pool).then(wd => callback(wd)).catch(err => console.error(err));
-                    });
-                }).catch(err => console.error(err));
-            }).catch(err => console.error(err))).catch(err => console.error(err));
+            if (req.query.update === "reset") {
+                populateWorldData(pool).then(() => getWorldData(pool, true).then(worldData => {
+                    updateMapData(pool, worldData).then(() => {
+                        pool.query("UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()", (err) => {
+                            if (err) console.error(err);
+                            callback();
+                        });
+                    }).catch(err => console.error(err));
+                }).catch(err => console.error(err))).catch(err => console.error(err));
+            } else {
+                pool.query("SELECT lastUpdate FROM updates", (err, rows) => {
+                    if (err) console.error(err);
+                    if (rows.length) {
+                        getWorldData(pool, true).then(worldData => {
+                            getUpdatedWorldNames(worldData.map(w => w.title), rows[0].lastUpdate)
+                                .then(updatedWorldNames => populateWorldData(pool, worldData, updatedWorldNames)
+                                    .then(worldData => {
+                                        checkUpdateMapData(pool, worldData, rows[0].lastUpdate).then(() => {
+                                            pool.query("UPDATE updates SET lastUpdate=NOW()", err => {
+                                                if (err) console.error(err);
+                                                callback();
+                                            });
+                                        }).catch(err => console.error(err));
+                                    }).catch(err => console.error(err)))
+                                .catch(err => console.error(err));
+                        }).catch(err => console.error(err));
+                    } else
+                        callback();
+                });
+            }
         } else
-            checkUpdateData(pool).then(() => getWorldData(pool).then(wd => callback(wd)).catch(err => console.error(err))).catch(err => console.error(err));
+            checkUpdateData(pool).then(() => callback()).catch(err => console.error(err));
     }).catch(err => console.error(err));
 });
 
@@ -226,6 +254,7 @@ function getWorldData(pool, preserveIds) {
                                 const avgSize = rows[0].size;
                                 missingMapWorlds.forEach(w => {
                                     w.size = avgSize;
+                                    w.noMaps = true;
                                 });
                                 resolve(worldData);
                             });
@@ -1100,7 +1129,7 @@ function getConnections(html) {
                 connType |= ConnType.DEAD_END;
             else if (areaText.indexOf(">Return<") > -1)
                 connType |= ConnType.ISOLATED;
-            if (areaText.indexOf("effect") > -1) {
+            if (areaText.indexOf("✨") > -1) {
                 connType |= ConnType.EFFECT;
                 if (areaText.indexOf("data-effect-params=\"") > -1) {
                     const paramsIndex = areaText.indexOf("data-effect-params=\"") + 20;

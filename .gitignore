@@ -109,7 +109,10 @@ dist
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
+
+# Local config files
 config/db.config.js
+config/app.config.js
 
 # World images
 public/images/worlds/

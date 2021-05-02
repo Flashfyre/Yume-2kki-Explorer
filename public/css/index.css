@@ -44,7 +44,13 @@ body {
     border: 10px solid transparent;
 }
 
+.controls__container {
+    display: flex;
+    justify-content: flex-end;
+}
+
 .controls-top {
+    display: block;
     z-index: 10;
 }
 
@@ -132,6 +138,11 @@ label {
     font-weight: bold;
 }
 
+ul {
+    list-style-type: none;
+    padding-inline-start: 1em;
+}
+
 button {
     margin: 8px;
     padding: 4px;
@@ -143,6 +154,9 @@ button {
 
 a {
     text-decoration: none;
+}
+
+a:not(.world-link) {
     padding: 4px;
     font-family: 'MS Gothic';
     font-size: 18px;
@@ -199,7 +213,7 @@ input[type='text'], select, .slider {
     height: calc(100% + 24px);
 }
 
-.modal__content a {
+.modal__content a:not(.world-link) {
     display: inline-block;
     margin-bottom: 24px;
 }
@@ -292,4 +306,18 @@ a.close-modal {
 
 .context-menu-item {
     border: 6px solid transparent;
+}
+
+.admin-only {
+    display: none;
+}
+
+.data-issues__container {
+    display: flex;
+    flex-wrap: wrap;
+    margin-top: 32px;
+}
+
+.data-issues-module {
+    padding: 0 24px 24px 0;
 }
