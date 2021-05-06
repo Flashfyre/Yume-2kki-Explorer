@@ -382,7 +382,7 @@ function populateWorldData(pool, worldData, updatedWorldNames, continueKey, worl
                 Promise.all(batches).then(() => {
                     const worldDataByName = _.keyBy(worldData, w => w.title);
                     const callback = function (updatedWorldData) {
-                        updateConns(pool, worldDataByName).then(() => {
+                        updateConns(pool, _.keyBy(worldData, w => w.id), _.keyBy(worldData, w => w.title)).then(() => {
                             updateConnTypeParams(pool, worldData).then(() => {
                                 updateWorldDepths(pool, _.sortBy(worldData, [ 'id' ])).then(() => {
                                     deleteRemovedWorlds(pool);
@@ -479,8 +479,7 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                     }
                     pool.query(worldsQuery, (error, res) => {
                         if (error) return reject(err);
-                        const insertedRows = res.affectedRows;
-                        const worldRowIdsQuery = `SELECT r.id FROM (SELECT id FROM worlds ORDER BY id DESC LIMIT ${insertedRows}) r ORDER BY 1`;
+                        const worldRowIdsQuery = `SELECT r.id FROM (SELECT id FROM worlds WHERE title IN ('${newWorldNames.map(w => w.replace(/'/g, "''")).join("', '")}') ORDER BY id DESC) r ORDER BY 1`;
                         pool.query(worldRowIdsQuery, (err, rows) => {
                             if (err) return reject(err);
                             for (let r in rows)
@@ -556,10 +555,10 @@ function updateWorldInfo(pool, world) {
     });
 }
 
-function updateConns(pool, worldDataByName) {
+function updateConns(pool, worldDataById, worldDataByName) {
     return new Promise((resolve, reject) => {
         const newConnsByKey = {};
-        const existingConns = [];
+        const existingUpdatedConns = [];
         const removedConnIds = [];
         const worldNames = Object.keys(worldDataByName);
         for (let w in worldDataByName) {
@@ -569,60 +568,67 @@ function updateConns(pool, worldDataByName) {
                     conn.sourceId = world.id;
                     if (!conn.targetId)
                         conn.targetId = worldDataByName[conn.location].id;
-                    const key = `${conn.sourceId}_${conn.targetId}`;
-                    newConnsByKey[key] = conn;
+					const key = `${conn.sourceId}_${conn.targetId}`;
+					newConnsByKey[key] = conn;
                 }
             }
         }
-        pool.query('SELECT id, sourceId, targetId FROM conns', (err, rows) => {
+        pool.query('SELECT id, sourceId, targetId, type FROM conns', (err, rows) => {
             if (err) return reject(err);
             for (let row of rows) {
                 const key = `${row.sourceId}_${row.targetId}`;
                 if (Object.keys(newConnsByKey).indexOf(key) > -1) {
                     const conn = newConnsByKey[key];
                     conn.id = row.id;
-                    existingConns.push(conn);
+                    if (conn.type != row.type) {
+                        existingUpdatedConns.push(conn);
+                    }
                 } else
                     removedConnIds.push(row.id);
                 delete newConnsByKey[key];
             }
-            const existingConnsByType = _.groupBy(existingConns, 'type');
-            const existingConnTypes = Object.keys(existingConnsByType);
+            const existingUpdatedConnsByType = _.groupBy(existingUpdatedConns, 'type');
+            const existingUpdatedConnTypes = Object.keys(existingUpdatedConnsByType);
             const connsCallback = function () {
-                if (existingConnTypes.length) {
+                if (existingUpdatedConnTypes.length) {
                     let updateConns = [];
-                    for (let type of existingConnTypes)
-                        updateConns.push(updateConnsOfType(pool, type, existingConnsByType[type]).catch(err => console.error(err)));
+                    for (let type of existingUpdatedConnTypes)
+                        updateConns.push(updateConnsOfType(pool, type, existingUpdatedConnsByType[type]).catch(err => console.error(err)));
                     Promise.allSettled(updateConns).finally(() => resolve());
                 } else
                     resolve();
             };
-            if (removedConnIds.length)
-                deleteRemovedConns(pool, removedConnIds);
-            const newConnKeys = Object.keys(newConnsByKey);
-            
-            if (newConnKeys.length) {
-                let i = 0;
-                let connsQuery = "INSERT INTO conns (sourceId, targetId, type) VALUES "
-                for (let c in newConnsByKey) {
-                    const conn = newConnsByKey[c];
-                    if (i++)
-                        connsQuery += ", ";
-                    connsQuery += `(${conn.sourceId}, ${conn.targetId}, ${conn.type})`;
-                }
-                pool.query(connsQuery, (err, res) => {
-                    if (err) return reject(err);
-                    const insertedRows = res.affectedRows;
-                    const connRowIdsQuery = `SELECT r.id FROM (SELECT id FROM conns ORDER BY id DESC LIMIT ${insertedRows}) r ORDER BY 1`;
-                    pool.query(connRowIdsQuery, (err, rows) => {
+
+            const callback = function () {
+                const newConnKeys = Object.keys(newConnsByKey);
+                if (newConnKeys.length) {
+                    let i = 0;
+                    let connsQuery = "INSERT INTO conns (sourceId, targetId, type) VALUES "
+                    for (let c in newConnsByKey) {
+                        const conn = newConnsByKey[c];
+                        if (i++)
+                            connsQuery += ", ";
+                        connsQuery += `(${conn.sourceId}, ${conn.targetId}, ${conn.type})`;
+                    }
+                    pool.query(connsQuery, (err, res) => {
                         if (err) return reject(err);
-                        for (let r in rows)
-                            newConnsByKey[newConnKeys[r]].id = rows[r].id;
-                        connsCallback();
+                        const insertedRows = res.affectedRows;
+                        const connRowIdsQuery = `SELECT r.id FROM (SELECT id FROM conns ORDER BY id DESC LIMIT ${insertedRows}) r ORDER BY 1`;
+                        pool.query(connRowIdsQuery, (err, rows) => {
+                            if (err) return reject(err);
+                            for (let r in rows)
+                                newConnsByKey[newConnKeys[r]].id = rows[r].id;
+                            connsCallback();
+                        });
                     });
-                });
-            } else
-                connsCallback();
+                } else
+                    connsCallback();
+            };
+
+            if (removedConnIds.length)
+                deleteRemovedConns(pool, removedConnIds).then(() => callback()).catch(err => reject(err));
+            else
+                callback();
         });
     });
 }
@@ -645,16 +651,19 @@ function updateConnsOfType(pool, type, conns) {
 }
 
 function deleteRemovedConns(pool, removedConnIds) {
-    let i = 0;
-    let deleteConnsQuery = "DELETE FROM conns WHERE id IN (";
-    for (let connId of removedConnIds) {
-        if (i++)
-            deleteConnsQuery += ", ";
-        deleteConnsQuery += connId;
-    }
-    deleteConnsQuery += ")";
-    pool.query(deleteConnsQuery, (err, _) => {
-        if (err) return console.error(err);
+    return new Promise((resolve, reject) => {
+        let i = 0;
+        let deleteConnsQuery = "DELETE FROM conns WHERE id IN (";
+        for (let connId of removedConnIds) {
+            if (i++)
+                deleteConnsQuery += ", ";
+            deleteConnsQuery += connId;
+        }
+        deleteConnsQuery += ")";
+        pool.query(deleteConnsQuery, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
     });
 }
 
@@ -681,15 +690,24 @@ function updateConnTypeParams(pool, worldData) {
                     removedConnTypeParamIds.push(row.id);
                 delete newConnTypeParams[row.connId][row.type];
             }
+			
+            const updateConnTypeParamsCallback = function () {
+                if (removedConnTypeParamIds.length)
+                    deleteRemovedConnTypeParams(pool, removedConnTypeParamIds).then(() => resolve()).catch(err => reject(err));
+                else
+                    resolve();
+            };
+
             const connTypeParamsCallback = function () {
                 if (updatedConnTypeParams.length) {
                     const updateExistingConnTypeParams = [];
                     for (let connTypeParam of updatedConnTypeParams)
                         updateExistingConnTypeParams.push(updateConnTypeParam(pool, connTypeParam));
-                    Promise.all(updateExistingConnTypeParams).then(() => resolve()).catch(err => reject(err));
+                    Promise.all(updateExistingConnTypeParams).then(() => updateConnTypeParamsCallback()).catch(err => reject(err));
                 } else
-                    resolve();
+                    updateConnTypeParamsCallback();
             };
+			
             let i = 0;
             let connTypeParamsQuery = "INSERT INTO conn_type_params (connId, type, params, paramsJP) VALUES ";
             for (let c in newConnTypeParams) {
@@ -710,8 +728,6 @@ function updateConnTypeParams(pool, worldData) {
                 });
             } else
                 connTypeParamsCallback();
-            if (removedConnTypeParamIds.length)
-                deleteRemovedConnTypeParams(pool, removedConnTypeParamIds);
         });
     });
 }
@@ -728,16 +744,19 @@ function updateConnTypeParam(pool, connTypeParam) {
 }
 
 function deleteRemovedConnTypeParams(pool, removedConnTypeParamIds) {
-    let i = 0;
-    let deleteConnTypeParamsQuery = "DELETE FROM conn_type_params WHERE id IN (";
-    for (let connTypeParamId of removedConnTypeParamIds) {
-        if (i++)
-            deleteConnTypeParamsQuery += ", ";
-        deleteConnTypeParamsQuery += connTypeParamId;
-    }
-    deleteConnTypeParamsQuery += ")";
-    pool.query(deleteConnTypeParamsQuery, (err, _) => {
-        if (err) return console.error(err);
+    return new Promise((resolve, reject) => {
+        let i = 0;
+        let deleteConnTypeParamsQuery = "DELETE FROM conn_type_params WHERE id IN (";
+        for (let connTypeParamId of removedConnTypeParamIds) {
+            if (i++)
+                deleteConnTypeParamsQuery += ", ";
+            deleteConnTypeParamsQuery += connTypeParamId;
+        }
+        deleteConnTypeParamsQuery += ")";
+        pool.query(deleteConnTypeParamsQuery, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
     });
 }
 
@@ -876,32 +895,37 @@ function updateMapData(pool, worldData) {
                         delete newWorldMapsByKey[key];
                     }
 
-                    if (removedWorldMapIds.length)
-                        deleteRemovedWorldMaps(pool, removedWorldMapIds);
-                    const newWorldMapKeys = Object.keys(newWorldMapsByKey);
+                    const callback = function () {
+                        const newWorldMapKeys = Object.keys(newWorldMapsByKey);
                     
-                    if (newWorldMapKeys.length) {
-                        let i = 0;
-                        let worldMapsQuery = "INSERT INTO world_maps (worldId, mapId) VALUES "
-                        for (let m in newWorldMapsByKey) {
-                            const worldMap = newWorldMapsByKey[m];
-                            if (i++)
-                                worldMapsQuery += ", ";
-                            worldMapsQuery += `(${worldMap.worldId}, ${worldMap.mapId})`;
-                        }
-                        pool.query(worldMapsQuery, (err, res) => {
-                            if (err) return reject(err);
-                            const insertedRows = res.affectedRows;
-                            const worldMapRowIdsQuery = `SELECT r.id FROM (SELECT id FROM world_maps ORDER BY id DESC LIMIT ${insertedRows}) r ORDER BY 1`;
-                            pool.query(worldMapRowIdsQuery, (err, rows) => {
+                        if (newWorldMapKeys.length) {
+                            let i = 0;
+                            let worldMapsQuery = "INSERT INTO world_maps (worldId, mapId) VALUES ";
+                            for (let m in newWorldMapsByKey) {
+                                const worldMap = newWorldMapsByKey[m];
+                                if (i++)
+                                    worldMapsQuery += ", ";
+                                worldMapsQuery += `(${worldMap.worldId}, ${worldMap.mapId})`;
+                            }
+                            pool.query(worldMapsQuery, (err, res) => {
                                 if (err) return reject(err);
-                                for (let r in rows)
-                                    newWorldMapsByKey[newWorldMapKeys[r]].id = rows[r].id;
-                                resolve();
+                                const insertedRows = res.affectedRows;
+                                const worldMapRowIdsQuery = `SELECT r.id FROM (SELECT id FROM world_maps ORDER BY id DESC LIMIT ${insertedRows}) r ORDER BY 1`;
+                                pool.query(worldMapRowIdsQuery, (err, rows) => {
+                                    if (err) return reject(err);
+                                    for (let r in rows)
+                                        newWorldMapsByKey[newWorldMapKeys[r]].id = rows[r].id;
+                                    resolve();
+                                });
                             });
-                        });
-                    } else
-                        resolve();
+                        } else
+                            resolve();
+                    };
+
+                    if (removedWorldMapIds.length)
+                        deleteRemovedWorldMaps(pool, removedWorldMapIds).then(() => callback()).catch(err => reject(err));
+                    else
+                        callback();
                 });
             }).catch(err => reject(err));
         }).catch(err => reject(err));
@@ -1008,16 +1032,19 @@ function updateMap(pool, map) {
 }
 
 function deleteRemovedWorldMaps(pool, removedWorldMapIds) {
-    let i = 0;
-    let deleteWorldMapsQuery = "DELETE FROM world_maps WHERE id IN (";
-    for (let worldMapId of removedWorldMapIds) {
-        if (i++)
-            deleteWorldMapsQuery += ", ";
-        deleteWorldMapsQuery += worldMapId;
-    }
-    deleteWorldMapsQuery += ")";
-    pool.query(deleteWorldMapsQuery, (err, _) => {
-        if (err) return console.log(err);
+    return new Promise((resolve, reject) => {
+        let i = 0;
+        let deleteWorldMapsQuery = "DELETE FROM world_maps WHERE id IN (";
+        for (let worldMapId of removedWorldMapIds) {
+            if (i++)
+                deleteWorldMapsQuery += ", ";
+            deleteWorldMapsQuery += worldMapId;
+        }
+        deleteWorldMapsQuery += ")";
+        pool.query(deleteWorldMapsQuery, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
     });
 }
 
@@ -1152,9 +1179,11 @@ function getConnections(html) {
                 type: connType,
                 typeParams: params
             });
+            if (areaText.indexOf("<b>Removed Connections</b>") > -1)
+                break;
         }
     }
     return ret;
 }
 
-app.listen(port, () => console.log(`2kki app listening on port ${port}!`))
+app.listen(port, () => console.log(`2kki app listening on port ${port}!`));
