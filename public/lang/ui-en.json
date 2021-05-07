@@ -81,6 +81,7 @@
                 "Fluorescent_Halls": "Fluorescent Halls",
                 "City_of_Liars": "City of Liars",
                 "Misc": "Misc. Theme",
+                "Monochrome_GB_World": "Monochrome GB World",
                 "Saturated_Eyeball_Zone": "Saturated Eyeball Zone"
             }
         },
@@ -127,6 +128,13 @@
                 "hover": "On Hover",
                 "select": "On Select",
                 "always": "Always"
+            }
+        },
+        "removedContentMode": {
+            "name": "Removed Content:",
+            "values": {
+                "hide": "Hide",
+                "show": "Show"
             }
         },
         "pathMode": {

@@ -1,4 +1,4 @@
-// Version 2.9.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 2.10.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -153970,6 +153970,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	const nodeImgDimensions = { x: 320, y: 240 };
 	let nodeObjectMaterial;
 	let iconTexts = [];
+	let removedCount;
 	const worldScales = {};
 	const defaultPathIgnoreConnTypeFlags = connType_1.NO_ENTRY | connType_1.LOCKED | connType_1.DEAD_END | connType_1.ISOLATED | connType_1.LOCKED_CONDITION | connType_1.EXIT_POINT;
 
@@ -154011,6 +154012,35 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    }
 	});
 
+	function initWorldData(data) {
+	    exports.worldData = config$1.removedContentMode === 0
+	        ? data.filter(w => !w.removed)
+	        : data;
+
+	    removedCount = 0;
+
+	    for (let w in exports.worldData) {
+	        const world = exports.worldData[w];
+	        world.id = parseInt(w);
+	        if (world.removed)
+	            world.rId = removedCount++;
+	        for (let world of exports.worldData) {
+	            world.connections.forEach(conn => {
+	                const effectParams = conn.typeParams[connType_1.EFFECT];
+	                if (effectParams) {
+	                    effectParams.paramsJP = effectParams.params.split(',').map(e => effectsJP[e]).join('」か「');
+	                    effectParams.params = effectParams.params.replace(/,/g, ', ');
+	                }
+	            });
+	        }
+	    }
+
+	    const worldSizes = exports.worldData.map(w => w.size); 
+
+	    minSize = lodash.min(worldSizes);
+	    maxSize = lodash.max(worldSizes);
+	}
+
 	function loadOrInitConfig() {
 	    try {
 	        if (!window.localStorage.hasOwnProperty("config"))
@@ -154048,6 +154078,9 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                        case "labelMode":
 	                            jquery(".js--label-mode").val(value);
 	                            break;
+	                        case "removedContentMode":
+	                            jquery(".js--removed-content-mode").val(value);
+	                            break;
 	                        case "pathMode":
 	                            jquery(".js--path-mode").val(value);
 	                            break;
@@ -154081,6 +154114,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	function loadWorldData(update, success, fail) {
 	    let queryString = update ? "?update=" + update : "";
+	    if (config$1.removedContentMode === 1)
+	        queryString += (queryString.length ? "&" : "?") + "includeRemovedContent=true";
 	    const urlSearchParams = new URLSearchParams(window.location.search);
 	    if (urlSearchParams.has("adminKey"))
 	        queryString += (queryString.length ? "&" : "?") + "adminKey=" + urlSearchParams.get("adminKey");
@@ -154100,7 +154135,27 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    }).fail(fail);
 	}
 
-	let contextWorldId = null, startWorldId = null, endWorldId = null, selectedWorldId = null;
+	function reloadWorldData(update) {
+	    const loadCallback = displayLoadingAnim(jquery("#graph"));
+	    loadWorldData(update, function (data) {
+	        initWorldData(data.worldData);
+	        lastUpdate = new Date(data.lastUpdate);
+	        lastFullUpdate = new Date(data.lastFullUpdate);
+
+	        initLocalization();
+
+	        loadCallback();
+
+	        if (isWebGL2) {
+	            worldImageData = [];
+	            initNodeObjectMaterial();
+	        }
+
+	        reloadGraph();
+	    }, loadCallback);
+	}
+
+	let contextWorldId = null, startWorldId = null, endWorldId = null, hoverWorldId = null, selectedWorldId = null;
 
 	let searchWorldIds = [], visibleWorldIds = [];
 
@@ -154108,6 +154163,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	let visibleTwoWayLinks = [];
 	let visibleOneWayLinks = [];
+	let hiddenLinks = [];
 	let linksTwoWayBuffered;
 	let linksOneWayBuffered;
 
@@ -154117,6 +154173,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	let icons3D;
 
 	const colorLinkSelected = new Color('red');
+	const nodeTextColors = ["#FFFFFF", "#AAAAAA", "#888888"];
 
 	let localizedNodeLabel;
 	let localizedPathNodeLabel;
@@ -154140,6 +154197,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    displayMode: 0,
 	    connMode: 0,
 	    labelMode: 1,
+	    removedContentMode: 0,
 	    pathMode: 1,
 	    sizeDiff: 1,
 	    stackSize: 20
@@ -154161,11 +154219,14 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	    const worldDepths = {};
 	    const worldRealDepths = {};
+	    const worldRemoved = {};
 
 	    iconTexts = [];
 
-	    for (let w of exports.worldData)
+	    for (let w of exports.worldData) {
 	        worldScales[w.id] = 1 + (Math.round((w.size - minSize) / (maxSize - minSize) * 10 * (config$1.sizeDiff - 1)) / 10);
+	        worldRemoved[w.id] = w.removed;
+	    }
 
 	    let maxDepth;
 
@@ -154371,37 +154432,37 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    links.forEach(l => {
 	        const icons = l.icons;
 	        const connType = l.connType;
+	        
 	        if (connType & connType_1.INACCESSIBLE)
 	            icons.push(getConnTypeIcon(connType_1.INACCESSIBLE));
-	        else {
-	            if (connType & connType_1.ONE_WAY)
-	                icons.push(getConnTypeIcon(connType_1.ONE_WAY));
-	            else if (connType & connType_1.NO_ENTRY)
-	                icons.push(getConnTypeIcon(connType_1.NO_ENTRY));
-	            if (connType & connType_1.UNLOCK)
-	                icons.push(getConnTypeIcon(connType_1.UNLOCK));
-	            else if (connType & connType_1.LOCKED)
-	                icons.push(getConnTypeIcon(connType_1.LOCKED));
-	            else if (connType & connType_1.LOCKED_CONDITION)
-	                icons.push(getConnTypeIcon(connType_1.LOCKED_CONDITION, l.typeParams[connType_1.LOCKED_CONDITION]));
-	            else if (connType & connType_1.SHORTCUT)
-	                icons.push(getConnTypeIcon(connType_1.SHORTCUT));
-	            else if (connType & connType_1.EXIT_POINT)
-	                icons.push(getConnTypeIcon(connType_1.EXIT_POINT));
-	            if (connType & connType_1.DEAD_END)
-	                icons.push(getConnTypeIcon(connType_1.DEAD_END));
-	            else if (connType & connType_1.ISOLATED)
-	                icons.push(getConnTypeIcon(connType_1.ISOLATED));
-	            if (connType & connType_1.EFFECT)
-	                icons.push(getConnTypeIcon(connType_1.EFFECT, l.typeParams[connType_1.EFFECT]));
-	            if (connType & connType_1.CHANCE)
-	                icons.push(getConnTypeIcon(connType_1.CHANCE, l.typeParams[connType_1.CHANCE]));
-	        }
+	        if (connType & connType_1.ONE_WAY)
+	            icons.push(getConnTypeIcon(connType_1.ONE_WAY));
+	        else if (connType & connType_1.NO_ENTRY)
+	            icons.push(getConnTypeIcon(connType_1.NO_ENTRY));
+	        if (connType & connType_1.UNLOCK)
+	            icons.push(getConnTypeIcon(connType_1.UNLOCK));
+	        else if (connType & connType_1.LOCKED)
+	            icons.push(getConnTypeIcon(connType_1.LOCKED));
+	        else if (connType & connType_1.LOCKED_CONDITION)
+	            icons.push(getConnTypeIcon(connType_1.LOCKED_CONDITION, l.typeParams[connType_1.LOCKED_CONDITION]));
+	        else if (connType & connType_1.SHORTCUT)
+	            icons.push(getConnTypeIcon(connType_1.SHORTCUT));
+	        else if (connType & connType_1.EXIT_POINT)
+	            icons.push(getConnTypeIcon(connType_1.EXIT_POINT));
+	        if (connType & connType_1.DEAD_END)
+	            icons.push(getConnTypeIcon(connType_1.DEAD_END));
+	        else if (connType & connType_1.ISOLATED)
+	            icons.push(getConnTypeIcon(connType_1.ISOLATED));
+	        if (connType & connType_1.EFFECT)
+	            icons.push(getConnTypeIcon(connType_1.EFFECT, l.typeParams[connType_1.EFFECT]));
+	        if (connType & connType_1.CHANCE)
+	            icons.push(getConnTypeIcon(connType_1.CHANCE, l.typeParams[connType_1.CHANCE]));
 	    });
 
 	    const images = (paths ? exports.worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1) : exports.worldData).map(d => {
 	        const img = imageLoader.load(d.filename);
 	        img.id = d.id;
+	        img.rId = d.rId;
 	        img.title = config$1.lang === "en" || !d.titleJP ? d.title : d.titleJP;
 	        return img;
 	    });
@@ -154412,10 +154473,14 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    for (let d = 0; d <= maxDepth; d++)
 	        depthColors.push(hueToRGBA(0.6666 - depthHueIncrement * d, 1));
 
+	    let n = 0;
+
 	    const nodes = images.map(img => {
 	        const id = parseInt(img.id);
+	        const rId = parseInt(img.rId);
 	        const scale = worldScales[id];
-	        const ret = { id: id, img, isHover: false, scale: scale };
+	        const removed = worldRemoved[id];
+	        const ret = { id, rId, index: n++, img, scale: scale, removed: removed };
 	        ret.depth = worldDepths[id];
 	        ret.depthColor = depthColors[ret.depth];
 	        if (paths)
@@ -154440,6 +154505,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	    visibleTwoWayLinks = [];
 	    visibleOneWayLinks = [];
+	    hiddenLinks = [];
 
 	    const rendererConfig = isWebGL2
 	        ? {
@@ -154500,11 +154566,12 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                    ret.renderOrder = world.id;
 	                }
 	                ret.material.opacity = getNodeOpacity(node.id);
+	                ret.material.grayscale = getNodeGrayscale(node);
 	            }
 
 	            if (!(isWebGL2 && is2d)) {
 	                const worldName = config$1.lang === "en" || !world.titleJP ? world.title : world.titleJP;
-	                const text = new _default(worldName, 1.5, 'white');
+	                const text = new _default(worldName, 1.5, node.removed ? getNodeTextColor(node, ret.material.grayscale) : 'white');
 	                text.__graphObjType = 'label';
 	                text.fontFace = 'MS Gothic';
 	                text.fontSize = 80;
@@ -154558,9 +154625,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            if (isWebGL2)
 	                updateNodePositions(is2d);
 	        })
-	        .linkThreeObject(link => {
-	            return dummyLinkObject;
-	        })
+	        .linkThreeObject(link => dummyLinkObject)
 	        .linkPositionUpdate((linkObject, { start, end }, link) => {
 	            if (!isWebGL2 && icons3D[link.key] !== undefined) {
 	                const linkIcons = icons3D[link.key];
@@ -154612,10 +154677,44 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        })
 	        .onNodeHover((node, prevNode) => {
 	            elem.style.cursor = node ? 'pointer' : null;
-	            if (node)
-	                node.isHover = true;
-	            if (prevNode)
-	                prevNode.isHover = false;
+
+	            if (node) {
+	                hoverWorldId = node.id;
+	                if (nodeObject && node.removed) {
+	                    const nodeGrayscale = getNodeGrayscale(node);
+	                    nodeObject.geometry.attributes.grayscale.array[node.index] = nodeGrayscale;
+	                    nodeObject.geometry.attributes.grayscale.needsUpdate = true;
+	                }
+	                const removedTwoWayLinks = visibleTwoWayLinks.filter(l => getWorldLinkRemoved(node.id, l, worldRemoved));
+	                const removedOneWayLinks = visibleOneWayLinks.filter(l => getWorldLinkRemoved(node.id, l, worldRemoved));
+	                const removedLinks = removedTwoWayLinks.concat(removedOneWayLinks).concat(hiddenLinks.filter(l => getWorldLinkRemoved(node.id, l, worldRemoved)));
+	                if (removedTwoWayLinks.length)
+	                    updateLinkColors(removedTwoWayLinks, linksTwoWayBuffered, visibleTwoWayLinks);
+	                if (removedOneWayLinks.length)
+	                    updateLinkColors(removedOneWayLinks, linksOneWayBuffered, visibleOneWayLinks);
+	                if (removedLinks.length)
+	                    updateConnectionModeIcons(removedLinks);
+	            }
+	            else
+	                hoverWorldId = null;
+
+	            if (prevNode) {
+	                if (nodeObject && prevNode.removed) {
+	                    const nodeGrayscale = getNodeGrayscale(prevNode);
+	                    nodeObject.geometry.attributes.grayscale.array[prevNode.index] = nodeGrayscale;
+	                    nodeObject.geometry.attributes.grayscale.needsUpdate = true;
+	                }
+	                const removedTwoWayLinks = visibleTwoWayLinks.filter(l => getWorldLinkRemoved(prevNode.id, l, worldRemoved));
+	                const removedOneWayLinks = visibleOneWayLinks.filter(l => getWorldLinkRemoved(prevNode.id, l, worldRemoved));
+	                const removedLinks = removedTwoWayLinks.concat(removedOneWayLinks).concat(hiddenLinks.filter(l => getWorldLinkRemoved(prevNode.id, l, worldRemoved)));
+	                if (removedTwoWayLinks.length)
+	                    updateLinkColors(removedTwoWayLinks, linksTwoWayBuffered, visibleTwoWayLinks);
+	                if (removedOneWayLinks.length)
+	                    updateLinkColors(removedOneWayLinks, linksOneWayBuffered, visibleOneWayLinks);
+	                if (removedLinks.length)
+	                    updateConnectionModeIcons(removedLinks);
+	            }
+
 	            if (isWebGL2 && is2d)
 	                updateNodeLabels2D();
 	        })
@@ -154699,13 +154798,11 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        makeIconObject(is2d);
 	        let index = 0;
 	        exports.graph.graphData().links.forEach(link => {
-	            link.icons.forEach(icon => {
-	                iconTexts[index] = icon.text;
-	                index++;
-	            });
+	            link.icons.forEach(icon => iconTexts[index++] = icon.text);
 	        });
 	        updateConnectionModeIcons();
-	        updateNodeLabels2D();
+	        if (is2d)
+	            updateNodeLabels2D();
 	    } else
 	        makeLinkIcons(is2d);
 
@@ -154719,6 +154816,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            else
 	                visibleTwoWayLinks.push(link);
 	        }
+	        else
+	            hiddenLinks.push(link);
 	    });
 
 	    makeLinkIconTooltip();
@@ -154745,11 +154844,20 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    nodeObject.count = nodes.length;
 	    if (isSubset) {
 	        let index = 0;
+	        let rIndex = 0;
 	        const totalNodeCount = nodes.length;
+	        const removedNodeCount = nodes.filter(n => n.removed).length;
+	     
 	        nodes.forEach(node => {
 	            copyImageData(node.id, index);
-	            if (is2d)
+	            if (is2d) {
 	                copyImageData(node.id + exports.worldData.length, index + totalNodeCount);
+	                if (node.removed) {
+	                    copyImageData(node.rId + exports.worldData.length * 2, rIndex + totalNodeCount * 2);
+	                    copyImageData(node.rId + exports.worldData.length * 2 + removedCount, rIndex + totalNodeCount * 2 + removedNodeCount);
+	                    rIndex++;
+	                }
+	            }
 	            index++;
 	        });
 	    } else
@@ -154775,11 +154883,14 @@ vec4 envMapTexelToLinear(vec4 color) {
 
     in float opacity;
     out float vOpacity;
+    in float grayscale;
+    out float vGrayscale;
     out vec2 vUv;
     in float texIndex;
     out float vTexIndex;
     void main() {
         vOpacity = opacity;
+        vGrayscale = grayscale;
         vUv = vec2(uv.x, 1.0 - uv.y); // flip texture vertically, because of how it's stored
         vTexIndex = texIndex;
         vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
@@ -154798,11 +154909,14 @@ vec4 envMapTexelToLinear(vec4 color) {
 
     in float opacity;
     out float vOpacity;
+    in float grayscale;
+    out float vGrayscale;
     out vec2 vUv;
     in float texIndex;
     out float vTexIndex;
     void main() {
         vOpacity = opacity;
+        vGrayscale = grayscale;
         vUv = vec2(uv.x, 1.0 - uv.y); // flip texture vertically, because of how it's stored
         vTexIndex = texIndex;
         vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
@@ -154816,6 +154930,7 @@ vec4 envMapTexelToLinear(vec4 color) {
     precision highp sampler2DArray;
 
     in float vOpacity;
+    in float vGrayscale;
     uniform sampler2DArray diffuse;
     in vec2 vUv;
     out vec4 fragmentColor;
@@ -154824,6 +154939,12 @@ vec4 envMapTexelToLinear(vec4 color) {
     void main() {
         vec4 temp = texture(diffuse, vec3(vUv, int(vTexIndex + 0.1)));
         temp.a = vOpacity;
+        if (vGrayscale > 0.0) {
+            float v = (temp.r + temp.g + temp.b) / 3.0;
+            temp.r = (temp.r * (1.0 - vGrayscale)) + (v * vGrayscale);
+            temp.g = (temp.g * (1.0 - vGrayscale)) + (v * vGrayscale);
+            temp.b = (temp.b * (1.0 - vGrayscale)) + (v * vGrayscale);
+        }
         fragmentColor = temp;
     }
 `;
@@ -154834,6 +154955,7 @@ vec4 envMapTexelToLinear(vec4 color) {
     precision highp sampler2DArray;
 
     in float vOpacity;
+    in float vGrayscale;
     uniform sampler2DArray diffuse;
     in vec2 vUv;
     out vec4 fragmentColor;
@@ -154842,12 +154964,19 @@ vec4 envMapTexelToLinear(vec4 color) {
     void main() {
         vec4 temp = texture(diffuse, vec3(vUv, int(vTexIndex + 0.1)));
         temp.a = temp.a * vOpacity;
+        if (vGrayscale > 0.0) {
+            float v = (temp.r + temp.g + temp.b) / 3.0;
+            temp.r = (temp.r * (1.0 - vGrayscale)) + (v * vGrayscale);
+            temp.g = (temp.g * (1.0 - vGrayscale)) + (v * vGrayscale);
+            temp.b = (temp.b * (1.0 - vGrayscale)) + (v * vGrayscale);
+        }
         fragmentColor = temp;
     }
 `;
 
-	let unsortedIconTexIndexes = [];
 	let unsortedIconOpacities = [];
+	let unsortedIconGrayscales = [];
+	let unsortedIconTexIndexes = [];
 	let sortedIconIds = [];
 	let iconCount;
 	function makeIconObject(is2d) {
@@ -154872,8 +155001,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	    iconCount = 0;
 	    exports.graph.graphData().links.forEach(link => {
-	        link.icons.forEach(_ => {
-	            iconCount++;
+	        link.icons.forEach(icon => {
+	            icon.id = iconCount++;
 	        });
 	    });
 	    let iconImgData = new Uint8ClampedArray(buffer);
@@ -154913,22 +155042,26 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    });
 
 	    const opacities = [];
+	    const grayscales = [];
 	    const texIndexes = [];
 
 	    let iconIndex = 0;
 	    exports.graph.graphData().links.forEach(link => {
 	        link.icons.forEach(icon => {
-	            texIndexes[iconIndex] = connTypes.findIndex(a => a == icon.type);
 	            opacities[iconIndex] = 1.0;
+	            grayscales[iconIndex] = 0;
+	            texIndexes[iconIndex] = connTypes.findIndex(a => a == icon.type);
 	            iconIndex++;
 	        });
 	    });
 
-	    unsortedIconTexIndexes = texIndexes.slice();
 	    unsortedIconOpacities = opacities.slice();
+	    unsortedIconGrayscales = grayscales.slice();
+	    unsortedIconTexIndexes = texIndexes.slice();
 
 	    const geometry = new PlaneBufferGeometry(5, 5);
 	    geometry.attributes.opacity = new InstancedBufferAttribute(new Float32Array(opacities), 1);
+	    geometry.attributes.grayscale = new InstancedBufferAttribute(new Float32Array(grayscales), 1);
 	    geometry.attributes.texIndex = new InstancedBufferAttribute(new Float32Array(texIndexes), 1);
 
 	    iconObject = new InstancedMesh(geometry, material, iconCount);
@@ -154994,12 +155127,12 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                iconIndex++;
 	            });
 	        });
-	        sortInstances(iconObject, unsortedIconOpacities, unsortedIconTexIndexes);
+	        sortInstances(iconObject, unsortedIconOpacities, unsortedIconGrayscales, unsortedIconTexIndexes);
 	        iconObject.instanceMatrix.needsUpdate = true;
 	    }
 	}
 
-	function sortInstances(instanceObject, unsortedOpacities, unsortedTexIndexes) {
+	function sortInstances(instanceObject, unsortedOpacities, unsortedGrayscales, unsortedTexIndexes) {
 	    const camera = exports.graph.camera();
 	    let dummy = new Object3D();
 	    let index = 0;
@@ -155013,10 +155146,11 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    });
 
 	    const opacities = instanceObject.geometry.attributes.opacity.array;
+	    const grayscales = instanceObject.geometry.attributes.grayscale.array;
 	    const texIndexes = instanceObject.geometry.attributes.texIndex.array;
 	    let vecArray = [];
 	    for (let i = 0; i < iconCount; i++)
-	        vecArray.push({ pos: positions[i], opacity: unsortedOpacities[i], texIndex: unsortedTexIndexes[i], unsortedId: i });
+	        vecArray.push({ pos: positions[i], opacity: unsortedOpacities[i], grayscale: unsortedGrayscales[i], texIndex: unsortedTexIndexes[i], unsortedId: i });
 	    vecArray.sort((a, b) => a.pos.distanceTo(camera.position) > b.pos.distanceTo(camera.position)
 	        ? -1
 	        : a.pos.distanceTo(camera.position) < b.pos.distanceTo(camera.position)
@@ -155040,19 +155174,22 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            dummy.updateMatrix();
 	            instanceObject.setMatrixAt(index, dummy.matrix);
 	            opacities[index] = vecArray[index].opacity;
+	            grayscales[index] = vecArray[index].grayscale;
 	            texIndexes[index] = vecArray[index].texIndex;
 	            index++;
 	        });
 	    });
 
 	    instanceObject.geometry.attributes.opacity.needsUpdate = true;
+	    instanceObject.geometry.attributes.grayscale.needsUpdate = true;
 	    instanceObject.geometry.attributes.texIndex.needsUpdate = true;
 	}
 
 	function initNodeObjectMaterial() {
-	    const buffer = new ArrayBuffer(nodeImgDimensions.x * nodeImgDimensions.y * 4 * exports.worldData.length * 2);
 	    const amount = exports.worldData.length;
-	    const texture = new DataTexture2DArray(new Uint8ClampedArray(buffer), nodeImgDimensions.x, nodeImgDimensions.y, amount * 2);
+	    const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
+	    const buffer = new ArrayBuffer(dataLength * amount * 2 + (dataLength * removedCount * 2));
+	    const texture = new DataTexture2DArray(new Uint8ClampedArray(buffer), nodeImgDimensions.x, nodeImgDimensions.y, amount * 2 + (removedCount * 2));
 	    texture.format = RGBAFormat;
 	    texture.type = UnsignedByteType;
 	    nodeObjectMaterial = new RawShaderMaterial({
@@ -155066,8 +155203,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    });
 
 	    const filenames = [];
-	    exports.worldData.forEach(node => {
-	        filenames.push(exports.worldData[node.id].filename);
+	    exports.worldData.forEach(world => {
+	        filenames.push(exports.worldData[world.id].filename);
 	    });
 
 	    Promise.all(getImageRawData(filenames))
@@ -155084,7 +155221,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            ctx.strokeStyle = 'black';
 	            ctx.lineWidth = 5;
 	            let index = 0;
-	            const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
+	            let rIndex = 0;
 	            const offsetLabels = images.length * dataLength;
 	            images.forEach(img => {
 	                // stretch to fit
@@ -155095,36 +155232,53 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                const worldId = index;
 	                const world = exports.worldData[worldId];
 	                const worldName = config$1.lang === "en" || !world.titleJP ? world.title : world.titleJP;
-	                let textLines = worldName.split(" ");
-	                for (let l = 0; l < textLines.length; l++) {
-	                    if (ctx.measureText(textLines[l]).width < nodeImgDimensions.x) {
-	                        let mergeIndex = 0;
-	                        for (let l2 = l + 1; l2 < textLines.length; l2++) {
-	                            const mergedLine = textLines.slice(l, l2 + 1).join(" ");
-	                            if (ctx.measureText(mergedLine).width < nodeImgDimensions.x)
-	                                mergeIndex = l2;
-	                            else
-	                                break;
-	                        }
-	                        if (mergeIndex)
-	                            textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
-	                    } else if (textLines[l].indexOf("：") > -1)
-	                        textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
-	                }
-	                for (let l in textLines) {
-	                    const textLine = textLines[l];
-	                    const lineWidth = ctx.measureText(textLine).width;
-	                    !lineYOffset && (lineYOffset = ctx.measureText(textLine).actualBoundingBoxAscent / 2);
-	                    const lineX = (nodeImgDimensions.x - lineWidth) / 2;
-	                    const lineY = ((nodeImgDimensions.y / 2) + lineYOffset) - ((textLines.length - 1) * halfFontSize) + l * fontSize;
-	                    ctx.strokeText(textLine, lineX, lineY);
-	                    ctx.fillText(textLine, lineX, lineY);
-	                }
 
-	                nodeImageData = ctx.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
-	                offset = offsetLabels + index * dataLength;
-	                nodeObjectMaterial.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
+	                if (world.removed)
+	                    ctx.save();
+
+	                for (let v = 0; v < 3; v++) {
+	                    if (v)
+	                        ctx.restore();
+	                       
+	                    let textLines = worldName.split(" ");
+	                    ctx.fillStyle = nodeTextColors[v];
+	                    for (let l = 0; l < textLines.length; l++) {
+	                        if (ctx.measureText(textLines[l]).width < nodeImgDimensions.x) {
+	                            let mergeIndex = 0;
+	                            for (let l2 = l + 1; l2 < textLines.length; l2++) {
+	                                const mergedLine = textLines.slice(l, l2 + 1).join(" ");
+	                                if (ctx.measureText(mergedLine).width < nodeImgDimensions.x)
+	                                    mergeIndex = l2;
+	                                else
+	                                    break;
+	                            }
+	                            if (mergeIndex)
+	                                textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
+	                        } else if (textLines[l].indexOf("：") > -1)
+	                            textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
+	                    }
+	                    for (let l in textLines) {
+	                        const textLine = textLines[l];
+	                        const lineWidth = ctx.measureText(textLine).width;
+	                        !lineYOffset && (lineYOffset = ctx.measureText(textLine).actualBoundingBoxAscent / 2);
+	                        const lineX = (nodeImgDimensions.x - lineWidth) / 2;
+	                        const lineY = ((nodeImgDimensions.y / 2) + lineYOffset) - ((textLines.length - 1) * halfFontSize) + l * fontSize;
+	                        ctx.strokeText(textLine, lineX, lineY);
+	                        ctx.fillText(textLine, lineX, lineY);
+	                    }
+
+	                    nodeImageData = ctx.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
+	                    offset = v
+	                        ? offsetLabels + images.length * dataLength + (removedCount * dataLength * (v - 1)) + rIndex * dataLength
+	                        : offsetLabels + index * dataLength;
+	                    nodeObjectMaterial.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
+
+	                    if (!world.removed)
+	                        break;
+	                }
 	                index++;
+	                if (world.removed)
+	                    rIndex++;
 	            });
 	            canvas.remove();
 	            worldImageData = nodeObjectMaterial.uniforms.diffuse.value.image.data.slice();
@@ -155136,9 +155290,13 @@ vec4 envMapTexelToLinear(vec4 color) {
 	function initNodeObject(is2d) {
 	    const amount = exports.worldData.length;
 	    const opacities = [];
+	    const grayscales = [];
 	    const texIndexes = [];
+
 	    for (let i = 0; i < amount; i++) {
-	        opacities[i] = getNodeOpacity(exports.worldData[i].id);
+	        const world = exports.worldData[i];
+	        opacities[i] = getNodeOpacity(world.id);
+	        grayscales[i] = world.removed ? 1 : 0;
 	        texIndexes[i] = i;
 	    }
 
@@ -155147,7 +155305,9 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        geometry = new PlaneBufferGeometry(1, 1);
 	    else
 	        geometry = new BoxBufferGeometry(1, 1, 1);
+
 	    geometry.attributes.opacity = new InstancedBufferAttribute(new Float32Array(opacities), 1);
+	    geometry.attributes.grayscale = new InstancedBufferAttribute(new Float32Array(grayscales), 1);
 	    geometry.attributes.texIndex = new InstancedBufferAttribute(new Float32Array(texIndexes), 1);
 	    nodeObject = new InstancedMesh(geometry, nodeObjectMaterial, amount);
 	    nodeObject.instanceMatrix.setUsage(DynamicDrawUsage);
@@ -155178,12 +155338,23 @@ vec4 envMapTexelToLinear(vec4 color) {
 	function updateNodeLabels2D() {
 	    if (nodeObject) {
 	        let index = 0;
-	        exports.graph.graphData().nodes.forEach(node => {
-	            if (is2d && (config$1.labelMode === 3 || (config$1.labelMode === 1 && node.isHover) || (config$1.labelMode === 2 && node.id === selectedWorldId)))
-	                nodeObject.geometry.attributes.texIndex.array[index] = index + exports.graph.graphData().nodes.length;
-	            else
+	        let rIndex = 0;
+	        const nodes = exports.graph.graphData().nodes;
+	        const totalNodeCount = nodes.length;
+	        const removedNodeCount = nodes.filter(n => n.removed).length;
+	        nodes.forEach(node => {
+	            if (is2d && (config$1.labelMode === 3 || (config$1.labelMode === 1 && node.id === hoverWorldId) || (config$1.labelMode === 2 && node.id === selectedWorldId))) {
+	                const layerIndex = node.removed
+	                    ? nodeTextColors.indexOf(getNodeTextColor(node))
+	                    : 0;
+	                nodeObject.geometry.attributes.texIndex.array[index] = layerIndex
+	                    ? rIndex + (totalNodeCount * 2) + (layerIndex - 1) * removedNodeCount
+	                    : index + totalNodeCount;
+	            } else
 	                nodeObject.geometry.attributes.texIndex.array[index] = index;
 	            index++;
+	            if (node.removed)
+	                rIndex++;
 	        });
 	        nodeObject.geometry.attributes.texIndex.needsUpdate = true;
 	    }
@@ -155223,7 +155394,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            const obj = node.__threeObj;
 	            if (obj) {
 	                const text = obj.children[0];
-	                if (config$1.labelMode === 3 || (config$1.labelMode === 1 && node.isHover) || (config$1.labelMode === 2 && node.id === selectedWorldId)) {
+	                if (config$1.labelMode === 3 || (config$1.labelMode === 1 && node.id === hoverWorldId) || (config$1.labelMode === 2 && node.id === selectedWorldId)) {
 	                    const scale = worldScales[node.id];
 	                    if (!is2d) {
 	                        const dist = new Vector3(camera.position.x, camera.position.y, camera.position.z).distanceTo(new Vector3(node.x, node.y, node.z));
@@ -155237,6 +155408,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                    text.scale.x = text.defaultScale.x * scale;
 	                    text.scale.y = text.defaultScale.y * scale;
 	                    text.material.opacity = getNodeOpacity(node.id);
+	                    text.color = getNodeTextColor(node);
+	                    
 	                    text.visible = true;
 	                } else
 	                    text.visible = false;
@@ -155256,10 +155429,30 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    return opacity;
 	}
 
+	function getNodeGrayscale(node) {
+	    if (!node.removed)
+	        return 0;
+
+	    const id = node.id;
+	    const grayscale = id === selectedWorldId
+	        ? 0
+	        : id === hoverWorldId || (selectedAuthor != null && exports.worldData[id].author === selectedAuthor) || (searchWorldIds.length && searchWorldIds.indexOf(id) > -1) || (selectedWorldId != null && exports.worldData[selectedWorldId].connections.filter(c => c.targetId === id).length)
+	        ? 0.625
+	        : 1;
+	    return grayscale;
+	}
+
+	function getNodeTextColor(node, grayscale) {
+	    if (grayscale === undefined && node)
+	        grayscale = getNodeGrayscale(node);
+	    return nodeTextColors[!grayscale ? 0 : grayscale === 1 ? 2 : 1];
+	}
+
 	function makeLinkIcons(is2d) {
 	    exports.graph.graphData().links.forEach(link => {
 	        if (icons3D[link.key] === undefined) {
 	            const linkOpacity = getLinkOpacity(link);
+	            const linkGrayscale = getLinkGrayscale(link);
 	            let linkIcons = [];
 	            link.icons.forEach(icon => {
 	                const text = new _default(icon.char, 1, 'white');
@@ -155276,11 +155469,13 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                }
 	                text.material.transparent = true;
 	                text.material.opacity = linkOpacity;
+	                text.material.grayscale = linkGrayscale;
 	                if (icon.type & connType_1.ONE_WAY) {
 	                    text.material.map.wrapS = RepeatWrapping;
 	                    link.source.x > link.target.x && (text.material.map.repeat.x = -1);
 	                }
-	                !config$1.connMode && link.hidden && (text.visible = false);
+	                if (!config$1.connMode && link.hidden)
+	                    text.visible = false;
 	                linkIcons.push(text);
 	                exports.graph.scene().add(text);
 	            });
@@ -155321,6 +155516,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    const lineFragShader = `
         varying vec3 vColor;
         varying float vOpacity;
+        varying float vGrayscale;
 
         void main() {
             gl_FragColor = vec4(vColor, vOpacity);
@@ -155331,6 +155527,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    geometry.setAttribute('position', new BufferAttribute(new Float32Array(size * 2 * 3), 3));
 	    geometry.setAttribute('color', new BufferAttribute(new Float32Array(size * 2 * 3), 3));
 	    geometry.setAttribute('opacity', new BufferAttribute(new Float32Array(size * 2), 1));
+	    geometry.setAttribute('grayscale', new BufferAttribute(new Float32Array(size * 2), 1));
 	    const material = new ShaderMaterial({
 	        vertexShader: lineVertShader,
 	        fragmentShader: lineFragShader,
@@ -155420,14 +155617,13 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    });
 	    bufferedObject.geometry.attributes.position.needsUpdate = true;
 	    bufferedObject.geometry.computeBoundingSphere();
-	    
 	}
 
 	function updateLinkAnimation(bufferedObject, time) {
 	    bufferedObject.material.uniforms.time.value = time;
 	}
 
-	function updateLinkColors(linkData, bufferedObject) {
+	function updateLinkColors(linkData, bufferedObject, unfilteredLinkData) {
 	    const colors = bufferedObject.geometry.attributes.color.array;
 	    const opacities = bufferedObject.geometry.attributes.opacity.array;
 	    let index = 0;
@@ -155435,18 +155631,32 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    linkData.forEach(link => {
 	        let color;
 	        let opacity;
+	        const grayscale = getLinkGrayscale(link);
 	        const sourceId = link.source.id !== undefined ? link.source.id : link.source;
 	        const targetId = link.target.id !== undefined ? link.target.id : link.target;
 	        const filterForAuthor = selectedAuthor != null && (exports.worldData[sourceId].author !== selectedAuthor || exports.worldData[targetId].author !== selectedAuthor);
 	        if (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)) {
 	            opacity = 1.0;
 	            color = colorLinkSelected;
-	        } else if (((selectedWorldId == null && !filterForAuthor) || selectedWorldId === sourceId || selectedWorldId === targetId) && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)) {
-	            opacity = 1.0;
+	        } else if ((selectedWorldId == null && !filterForAuthor) && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)) {
+	            opacity = 0.625;
 	            color = new Color(link.defaultColor);
 	        } else {
 	            opacity = 0.1;
 	            color = new Color(link.defaultColor);
+	        }
+	        if (grayscale) {
+	            const v = (color.r + color.g + color.b) / 3;
+	            color.setRGB(
+	                color.r * (1 - grayscale) + v * grayscale,
+	                color.g * (1 - grayscale) + v * grayscale,
+	                color.b * (1 - grayscale) + v * grayscale
+	            );
+	        }
+	        if (unfilteredLinkData) {
+	            const linkIndex = unfilteredLinkData.indexOf(link);
+	            index = linkIndex * 6;
+	            opacityIndex = linkIndex * 2;
 	        }
 	        colors[index++] = color.r;
 	        colors[index++] = color.g;
@@ -155478,6 +155688,12 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    linksOneWayBuffered.geometry.attributes.lineDistance.needsUpdate = true;
 	}
 
+	function getWorldLinkRemoved(worldId, link, worldRemoved) {
+	    const sourceId = link.source.id !== undefined ? link.source.id : l.source;
+	    const targetId = link.target.id !== undefined ? link.target.id : l.target;
+	    return (sourceId === worldId || targetId === worldId) && (worldRemoved[sourceId] || worldRemoved[targetId] || link.connType & connType_1.INACCESSIBLE);
+	}
+
 	function getLinkOpacity(link) {
 	    const sourceId = link.source.id !== undefined ? link.source.id : link.source;
 	    const targetId = link.target.id !== undefined ? link.target.id : link.target;
@@ -155487,7 +155703,24 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        ? 1
 	        : selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)
 	        ? 0.625
-	        : 0.1
+	        : 0.1;
+	}
+
+	function getLinkGrayscale(link) {
+	    const sourceId = link.source.id !== undefined ? link.source.id : link.source;
+	    const targetId = link.target.id !== undefined ? link.target.id : link.target;
+	    const sourceWorld = exports.worldData[sourceId];
+	    const targetWorld = exports.worldData[targetId];
+
+	    if (!sourceWorld.removed && !targetWorld.removed)
+	        return 0;
+
+	    return sourceId === selectedWorldId || targetId === selectedWorldId
+	        ? 0
+	        : (sourceId === hoverWorldId || targetId === hoverWorldId) || (selectedAuthor != null && (sourceWorld.author === selectedAuthor || targetWorld.author === selectedAuthor))
+	            || (searchWorldIds.length && (searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1))
+	        ? 0.375
+	        : 0.85;
 	}
 
 	function getConnTypeIcon(connType, typeParams) {
@@ -155568,7 +155801,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    const startWorld = startWorldId != null ? exports.worldData[startWorldId] : null;
 	    const endWorld = endWorldId != null ? exports.worldData[endWorldId] : null;
 	    const matchPaths = startWorld && endWorld && startWorld != endWorld
-	        ? findPath(startWorld.id, endWorld.id, true, connType_1.NO_ENTRY | connType_1.DEAD_END | connType_1.ISOLATED, config$1.pathMode === 0 ? 3 : config$1.pathMode === 1 ? 5 : 10)
+	        ? findPath(startWorld.id, endWorld.id, true, connType_1.NO_ENTRY | connType_1.DEAD_END | connType_1.ISOLATED | connType_1.SHORTCUT, config$1.pathMode === 0 ? 3 : config$1.pathMode === 1 ? 5 : 10)
 	        : null;
 	    if (exports.graph)
 	        exports.graph._destructor();
@@ -155671,18 +155904,11 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	    isDebug && console.log("Found", matchPaths.length, "matching path(s) in", Math.round((endTime - startTime) * 10) / 10, "ms");
 	    if (!matchPaths.length) {
-	        if (ignoreTypeFlags & connType_1.DEAD_END) {
-	            isDebug && console.log("Allowing dead end and isolated connections and retrying...");
-	            ignoreTypeFlags ^= (connType_1.DEAD_END | connType_1.ISOLATED);
-	        } else
-	            ignoreTypeFlags = 0;
-	        if (ignoreTypeFlags)
-	            return findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths);
-	        else {
+	        if (!tryAddNexusPath(matchPaths, existingMatchPaths, exports.worldData, s, t)) {
 	            isDebug && console.log("Marking route as inaccessible");
 	            matchPaths = [ [ { id: s, connType: connType_1.INACCESSIBLE }, { id: t, connType: null } ] ];
-	            return matchPaths;
 	        }
+	        return matchPaths;
 	    } else if (isRoot) {
 	        const rootLimit = Math.min(5, limit);
 	        const ignoreTypesList = [connType_1.CHANCE, connType_1.EFFECT, connType_1.LOCKED | connType_1.LOCKED_CONDITION | connType_1.EXIT_POINT];
@@ -155754,29 +155980,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            }
 	        }
 
-	        const nexusWorldName = "The Nexus";
-	        const nexusWorldId = exports.worldData.filter(w => w.title === nexusWorldName)[0].id;
-
-	        if (s !== nexusWorldId) {
-	            isDebug && console.log("Searching for paths eligible for Eyeball Bomb Nexus shortcut...");
-	            const nexusPaths = existingMatchPaths.concat(matchPaths).filter(p => (p.length > t !== nexusWorldId ? 2 : 3) && p.filter(w => w.id === nexusWorldId).length);
-	            if (nexusPaths.length) {
-	                isDebug && console.log("Found", nexusPaths.length, "paths eligible for Eyeball Bomb Nexus shortcut: creating shortcut paths");
-	                for (let nexusPath of nexusPaths) {
-	                    const nexusWorldIndex = nexusPath.indexOf(nexusPath.filter(w => w.id === nexusWorldId)[0]);
-	                    const nexusShortcutPath = lodash.cloneDeep([nexusPath[0]].concat(nexusPath.slice(nexusWorldIndex)));
-	                    const nexusSource = nexusShortcutPath[0];
-	                    nexusSource.connType = (nexusWorldIndex > 1 ? connType_1.ONE_WAY : 0) | connType_1.EFFECT;
-	                    nexusSource.typeParams = {};
-	                    nexusSource.typeParams[connType_1.EFFECT] = {
-	                        params: 'Eyeball Bomb',
-	                        paramsJP: effectsJP['Eyeball Bomb']
-	                    };
-	                    matchPaths.push(nexusShortcutPath);
-	                    limit++;
-	                }
-	            }
-	        }
+	        if (tryAddNexusPath(matchPaths, existingMatchPaths, exports.worldData, s, t))
+	            limit++;
 	    }
 
 	    matchPaths = lodash.sortBy(matchPaths, [ 'length' ]);
@@ -155848,8 +156053,35 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    return ret;
 	}
 
-	function findRealPathDepth(paths, worldId, pathWorldIds, worldDepthsMap, maxDepth, minDepth, ignoreTypeFlags)
-	{
+	function tryAddNexusPath(matchPaths, existingMatchPaths, worldData, sourceId, targetId) {
+	    const nexusWorldName = "The Nexus";
+	    const nexusWorldId = worldData.filter(w => w.title === nexusWorldName)[0].id;
+
+	    if (sourceId !== nexusWorldId) {
+	        isDebug && console.log("Searching for paths eligible for Eyeball Bomb Nexus shortcut...");
+	        const nexusPaths = existingMatchPaths.concat(matchPaths).filter(p => (p.length > targetId !== nexusWorldId ? 2 : 3) && p.filter(w => w.id === nexusWorldId).length);
+	        if (nexusPaths.length) {
+	            isDebug && console.log("Found", nexusPaths.length, "paths eligible for Eyeball Bomb Nexus shortcut: creating shortcut paths");
+	            for (let nexusPath of nexusPaths) {
+	                const nexusWorldIndex = nexusPath.indexOf(nexusPath.filter(w => w.id === nexusWorldId)[0]);
+	                const nexusShortcutPath = lodash.cloneDeep([nexusPath[0]].concat(nexusPath.slice(nexusWorldIndex)));
+	                const nexusSource = nexusShortcutPath[0];
+	                nexusSource.connType = (nexusWorldIndex > 1 ? connType_1.ONE_WAY : 0) | connType_1.EFFECT;
+	                nexusSource.typeParams = {};
+	                nexusSource.typeParams[connType_1.EFFECT] = {
+	                    params: 'Eyeball Bomb',
+	                    paramsJP: effectsJP['Eyeball Bomb']
+	                };
+	                matchPaths.push(nexusShortcutPath);
+	                return true;
+	            }
+	        }
+	    }
+
+	    return false;
+	}
+
+	function findRealPathDepth(paths, worldId, pathWorldIds, worldDepthsMap, maxDepth, minDepth, ignoreTypeFlags) {
 	    let ret = -1;
 
 	    if (minDepth == maxDepth)
@@ -155892,9 +156124,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    
 	    exports.worldData.forEach(w => {
 	        connData[w.id] = [];
-	        exports.worldData[w.id].connections.map(c => exports.worldData[c.targetId]).forEach(c => {
-	            connData[w.id].push(c.id);
-	        });
+	        exports.worldData[w.id].connections.map(c => exports.worldData[c.targetId]).forEach(c => connData[w.id].push(c.id));
 	    });
 
 	    Object.keys(connData).forEach(id => {
@@ -155909,12 +156139,52 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    });
 
 	    Object.keys(connData).forEach(id => {
-	        if (connData[id].length) {
-	            connData[id].forEach(c => {
-	                ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${c}">${exports.worldData[c].title}</a> is missing a connection to <a class="world-link" href="javascript:void(0);" data-world-id="${id}">${exports.worldData[id].title}</a>`);
-	            });
-	        }
+	        if (connData[id].length)
+	            connData[id].forEach(c => ret.push(`${getWorldLinkForAdmin(exports.worldData[c])} is missing a connection to ${getWorldLinkForAdmin(exports.worldData[id])}`));
 	    });
+
+	    return ret;
+	}
+
+	function getInvalidConnectionPairs() {
+	    const ret = [];
+
+	    const checkedReverseConnIds = [];
+	    const expectedReverseConnTypes = {};
+
+	    var addConnTypePair = function(x, y) {
+	        expectedReverseConnTypes[x] = y;
+	        expectedReverseConnTypes[y] = x;
+	    };
+
+	    addConnTypePair(connType_1.ONE_WAY, connType_1.NO_ENTRY);
+	    addConnTypePair(connType_1.UNLOCK, connType_1.LOCKED);
+	    addConnTypePair(connType_1.DEAD_END, connType_1.ISOLATED);
+	    addConnTypePair(connType_1.SHORTCUT, connType_1.EXIT_POINT);
+	    
+	    exports.worldData.forEach(w =>
+	        exports.worldData[w.id].connections.forEach(c => {
+	            const connId = `${w.id}_${c.targetId}`;
+	            if (checkedReverseConnIds.indexOf(connId) === -1) {
+	                const conns = exports.worldData[c.targetId].connections;
+	                for (let reverseConn of conns) {
+	                    if (reverseConn.targetId === w.id) {
+	                        const reverseConnId = `${c.targetId}_${w.id}`;
+	                        Object.keys(expectedReverseConnTypes).forEach(ct => {
+	                            const connType = parseInt(ct);
+	                            const expectedReverseConnType = expectedReverseConnTypes[ct];
+	                            if (c.type & connType && !(reverseConn.type & expectedReverseConnType))
+	                                ret.push(`${localizedConns[ct].name} connection between ${getWorldLinkForAdmin(exports.worldData[w.id])} and ${getWorldLinkForAdmin(exports.worldData[c.targetId])} expects ${localizedConns[expectedReverseConnType + ''].name} connection on the opposite side`);
+	                            else if (reverseConn.type & connType && !(c.type & expectedReverseConnType))
+	                                ret.push(`${localizedConns[ct].name} connection between ${getWorldLinkForAdmin(exports.worldData[c.targetId])} and ${getWorldLinkForAdmin(exports.worldData[w.id])} expects ${localizedConns[expectedReverseConnType + ''].name} connection on the opposite side`);
+	                        });
+	                        checkedReverseConnIds.push(reverseConnId);
+	                        break;
+	                    }
+	                }
+	            }
+	        })
+	    );
 
 	    return ret;
 	}
@@ -155924,23 +156194,25 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	    exports.worldData.forEach(w => {
 	        if (!w.titleJP || w.titleJP === "None")
-	            ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> is missing its Japanese name parameter`);
+	            ret.push(`${getWorldLinkForAdmin(w)} is missing its Japanese name parameter`);
 	            
 	        w.connections.forEach(conn => {
 	            const connWorld = exports.worldData[conn.targetId];
 	            if (conn.type & connType_1.EFFECT) {
 	                if (!conn.typeParams || !conn.typeParams[connType_1.EFFECT] || !conn.typeParams[connType_1.EFFECT].params)
-	                    ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> is missing the effects parameter for its connection to <a class="world-link" href="javascript:void(0);" data-world-id="${connWorld.id}">${connWorld.title}</a>`);
+	                    ret.push(`${getWorldLinkForAdmin(w)} is missing the effects parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
 	            }
 	            if (conn.type & connType_1.CHANCE) {
 	                if (!conn.typeParams || !conn.typeParams[connType_1.CHANCE] || !conn.typeParams[connType_1.CHANCE].params)
-	                    ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> is missing the chance percentage parameter for its connection to <a class="world-link" href="javascript:void(0);" data-world-id="${connWorld.id}">${connWorld.title}</a>`);
+	                    ret.push(`${getWorldLinkForAdmin(w)} is missing the chance percentage parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
+	                else if (conn.typeParams[connType_1.CHANCE].params === "0%")
+	                    ret.push(`${getWorldLinkForAdmin(w)} has a chance percentage parameter of 0% for its connection to ${getWorldLinkForAdmin(connWorld)}`);
 	            }
 	            if (conn.type & connType_1.LOCKED_CONDITION) {
 	                if (!conn.typeParams || !conn.typeParams[connType_1.LOCKED_CONDITION] || !conn.typeParams[connType_1.LOCKED_CONDITION].params)
-	                    ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> is missing the lock condition parameter for its connection to <a class="world-link" href="javascript:void(0);" data-world-id="${connWorld.id}">${connWorld.title}</a>`);
+	                    ret.push(`${getWorldLinkForAdmin(w)} is missing the lock condition parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
 	                if (!conn.typeParamsJP || !conn.typeParams[connType_1.LOCKED_CONDITION] || !conn.typeParams[connType_1.LOCKED_CONDITION].paramsJP)
-	                    ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> is missing the Japanese lock condition parameter for its connection to <a class="world-link" href="javascript:void(0);" data-world-id="${connWorld.id}">${connWorld.title}</a>`);
+	                    ret.push(`${getWorldLinkForAdmin(w)} is missing the Japanese lock condition parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
 	            }
 	        });
 	    });
@@ -155949,7 +156221,12 @@ vec4 envMapTexelToLinear(vec4 color) {
 	}
 
 	function getMissingMapIds() {
-	    return exports.worldData.filter(w => w.noMaps).map(w => `<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> has no associated Map IDs`);
+	    return exports.worldData.filter(w => w.noMaps).map(w => `${getWorldLinkForAdmin(w)} has no associated Map IDs`);
+	}
+
+	function getWorldLinkForAdmin(world) {
+	    const removedPrefix = world.removed ? '[REMOVED] ' : '';
+	    return `${removedPrefix}<a class="world-link" href="javascript:void(0);" data-world-id="${world.id}">${world.title}</a>`
 	}
 
 	function initLocalization(isInitial) {
@@ -155959,7 +156236,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "2.9.1");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "2.10.0");
 	            const formatDate = (date) => date.toLocaleString(isEn ? "en-US" : "ja-JP", { timeZoneName: "short" });
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate));
@@ -155999,6 +156276,10 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                effectsJP = data;
 	            }
 	        });
+	    } else {
+	        exports.worldsByName = isEn ? lodash.keyBy(exports.worldData, w => w.title) : lodash.keyBy(exports.worldData, w => w.titleJP || w.title);
+
+	        worldNames = Object.keys(exports.worldsByName);
 	    }
 
 	    jquery(".js--world-input").each(function() {
@@ -156008,10 +156289,6 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            jquery(this).val(isEn || !world.titleJP ? world.title : world.titleJP);
 	        }
 	    });
-
-	    exports.worldsByName = isEn ? lodash.keyBy(exports.worldData, w => w.title) : lodash.keyBy(exports.worldData, w => w.titleJP || w.title);
-
-	    worldNames = Object.keys(exports.worldsByName);
 
 	    jquery(".js--path--world-input").each(function () {
 	        jquery(this).off("change").devbridgeAutocomplete("destroy");
@@ -156110,6 +156387,12 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    });
 	    if (selectedAuthor === '')
 	        $authorSelect.val('');
+	    else if (selectedAuthor) {
+	        const validAuthor = authors.indexOf(selectedAuthor) > -1;
+	        if (!validAuthor)
+	            selectedAuthor = null;
+	        $authorSelect.val(validAuthor ? selectedAuthor : 'null');
+	    }
 	}
 
 	function initContextMenu(localizedContextMenu) {
@@ -156144,7 +156427,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	function openWorldWikiPage(worldId, newWindow) {
 	    const world = exports.worldData[worldId];
-	    window.open(config$1.lang === 'en' || !world.titleJP
+	    window.open(config$1.lang === 'en' || !world.titleJP || world.removed
 	        ? 'https://yume2kki.fandom.com/wiki/' + world.title
 	        : ('https://wikiwiki.jp/yume2kki-t/' + (world.titleJP.indexOf("：") > -1 ? world.titleJP.slice(0, world.titleJP.indexOf("：")) : world.titleJP)),
 	        "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
@@ -156168,29 +156451,41 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    }
 	}
 
-	function updateConnectionModeIcons() {
-	    if (isWebGL2) {
+	function updateConnectionModeIcons(links) {
+	    if (!links)
+	        links = exports.graph ? exports.graph.graphData().links : [];
+	    if (!links.length)
+	        return;
+	    if (isWebGL2 && iconObject) {
 	        iconObject.geometry.attributes.opacity.array.set(unsortedIconOpacities, 0);
+	        iconObject.geometry.attributes.grayscale.array.set(unsortedIconGrayscales, 0);
 	        let opacities = iconObject.geometry.attributes.opacity.array;
-	        let iconIndex = 0;
-	        exports.graph.graphData().links.forEach(link => {
+	        let grayscales = iconObject.geometry.attributes.grayscale.array;
+	        links.forEach(link => {
 	            const linkOpacity = getLinkOpacity(link);
+	            const linkGrayscale = getLinkGrayscale(link);
 	            link.icons.forEach(icon => {
-	                opacities[iconIndex] = linkOpacity;
-	                config$1.connMode === 0 && link.hidden && (opacities[iconIndex] = 0);
-	                iconIndex++;
+	                opacities[icon.id] = linkOpacity;
+	                grayscales[icon.id] = linkGrayscale;
+	                if (config$1.connMode === 0 && link.hidden)
+	                    opacities[icon.id] = 0;
 	            });
 	        });
 	        unsortedIconOpacities = opacities.slice();
+	        unsortedIconGrayscales = grayscales.slice();
 	        iconObject.geometry.attributes.opacity.needsUpdate = true;
+	        iconObject.geometry.attributes.grayscale.needsUpdate = true;
 	    } else {
-	        exports.graph.graphData().links.forEach(link => {
+	        links.forEach(link => {
 	            if (icons3D[link.key] !== undefined) {
 	                const linkOpacity = getLinkOpacity(link);
+	                const linkGrayscale = getLinkGrayscale(link);
 	                icons3D[link.key].forEach(icon => {
 	                    icon.visible = true;
 	                    icon.material.opacity = linkOpacity;
-	                    config$1.connMode === 0 && link.hidden && (icon.visible = false);
+	                    icon.material.grayScale = linkGrayscale;
+	                    if (config$1.connMode === 0 && link.hidden)
+	                        icon.visible = false;
 	                });
 	            }
 	        });
@@ -156202,13 +156497,20 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    let index = 0;
 	    exports.graph.graphData().nodes.forEach(node => {
 	        const nodeOpacity = getNodeOpacity(node.id);
-	        if (nodeObject)
+	        const nodeGrayscale = getNodeGrayscale(node);
+	        if (nodeObject) {
 	            nodeObject.geometry.attributes.opacity.array[index] = nodeOpacity;
-	        else
+	            nodeObject.geometry.attributes.grayscale.array[index] = nodeGrayscale;
+	        } else {
 	            node.__threeObj.material.opacity = nodeOpacity;
+	            node.__threeObj.material.grayscale = nodeGrayscale;
+	        }
 	        index++;
 	    });
-	    nodeObject && (nodeObject.geometry.attributes.opacity.needsUpdate = true);
+	    if (nodeObject) {
+	        nodeObject.geometry.attributes.opacity.needsUpdate = true;
+	        nodeObject.geometry.attributes.grayscale.needsUpdate = true;
+	    }
 	    updateLinkColors(visibleTwoWayLinks, linksTwoWayBuffered);
 	    updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
 	    if (isWebGL2 && is2d)
@@ -156392,6 +156694,16 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        }
 	    });
 
+	    jquery(".js--removed-content-mode").on("change", function() {
+	        config$1.removedContentMode = parseInt(jquery(this).val());
+	        updateConfig(config$1);
+	        if (exports.worldData) {
+	            if (jquery(".modal:visible").length)
+	                jquery.modal.close();
+	            reloadWorldData(false);
+	        }
+	    });
+
 	    jquery(".js--path-mode").on("change", function() {
 	        config$1.pathMode = parseInt(jquery(this).val());
 	        updateConfig(config$1);
@@ -156424,6 +156736,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        jquery(".js--author").val("null");
 	        startWorldId = null;
 	        endWorldId = null;
+	        hoverWorldId = null;
 	        selectedWorldId = null;
 	        selectedAuthor = null;
 	        if (exports.worldData)
@@ -156469,6 +156782,10 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                data: getMissingConnections(),
 	                emptyMessage: "No missing connections found"
 	            },
+	            "invalid-conn-pairs": {
+	                data: getInvalidConnectionPairs(),
+	                emptyMessage: "No invalid connection pairs found"
+	            },
 	            "missing-location-params": {
 	                data: getMissingLocationParams(),
 	                emptyMessage: "No missing location parameters found"
@@ -156496,15 +156813,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    jquery(".js--update-data, .js--reset-data").on("click", function() {
 	        if (jquery(".modal:visible").length)
 	            jquery.modal.close();
-
 	        const isReset = jquery(this).hasClass("js--reset-data");
-	        const loadCallback = displayLoadingAnim(jquery("#graph"));
-
-	        loadWorldData(isReset ? "reset" : true, function () {
-	            window.location.reload();
-	        }, function () {
-	            loadCallback(true);
-	        });
+	        reloadWorldData(isReset ? "reset" : true);
 	    });
 
 	    jquery(document).on("click", "a.world-link", function () {
@@ -156554,7 +156864,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    initLocalization(true);
 
 	    loadWorldData(false, function (data) {
-	        exports.worldData = data.worldData;
+	        initWorldData(data.worldData);
 	        lastUpdate = new Date(data.lastUpdate);
 	        lastFullUpdate = new Date(data.lastFullUpdate);
 
@@ -156563,24 +156873,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	            jquery('.admin-only').removeClass('admin-only');
 	        }
 
-	        for (let d in Object.keys(exports.worldData)) {
-	            const world = exports.worldData[d];
-	            world.id = parseInt(d);
-	            world.connections.forEach(conn => {
-	                const effectParams = conn.typeParams[connType_1.EFFECT];
-	                if (effectParams) {
-	                    effectParams.paramsJP = effectParams.params.split(',').map(e => effectsJP[e]).join('」か「');
-	                    effectParams.params = effectParams.params.replace(/,/g, ', ');
-	                }
-	            });
-	        }
-
 	        initLocalization();
-
-	        const worldSizes = exports.worldData.map(w => w.size); 
-
-	        minSize = lodash.min(worldSizes);
-	        maxSize = lodash.max(worldSizes);
 
 	        loadCallback();
 

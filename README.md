@@ -102,6 +102,10 @@ Select whether to display connection icons for connections going backwards in de
 
 Select when to show labels on world nodes.
 
+### Removed Content
+
+Select whether to show removed worlds and connections.
+
 ### Routing Mode
 
 Select the complexity to use when mapping paths between origin and destination world. More complex means more paths will be shown.
@@ -196,11 +200,11 @@ This setting determines the number of world nodes that make up a stack within th
 
 ### レンダリングモードの設定
 
-マップツリーを2Dで表示するか、3Dで表示するかを選びます。
+マップツリーを2Dで表示するか、3Dで表示するかを選択します。
 
 ### 表示モードの設定
 
-どのようにマップツリーを構成するか選択します。自分に合った表示を探してみてください。
+どのようにマップツリーを構成するかを選択します。自分に合った表示を探してみてください。
 
 ### 接続モードの設定
 
@@ -210,6 +214,10 @@ This setting determines the number of world nodes that make up a stack within th
 ### ラベル表示の調整
 
 マップにラベルを表示するタイミングを設定します。
+
+### 旧版データ
+
+削除されたマップや接続を表示するかを選択します。
 
 ### ルート表示モード
 現在地点から目的地までのルートを検索するときの、一度に表示するルート例の量を設定します。

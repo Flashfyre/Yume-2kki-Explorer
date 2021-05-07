@@ -45,6 +45,6 @@
     },
     "2048": {
         "name": "Inaccessible",
-        "description": ""
+        "description": "Cannot be accessed in the current version of the game"
     }
 }

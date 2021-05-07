@@ -17,7 +17,7 @@
                 color: rgba(216, 216, 216, 1); /*base*/
             }
 
-            label, h1, h2, h3, h4, p, li, .close-modal, .loading-container .loading-container__text {
+            label, h1, h2, h3, h4, p, li:not(.context-menu-item), .close-modal, .loading-container .loading-container__text {
                 background-image: url(/images/ui/Default_Custom/font1.png) !important; /*base*/
                 -webkit-background-clip: text;
 	            -webkit-text-fill-color: transparent;
@@ -215,6 +215,13 @@
                         </select>
                     </div>
                     <div class="control">
+                        <label data-localize="settings.removedContentMode.name" class="noselect">Removed Content:</label>
+                        <select name="removedContentMode" class="js--removed-content-mode">
+                            <option data-localize="settings.removedContentMode.values.hide" value="0">Hide</option>
+                            <option data-localize="settings.removedContentMode.values.show" value="1">Show</option>
+                        </select>
+                    </div>
+                    <div class="control">
                         <label data-localize="settings.pathMode.name" class="noselect">Routing Mode:</label>
                         <select name="pathMode" class="js--path-mode">
                             <option data-localize="settings.pathMode.values.simple" value="0">Simple</option>
@@ -244,6 +251,10 @@
                     <div class="data-issues-module">
                         <label>Missing Connections</label>
                         <div class="js--data-issues__missing-conns"></div>
+                    </div>
+                    <div class="data-issues-module">
+                        <label>Invalid Connection Pairs</label>
+                        <div class="js--data-issues__invalid-conn-pairs"></div>
                     </div>
                     <div class="data-issues-module">
                         <label>Missing Location Parameters</label>

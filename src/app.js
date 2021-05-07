@@ -39,6 +39,7 @@ let graphContext;
 const nodeImgDimensions = { x: 320, y: 240 };
 let nodeObjectMaterial;
 let iconTexts = [];
+let removedCount;
 const worldScales = {};
 const defaultPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT;
 
@@ -82,6 +83,35 @@ $.fn.extend({
 
 export let worldData;
 
+function initWorldData(data) {
+    worldData = config.removedContentMode === 0
+        ? data.filter(w => !w.removed)
+        : data;
+
+    removedCount = 0;
+
+    for (let w in worldData) {
+        const world = worldData[w];
+        world.id = parseInt(w);
+        if (world.removed)
+            world.rId = removedCount++;
+        for (let world of worldData) {
+            world.connections.forEach(conn => {
+                const effectParams = conn.typeParams[ConnType.EFFECT];
+                if (effectParams) {
+                    effectParams.paramsJP = effectParams.params.split(',').map(e => effectsJP[e]).join('」か「');
+                    effectParams.params = effectParams.params.replace(/,/g, ', ');
+                }
+            });
+        }
+    }
+
+    const worldSizes = worldData.map(w => w.size); 
+
+    minSize = _.min(worldSizes);
+    maxSize = _.max(worldSizes);
+}
+
 function loadOrInitConfig() {
     try {
         if (!window.localStorage.hasOwnProperty("config"))
@@ -119,6 +149,9 @@ function loadOrInitConfig() {
                         case "labelMode":
                             $(".js--label-mode").val(value);
                             break;
+                        case "removedContentMode":
+                            $(".js--removed-content-mode").val(value);
+                            break;
                         case "pathMode":
                             $(".js--path-mode").val(value);
                             break;
@@ -152,6 +185,8 @@ function updateControlsContainer(updateTabMargin) {
 
 export function loadWorldData(update, success, fail) {
     let queryString = update ? "?update=" + update : "";
+    if (config.removedContentMode === 1)
+        queryString += (queryString.length ? "&" : "?") + "includeRemovedContent=true";
     const urlSearchParams = new URLSearchParams(window.location.search);
     if (urlSearchParams.has("adminKey"))
         queryString += (queryString.length ? "&" : "?") + "adminKey=" + urlSearchParams.get("adminKey");
@@ -171,9 +206,29 @@ export function loadWorldData(update, success, fail) {
     }).fail(fail);
 }
 
+function reloadWorldData(update) {
+    const loadCallback = displayLoadingAnim($("#graph"));
+    loadWorldData(update, function (data) {
+        initWorldData(data.worldData);
+        lastUpdate = new Date(data.lastUpdate);
+        lastFullUpdate = new Date(data.lastFullUpdate);
+
+        initLocalization();
+
+        loadCallback();
+
+        if (isWebGL2) {
+            worldImageData = [];
+            initNodeObjectMaterial();
+        }
+
+        reloadGraph();
+    }, loadCallback);
+}
+
 export let graph;
 
-let contextWorldId = null, startWorldId = null, endWorldId = null, selectedWorldId = null;
+let contextWorldId = null, startWorldId = null, endWorldId = null, hoverWorldId = null, selectedWorldId = null;
 
 let searchWorldIds = [], visibleWorldIds = [];
 
@@ -181,6 +236,7 @@ let selectedAuthor = null;
 
 let visibleTwoWayLinks = [];
 let visibleOneWayLinks = [];
+let hiddenLinks = [];
 let linksTwoWayBuffered;
 let linksOneWayBuffered;
 
@@ -190,6 +246,7 @@ let iconObject;
 let icons3D;
 
 const colorLinkSelected = new THREE.Color('red');
+const nodeTextColors = ["#FFFFFF", "#AAAAAA", "#888888"];
 
 let localizedNodeLabel;
 let localizedPathNodeLabel;
@@ -213,6 +270,7 @@ let config = {
     displayMode: 0,
     connMode: 0,
     labelMode: 1,
+    removedContentMode: 0,
     pathMode: 1,
     sizeDiff: 1,
     stackSize: 20
@@ -234,11 +292,14 @@ function initGraph(renderMode, displayMode, paths) {
 
     const worldDepths = {};
     const worldRealDepths = {};
+    const worldRemoved = {};
 
     iconTexts = [];
 
-    for (let w of worldData)
+    for (let w of worldData) {
         worldScales[w.id] = 1 + (Math.round((w.size - minSize) / (maxSize - minSize) * 10 * (config.sizeDiff - 1)) / 10);
+        worldRemoved[w.id] = w.removed;
+    }
 
     let maxDepth;
 
@@ -444,37 +505,37 @@ function initGraph(renderMode, displayMode, paths) {
     links.forEach(l => {
         const icons = l.icons;
         const connType = l.connType;
+        
         if (connType & ConnType.INACCESSIBLE)
             icons.push(getConnTypeIcon(ConnType.INACCESSIBLE));
-        else {
-            if (connType & ConnType.ONE_WAY)
-                icons.push(getConnTypeIcon(ConnType.ONE_WAY));
-            else if (connType & ConnType.NO_ENTRY)
-                icons.push(getConnTypeIcon(ConnType.NO_ENTRY));
-            if (connType & ConnType.UNLOCK)
-                icons.push(getConnTypeIcon(ConnType.UNLOCK));
-            else if (connType & ConnType.LOCKED)
-                icons.push(getConnTypeIcon(ConnType.LOCKED));
-            else if (connType & ConnType.LOCKED_CONDITION)
-                icons.push(getConnTypeIcon(ConnType.LOCKED_CONDITION, l.typeParams[ConnType.LOCKED_CONDITION]));
-            else if (connType & ConnType.SHORTCUT)
-                icons.push(getConnTypeIcon(ConnType.SHORTCUT));
-            else if (connType & ConnType.EXIT_POINT)
-                icons.push(getConnTypeIcon(ConnType.EXIT_POINT));
-            if (connType & ConnType.DEAD_END)
-                icons.push(getConnTypeIcon(ConnType.DEAD_END));
-            else if (connType & ConnType.ISOLATED)
-                icons.push(getConnTypeIcon(ConnType.ISOLATED));
-            if (connType & ConnType.EFFECT)
-                icons.push(getConnTypeIcon(ConnType.EFFECT, l.typeParams[ConnType.EFFECT]));
-            if (connType & ConnType.CHANCE)
-                icons.push(getConnTypeIcon(ConnType.CHANCE, l.typeParams[ConnType.CHANCE]));
-        }
+        if (connType & ConnType.ONE_WAY)
+            icons.push(getConnTypeIcon(ConnType.ONE_WAY));
+        else if (connType & ConnType.NO_ENTRY)
+            icons.push(getConnTypeIcon(ConnType.NO_ENTRY));
+        if (connType & ConnType.UNLOCK)
+            icons.push(getConnTypeIcon(ConnType.UNLOCK));
+        else if (connType & ConnType.LOCKED)
+            icons.push(getConnTypeIcon(ConnType.LOCKED));
+        else if (connType & ConnType.LOCKED_CONDITION)
+            icons.push(getConnTypeIcon(ConnType.LOCKED_CONDITION, l.typeParams[ConnType.LOCKED_CONDITION]));
+        else if (connType & ConnType.SHORTCUT)
+            icons.push(getConnTypeIcon(ConnType.SHORTCUT));
+        else if (connType & ConnType.EXIT_POINT)
+            icons.push(getConnTypeIcon(ConnType.EXIT_POINT));
+        if (connType & ConnType.DEAD_END)
+            icons.push(getConnTypeIcon(ConnType.DEAD_END));
+        else if (connType & ConnType.ISOLATED)
+            icons.push(getConnTypeIcon(ConnType.ISOLATED));
+        if (connType & ConnType.EFFECT)
+            icons.push(getConnTypeIcon(ConnType.EFFECT, l.typeParams[ConnType.EFFECT]));
+        if (connType & ConnType.CHANCE)
+            icons.push(getConnTypeIcon(ConnType.CHANCE, l.typeParams[ConnType.CHANCE]));
     });
 
     const images = (paths ? worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1) : worldData).map(d => {
         const img = imageLoader.load(d.filename);
         img.id = d.id;
+        img.rId = d.rId;
         img.title = config.lang === "en" || !d.titleJP ? d.title : d.titleJP;
         return img;
     });
@@ -485,10 +546,14 @@ function initGraph(renderMode, displayMode, paths) {
     for (let d = 0; d <= maxDepth; d++)
         depthColors.push(hueToRGBA(0.6666 - depthHueIncrement * d, 1));
 
+    let n = 0;
+
     const nodes = images.map(img => {
         const id = parseInt(img.id);
+        const rId = parseInt(img.rId);
         const scale = worldScales[id];
-        const ret = { id: id, img, isHover: false, scale: scale };
+        const removed = worldRemoved[id];
+        const ret = { id, rId, index: n++, img, scale: scale, removed: removed };
         ret.depth = worldDepths[id];
         ret.depthColor = depthColors[ret.depth];
         if (paths)
@@ -513,6 +578,7 @@ function initGraph(renderMode, displayMode, paths) {
 
     visibleTwoWayLinks = [];
     visibleOneWayLinks = [];
+    hiddenLinks = [];
 
     const rendererConfig = isWebGL2
         ? {
@@ -573,11 +639,12 @@ function initGraph(renderMode, displayMode, paths) {
                     ret.renderOrder = world.id;
                 }
                 ret.material.opacity = getNodeOpacity(node.id);
+                ret.material.grayscale = getNodeGrayscale(node);
             }
 
             if (!(isWebGL2 && is2d)) {
                 const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
-                const text = new SpriteText(worldName, 1.5, 'white');
+                const text = new SpriteText(worldName, 1.5, node.removed ? getNodeTextColor(node, ret.material.grayscale) : 'white');
                 text.__graphObjType = 'label';
                 text.fontFace = 'MS Gothic';
                 text.fontSize = 80;
@@ -631,9 +698,7 @@ function initGraph(renderMode, displayMode, paths) {
             if (isWebGL2)
                 updateNodePositions(is2d);
         })
-        .linkThreeObject(link => {
-            return dummyLinkObject;
-        })
+        .linkThreeObject(link => dummyLinkObject)
         .linkPositionUpdate((linkObject, { start, end }, link) => {
             if (!isWebGL2 && icons3D[link.key] !== undefined) {
                 const linkIcons = icons3D[link.key];
@@ -685,10 +750,44 @@ function initGraph(renderMode, displayMode, paths) {
         })
         .onNodeHover((node, prevNode) => {
             elem.style.cursor = node ? 'pointer' : null;
-            if (node)
-                node.isHover = true;
-            if (prevNode)
-                prevNode.isHover = false;
+
+            if (node) {
+                hoverWorldId = node.id;
+                if (nodeObject && node.removed) {
+                    const nodeGrayscale = getNodeGrayscale(node);
+                    nodeObject.geometry.attributes.grayscale.array[node.index] = nodeGrayscale;
+                    nodeObject.geometry.attributes.grayscale.needsUpdate = true;
+                }
+                const removedTwoWayLinks = visibleTwoWayLinks.filter(l => getWorldLinkRemoved(node.id, l, worldRemoved));
+                const removedOneWayLinks = visibleOneWayLinks.filter(l => getWorldLinkRemoved(node.id, l, worldRemoved));
+                const removedLinks = removedTwoWayLinks.concat(removedOneWayLinks).concat(hiddenLinks.filter(l => getWorldLinkRemoved(node.id, l, worldRemoved)));
+                if (removedTwoWayLinks.length)
+                    updateLinkColors(removedTwoWayLinks, linksTwoWayBuffered, visibleTwoWayLinks);
+                if (removedOneWayLinks.length)
+                    updateLinkColors(removedOneWayLinks, linksOneWayBuffered, visibleOneWayLinks);
+                if (removedLinks.length)
+                    updateConnectionModeIcons(removedLinks);
+            }
+            else
+                hoverWorldId = null;
+
+            if (prevNode) {
+                if (nodeObject && prevNode.removed) {
+                    const nodeGrayscale = getNodeGrayscale(prevNode);
+                    nodeObject.geometry.attributes.grayscale.array[prevNode.index] = nodeGrayscale;
+                    nodeObject.geometry.attributes.grayscale.needsUpdate = true;
+                }
+                const removedTwoWayLinks = visibleTwoWayLinks.filter(l => getWorldLinkRemoved(prevNode.id, l, worldRemoved));
+                const removedOneWayLinks = visibleOneWayLinks.filter(l => getWorldLinkRemoved(prevNode.id, l, worldRemoved));
+                const removedLinks = removedTwoWayLinks.concat(removedOneWayLinks).concat(hiddenLinks.filter(l => getWorldLinkRemoved(prevNode.id, l, worldRemoved)));
+                if (removedTwoWayLinks.length)
+                    updateLinkColors(removedTwoWayLinks, linksTwoWayBuffered, visibleTwoWayLinks);
+                if (removedOneWayLinks.length)
+                    updateLinkColors(removedOneWayLinks, linksOneWayBuffered, visibleOneWayLinks);
+                if (removedLinks.length)
+                    updateConnectionModeIcons(removedLinks);
+            }
+
             if (isWebGL2 && is2d)
                 updateNodeLabels2D();
         })
@@ -764,7 +863,7 @@ function initGraph(renderMode, displayMode, paths) {
             onRender(is2d);
             _animationCycle.apply(this)
         }
-    })()
+    })();
 
     if (isWebGL2) {
         initNodeObject(is2d);
@@ -772,13 +871,11 @@ function initGraph(renderMode, displayMode, paths) {
         makeIconObject(is2d);
         let index = 0;
         graph.graphData().links.forEach(link => {
-            link.icons.forEach(icon => {
-                iconTexts[index] = icon.text;
-                index++;
-            });
+            link.icons.forEach(icon => iconTexts[index++] = icon.text);
         });
         updateConnectionModeIcons();
-        updateNodeLabels2D();
+        if (is2d)
+            updateNodeLabels2D();
     } else
         makeLinkIcons(is2d);
 
@@ -792,7 +889,9 @@ function initGraph(renderMode, displayMode, paths) {
             else
                 visibleTwoWayLinks.push(link);
         }
-    })
+        else
+            hiddenLinks.push(link);
+    });
 
     makeLinkIconTooltip();
     linksTwoWayBuffered = makeTwoWayLinkObjects(is2d);
@@ -818,11 +917,20 @@ function updateNodeImageData(nodes, isSubset, is2d) {
     nodeObject.count = nodes.length;
     if (isSubset) {
         let index = 0;
+        let rIndex = 0;
         const totalNodeCount = nodes.length;
+        const removedNodeCount = nodes.filter(n => n.removed).length;
+     
         nodes.forEach(node => {
-            copyImageData(node.id, index, totalNodeCount);
-            if (is2d)
+            copyImageData(node.id, index);
+            if (is2d) {
                 copyImageData(node.id + worldData.length, index + totalNodeCount);
+                if (node.removed) {
+                    copyImageData(node.rId + worldData.length * 2, rIndex + totalNodeCount * 2);
+                    copyImageData(node.rId + worldData.length * 2 + removedCount, rIndex + totalNodeCount * 2 + removedNodeCount);
+                    rIndex++;
+                }
+            }
             index++;
         });
     } else
@@ -848,11 +956,14 @@ const instanceVS = `#version 300 es
 
     in float opacity;
     out float vOpacity;
+    in float grayscale;
+    out float vGrayscale;
     out vec2 vUv;
     in float texIndex;
     out float vTexIndex;
     void main() {
         vOpacity = opacity;
+        vGrayscale = grayscale;
         vUv = vec2(uv.x, 1.0 - uv.y); // flip texture vertically, because of how it's stored
         vTexIndex = texIndex;
         vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
@@ -871,11 +982,14 @@ const instanceIconVS = `#version 300 es
 
     in float opacity;
     out float vOpacity;
+    in float grayscale;
+    out float vGrayscale;
     out vec2 vUv;
     in float texIndex;
     out float vTexIndex;
     void main() {
         vOpacity = opacity;
+        vGrayscale = grayscale;
         vUv = vec2(uv.x, 1.0 - uv.y); // flip texture vertically, because of how it's stored
         vTexIndex = texIndex;
         vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
@@ -889,6 +1003,7 @@ const instanceFS = `#version 300 es
     precision highp sampler2DArray;
 
     in float vOpacity;
+    in float vGrayscale;
     uniform sampler2DArray diffuse;
     in vec2 vUv;
     out vec4 fragmentColor;
@@ -897,6 +1012,12 @@ const instanceFS = `#version 300 es
     void main() {
         vec4 temp = texture(diffuse, vec3(vUv, int(vTexIndex + 0.1)));
         temp.a = vOpacity;
+        if (vGrayscale > 0.0) {
+            float v = (temp.r + temp.g + temp.b) / 3.0;
+            temp.r = (temp.r * (1.0 - vGrayscale)) + (v * vGrayscale);
+            temp.g = (temp.g * (1.0 - vGrayscale)) + (v * vGrayscale);
+            temp.b = (temp.b * (1.0 - vGrayscale)) + (v * vGrayscale);
+        }
         fragmentColor = temp;
     }
 `;
@@ -907,6 +1028,7 @@ const instanceIconFS = `#version 300 es
     precision highp sampler2DArray;
 
     in float vOpacity;
+    in float vGrayscale;
     uniform sampler2DArray diffuse;
     in vec2 vUv;
     out vec4 fragmentColor;
@@ -915,12 +1037,19 @@ const instanceIconFS = `#version 300 es
     void main() {
         vec4 temp = texture(diffuse, vec3(vUv, int(vTexIndex + 0.1)));
         temp.a = temp.a * vOpacity;
+        if (vGrayscale > 0.0) {
+            float v = (temp.r + temp.g + temp.b) / 3.0;
+            temp.r = (temp.r * (1.0 - vGrayscale)) + (v * vGrayscale);
+            temp.g = (temp.g * (1.0 - vGrayscale)) + (v * vGrayscale);
+            temp.b = (temp.b * (1.0 - vGrayscale)) + (v * vGrayscale);
+        }
         fragmentColor = temp;
     }
 `;
 
-let unsortedIconTexIndexes = [];
 let unsortedIconOpacities = [];
+let unsortedIconGrayscales = [];
+let unsortedIconTexIndexes = [];
 let sortedIconIds = [];
 let iconCount;
 function makeIconObject(is2d) {
@@ -945,8 +1074,8 @@ function makeIconObject(is2d) {
 
     iconCount = 0;
     graph.graphData().links.forEach(link => {
-        link.icons.forEach(_ => {
-            iconCount++;
+        link.icons.forEach(icon => {
+            icon.id = iconCount++;
         })
     });
     let iconImgData = new Uint8ClampedArray(buffer);
@@ -986,22 +1115,26 @@ function makeIconObject(is2d) {
     });
 
     const opacities = [];
+    const grayscales = [];
     const texIndexes = [];
 
     let iconIndex = 0;
     graph.graphData().links.forEach(link => {
         link.icons.forEach(icon => {
-            texIndexes[iconIndex] = connTypes.findIndex(a => a == icon.type);
             opacities[iconIndex] = 1.0;
+            grayscales[iconIndex] = 0;
+            texIndexes[iconIndex] = connTypes.findIndex(a => a == icon.type);
             iconIndex++;
         });
     });
 
-    unsortedIconTexIndexes = texIndexes.slice();
     unsortedIconOpacities = opacities.slice();
+    unsortedIconGrayscales = grayscales.slice();
+    unsortedIconTexIndexes = texIndexes.slice();
 
     const geometry = new THREE.PlaneBufferGeometry(5, 5);
     geometry.attributes.opacity = new THREE.InstancedBufferAttribute(new Float32Array(opacities), 1);
+    geometry.attributes.grayscale = new THREE.InstancedBufferAttribute(new Float32Array(grayscales), 1);
     geometry.attributes.texIndex = new THREE.InstancedBufferAttribute(new Float32Array(texIndexes), 1);
 
     iconObject = new THREE.InstancedMesh(geometry, material, iconCount);
@@ -1067,12 +1200,12 @@ function updateIconPositions(is2d) {
                 iconIndex++;
             });
         });
-        sortInstances(iconObject, unsortedIconOpacities, unsortedIconTexIndexes);
+        sortInstances(iconObject, unsortedIconOpacities, unsortedIconGrayscales, unsortedIconTexIndexes);
         iconObject.instanceMatrix.needsUpdate = true;
     }
 }
 
-function sortInstances(instanceObject, unsortedOpacities, unsortedTexIndexes) {
+function sortInstances(instanceObject, unsortedOpacities, unsortedGrayscales, unsortedTexIndexes) {
     const camera = graph.camera();
     let dummy = new THREE.Object3D();
     let index = 0;
@@ -1086,10 +1219,11 @@ function sortInstances(instanceObject, unsortedOpacities, unsortedTexIndexes) {
     });
 
     const opacities = instanceObject.geometry.attributes.opacity.array;
+    const grayscales = instanceObject.geometry.attributes.grayscale.array;
     const texIndexes = instanceObject.geometry.attributes.texIndex.array;
     let vecArray = [];
     for (let i = 0; i < iconCount; i++)
-        vecArray.push({ pos: positions[i], opacity: unsortedOpacities[i], texIndex: unsortedTexIndexes[i], unsortedId: i });
+        vecArray.push({ pos: positions[i], opacity: unsortedOpacities[i], grayscale: unsortedGrayscales[i], texIndex: unsortedTexIndexes[i], unsortedId: i });
     vecArray.sort((a, b) => a.pos.distanceTo(camera.position) > b.pos.distanceTo(camera.position)
         ? -1
         : a.pos.distanceTo(camera.position) < b.pos.distanceTo(camera.position)
@@ -1113,19 +1247,22 @@ function sortInstances(instanceObject, unsortedOpacities, unsortedTexIndexes) {
             dummy.updateMatrix();
             instanceObject.setMatrixAt(index, dummy.matrix);
             opacities[index] = vecArray[index].opacity;
+            grayscales[index] = vecArray[index].grayscale;
             texIndexes[index] = vecArray[index].texIndex;
             index++;
         });
     });
 
     instanceObject.geometry.attributes.opacity.needsUpdate = true;
+    instanceObject.geometry.attributes.grayscale.needsUpdate = true;
     instanceObject.geometry.attributes.texIndex.needsUpdate = true;
 }
 
 function initNodeObjectMaterial() {
-    const buffer = new ArrayBuffer(nodeImgDimensions.x * nodeImgDimensions.y * 4 * worldData.length * 2);
     const amount = worldData.length;
-    const texture = new THREE.DataTexture2DArray(new Uint8ClampedArray(buffer), nodeImgDimensions.x, nodeImgDimensions.y, amount * 2);
+    const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
+    const buffer = new ArrayBuffer(dataLength * amount * 2 + (dataLength * removedCount * 2));
+    const texture = new THREE.DataTexture2DArray(new Uint8ClampedArray(buffer), nodeImgDimensions.x, nodeImgDimensions.y, amount * 2 + (removedCount * 2));
     texture.format = THREE.RGBAFormat;
     texture.type = THREE.UnsignedByteType;
     nodeObjectMaterial = new THREE.RawShaderMaterial({
@@ -1139,8 +1276,8 @@ function initNodeObjectMaterial() {
     });
 
     const filenames = [];
-    worldData.forEach(node => {
-        filenames.push(worldData[node.id].filename);
+    worldData.forEach(world => {
+        filenames.push(worldData[world.id].filename);
     });
 
     Promise.all(getImageRawData(filenames))
@@ -1157,7 +1294,7 @@ function initNodeObjectMaterial() {
             ctx.strokeStyle = 'black';
             ctx.lineWidth = 5;
             let index = 0;
-            const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
+            let rIndex = 0;
             const offsetLabels = images.length * dataLength;
             images.forEach(img => {
                 // stretch to fit
@@ -1168,36 +1305,53 @@ function initNodeObjectMaterial() {
                 const worldId = index;
                 const world = worldData[worldId];
                 const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
-                let textLines = worldName.split(" ");
-                for (let l = 0; l < textLines.length; l++) {
-                    if (ctx.measureText(textLines[l]).width < nodeImgDimensions.x) {
-                        let mergeIndex = 0;
-                        for (let l2 = l + 1; l2 < textLines.length; l2++) {
-                            const mergedLine = textLines.slice(l, l2 + 1).join(" ");
-                            if (ctx.measureText(mergedLine).width < nodeImgDimensions.x)
-                                mergeIndex = l2;
-                            else
-                                break;
-                        }
-                        if (mergeIndex)
-                            textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
-                    } else if (textLines[l].indexOf("：") > -1)
-                        textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
-                }
-                for (let l in textLines) {
-                    const textLine = textLines[l];
-                    const lineWidth = ctx.measureText(textLine).width;
-                    !lineYOffset && (lineYOffset = ctx.measureText(textLine).actualBoundingBoxAscent / 2);
-                    const lineX = (nodeImgDimensions.x - lineWidth) / 2;
-                    const lineY = ((nodeImgDimensions.y / 2) + lineYOffset) - ((textLines.length - 1) * halfFontSize) + l * fontSize;
-                    ctx.strokeText(textLine, lineX, lineY);
-                    ctx.fillText(textLine, lineX, lineY);
-                }
 
-                nodeImageData = ctx.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
-                offset = offsetLabels + index * dataLength;
-                nodeObjectMaterial.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
+                if (world.removed)
+                    ctx.save();
+
+                for (let v = 0; v < 3; v++) {
+                    if (v)
+                        ctx.restore();
+                       
+                    let textLines = worldName.split(" ");
+                    ctx.fillStyle = nodeTextColors[v];
+                    for (let l = 0; l < textLines.length; l++) {
+                        if (ctx.measureText(textLines[l]).width < nodeImgDimensions.x) {
+                            let mergeIndex = 0;
+                            for (let l2 = l + 1; l2 < textLines.length; l2++) {
+                                const mergedLine = textLines.slice(l, l2 + 1).join(" ");
+                                if (ctx.measureText(mergedLine).width < nodeImgDimensions.x)
+                                    mergeIndex = l2;
+                                else
+                                    break;
+                            }
+                            if (mergeIndex)
+                                textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
+                        } else if (textLines[l].indexOf("：") > -1)
+                            textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
+                    }
+                    for (let l in textLines) {
+                        const textLine = textLines[l];
+                        const lineWidth = ctx.measureText(textLine).width;
+                        !lineYOffset && (lineYOffset = ctx.measureText(textLine).actualBoundingBoxAscent / 2);
+                        const lineX = (nodeImgDimensions.x - lineWidth) / 2;
+                        const lineY = ((nodeImgDimensions.y / 2) + lineYOffset) - ((textLines.length - 1) * halfFontSize) + l * fontSize;
+                        ctx.strokeText(textLine, lineX, lineY);
+                        ctx.fillText(textLine, lineX, lineY);
+                    }
+
+                    nodeImageData = ctx.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
+                    offset = v
+                        ? offsetLabels + images.length * dataLength + (removedCount * dataLength * (v - 1)) + rIndex * dataLength
+                        : offsetLabels + index * dataLength;
+                    nodeObjectMaterial.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
+
+                    if (!world.removed)
+                        break;
+                }
                 index++;
+                if (world.removed)
+                    rIndex++;
             });
             canvas.remove();
             worldImageData = nodeObjectMaterial.uniforms.diffuse.value.image.data.slice();
@@ -1209,9 +1363,13 @@ function initNodeObjectMaterial() {
 function initNodeObject(is2d) {
     const amount = worldData.length;
     const opacities = [];
+    const grayscales = [];
     const texIndexes = [];
+
     for (let i = 0; i < amount; i++) {
-        opacities[i] = getNodeOpacity(worldData[i].id);
+        const world = worldData[i];
+        opacities[i] = getNodeOpacity(world.id);
+        grayscales[i] = world.removed ? 1 : 0;
         texIndexes[i] = i;
     }
 
@@ -1220,7 +1378,9 @@ function initNodeObject(is2d) {
         geometry = new THREE.PlaneBufferGeometry(1, 1);
     else
         geometry = new THREE.BoxBufferGeometry(1, 1, 1);
+
     geometry.attributes.opacity = new THREE.InstancedBufferAttribute(new Float32Array(opacities), 1);
+    geometry.attributes.grayscale = new THREE.InstancedBufferAttribute(new Float32Array(grayscales), 1);
     geometry.attributes.texIndex = new THREE.InstancedBufferAttribute(new Float32Array(texIndexes), 1);
     nodeObject = new THREE.InstancedMesh(geometry, nodeObjectMaterial, amount);
     nodeObject.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -1251,12 +1411,23 @@ function updateNodePositions(is2d) {
 function updateNodeLabels2D() {
     if (nodeObject) {
         let index = 0;
-        graph.graphData().nodes.forEach(node => {
-            if (is2d && (config.labelMode === 3 || (config.labelMode === 1 && node.isHover) || (config.labelMode === 2 && node.id === selectedWorldId)))
-                nodeObject.geometry.attributes.texIndex.array[index] = index + graph.graphData().nodes.length;
-            else
+        let rIndex = 0;
+        const nodes = graph.graphData().nodes;
+        const totalNodeCount = nodes.length;
+        const removedNodeCount = nodes.filter(n => n.removed).length;
+        nodes.forEach(node => {
+            if (is2d && (config.labelMode === 3 || (config.labelMode === 1 && node.id === hoverWorldId) || (config.labelMode === 2 && node.id === selectedWorldId))) {
+                const layerIndex = node.removed
+                    ? nodeTextColors.indexOf(getNodeTextColor(node))
+                    : 0;
+                nodeObject.geometry.attributes.texIndex.array[index] = layerIndex
+                    ? rIndex + (totalNodeCount * 2) + (layerIndex - 1) * removedNodeCount
+                    : index + totalNodeCount;
+            } else
                 nodeObject.geometry.attributes.texIndex.array[index] = index;
             index++;
+            if (node.removed)
+                rIndex++;
         });
         nodeObject.geometry.attributes.texIndex.needsUpdate = true;
     }
@@ -1296,7 +1467,7 @@ function updateNodeLabels(is2d) {
             const obj = node.__threeObj;
             if (obj) {
                 const text = obj.children[0];
-                if (config.labelMode === 3 || (config.labelMode === 1 && node.isHover) || (config.labelMode === 2 && node.id === selectedWorldId)) {
+                if (config.labelMode === 3 || (config.labelMode === 1 && node.id === hoverWorldId) || (config.labelMode === 2 && node.id === selectedWorldId)) {
                     const scale = worldScales[node.id];
                     if (!is2d) {
                         const dist = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z).distanceTo(new THREE.Vector3(node.x, node.y, node.z));
@@ -1310,6 +1481,8 @@ function updateNodeLabels(is2d) {
                     text.scale.x = text.defaultScale.x * scale;
                     text.scale.y = text.defaultScale.y * scale;
                     text.material.opacity = getNodeOpacity(node.id);
+                    text.color = getNodeTextColor(node);
+                    
                     text.visible = true;
                 } else
                     text.visible = false;
@@ -1329,10 +1502,30 @@ function getNodeOpacity(id) {
     return opacity;
 }
 
+function getNodeGrayscale(node) {
+    if (!node.removed)
+        return 0;
+
+    const id = node.id;
+    const grayscale = id === selectedWorldId
+        ? 0
+        : id === hoverWorldId || (selectedAuthor != null && worldData[id].author === selectedAuthor) || (searchWorldIds.length && searchWorldIds.indexOf(id) > -1) || (selectedWorldId != null && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length)
+        ? 0.625
+        : 1;
+    return grayscale;
+}
+
+function getNodeTextColor(node, grayscale) {
+    if (grayscale === undefined && node)
+        grayscale = getNodeGrayscale(node);
+    return nodeTextColors[!grayscale ? 0 : grayscale === 1 ? 2 : 1];
+}
+
 function makeLinkIcons(is2d) {
     graph.graphData().links.forEach(link => {
         if (icons3D[link.key] === undefined) {
             const linkOpacity = getLinkOpacity(link);
+            const linkGrayscale = getLinkGrayscale(link);
             let linkIcons = [];
             link.icons.forEach(icon => {
                 const text = new SpriteText(icon.char, 1, 'white');
@@ -1349,11 +1542,13 @@ function makeLinkIcons(is2d) {
                 }
                 text.material.transparent = true;
                 text.material.opacity = linkOpacity;
+                text.material.grayscale = linkGrayscale;
                 if (icon.type & ConnType.ONE_WAY) {
                     text.material.map.wrapS = THREE.RepeatWrapping;
                     link.source.x > link.target.x && (text.material.map.repeat.x = -1);
                 }
-                !config.connMode && link.hidden && (text.visible = false);
+                if (!config.connMode && link.hidden)
+                    text.visible = false;
                 linkIcons.push(text);
                 graph.scene().add(text);
             });
@@ -1394,6 +1589,7 @@ function makeTwoWayLinkObjects(is2d) {
     const lineFragShader = `
         varying vec3 vColor;
         varying float vOpacity;
+        varying float vGrayscale;
 
         void main() {
             gl_FragColor = vec4(vColor, vOpacity);
@@ -1404,6 +1600,7 @@ function makeTwoWayLinkObjects(is2d) {
     geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(size * 2 * 3), 3));
     geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(size * 2 * 3), 3));
     geometry.setAttribute('opacity', new THREE.BufferAttribute(new Float32Array(size * 2), 1));
+    geometry.setAttribute('grayscale', new THREE.BufferAttribute(new Float32Array(size * 2), 1));
     const material = new THREE.ShaderMaterial({
         vertexShader: lineVertShader,
         fragmentShader: lineFragShader,
@@ -1493,14 +1690,13 @@ function updateLinkObjects(linkData, bufferedObject, is2d) {
     });
     bufferedObject.geometry.attributes.position.needsUpdate = true;
     bufferedObject.geometry.computeBoundingSphere();
-    
 }
 
 function updateLinkAnimation(bufferedObject, time) {
     bufferedObject.material.uniforms.time.value = time;
 }
 
-function updateLinkColors(linkData, bufferedObject) {
+function updateLinkColors(linkData, bufferedObject, unfilteredLinkData) {
     const colors = bufferedObject.geometry.attributes.color.array;
     const opacities = bufferedObject.geometry.attributes.opacity.array;
     let index = 0;
@@ -1508,18 +1704,32 @@ function updateLinkColors(linkData, bufferedObject) {
     linkData.forEach(link => {
         let color;
         let opacity;
+        const grayscale = getLinkGrayscale(link);
         const sourceId = link.source.id !== undefined ? link.source.id : link.source;
         const targetId = link.target.id !== undefined ? link.target.id : link.target;
         const filterForAuthor = selectedAuthor != null && (worldData[sourceId].author !== selectedAuthor || worldData[targetId].author !== selectedAuthor);
         if (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)) {
             opacity = 1.0;
             color = colorLinkSelected;
-        } else if (((selectedWorldId == null && !filterForAuthor) || selectedWorldId === sourceId || selectedWorldId === targetId) && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)) {
-            opacity = 1.0;
+        } else if ((selectedWorldId == null && !filterForAuthor) && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)) {
+            opacity = 0.625;
             color = new THREE.Color(link.defaultColor);
         } else {
             opacity = 0.1;
             color = new THREE.Color(link.defaultColor);
+        }
+        if (grayscale) {
+            const v = (color.r + color.g + color.b) / 3;
+            color.setRGB(
+                color.r * (1 - grayscale) + v * grayscale,
+                color.g * (1 - grayscale) + v * grayscale,
+                color.b * (1 - grayscale) + v * grayscale
+            );
+        }
+        if (unfilteredLinkData) {
+            const linkIndex = unfilteredLinkData.indexOf(link);
+            index = linkIndex * 6;
+            opacityIndex = linkIndex * 2;
         }
         colors[index++] = color.r;
         colors[index++] = color.g;
@@ -1551,6 +1761,12 @@ function updateLinkDistances() {
     linksOneWayBuffered.geometry.attributes.lineDistance.needsUpdate = true;
 }
 
+function getWorldLinkRemoved(worldId, link, worldRemoved) {
+    const sourceId = link.source.id !== undefined ? link.source.id : l.source;
+    const targetId = link.target.id !== undefined ? link.target.id : l.target;
+    return (sourceId === worldId || targetId === worldId) && (worldRemoved[sourceId] || worldRemoved[targetId] || link.connType & ConnType.INACCESSIBLE);
+}
+
 function getLinkOpacity(link) {
     const sourceId = link.source.id !== undefined ? link.source.id : link.source;
     const targetId = link.target.id !== undefined ? link.target.id : link.target;
@@ -1560,7 +1776,24 @@ function getLinkOpacity(link) {
         ? 1
         : selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)
         ? 0.625
-        : 0.1
+        : 0.1;
+}
+
+function getLinkGrayscale(link) {
+    const sourceId = link.source.id !== undefined ? link.source.id : link.source;
+    const targetId = link.target.id !== undefined ? link.target.id : link.target;
+    const sourceWorld = worldData[sourceId];
+    const targetWorld = worldData[targetId];
+
+    if (!sourceWorld.removed && !targetWorld.removed)
+        return 0;
+
+    return sourceId === selectedWorldId || targetId === selectedWorldId
+        ? 0
+        : (sourceId === hoverWorldId || targetId === hoverWorldId) || (selectedAuthor != null && (sourceWorld.author === selectedAuthor || targetWorld.author === selectedAuthor))
+            || (searchWorldIds.length && (searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1))
+        ? 0.375
+        : 0.85;
 }
 
 function getConnTypeIcon(connType, typeParams) {
@@ -1641,7 +1874,7 @@ function reloadGraph() {
     const startWorld = startWorldId != null ? worldData[startWorldId] : null;
     const endWorld = endWorldId != null ? worldData[endWorldId] : null;
     const matchPaths = startWorld && endWorld && startWorld != endWorld
-        ? findPath(startWorld.id, endWorld.id, true, ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED, config.pathMode === 0 ? 3 : config.pathMode === 1 ? 5 : 10)
+        ? findPath(startWorld.id, endWorld.id, true, ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.SHORTCUT, config.pathMode === 0 ? 3 : config.pathMode === 1 ? 5 : 10)
         : null;
     if (graph)
         graph._destructor();
@@ -1744,18 +1977,11 @@ function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
 
     isDebug && console.log("Found", matchPaths.length, "matching path(s) in", Math.round((endTime - startTime) * 10) / 10, "ms");
     if (!matchPaths.length) {
-        if (ignoreTypeFlags & ConnType.DEAD_END) {
-            isDebug && console.log("Allowing dead end and isolated connections and retrying...");
-            ignoreTypeFlags ^= (ConnType.DEAD_END | ConnType.ISOLATED);
-        } else
-            ignoreTypeFlags = 0;
-        if (ignoreTypeFlags)
-            return findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths);
-        else {
+        if (!tryAddNexusPath(matchPaths, existingMatchPaths, worldData, s, t)) {
             isDebug && console.log("Marking route as inaccessible");
             matchPaths = [ [ { id: s, connType: ConnType.INACCESSIBLE }, { id: t, connType: null } ] ];
-            return matchPaths;
         }
+        return matchPaths;
     } else if (isRoot) {
         const rootLimit = Math.min(5, limit);
         const ignoreTypesList = [ConnType.CHANCE, ConnType.EFFECT, ConnType.LOCKED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT];
@@ -1827,29 +2053,8 @@ function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
             }
         }
 
-        const nexusWorldName = "The Nexus";
-        const nexusWorldId = worldData.filter(w => w.title === nexusWorldName)[0].id;
-
-        if (s !== nexusWorldId) {
-            isDebug && console.log("Searching for paths eligible for Eyeball Bomb Nexus shortcut...");
-            const nexusPaths = existingMatchPaths.concat(matchPaths).filter(p => (p.length > t !== nexusWorldId ? 2 : 3) && p.filter(w => w.id === nexusWorldId).length);
-            if (nexusPaths.length) {
-                isDebug && console.log("Found", nexusPaths.length, "paths eligible for Eyeball Bomb Nexus shortcut: creating shortcut paths");
-                for (let nexusPath of nexusPaths) {
-                    const nexusWorldIndex = nexusPath.indexOf(nexusPath.filter(w => w.id === nexusWorldId)[0]);
-                    const nexusShortcutPath = _.cloneDeep([nexusPath[0]].concat(nexusPath.slice(nexusWorldIndex)));
-                    const nexusSource = nexusShortcutPath[0];
-                    nexusSource.connType = (nexusWorldIndex > 1 ? ConnType.ONE_WAY : 0) | ConnType.EFFECT;
-                    nexusSource.typeParams = {};
-                    nexusSource.typeParams[ConnType.EFFECT] = {
-                        params: 'Eyeball Bomb',
-                        paramsJP: effectsJP['Eyeball Bomb']
-                    };
-                    matchPaths.push(nexusShortcutPath);
-                    limit++;
-                }
-            }
-        }
+        if (tryAddNexusPath(matchPaths, existingMatchPaths, worldData, s, t))
+            limit++;
     }
 
     matchPaths = _.sortBy(matchPaths, [ 'length' ]);
@@ -1921,8 +2126,35 @@ function traverseConns(checkedNodes, path, nextGenWorlds, world, ignoreTypeFlags
     return ret;
 }
 
-function findRealPathDepth(paths, worldId, pathWorldIds, worldDepthsMap, maxDepth, minDepth, ignoreTypeFlags)
-{
+function tryAddNexusPath(matchPaths, existingMatchPaths, worldData, sourceId, targetId) {
+    const nexusWorldName = "The Nexus";
+    const nexusWorldId = worldData.filter(w => w.title === nexusWorldName)[0].id;
+
+    if (sourceId !== nexusWorldId) {
+        isDebug && console.log("Searching for paths eligible for Eyeball Bomb Nexus shortcut...");
+        const nexusPaths = existingMatchPaths.concat(matchPaths).filter(p => (p.length > targetId !== nexusWorldId ? 2 : 3) && p.filter(w => w.id === nexusWorldId).length);
+        if (nexusPaths.length) {
+            isDebug && console.log("Found", nexusPaths.length, "paths eligible for Eyeball Bomb Nexus shortcut: creating shortcut paths");
+            for (let nexusPath of nexusPaths) {
+                const nexusWorldIndex = nexusPath.indexOf(nexusPath.filter(w => w.id === nexusWorldId)[0]);
+                const nexusShortcutPath = _.cloneDeep([nexusPath[0]].concat(nexusPath.slice(nexusWorldIndex)));
+                const nexusSource = nexusShortcutPath[0];
+                nexusSource.connType = (nexusWorldIndex > 1 ? ConnType.ONE_WAY : 0) | ConnType.EFFECT;
+                nexusSource.typeParams = {};
+                nexusSource.typeParams[ConnType.EFFECT] = {
+                    params: 'Eyeball Bomb',
+                    paramsJP: effectsJP['Eyeball Bomb']
+                };
+                matchPaths.push(nexusShortcutPath);
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+function findRealPathDepth(paths, worldId, pathWorldIds, worldDepthsMap, maxDepth, minDepth, ignoreTypeFlags) {
     let ret = -1;
 
     if (minDepth == maxDepth)
@@ -1965,9 +2197,7 @@ function getMissingConnections() {
     
     worldData.forEach(w => {
         connData[w.id] = [];
-        worldData[w.id].connections.map(c => worldData[c.targetId]).forEach(c => {
-            connData[w.id].push(c.id);
-        });
+        worldData[w.id].connections.map(c => worldData[c.targetId]).forEach(c => connData[w.id].push(c.id));
     });
 
     Object.keys(connData).forEach(id => {
@@ -1982,12 +2212,52 @@ function getMissingConnections() {
     });
 
     Object.keys(connData).forEach(id => {
-        if (connData[id].length) {
-            connData[id].forEach(c => {
-                ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${c}">${worldData[c].title}</a> is missing a connection to <a class="world-link" href="javascript:void(0);" data-world-id="${id}">${worldData[id].title}</a>`);
-            });
-        }
+        if (connData[id].length)
+            connData[id].forEach(c => ret.push(`${getWorldLinkForAdmin(worldData[c])} is missing a connection to ${getWorldLinkForAdmin(worldData[id])}`));
     });
+
+    return ret;
+}
+
+function getInvalidConnectionPairs() {
+    const ret = [];
+
+    const checkedReverseConnIds = [];
+    const expectedReverseConnTypes = {};
+
+    var addConnTypePair = function(x, y) {
+        expectedReverseConnTypes[x] = y;
+        expectedReverseConnTypes[y] = x;
+    };
+
+    addConnTypePair(ConnType.ONE_WAY, ConnType.NO_ENTRY);
+    addConnTypePair(ConnType.UNLOCK, ConnType.LOCKED);
+    addConnTypePair(ConnType.DEAD_END, ConnType.ISOLATED);
+    addConnTypePair(ConnType.SHORTCUT, ConnType.EXIT_POINT);
+    
+    worldData.forEach(w =>
+        worldData[w.id].connections.forEach(c => {
+            const connId = `${w.id}_${c.targetId}`;
+            if (checkedReverseConnIds.indexOf(connId) === -1) {
+                const conns = worldData[c.targetId].connections;
+                for (let reverseConn of conns) {
+                    if (reverseConn.targetId === w.id) {
+                        const reverseConnId = `${c.targetId}_${w.id}`;
+                        Object.keys(expectedReverseConnTypes).forEach(ct => {
+                            const connType = parseInt(ct);
+                            const expectedReverseConnType = expectedReverseConnTypes[ct];
+                            if (c.type & connType && !(reverseConn.type & expectedReverseConnType))
+                                ret.push(`${localizedConns[ct].name} connection between ${getWorldLinkForAdmin(worldData[w.id])} and ${getWorldLinkForAdmin(worldData[c.targetId])} expects ${localizedConns[expectedReverseConnType + ''].name} connection on the opposite side`);
+                            else if (reverseConn.type & connType && !(c.type & expectedReverseConnType))
+                                ret.push(`${localizedConns[ct].name} connection between ${getWorldLinkForAdmin(worldData[c.targetId])} and ${getWorldLinkForAdmin(worldData[w.id])} expects ${localizedConns[expectedReverseConnType + ''].name} connection on the opposite side`);
+                        });
+                        checkedReverseConnIds.push(reverseConnId);
+                        break;
+                    }
+                }
+            }
+        })
+    );
 
     return ret;
 }
@@ -1997,23 +2267,25 @@ function getMissingLocationParams() {
 
     worldData.forEach(w => {
         if (!w.titleJP || w.titleJP === "None")
-            ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> is missing its Japanese name parameter`);
+            ret.push(`${getWorldLinkForAdmin(w)} is missing its Japanese name parameter`);
             
         w.connections.forEach(conn => {
             const connWorld = worldData[conn.targetId];
             if (conn.type & ConnType.EFFECT) {
                 if (!conn.typeParams || !conn.typeParams[ConnType.EFFECT] || !conn.typeParams[ConnType.EFFECT].params)
-                    ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> is missing the effects parameter for its connection to <a class="world-link" href="javascript:void(0);" data-world-id="${connWorld.id}">${connWorld.title}</a>`);
+                    ret.push(`${getWorldLinkForAdmin(w)} is missing the effects parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
             }
             if (conn.type & ConnType.CHANCE) {
                 if (!conn.typeParams || !conn.typeParams[ConnType.CHANCE] || !conn.typeParams[ConnType.CHANCE].params)
-                    ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> is missing the chance percentage parameter for its connection to <a class="world-link" href="javascript:void(0);" data-world-id="${connWorld.id}">${connWorld.title}</a>`);
+                    ret.push(`${getWorldLinkForAdmin(w)} is missing the chance percentage parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
+                else if (conn.typeParams[ConnType.CHANCE].params === "0%")
+                    ret.push(`${getWorldLinkForAdmin(w)} has a chance percentage parameter of 0% for its connection to ${getWorldLinkForAdmin(connWorld)}`);
             }
             if (conn.type & ConnType.LOCKED_CONDITION) {
                 if (!conn.typeParams || !conn.typeParams[ConnType.LOCKED_CONDITION] || !conn.typeParams[ConnType.LOCKED_CONDITION].params)
-                    ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> is missing the lock condition parameter for its connection to <a class="world-link" href="javascript:void(0);" data-world-id="${connWorld.id}">${connWorld.title}</a>`);
+                    ret.push(`${getWorldLinkForAdmin(w)} is missing the lock condition parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
                 if (!conn.typeParamsJP || !conn.typeParams[ConnType.LOCKED_CONDITION] || !conn.typeParams[ConnType.LOCKED_CONDITION].paramsJP)
-                    ret.push(`<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> is missing the Japanese lock condition parameter for its connection to <a class="world-link" href="javascript:void(0);" data-world-id="${connWorld.id}">${connWorld.title}</a>`);
+                    ret.push(`${getWorldLinkForAdmin(w)} is missing the Japanese lock condition parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
             }
         });
     });
@@ -2022,7 +2294,12 @@ function getMissingLocationParams() {
 }
 
 function getMissingMapIds() {
-    return worldData.filter(w => w.noMaps).map(w => `<a class="world-link" href="javascript:void(0);" data-world-id="${w.id}">${w.title}</a> has no associated Map IDs`);
+    return worldData.filter(w => w.noMaps).map(w => `${getWorldLinkForAdmin(w)} has no associated Map IDs`);
+}
+
+function getWorldLinkForAdmin(world) {
+    const removedPrefix = world.removed ? '[REMOVED] ' : '';
+    return `${removedPrefix}<a class="world-link" href="javascript:void(0);" data-world-id="${world.id}">${world.title}</a>`
 }
 
 function initLocalization(isInitial) {
@@ -2032,7 +2309,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "2.9.1");
+            data.footer.about = data.footer.about.replace("{VERSION}", "2.10.0");
             const formatDate = (date) => date.toLocaleString(isEn ? "en-US" : "ja-JP", { timeZoneName: "short" });
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate));
@@ -2072,6 +2349,10 @@ function initLocalization(isInitial) {
                 effectsJP = data;
             }
         });
+    } else {
+        worldsByName = isEn ? _.keyBy(worldData, w => w.title) : _.keyBy(worldData, w => w.titleJP || w.title);
+
+        worldNames = Object.keys(worldsByName);
     }
 
     $(".js--world-input").each(function() {
@@ -2081,10 +2362,6 @@ function initLocalization(isInitial) {
             $(this).val(isEn || !world.titleJP ? world.title : world.titleJP);
         }
     });
-
-    worldsByName = isEn ? _.keyBy(worldData, w => w.title) : _.keyBy(worldData, w => w.titleJP || w.title);
-
-    worldNames = Object.keys(worldsByName);
 
     $(".js--path--world-input").each(function () {
         $(this).off("change").devbridgeAutocomplete("destroy");
@@ -2183,6 +2460,12 @@ function initAuthorSelectOptions(localizedEmptyAuthor) {
     });
     if (selectedAuthor === '')
         $authorSelect.val('');
+    else if (selectedAuthor) {
+        const validAuthor = authors.indexOf(selectedAuthor) > -1;
+        if (!validAuthor)
+            selectedAuthor = null;
+        $authorSelect.val(validAuthor ? selectedAuthor : 'null');
+    }
 }
 
 function initContextMenu(localizedContextMenu) {
@@ -2217,7 +2500,7 @@ function initContextMenu(localizedContextMenu) {
 
 function openWorldWikiPage(worldId, newWindow) {
     const world = worldData[worldId];
-    window.open(config.lang === 'en' || !world.titleJP
+    window.open(config.lang === 'en' || !world.titleJP || world.removed
         ? 'https://yume2kki.fandom.com/wiki/' + world.title
         : ('https://wikiwiki.jp/yume2kki-t/' + (world.titleJP.indexOf("：") > -1 ? world.titleJP.slice(0, world.titleJP.indexOf("：")) : world.titleJP)),
         "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
@@ -2241,29 +2524,41 @@ function focusNode(node) {
     }
 }
 
-function updateConnectionModeIcons() {
-    if (isWebGL2) {
+function updateConnectionModeIcons(links) {
+    if (!links)
+        links = graph ? graph.graphData().links : [];
+    if (!links.length)
+        return;
+    if (isWebGL2 && iconObject) {
         iconObject.geometry.attributes.opacity.array.set(unsortedIconOpacities, 0);
+        iconObject.geometry.attributes.grayscale.array.set(unsortedIconGrayscales, 0);
         let opacities = iconObject.geometry.attributes.opacity.array;
-        let iconIndex = 0;
-        graph.graphData().links.forEach(link => {
+        let grayscales = iconObject.geometry.attributes.grayscale.array;
+        links.forEach(link => {
             const linkOpacity = getLinkOpacity(link);
+            const linkGrayscale = getLinkGrayscale(link);
             link.icons.forEach(icon => {
-                opacities[iconIndex] = linkOpacity;
-                config.connMode === 0 && link.hidden && (opacities[iconIndex] = 0);
-                iconIndex++;
+                opacities[icon.id] = linkOpacity;
+                grayscales[icon.id] = linkGrayscale;
+                if (config.connMode === 0 && link.hidden)
+                    opacities[icon.id] = 0;
             });
         });
         unsortedIconOpacities = opacities.slice();
+        unsortedIconGrayscales = grayscales.slice();
         iconObject.geometry.attributes.opacity.needsUpdate = true;
+        iconObject.geometry.attributes.grayscale.needsUpdate = true;
     } else {
-        graph.graphData().links.forEach(link => {
+        links.forEach(link => {
             if (icons3D[link.key] !== undefined) {
                 const linkOpacity = getLinkOpacity(link);
+                const linkGrayscale = getLinkGrayscale(link);
                 icons3D[link.key].forEach(icon => {
                     icon.visible = true;
                     icon.material.opacity = linkOpacity;
-                    config.connMode === 0 && link.hidden && (icon.visible = false);
+                    icon.material.grayScale = linkGrayscale;
+                    if (config.connMode === 0 && link.hidden)
+                        icon.visible = false;
                 });
             }
         });
@@ -2275,13 +2570,20 @@ function highlightWorldSelection() {
     let index = 0;
     graph.graphData().nodes.forEach(node => {
         const nodeOpacity = getNodeOpacity(node.id);
-        if (nodeObject)
+        const nodeGrayscale = getNodeGrayscale(node);
+        if (nodeObject) {
             nodeObject.geometry.attributes.opacity.array[index] = nodeOpacity;
-        else
+            nodeObject.geometry.attributes.grayscale.array[index] = nodeGrayscale;
+        } else {
             node.__threeObj.material.opacity = nodeOpacity;
+            node.__threeObj.material.grayscale = nodeGrayscale;
+        }
         index++;
     });
-    nodeObject && (nodeObject.geometry.attributes.opacity.needsUpdate = true);
+    if (nodeObject) {
+        nodeObject.geometry.attributes.opacity.needsUpdate = true;
+        nodeObject.geometry.attributes.grayscale.needsUpdate = true;
+    }
     updateLinkColors(visibleTwoWayLinks, linksTwoWayBuffered);
     updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
     if (isWebGL2 && is2d)
@@ -2467,6 +2769,16 @@ function initControls() {
         }
     });
 
+    $(".js--removed-content-mode").on("change", function() {
+        config.removedContentMode = parseInt($(this).val());
+        updateConfig(config);
+        if (worldData) {
+            if ($(".modal:visible").length)
+                $.modal.close();
+            reloadWorldData(false);
+        }
+    });
+
     $(".js--path-mode").on("change", function() {
         config.pathMode = parseInt($(this).val());
         updateConfig(config);
@@ -2499,6 +2811,7 @@ function initControls() {
         $(".js--author").val("null");
         startWorldId = null;
         endWorldId = null;
+        hoverWorldId = null;
         selectedWorldId = null;
         selectedAuthor = null;
         if (worldData)
@@ -2544,6 +2857,10 @@ function initAdminControls() {
                 data: getMissingConnections(),
                 emptyMessage: "No missing connections found"
             },
+            "invalid-conn-pairs": {
+                data: getInvalidConnectionPairs(),
+                emptyMessage: "No invalid connection pairs found"
+            },
             "missing-location-params": {
                 data: getMissingLocationParams(),
                 emptyMessage: "No missing location parameters found"
@@ -2571,15 +2888,8 @@ function initAdminControls() {
     $(".js--update-data, .js--reset-data").on("click", function() {
         if ($(".modal:visible").length)
             $.modal.close();
-
         const isReset = $(this).hasClass("js--reset-data");
-        const loadCallback = displayLoadingAnim($("#graph"));
-
-        loadWorldData(isReset ? "reset" : true, function () {
-            window.location.reload();
-        }, function () {
-            loadCallback(true);
-        });
+        reloadWorldData(isReset ? "reset" : true);
     });
 
     $(document).on("click", "a.world-link", function () {
@@ -2629,7 +2939,7 @@ $(function () {
     initLocalization(true);
 
     loadWorldData(false, function (data) {
-        worldData = data.worldData;
+        initWorldData(data.worldData);
         lastUpdate = new Date(data.lastUpdate);
         lastFullUpdate = new Date(data.lastFullUpdate);
 
@@ -2638,24 +2948,7 @@ $(function () {
             $('.admin-only').removeClass('admin-only');
         }
 
-        for (let d in Object.keys(worldData)) {
-            const world = worldData[d];
-            world.id = parseInt(d);
-            world.connections.forEach(conn => {
-                const effectParams = conn.typeParams[ConnType.EFFECT];
-                if (effectParams) {
-                    effectParams.paramsJP = effectParams.params.split(',').map(e => effectsJP[e]).join('」か「');
-                    effectParams.params = effectParams.params.replace(/,/g, ', ');
-                }
-            });
-        }
-
         initLocalization();
-
-        const worldSizes = worldData.map(w => w.size); 
-
-        minSize = _.min(worldSizes);
-        maxSize = _.max(worldSizes);
 
         loadCallback();
 
