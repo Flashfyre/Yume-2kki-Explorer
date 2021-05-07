@@ -26,7 +26,7 @@ function initConnPool() {
             user: user,
             password: password,
             database: database,
-            typeCast: handleTypeCast
+            typeCast: handleTypeCasting
         });
     } else {
         const dbConfig = require("./config/db.config.js");
