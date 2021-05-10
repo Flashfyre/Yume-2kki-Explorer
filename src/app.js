@@ -207,7 +207,7 @@ export function loadWorldData(update, success, fail) {
 }
 
 function reloadWorldData(update) {
-    const loadCallback = displayLoadingAnim($("#graph"));
+    const loadCallback = displayLoadingAnim($("#graphContainer"));
     loadWorldData(update, function (data) {
         initWorldData(data.worldData);
         lastUpdate = new Date(data.lastUpdate);
@@ -215,14 +215,16 @@ function reloadWorldData(update) {
 
         initLocalization();
 
-        loadCallback();
-
         if (isWebGL2) {
             worldImageData = [];
-            initNodeObjectMaterial();
+            initNodeObjectMaterial().then(() => {
+                reloadGraph();
+                loadCallback();
+            }).catch(err => console.error(err));
+        } else {
+            reloadGraph();
+            loadCallback();
         }
-
-        reloadGraph();
     }, loadCallback);
 }
 
@@ -1276,88 +1278,89 @@ function initNodeObjectMaterial() {
     });
 
     const filenames = [];
-    worldData.forEach(world => {
-        filenames.push(worldData[world.id].filename);
-    });
+    worldData.forEach(world => filenames.push(worldData[world.id].filename));
 
-    Promise.all(getImageRawData(filenames))
-        .then(images => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d', { alpha: false });
-            canvas.width = nodeImgDimensions.x;
-            canvas.height = nodeImgDimensions.y;
-            const fontSize = 36;
-            const halfFontSize = fontSize / 2;
-            let lineYOffset;
-            ctx.font = fontSize + 'px MS Gothic';
-            ctx.fillStyle = 'white';
-            ctx.strokeStyle = 'black';
-            ctx.lineWidth = 5;
-            let index = 0;
-            let rIndex = 0;
-            const offsetLabels = images.length * dataLength;
-            images.forEach(img => {
-                // stretch to fit
-                ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
-                let nodeImageData = ctx.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
-                let offset = index * dataLength;
-                nodeObjectMaterial.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
-                const worldId = index;
-                const world = worldData[worldId];
-                const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
-
-                if (world.removed)
-                    ctx.save();
-
-                for (let v = 0; v < 3; v++) {
-                    if (v)
-                        ctx.restore();
-                       
-                    let textLines = worldName.split(" ");
-                    ctx.fillStyle = nodeTextColors[v];
-                    for (let l = 0; l < textLines.length; l++) {
-                        if (ctx.measureText(textLines[l]).width < nodeImgDimensions.x) {
-                            let mergeIndex = 0;
-                            for (let l2 = l + 1; l2 < textLines.length; l2++) {
-                                const mergedLine = textLines.slice(l, l2 + 1).join(" ");
-                                if (ctx.measureText(mergedLine).width < nodeImgDimensions.x)
-                                    mergeIndex = l2;
-                                else
-                                    break;
-                            }
-                            if (mergeIndex)
-                                textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
-                        } else if (textLines[l].indexOf("：") > -1)
-                            textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
-                    }
-                    for (let l in textLines) {
-                        const textLine = textLines[l];
-                        const lineWidth = ctx.measureText(textLine).width;
-                        !lineYOffset && (lineYOffset = ctx.measureText(textLine).actualBoundingBoxAscent / 2);
-                        const lineX = (nodeImgDimensions.x - lineWidth) / 2;
-                        const lineY = ((nodeImgDimensions.y / 2) + lineYOffset) - ((textLines.length - 1) * halfFontSize) + l * fontSize;
-                        ctx.strokeText(textLine, lineX, lineY);
-                        ctx.fillText(textLine, lineX, lineY);
-                    }
-
-                    nodeImageData = ctx.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
-                    offset = v
-                        ? offsetLabels + images.length * dataLength + (removedCount * dataLength * (v - 1)) + rIndex * dataLength
-                        : offsetLabels + index * dataLength;
+    return new Promise((resolve, reject) => {
+        Promise.all(getImageRawData(filenames))
+            .then(images => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d', { alpha: false });
+                canvas.width = nodeImgDimensions.x;
+                canvas.height = nodeImgDimensions.y;
+                const fontSize = 36;
+                const halfFontSize = fontSize / 2;
+                let lineYOffset;
+                ctx.font = fontSize + 'px MS Gothic';
+                ctx.fillStyle = 'white';
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 5;
+                let index = 0;
+                let rIndex = 0;
+                const offsetLabels = images.length * dataLength;
+                images.forEach(img => {
+                    // stretch to fit
+                    ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
+                    let nodeImageData = ctx.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
+                    let offset = index * dataLength;
                     nodeObjectMaterial.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
+                    const worldId = index;
+                    const world = worldData[worldId];
+                    const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
 
-                    if (!world.removed)
-                        break;
-                }
-                index++;
-                if (world.removed)
-                    rIndex++;
-            });
-            canvas.remove();
-            worldImageData = nodeObjectMaterial.uniforms.diffuse.value.image.data.slice();
-            nodeObjectMaterial.uniforms.diffuse.value.needsUpdate = true;
-        })
-        .catch(err => console.error(err));
+                    if (world.removed)
+                        ctx.save();
+
+                    for (let v = 0; v < 3; v++) {
+                        if (v)
+                            ctx.restore();
+                        
+                        let textLines = worldName.split(" ");
+                        ctx.fillStyle = nodeTextColors[v];
+                        for (let l = 0; l < textLines.length; l++) {
+                            if (ctx.measureText(textLines[l]).width < nodeImgDimensions.x) {
+                                let mergeIndex = 0;
+                                for (let l2 = l + 1; l2 < textLines.length; l2++) {
+                                    const mergedLine = textLines.slice(l, l2 + 1).join(" ");
+                                    if (ctx.measureText(mergedLine).width < nodeImgDimensions.x)
+                                        mergeIndex = l2;
+                                    else
+                                        break;
+                                }
+                                if (mergeIndex)
+                                    textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
+                            } else if (textLines[l].indexOf("：") > -1)
+                                textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
+                        }
+                        for (let l in textLines) {
+                            const textLine = textLines[l];
+                            const lineWidth = ctx.measureText(textLine).width;
+                            !lineYOffset && (lineYOffset = ctx.measureText(textLine).actualBoundingBoxAscent / 2);
+                            const lineX = (nodeImgDimensions.x - lineWidth) / 2;
+                            const lineY = ((nodeImgDimensions.y / 2) + lineYOffset) - ((textLines.length - 1) * halfFontSize) + l * fontSize;
+                            ctx.strokeText(textLine, lineX, lineY);
+                            ctx.fillText(textLine, lineX, lineY);
+                        }
+
+                        nodeImageData = ctx.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
+                        offset = v
+                            ? offsetLabels + images.length * dataLength + (removedCount * dataLength * (v - 1)) + rIndex * dataLength
+                            : offsetLabels + index * dataLength;
+                        nodeObjectMaterial.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
+
+                        if (!world.removed)
+                            break;
+                    }
+                    index++;
+                    if (world.removed)
+                        rIndex++;
+                });
+                canvas.remove();
+                worldImageData = nodeObjectMaterial.uniforms.diffuse.value.image.data.slice();
+                nodeObjectMaterial.uniforms.diffuse.value.needsUpdate = true;
+                resolve();
+            })
+            .catch(err => reject(err));
+    });
 }
 
 function initNodeObject(is2d) {
@@ -2309,7 +2312,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "2.10.0");
+            data.footer.about = data.footer.about.replace("{VERSION}", "2.10.1");
             const formatDate = (date) => date.toLocaleString(isEn ? "en-US" : "ja-JP", { timeZoneName: "short" });
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate));
@@ -2696,9 +2699,12 @@ function initControls() {
         config.lang = $(this).val();
         updateConfig(config);
         initLocalization();
-        if (isWebGL2)
-            initNodeObjectMaterial();
-        if (worldData)
+        if (isWebGL2) {
+            initNodeObjectMaterial().then(() => {
+                if (worldData)
+                    reloadGraph();
+            }).catch(err => console.error(err));
+        } else if (worldData)
             reloadGraph();
     });
 
@@ -2850,8 +2856,6 @@ function initAdminControls() {
             closeText: '✖'
         });
 
-        const loadCallback = displayLoadingAnim($(".js--data-issues-modal__content"), true);
-
         const dataIssues = {
             "missing-conns": {
                 data: getMissingConnections(),
@@ -2870,8 +2874,6 @@ function initAdminControls() {
                 emptyMessage: "No locations with missing map IDs found"
             }
         };
-
-        loadCallback();
 
         Object.keys(dataIssues).forEach(di => {
             const data = dataIssues[di].data;
@@ -2897,40 +2899,54 @@ function initAdminControls() {
     });
 }
 
-function displayLoadingAnim($container, restoreContent) {
-    const containerContent = $container.html();
-    $container.html(
-        `<div class="loading-container">
-            <span class="loading-container__text loading-container__text--loading"><span data-localize="loading.label" class="loading-container__text__main">Loading</span><span data-localize="loading.space" class="loading-container__text__append"></span></span>
+function displayLoadingAnim($container) {
+    const $existingLoadingContainer = $container.find(".loading-container");
+    const $loadingContainer = $(`
+        <div class="loading-container">
+            <span class="loading-container__text loading-container__text--loading"><span data-localize="loading.label" class="loading-container__text__main">Loading</span><span data-localize="loading.space" class="loading-container__text__append">   </span></span>
             <span class="loading-container__text loading-container__text--error" data-localize="loading.error" style="display: none;"></span>
             <img src="images/urowalk.gif" />
         </div>`);
+    if ($existingLoadingContainer.length)
+        $existingLoadingContainer.remove();
+    const $content = $container.children();
+    $content.addClass("display--none");
+    $container.prepend($loadingContainer);
 
     let loadingFrameCount = 0;
-    const loadingTimer = window.setInterval(function () {
+    const updateLoadingText = function () {
         let loadingTextAppend = "";
         const loadingTextAppendChar = config.lang === "en" ? "." : "．";
         const loadingTextSpaceChar = config.lang === "en" ? " " : "　";
         for (let i = 0; i < 3; i++)
             loadingTextAppend += i < loadingFrameCount ? loadingTextAppendChar : loadingTextSpaceChar;
-        $container.find(".loading-container__text__append").text(loadingTextAppend);
+        $loadingContainer.find(".loading-container__text__append").text(loadingTextAppend);
         loadingFrameCount += loadingFrameCount < 3 ? 1 : -3;
-    }, 300);
+    };
+    updateLoadingText();
+    const loadingTimer = window.setInterval(updateLoadingText, 300);
 
     return function (error) {
-        window.clearInterval(loadingTimer);
-        if (restoreContent)
-            $container.html(containerContent);
         if (error) {
-            $container.find(".loading-container .loading-container__text--loading").hide();
-            $container.find(".loading-container .loading-container__text--error").show();
-            $container.find(".loading-container img").attr("src", "images/urofaint.gif");
+            window.clearInterval(loadingTimer);
+            $loadingContainer.find(".loading-container .loading-container__text--loading").hide();
+            $loadingContainer.find(".loading-container .loading-container__text--error").show();
+            $loadingContainer.find(".loading-container img").attr("src", "images/urofaint.gif");
+        } else {
+            const marginTop = $content.css("marginTop");
+            const offsetMarginTop = (($loadingContainer[0].offsetHeight * -1) + (marginTop ? parseInt(marginTop) : 0)) + "px";
+            $loadingContainer.animateCss("fadeOut", 250);
+            $content.css("marginTop", offsetMarginTop).removeClass("display--none").animateCss("fadeIn", 250, function () {
+                window.clearInterval(loadingTimer);
+                $content.css("marginTop", marginTop);
+                $loadingContainer.remove();
+            });
         }
     };
 }
 
 $(function () {
-    const loadCallback = displayLoadingAnim($("#graph"));
+    const loadCallback = displayLoadingAnim($("#graphContainer"));
 
     initControls();
 
@@ -2950,16 +2966,19 @@ $(function () {
 
         initLocalization();
 
-        loadCallback();
-
         graphCanvas = document.createElement('canvas');
         graphContext = graphCanvas.getContext('webgl2');
 
         isWebGL2 = graphContext != null;
 
-        if (isWebGL2)
-            initNodeObjectMaterial();
-            
-        reloadGraph();
+        if (isWebGL2) {
+            initNodeObjectMaterial().then(() => {
+                reloadGraph();
+                loadCallback();
+            }).catch(err => console.error(err));
+        } else {
+            reloadGraph();
+            loadCallback();
+        }
     }, loadCallback);
 });

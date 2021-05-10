@@ -19,6 +19,10 @@ body {
     user-select: none;
 }
 
+.display--none {
+    display: none;
+}
+
 .content {
     background: rgba(0,0,0,0.8);
     padding-top: 0.1px;
@@ -106,6 +110,7 @@ body {
 }
 
 .loading-container img {
+    z-index: 1;
     -ms-interpolation-mode: nearest-neighbor;
     image-rendering: pixelated;
     height: 25%;
@@ -113,6 +118,11 @@ body {
 
 .blocker {
     padding: 24px 24px 32px 24px !important;
+}
+
+.graph-container {
+    width: 100%;
+    height: 100%;
 }
 
 .graph {
