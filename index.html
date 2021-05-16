@@ -11,6 +11,7 @@
             .controls, .modal {
                 background: url(/images/ui/Default_Custom/containerbg.png) !important;
                 border-image: url(/images/ui/Default_Custom/border.png) 12 repeat;
+                image-rendering: pixelated;
             }
 
             .controls--container--tab__button {
@@ -29,6 +30,11 @@
                 -webkit-background-clip: text;
 	            -webkit-text-fill-color: transparent;
                 background-clip: text;
+                image-rendering: pixelated;
+            }
+
+            .alt-highlight {
+                color: rgba(255, 255, 157, 1); /*alt*/
             }
 
             label {
@@ -51,29 +57,40 @@
                 background-size: 16px;
             }
 
+            hr {
+                border: none;
+                border-top: 10px solid transparent;
+                border-image: url(/images/ui/Default_Custom/border.png) 12 repeat;
+                image-rendering: pixelated;
+            }
+
             .modal__content::-webkit-scrollbar-track {
                 border-image: url(/images/ui/Default_Custom/border.png) 12 repeat !important;
                 background-color: rgba(45, 17, 23, 1); /*base*/
+                image-rendering: pixelated;
             }
 
             .modal__content::-webkit-scrollbar-thumb {
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round !important;
+                image-rendering: pixelated;
             }
 
             .footer {
                 color: rgba(216, 216, 216, 1); /*base*/
             }
 
-            button, a:not(.world-link) {
+            button, a:not(.no-border) {
                 color: rgba(216, 216, 216, 1); /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
                 background-image: url(/images/ui/Default_Custom/containerbg.png);
+                image-rendering: pixelated;
             }
 
             input[type='text'], select, .slider {
                 color: rgba(216, 216, 216, 1); /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
                 background-color: rgba(45, 17, 23, 1); /*base*/
+                image-rendering: pixelated;
             }
 
             input[type='text'].selected {
@@ -83,17 +100,20 @@
             .slider::-webkit-slider-thumb {
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
                 background-color: rgba(45, 17, 23, 1); /*base*/
+                image-rendering: pixelated;
             }
 
             .slider::-moz-range-thumb {
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
                 background-color: rgba(45, 17, 23, 1); /*base*/
+                image-rendering: pixelated;
             }
 
             .autocomplete-suggestions {
                 color: rgba(216, 216, 216, 1); /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
                 background-color: rgba(45, 17, 23, 1); /*base*/
+                image-rendering: pixelated;
             }
 
             .autocomplete-selected {
@@ -109,6 +129,7 @@
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round !important;
                 background-color: rgba(45, 17, 23, 1) !important; /*base*/
                 background-image: url(/images/ui/Default_Custom/containerbg.png) !important;
+                image-rendering: pixelated;
             }
 
             .context-menu-item.context-menu-hover {
@@ -137,8 +158,12 @@
                     <div class="control">
                         <label data-localize="controls.origin.name" class="noselect">Origin:</label>
                         <input name="startWorld" type="text" class="js--world-input js--path--world-input js--start-world" />
+                    </div>
+                    <div class="control">
                         <label data-localize="controls.destination.name" class="noselect">Destination:</label>
                         <input name="endWorld" type="text" class="js--world-input js--path--world-input js--end-world" />
+                    </div>
+                    <div class="control">
                         <button data-localize="controls.reset.name" class="js--reset noselect">Reset</button>
                         <button data-localize="controls.help.name" class="js--help noselect">Help</button>
                     </div>
@@ -154,8 +179,18 @@
             <div id="graphContainer" class="graph-container">
                 <div id="graph" class="graph"></div>
             </div>
-            <div class="controls--container--tab" style="display: none;">
-                <button class="controls--container--tab__button noselect">▲</button>
+            <div class="controls--container--tab controls-side--container--tab" style="display: none;">
+                <button class="controls--container--tab__button controls-side--container--tab__button noselect">◀</button>
+            </div>
+            <div class="controls--container controls-side--container">
+                <div class="controls controls-side" style="opacity: 0;">
+                    <div class="control">
+                        <button data-localize="collectableControls.menuThemes.name" class="js--menu-themes noselect">Menu Themes</button>
+                    </div>
+                </div>
+            </div>
+            <div class="controls--container--tab controls-bottom--container--tab" style="display: none;">
+                <button class="controls--container--tab__button controls-bottom--container--tab__button noselect">▲</button>
             </div>
             <div class="controls--container controls-bottom--container">
                 <div class="controls controls-bottom" style="opacity: 0;">
@@ -265,6 +300,26 @@
                     <div class="data-issues-module">
                         <label>Locations Missing Map IDs</label>
                         <div class="js--data-issues__missing-map-ids"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="menuThemesModal" class="js--menu-themes-modal modal">
+            <div>
+                <div class="js--menu-themes-modal__content modal__content">
+                    <div class="js--menu-themes-container collectables-container">
+                        <div class="js--menu-themes-container__items collectables-container__items"></div>
+                        <div class="js--menu-themes-container__borders collectables-container__borders"></div>
+                    </div>
+                    <div class="js--removed-content">
+                        <span class="menu-themes__previous-methods-title">
+                            <h2 data-localize="menuThemesModal.previousMethods">Previous Methods</h2>
+                            <hr />
+                        </span>
+                        <div class="js--removed-menu-themes-container collectables-container">
+                            <div class="js--removed-menu-themes-container__items collectables-container__items"></div>
+                            <div class="js--removed-menu-themes-container__borders collectables-container__borders"></div>
+                        </div>
                     </div>
                 </div>
             </div>

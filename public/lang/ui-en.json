@@ -29,6 +29,11 @@
             "name": "Help"
         }
     },
+    "collectableControls": {
+        "menuThemes": {
+            "name": "Menu Themes"
+        }
+    },
     "settings": {
         "lang": {
             "name": "Language:",
@@ -162,6 +167,9 @@
     "nodeLabel": {
         "depth": "Depth: ",
         "author": "Author: "
+    },
+    "menuThemesModal": {
+        "previousMethods": "Previous Methods"
     },
     "helpModal": {
         "reportBug": "Report a Bug"

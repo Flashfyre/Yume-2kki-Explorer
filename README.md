@@ -70,6 +70,12 @@ Reload the graph while resetting your search, origin, and destination.
 
 Load this documentation within the app in a modal window.
 
+## Side Menu
+
+### Menu Themes
+
+Display a list of available menu themes in a modal window. Hovering over a menu theme will show information from the Wiki on how to locate it. Clicking a menu theme will navigate to the world it's located in if applicable.
+
 ## Settings
 
 Settings are accessible by clicking the arrow tab in the bottom center of the page.
@@ -186,11 +192,17 @@ This setting determines the number of world nodes that make up a stack within th
 
 ページ下部中央の矢印タブをクリックして、設定画面にアクセスします。
 
+## 右側メニュー
+
+### メンユータイプ
+
+ポップアップでメンユータイプのリストを表示します。メンユータイプ画像にマウスオーバーするものを得られる方法を特定します。メンユータイプ画像クリックで、該当するものを得られる場所を知らせます（エクスプローラに表示）。
+
 ### 言語設定
 
 言語を変更します。
 
-### メニュータイプの設定
+### アプリのメニュータイプの設定
 
 ゆめ2っきのメニュータイプから、メニュー画面の表示を変更します。
 

@@ -1,4 +1,4 @@
-// Version 2.10.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 2.11.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -154013,9 +154013,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	});
 
 	function initWorldData(data) {
-	    exports.worldData = config$1.removedContentMode === 0
-	        ? data.filter(w => !w.removed)
-	        : data;
+	    exports.worldData = data;
 
 	    removedCount = 0;
 
@@ -154039,6 +154037,63 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	    minSize = lodash.min(worldSizes);
 	    maxSize = lodash.max(worldSizes);
+	}
+
+	let menuThemeData;
+
+	function initMenuThemeData(data) {
+	    menuThemeData = data;
+
+	    const $menuThemesContainerItems = jquery(".js--menu-themes-container__items");
+	    const $menuThemesContainerBorders = jquery(".js--menu-themes-container__borders");
+	    const $removedMenuThemesContainerItems = jquery(".js--removed-menu-themes-container__items");
+	    const $removedMenuThemesContainerBorders = jquery(".js--removed-menu-themes-container__borders");
+	    const menuThemeLocationsById = {};
+
+	    $menuThemesContainerItems.empty();
+	    $menuThemesContainerBorders.empty();
+	    $removedMenuThemesContainerItems.empty();
+	    $removedMenuThemesContainerBorders.empty();
+
+	    for (let m of menuThemeData) {
+	        for (let l of m.locations) {
+	            const removedCollectableClass = l.removed ? ' removed-collectable' : '';
+	            const worldIdAttribute = l.worldId ? ` data-world-id="${l.worldId}"` : '';
+	            const menuThemeImageHtml = `<div href="javascript:void(0);" class="menu-theme collectable${removedCollectableClass} noselect"><img src="${m.filename}" referrerpolicy="no-referrer" /></div>`;
+	            const menuThemeLinkHtml = `<a href="javascript:void(0);" class="js--menu-theme menu-theme collectable--border noselect" data-location-id="${l.id}"${worldIdAttribute}></a>`;
+	            l.method = l.method.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
+	            if (l.methodJP)
+	                l.methodJP = l.methodJP.replace(/<span .*?>(.*?)<\/ *span>/ig, '$1').replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
+	            jquery(menuThemeImageHtml).appendTo(l.removed ? $removedMenuThemesContainerItems : $menuThemesContainerItems);
+	            jquery(menuThemeLinkHtml).appendTo(l.removed ? $removedMenuThemesContainerBorders : $menuThemesContainerBorders);
+	            menuThemeLocationsById[l.id] = l;
+	        }
+	    }
+
+	    var $tooltip = jquery('<div class="menu-theme-tooltip scene-tooltip display--none"></div>').prependTo('.content');
+
+	    jquery(".js--menu-theme[data-world-id]").on("click", function () {
+	        if (trySelectNode(jquery(this).data("worldId"), true))
+	            jquery.modal.close();
+	    });
+	    
+	    jquery(".js--menu-theme").on("mousemove", function (e) {
+	        $tooltip.css({
+	            top: e.pageY + 10 + 'px',
+	            left: (e.pageX - ($tooltip.innerWidth() / 2)) + 'px'
+	        });
+	    }).on("mouseenter", function () {
+	        const location = menuThemeLocationsById[jquery(this).data("locationId")];
+	        const world = location.worldId ? exports.worldData[location.worldId] : null;
+	        const worldName = world ?
+	            config$1.lang === "en" || !world.titleJP ? world.title : world.titleJP
+	            : null;
+	        const worldLabel = worldName ? `<span class="menu-theme-tooltip__world">${worldName}</span><br />` : '';
+	        const method = config$1.lang === "en" || !location.methodJP ? location.method : location.methodJP;
+	        $tooltip.html(`${worldLabel}${method}`).removeClass("display--none");
+	    }).on("mouseleave", function () {
+	        $tooltip.addClass("display--none");
+	    });
 	}
 
 	function loadOrInitConfig() {
@@ -154080,6 +154135,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	                            break;
 	                        case "removedContentMode":
 	                            jquery(".js--removed-content-mode").val(value);
+	                            jquery(".js--removed-content").toggleClass("display--none", !value);
 	                            break;
 	                        case "pathMode":
 	                            jquery(".js--path-mode").val(value);
@@ -154102,24 +154158,65 @@ vec4 envMapTexelToLinear(vec4 color) {
 	function updateControlsContainer(updateTabMargin) {
 	    const controlsHeight = jquery(".controls-top").outerHeight();
 	    const settingsHeight = jquery(".controls-bottom").outerHeight();
-	    jquery(".controls--container").css({ "height": `${settingsHeight}px`, "margin-top": `-${(settingsHeight + 20)}px` });
-	    jquery(".controls--container--tab").css({ "height": `${settingsHeight}px`, "left": `calc(50% - ${((jquery(".controls--container--tab").outerWidth() - 16) / 2)}px)` });
-	    if (updateTabMargin && jquery(".controls-bottom").hasClass("visible"))
-	        jquery(".controls--container--tab, .footer").css("margin-top", `-${(settingsHeight + 8)}px`);
+	    const collectableControlsHeight = jquery(".controls-side").outerHeight();
+	    const collectableControlsWidth = jquery(".controls-side").outerWidth();
+	    jquery(".controls-top--container, .controls-bottom--container").css("margin-top", `-${(settingsHeight + 20)}px`);
+	    jquery(".controls-top--container, controls-bottom--container, .controls-bottom--container--tab, .footer").each(function () {
+	        jquery(this).css("height", `${settingsHeight - (jquery(this).outerHeight() - parseFloat(window.getComputedStyle(this, null).getPropertyValue("height")))}px`);
+	    });
+	    jquery(".controls-bottom--container--tab").css("left", `calc(50% - ${(jquery(".controls-bottom--container--tab").outerWidth() / 2)}px`);
+	    jquery(".controls-side--container").css({
+	        "top": `${(controlsHeight + 16)}px`,
+	        "margin-left": `-${(collectableControlsWidth + 20)}px`
+	    });
+	    jquery(".controls-side--container--tab").css({
+	        "width": `${collectableControlsWidth}px`,
+	        "top": `${(controlsHeight + 16)}px`,
+	        "margin-top": `${16 + (((collectableControlsHeight + 16) - jquery(".controls-side--container--tab").outerHeight()) / 2)}px`
+	    });
+	    if (updateTabMargin) {
+	        if (jquery(".controls-bottom").hasClass("visible"))
+	            jquery(".controls-bottom--container--tab, .footer").css("margin-top", `-${(settingsHeight + 8)}px`);
+	        if (jquery(".controls-side").hasClass("visible"))
+	            jquery(".controls-side--container--tab").css("margin-left", `-${(collectableControlsWidth + 8)}px`);
+	        jquery(".modal").css("transition", "");
+	    }
+
+	    let modalMaxWidth;
+	    let modalLeftMargin;
+	    let modalRightMargin;
+	    if (jquery(".controls-side").hasClass("visible")) {
+	        const fullModalWidth = window.innerWidth * 0.9;
+	        const collectableControlsWidth = jquery(".controls-side").outerWidth() + parseFloat(jquery(".controls-side").css("margin-right")) + jquery(".controls-side--container--tab__button").outerWidth();
+	        modalMaxWidth = window.innerWidth - (collectableControlsWidth + 8);
+	        modalLeftMargin =  collectableControlsWidth >= window.innerWidth - fullModalWidth
+	            ? (window.innerWidth - (fullModalWidth + collectableControlsWidth + 8)) * -1
+	            : 0;
+	            modalLeftMargin = 0;
+	        modalRightMargin = collectableControlsWidth - 12;
+	    } else {
+	        modalMaxWidth = window.innerWidth;
+	        modalLeftMargin = 0;
+	        modalRightMargin = 0;
+	    }
+
 	    jquery(".modal").css({
 	        "margin-top": `${(controlsHeight + 16)}px`,
-	        "height": `calc(100% - ${(controlsHeight + 16 + (jquery(".controls-bottom").hasClass("visible") ? settingsHeight + 8 : 0))}px)`
+	        "height": `calc(100% - ${(controlsHeight + 16 + (jquery(".controls-bottom").hasClass("visible") ? settingsHeight + 8 : 0))}px)`,
+	        "max-width": `${modalMaxWidth}px`,
+	        "margin-left": `${modalLeftMargin}px`,
+	        "margin-right": `${modalRightMargin}px`
 	    });
 	}
 
-	function loadWorldData(update, success, fail) {
+	function loadData(update, success, fail) {
 	    let queryString = update ? "?update=" + update : "";
 	    if (config$1.removedContentMode === 1)
 	        queryString += (queryString.length ? "&" : "?") + "includeRemovedContent=true";
 	    const urlSearchParams = new URLSearchParams(window.location.search);
 	    if (urlSearchParams.has("adminKey"))
 	        queryString += (queryString.length ? "&" : "?") + "adminKey=" + urlSearchParams.get("adminKey");
-	    jquery.get("/worlds" + queryString, function (data) {
+	    jquery.get("/data" + queryString, function (data) {
 	        if (document.fonts.check("12px MS Gothic")) {
 	            fontsLoaded = true;
 	            success(data);
@@ -154135,10 +154232,11 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    }).fail(fail);
 	}
 
-	function reloadWorldData(update) {
+	function reloadData(update) {
 	    const loadCallback = displayLoadingAnim(jquery("#graphContainer"));
-	    loadWorldData(update, function (data) {
+	    loadData(update, function (data) {
 	        initWorldData(data.worldData);
+	        initMenuThemeData(data.menuThemeData);
 	        lastUpdate = new Date(data.lastUpdate);
 	        lastFullUpdate = new Date(data.lastFullUpdate);
 
@@ -154723,15 +154821,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        .onNodeClick(node => {
 	            if (isCtrl || isShift)
 	                openWorldWikiPage(node.id, isShift);
-	            else {
-	                const world = exports.worldData[node.id];
-	                if (node && (selectedWorldId == null || selectedWorldId !== node.id)) {
-	                    jquery(".js--search-world").addClass("selected").val(config$1.lang === 'en' || !world.titleJP ? world.title : world.titleJP);
-	                    selectedWorldId = node.id;
-	                } else
-	                    focusNode(node);
-	                highlightWorldSelection();
-	            }
+	            else
+	                trySelectNode(node);
 	        })
 	        .onNodeRightClick((node, ev) => {
 	            contextWorldId = node.id;
@@ -154767,7 +154858,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        })
 	        .graphData(gData);
 
-	    document.querySelector(".controls--container--tab").style.display = '';
+	    document.querySelector(".controls-bottom--container--tab").style.display = '';
+	    document.querySelector(".controls-side--container--tab").style.display = '';
 
 	    document.removeEventListener('mousemove', onDocumentMouseMove, false);
 	    document.querySelector('#graph canvas').removeEventListener('wheel', clearTweens, false);
@@ -156229,7 +156321,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	function getWorldLinkForAdmin(world) {
 	    const removedPrefix = world.removed ? '[REMOVED] ' : '';
-	    return `${removedPrefix}<a class="world-link" href="javascript:void(0);" data-world-id="${world.id}">${world.title}</a>`
+	    return `${removedPrefix}<a class="world-link no-border" href="javascript:void(0);" data-world-id="${world.id}">${world.title}</a>`
 	}
 
 	function initLocalization(isInitial) {
@@ -156239,10 +156331,15 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "2.10.1");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "2.11.0");
 	            const formatDate = (date) => date.toLocaleString(isEn ? "en-US" : "ja-JP", { timeZoneName: "short" });
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate));
+	            if (config$1.lang === "ja") {
+	                convertJPControlLabels(data.controls);
+	                convertJPControlLabels(data.collectableControls);
+	                convertJPControlLabels(data.settings);
+	            }
 	            localizedConns = data.conn;
 	            initContextMenu(data.contextMenu);
 	            localizedNodeLabel = getLocalizedNodeLabel(data.nodeLabel);
@@ -156332,6 +156429,25 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    });
 	}
 
+	function convertJPControlLabels(data) {
+	    if (data) {
+	        Object.keys(data).forEach(function (key) {
+	            const value = data[key];
+	            if (value) {
+	                switch (typeof value) {
+	                    case "object":
+	                        convertJPControlLabels(value);
+	                        break;
+	                    case "string":
+	                        if (value.indexOf(" ") > -1)
+	                            data[key] = value.split(/ +/g).map(v => `<span class="jp-word-break">${v}</span>`).join("");
+	                        break;
+	                }
+	            }
+	        });
+	    }
+	}
+
 	function initWorldSearch() {
 	    const $search = jquery(".js--search-world");
 	    $search.devbridgeAutocomplete("destroy");
@@ -156355,9 +156471,8 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        },
 	        onSelect: function (selectedWorld) {
 	            $search.addClass("selected");
-	            selectedWorldId = exports.worldsByName[selectedWorld.value].id;
-	            focusNode(exports.graph.graphData().nodes.filter(n => n.id === selectedWorldId)[0]);
-	            highlightWorldSelection();
+	            const worldId = exports.worldsByName[selectedWorld.value].id;
+	            trySelectNode(exports.graph.graphData().nodes.filter(n => n.id === worldId)[0], false, true);
 	        },
 	        onHide: function () {
 	           if (selectedWorldId != null) {
@@ -156434,6 +156549,28 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        ? 'https://yume2kki.fandom.com/wiki/' + world.title
 	        : ('https://wikiwiki.jp/yume2kki-t/' + (world.titleJP.indexOf("：") > -1 ? world.titleJP.slice(0, world.titleJP.indexOf("：")) : world.titleJP)),
 	        "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
+	}
+
+	function trySelectNode(node, forceFocus, ignoreSearch) {
+	    if (node == null)
+	        return false;
+	    if (!node.hasOwnProperty("id")) {
+	        const nodes = exports.graph.graphData().nodes.filter(n => n.id === node);
+	        if (!nodes.length)
+	            return false;
+	        node = nodes[0];
+	    }
+	    const world = exports.worldData[node.id];
+	    selectedWorldId = world.id;
+	    if ((node && (selectedWorldId == null || selectedWorldId !== node.id))) {
+	        if (!ignoreSearch)
+	            jquery(".js--search-world").addClass("selected").val(config$1.lang === 'en' || !world.titleJP ? world.title : world.titleJP);
+	        if (forceFocus)
+	            focusNode(node);
+	    } else
+	        focusNode(node);
+	    highlightWorldSelection();
+	    return true;
 	}
 
 	function focusNode(node) {
@@ -156599,16 +156736,35 @@ vec4 envMapTexelToLinear(vec4 color) {
 	}
 
 	function initControls() {
-	    jquery(".controls--container--tab__button").on("click", function() {
+	    jquery(".controls-bottom--container--tab__button").on("click", function() {
 	        if (jquery(".controls-bottom").hasClass("visible")) {
 	            jquery(".controls-bottom").removeClass("visible").animateCss("slideOutDown", 250, function () {
 	                if (!jquery(this).hasClass("visible"))
 	                    jquery(this).css("opacity", 0);
 	            });
-	            jquery(".controls--container--tab, .footer").css("margin-top", "0px").animateCss("slideInDown", 300);
+	            jquery(".controls-bottom--container--tab, .footer").css("margin-top", "0px").animateCss("slideInDown", 300);
+	            jquery(".modal").css("transition", "height 0.3s ease-out, margin-top 0.3s ease-out");
 	        } else {
+	            const settingsHeight = jquery(".controls-bottom").outerHeight() + 8;
 	            jquery(".controls-bottom").addClass("visible").css("opacity", 1).animateCss("slideInUp", 250);
-	            jquery(".controls--container--tab, .footer").css("margin-top", "-" + (jquery(".controls-bottom").outerHeight() + 8) + "px").animateCss("slideInUp", 250);
+	            jquery(".controls-bottom--container--tab, .footer").css("margin-top", "-" + settingsHeight + "px").animateCss("slideInUp", 250);
+	            jquery(".modal").css("transition", "height 0.25s ease-out, margin-top 0.25s ease-out");
+	        }
+	        updateControlsContainer();
+	    });
+
+	    jquery(".controls-side--container--tab__button").on("click", function() {
+	        if (jquery(".controls-side").hasClass("visible")) {
+	            jquery(".controls-side").removeClass("visible").animateCss("slideOutRight", 250, function () {
+	                if (!jquery(this).hasClass("visible"))
+	                    jquery(this).css("opacity", 0);
+	            });
+	            jquery(".controls-side--container--tab").css("margin-left", "0px").animateCss("slideInLeft", 300);
+	            jquery(".modal").css("transition", "max-width 0.3s ease-out, margin-left 0.3s ease-out, margin-right 0.3s ease-out");
+	        } else {
+	            jquery(".controls-side").addClass("visible").css("opacity", 1).animateCss("slideInRight", 250);
+	            jquery(".controls-side--container--tab").css("margin-left", "-" + (jquery(".controls-side").outerWidth() + 8) + "px").animateCss("slideInRight", 250);
+	            jquery(".modal").css("transition", "max-width 0.25s ease-out, margin-left 0.25s ease-out, margin-right 0.25s ease-out");
 	        }
 	        updateControlsContainer();
 	    });
@@ -156619,18 +156775,35 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        isShift = false;
 	        isCtrl = false;
 	    });
+
+	    const onModalShown = function () {
+	        const $modalContent = jquery(this).find(".modal__content");
+	        $modalContent.css("padding-right", $modalContent[0].scrollHeight > $modalContent[0].clientHeight ? "24px" : null);
+	    };
+
+	    jquery(document).on(jquery.modal.OPEN, ".modal", onModalShown);
 	    
 	    jquery(".js--lang").on("change", function() {
 	        config$1.lang = jquery(this).val();
 	        updateConfig(config$1);
+
+	        const loadCallback = displayLoadingAnim(jquery("#graphContainer"));
+	        const callback = function () {
+	            if (exports.worldData) {
+	                reloadGraph();
+	                loadCallback();
+	            }
+	        };
+
+	        if (jquery(".modal:visible").length)
+	            jquery.modal.close();
+
 	        initLocalization();
-	        if (isWebGL2) {
-	            initNodeObjectMaterial().then(() => {
-	                if (exports.worldData)
-	                    reloadGraph();
-	            }).catch(err => console.error(err));
-	        } else if (exports.worldData)
-	            reloadGraph();
+
+	        if (isWebGL2)
+	            initNodeObjectMaterial().then(() => callback()).catch(err => console.error(err));
+	        else if (exports.worldData)
+	            callback();
 	    });
 
 	    jquery(".js--ui-theme").on("change", function() {
@@ -156702,11 +156875,12 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	    jquery(".js--removed-content-mode").on("change", function() {
 	        config$1.removedContentMode = parseInt(jquery(this).val());
+	        jquery(".js--removed-content").toggleClass("display--none", !config$1.removedContentMode);
 	        updateConfig(config$1);
 	        if (exports.worldData) {
 	            if (jquery(".modal:visible").length)
 	                jquery.modal.close();
-	            reloadWorldData(false);
+	            reloadData(false);
 	        }
 	    });
 
@@ -156735,6 +156909,19 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        selectedAuthor = jquery(this).val() !== "null" ? jquery(this).val() || "" : null;
 	        if (exports.worldData)
 	            highlightWorldSelection();
+	    });
+
+	    jquery(".js--menu-themes").on("click", function() {
+	        if (menuThemeData && menuThemeData.length) {
+	            if (jquery(".js--menu-themes-modal:visible").length)
+	                jquery.modal.close();
+	            else
+	                jquery(".js--menu-themes-modal").modal({
+	                    fadeDuration: 100,
+	                    closeClass: 'noselect',
+	                    closeText: '✖'
+	                });
+	        }
 	    });
 
 	    jquery(".js--reset").on("click", function() {
@@ -156816,7 +157003,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	        if (jquery(".modal:visible").length)
 	            jquery.modal.close();
 	        const isReset = jquery(this).hasClass("js--reset-data");
-	        reloadWorldData(isReset ? "reset" : true);
+	        reloadData(isReset ? "reset" : true);
 	    });
 
 	    jquery(document).on("click", "a.world-link", function () {
@@ -156879,8 +157066,9 @@ vec4 envMapTexelToLinear(vec4 color) {
 
 	    initLocalization(true);
 
-	    loadWorldData(false, function (data) {
+	    loadData(false, function (data) {
 	        initWorldData(data.worldData);
+	        initMenuThemeData(data.menuThemeData);
 	        lastUpdate = new Date(data.lastUpdate);
 	        lastFullUpdate = new Date(data.lastFullUpdate);
 
@@ -156908,7 +157096,7 @@ vec4 envMapTexelToLinear(vec4 color) {
 	    }, loadCallback);
 	});
 
-	exports.loadWorldData = loadWorldData;
+	exports.loadData = loadData;
 
 	Object.defineProperty(exports, '__esModule', { value: true });
 

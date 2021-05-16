@@ -113,6 +113,26 @@ function initDb(pool) {
                 FOREIGN KEY (mapId)
                     REFERENCES maps (id)
                     ON DELETE CASCADE
+            )`)).then(() => queryAsPromise(pool,
+            `CREATE TABLE IF NOT EXISTS menu_themes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                menuThemeId INT NOT NULL,
+                filename VARCHAR(255) NOT NULL
+            )`)).then(() => queryAsPromise(pool,
+            `CREATE TABLE IF NOT EXISTS menu_theme_locations (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                menuThemeId INT NOT NULL,
+                worldId INT NULL,
+                method VARCHAR(1000) NULL,
+                methodJP VARCHAR(1000) NULL,
+                filename VARCHAR(255) NULL,
+                removed BIT NOT NULL,
+                FOREIGN KEY (menuThemeId)
+                    REFERENCES menu_themes (id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (worldId)
+                    REFERENCES worlds (id)
+                    ON DELETE CASCADE
             )`)).then(() => {
                 dbInitialized = true;
                 resolve(pool);
@@ -150,39 +170,44 @@ const startLocation = "Urotsuki's Room";
 
 const batchSize = 20;
 
-app.get('/worlds', function(req, res) {
+app.get('/data', function(req, res) {
     getConnPool().then(pool => {
         const callback = function () {
-            getWorldData(pool, false, !req.query.hasOwnProperty("includeRemovedContent") || !req.query.includeRemovedContent).then(worldData => {
-                pool.query('SELECT lastUpdate, lastFullUpdate FROM updates', (err, rows) => {
-                    if (err) console.error(err);
-                    const row = rows.length ? rows[0] : null;
-                    const lastUpdate = row ? row.lastUpdate : null;
-                    const lastFullUpdate = row ? row.lastFullUpdate : null;
-                    const isAdmin = req.query.hasOwnProperty("adminKey") && req.query.adminKey === adminKey;
-    
-                    res.json({
-                        worldData: worldData,
-                        lastUpdate: lastUpdate,
-                        lastFullUpdate: lastFullUpdate,
-                        isAdmin: isAdmin
+            getWorldData(pool, false, !req.query.hasOwnProperty('includeRemovedContent') || !req.query.includeRemovedContent).then(worldData => {
+                getMenuThemeData(pool, worldData, !req.query.hasOwnProperty('includeRemovedContent') || !req.query.includeRemovedContent).then(menuThemeData => {
+                    pool.query('SELECT lastUpdate, lastFullUpdate FROM updates', (err, rows) => {
+                        if (err) console.error(err);
+                        const row = rows.length ? rows[0] : null;
+                        const lastUpdate = row ? row.lastUpdate : null;
+                        const lastFullUpdate = row ? row.lastFullUpdate : null;
+                        const isAdmin = req.query.hasOwnProperty("adminKey") && req.query.adminKey === adminKey;
+        
+                        res.json({
+                            worldData: worldData,
+                            menuThemeData: menuThemeData,
+                            lastUpdate: lastUpdate,
+                            lastFullUpdate: lastFullUpdate,
+                            isAdmin: isAdmin
+                        });
+                        pool.end();
                     });
-                    pool.end();
-                });
+                }).catch(err => console.error(err));
             }).catch(err => console.error(err));
         };
-        if (req.query.hasOwnProperty("update") && req.query.update) {
-            if (req.query.update === "reset") {
+        if (req.query.hasOwnProperty('update') && req.query.update) {
+            if (req.query.update === 'reset') {
                 populateWorldData(pool).then(() => getWorldData(pool, true).then(worldData => {
                     updateMapData(pool, worldData).then(() => {
-                        pool.query("UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()", (err) => {
-                            if (err) console.error(err);
-                            callback();
-                        });
+                        updateMenuThemeData(pool, worldData).then(() => {
+                            pool.query('UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()', (err) => {
+                                if (err) console.error(err);
+                                callback();
+                            });
+                        }).catch(err => console.error(err));
                     }).catch(err => console.error(err));
                 }).catch(err => console.error(err))).catch(err => console.error(err));
             } else {
-                pool.query("SELECT lastUpdate FROM updates", (err, rows) => {
+                pool.query('SELECT lastUpdate FROM updates', (err, rows) => {
                     if (err) console.error(err);
                     if (rows.length) {
                         getWorldData(pool, true).then(worldData => {
@@ -190,10 +215,12 @@ app.get('/worlds', function(req, res) {
                                 .then(updatedWorldNames => populateWorldData(pool, worldData, updatedWorldNames)
                                     .then(worldData => {
                                         checkUpdateMapData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                            pool.query("UPDATE updates SET lastUpdate=NOW()", err => {
-                                                if (err) console.error(err);
-                                                callback();
-                                            });
+                                            checkUpdateMenuThemeData(pool, worldData, rows[0].lastUpdate).then(() => {
+                                                pool.query('UPDATE updates SET lastUpdate=NOW()', err => {
+                                                    if (err) console.error(err);
+                                                    callback();
+                                                });
+                                            }).catch(err => console.error(err));
                                         }).catch(err => console.error(err));
                                     }).catch(err => console.error(err)))
                                 .catch(err => console.error(err));
@@ -297,28 +324,75 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
     });
 }
 
+function getMenuThemeData(pool, worldData, excludeRemovedContent) {
+    return new Promise((resolve, reject) => {
+        const menuThemeDataById = {};
+        pool.query('SELECT id, menuThemeId, filename FROM menu_themes ORDER BY menuThemeId', (err, rows) => {
+            if (err) return reject(err);
+            for (let row of rows) {
+                menuThemeDataById[row.id] = {
+                    id: row.id,
+                    menuThemeId: row.menuThemeId,
+                    filename: row.filename,
+                    locations: []
+                };
+            }
+            
+            pool.query('SELECT l.menuThemeId, w.title, l.method, l.methodJP, l.filename, l.removed FROM menu_theme_locations l LEFT JOIN worlds w ON w.id = l.worldId' + (excludeRemovedContent ? ' where l.removed = 0' : ''), (err, rows) => {
+                if (err) return reject(err);
+
+                const worldDataByName = _.keyBy(worldData, w => w.title);
+
+                let l = 0;
+
+                for (let row of rows) {
+                    const menuTheme = menuThemeDataById[row.menuThemeId];
+                    if (menuTheme == null)
+                        continue;
+                    const world = row.title ? worldDataByName[row.title] : null;
+                    const location = {
+                        id: l++,
+                        worldId: world ? world.id : null,
+                        method: row.method,
+                        methodJP: row.methodJP,
+                        filename: row.filename,
+                        removed: row.removed
+                    };
+                    menuTheme.locations.push(location);
+                }
+
+                resolve(_.sortBy(Object.values(menuThemeDataById), m => m.menuThemeId > -1 ? m.menuThemeId : 999));
+            });
+        });
+    });
+}
+
 function checkUpdateData(pool) {
     return new Promise((resolve, reject) => {
-        pool.query("SELECT lastFullUpdate FROM updates WHERE DATE_ADD(lastFullUpdate, INTERVAL 1 WEEK) < NOW()", (err, rows) => {
+        pool.query('SELECT lastFullUpdate FROM updates WHERE DATE_ADD(lastFullUpdate, INTERVAL 1 WEEK) < NOW()', (err, rows) => {
             if (err) return reject(err);
             if (rows.length) {
-                pool.query("UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()", (err) => {
+                pool.query('UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()', (err) => {
                     populateWorldData(pool).then(worldData => {
                         if (err) console.error(err);
-                        updateMapData(pool, worldData).then(() => resolve()).catch(err => reject(err));
+                        updateMapData(pool, worldData).then(() => {
+                            updateMenuThemeData(pool, worldData).then(() => resolve()).catch(err => reject(err));
+                        }).catch(err => reject(err));
                     }).catch(err => reject(err));
                 });
             } else {
-                pool.query("SELECT lastUpdate FROM updates WHERE DATE_ADD(lastUpdate, INTERVAL 1 HOUR) < NOW()", (err, rows) => {
+                pool.query('SELECT lastUpdate FROM updates WHERE DATE_ADD(lastUpdate, INTERVAL 1 HOUR) < NOW()', (err, rows) => {
                     if (err) return reject(err);
                     if (rows.length) {
-                        pool.query("UPDATE updates SET lastUpdate=NOW()", err => {
+                        pool.query('UPDATE updates SET lastUpdate=NOW()', err => {
                             if (err) return reject(err);
                             getWorldData(pool, true).then(worldData => {
                                 getUpdatedWorldNames(worldData.map(w => w.title), rows[0].lastUpdate)
                                     .then(updatedWorldNames => populateWorldData(pool, worldData, updatedWorldNames)
                                         .then(worldData => {
-                                            checkUpdateMapData(pool, worldData, rows[0].lastUpdate).then(() => resolve()).catch(err => reject(err));
+                                            checkUpdateMapData(pool, worldData, rows[0].lastUpdate).then(() => {
+                                                checkUpdateMenuThemeData(pool, worldData, rows[0].lastUpdate).then(() => resolve()).catch(err => reject(err));
+                                            }).catch(err => reject(err));
                                         }).catch(err => reject(err)))
                                     .catch(err => reject(err));
                             }).catch(err => reject(err));
@@ -359,10 +433,10 @@ function populateRecentChanges(recentChanges, lastUpdate) {
     });
 }
 
-function checkUpdateMapData(pool, worldData, lastUpdate) {
+function checkUpdatePage(pool, pageTitle, lastUpdate) {
     return new Promise((resolve, reject) => {
         superagent.get('https://yume2kki.fandom.com/api.php')
-            .query({ action: 'query', titles: 'Map IDs', prop: 'revisions', format: 'json' })
+            .query({ action: 'query', titles: pageTitle, prop: 'revisions', format: 'json' })
             .end((err, res) => {
                 if (err) return reject(err);
                 const data = JSON.parse(res.text);
@@ -373,13 +447,35 @@ function checkUpdateMapData(pool, worldData, lastUpdate) {
                     if (revisions.length) {
                         const revDate = new Date(revisions[0].timestamp);
                         if (lastUpdate < revDate) {
-                            updateMapData(pool, worldData).then(() => resolve()).catch(err => reject(err));
+                            resolve(true);
                             return;
                         }
                     }
                 }
-                resolve();
+                resolve(false);
             });
+    });
+}
+
+function checkUpdateMapData(pool, worldData, lastUpdate) {
+    return new Promise((resolve, reject) => {
+        checkUpdatePage(pool, "Map IDs", lastUpdate).then(needsUpdate => {
+            if (needsUpdate)
+                updateMapData(pool, worldData).then(() => resolve()).catch(err => reject(err));
+            else
+                resolve();
+        }).catch(err => reject(err));
+    });
+}
+
+function checkUpdateMenuThemeData(pool, worldData, lastUpdate) {
+    return new Promise((resolve, reject) => {
+        checkUpdatePage(pool, "Menu Themes", lastUpdate).then(needsUpdate => {
+            if (needsUpdate)
+                updateMenuThemeData(pool, worldData).then(() => resolve()).catch(err => reject(err));
+            else
+                resolve();
+        }).catch(err => reject(err));
     });
 }
 
@@ -496,14 +592,14 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                 const newWorldNames = Object.keys(newWorldsByName);
                 if (newWorldNames.length) {
                     let i = 0;
-                    let worldsQuery = "INSERT INTO worlds (title, titleJP, author, depth, filename, removed) VALUES ";
+                    let worldsQuery = 'INSERT INTO worlds (title, titleJP, author, depth, filename, removed) VALUES ';
                     for (const w in newWorldsByName) {
                         const newWorld = newWorldsByName[w];
                         if (i++)
                             worldsQuery += ", ";
                         const title = newWorld.title.replace(/'/g, "''");
-                        const titleJPValue = newWorld.titleJP ? `'${newWorld.titleJP}'` : "NULL";
-                        const authorValue = newWorld.author ? `'${newWorld.author}'` : "NULL";
+                        const titleJPValue = newWorld.titleJP ? `'${newWorld.titleJP}'` : 'NULL';
+                        const authorValue = newWorld.author ? `'${newWorld.author}'` : 'NULL';
                         const removedValue = newWorld.removed ? '1' : '0';
                         worldsQuery += `('${title}', ${titleJPValue}, ${authorValue}, 0, '${newWorld.filename.replace(/'/g, "''")}', ${removedValue})`;
                     }
@@ -603,7 +699,7 @@ function updateConns(pool, worldDataByName) {
             if (err) return reject(err);
             for (let row of rows) {
                 const key = `${row.sourceId}_${row.targetId}`;
-                if (Object.keys(newConnsByKey).indexOf(key) > -1) {
+                if (newConnsByKey.hasOwnProperty(key)) {
                     const conn = newConnsByKey[key];
                     conn.id = row.id;
                     if (conn.type != row.type) {
@@ -629,11 +725,11 @@ function updateConns(pool, worldDataByName) {
                 const newConnKeys = Object.keys(newConnsByKey);
                 if (newConnKeys.length) {
                     let i = 0;
-                    let connsQuery = "INSERT INTO conns (sourceId, targetId, type) VALUES "
+                    let connsQuery = 'INSERT INTO conns (sourceId, targetId, type) VALUES ';
                     for (let c in newConnsByKey) {
                         const conn = newConnsByKey[c];
                         if (i++)
-                            connsQuery += ", ";
+                            connsQuery += ', ';
                         connsQuery += `(${conn.sourceId}, ${conn.targetId}, ${conn.type})`;
                     }
                     pool.query(connsQuery, (err, res) => {
@@ -662,13 +758,13 @@ function updateConns(pool, worldDataByName) {
 function updateConnsOfType(pool, type, conns) {
     return new Promise((resolve, reject) => {
         let i = 0;
-        let updateConnsQuery = `UPDATE conns SET type=${type} WHERE id IN (`
+        let updateConnsQuery = `UPDATE conns SET type=${type} WHERE id IN (`;
         for (let conn of conns) {
             if (i++)
-                updateConnsQuery += ", ";
+                updateConnsQuery += ', ';
             updateConnsQuery += conn.id;
         }
-        updateConnsQuery += ")";
+        updateConnsQuery += ')';
         pool.query(updateConnsQuery, (err, _) => {
             if (err) return reject(err);
             resolve();
@@ -679,13 +775,13 @@ function updateConnsOfType(pool, type, conns) {
 function deleteRemovedConns(pool, removedConnIds) {
     return new Promise((resolve, reject) => {
         let i = 0;
-        let deleteConnsQuery = "DELETE FROM conns WHERE id IN (";
+        let deleteConnsQuery = 'DELETE FROM conns WHERE id IN (';
         for (let connId of removedConnIds) {
             if (i++)
-                deleteConnsQuery += ", ";
+                deleteConnsQuery += ', ';
             deleteConnsQuery += connId;
         }
-        deleteConnsQuery += ")";
+        deleteConnsQuery += ')';
         pool.query(deleteConnsQuery, (err, _) => {
             if (err) return reject(err);
             resolve();
@@ -735,13 +831,13 @@ function updateConnTypeParams(pool, worldData) {
             };
 
             let i = 0;
-            let connTypeParamsQuery = "INSERT INTO conn_type_params (connId, type, params, paramsJP) VALUES ";
+            let connTypeParamsQuery = 'INSERT INTO conn_type_params (connId, type, params, paramsJP) VALUES ';
             for (let c in newConnTypeParams) {
                 const connConnTypeParams = newConnTypeParams[c];
                 for (let t in connConnTypeParams) {
                     const connTypeParam = connConnTypeParams[t];
                     const params = `'${connTypeParam.params.replace(/'/g, "''")}'`;
-                    const paramsJP = connTypeParam.paramsJP ? `'${connTypeParam.paramsJP.replace(/'/g, "''")}'` : "NULL";
+                    const paramsJP = connTypeParam.paramsJP ? `'${connTypeParam.paramsJP.replace(/'/g, "''")}'` : 'NULL';
                     if (i++)
                         connTypeParamsQuery += ", ";
                     connTypeParamsQuery += `(${c}, ${t}, ${params}, ${paramsJP})`;
@@ -772,13 +868,13 @@ function updateConnTypeParam(pool, connTypeParam) {
 function deleteRemovedConnTypeParams(pool, removedConnTypeParamIds) {
     return new Promise((resolve, reject) => {
         let i = 0;
-        let deleteConnTypeParamsQuery = "DELETE FROM conn_type_params WHERE id IN (";
+        let deleteConnTypeParamsQuery = 'DELETE FROM conn_type_params WHERE id IN (';
         for (let connTypeParamId of removedConnTypeParamIds) {
             if (i++)
-                deleteConnTypeParamsQuery += ", ";
+                deleteConnTypeParamsQuery += ', ';
             deleteConnTypeParamsQuery += connTypeParamId;
         }
-        deleteConnTypeParamsQuery += ")";
+        deleteConnTypeParamsQuery += ')';
         pool.query(deleteConnTypeParamsQuery, (err, _) => {
             if (err) return reject(err);
             resolve();
@@ -898,7 +994,7 @@ function resolveMissingDepths(worldData, worldDataById, worldDataByName, depthMa
 function updateWorldsOfDepth(pool, depth, worlds) {
     return new Promise((resolve, reject) => {
         let i = 0;
-        let updateDepthsQuery = `UPDATE worlds SET depth=${depth} WHERE id IN (`
+        let updateDepthsQuery = `UPDATE worlds SET depth=${depth} WHERE id IN (`;
         for (let world of worlds) {
             if (i++)
                 updateDepthsQuery += ", ";
@@ -954,11 +1050,11 @@ function updateMapData(pool, worldData) {
                     
                         if (newWorldMapKeys.length) {
                             let i = 0;
-                            let worldMapsQuery = "INSERT INTO world_maps (worldId, mapId) VALUES ";
+                            let worldMapsQuery = 'INSERT INTO world_maps (worldId, mapId) VALUES ';
                             for (let m in newWorldMapsByKey) {
                                 const worldMap = newWorldMapsByKey[m];
                                 if (i++)
-                                    worldMapsQuery += ", ";
+                                    worldMapsQuery += ', ';
                                 worldMapsQuery += `(${worldMap.worldId}, ${worldMap.mapId})`;
                             }
                             pool.query(worldMapsQuery, (err, res) => {
@@ -1030,6 +1126,8 @@ function updateMaps(pool, mapData) {
             const newMapsByMapId = _.keyBy(mapData, m => m.mapId);
             const mapIds = Object.keys(mapDataByMapId);
             const updatedMaps = [];
+            const removedMapIds = [];
+
             for (let row of rows) {
                 const mapId = row.mapId;
                 if (mapIds.indexOf(mapId) > -1) {
@@ -1037,10 +1135,12 @@ function updateMaps(pool, mapData) {
                     map.id = row.id;
                     if (row.width !== map.width || row.height !== map.height)
                         updatedMaps.push(map);
-                }
+                } else
+                    removedMapIds.push(row.id);
                 delete newMapsByMapId[mapId];
             }
-            const insertCallback = function() {
+
+            const insertCallback = function () {
                 if (updatedMaps.length) {
                     const updateMaps = [];
                     for (let map of updatedMaps)
@@ -1049,29 +1149,37 @@ function updateMaps(pool, mapData) {
                 } else
                     resolve();
             };
-            const newMapIds = Object.keys(newMapsByMapId);
-            if (newMapIds.length) {
-                let i = 0;
-                let mapsQuery = "INSERT INTO maps (mapId, width, height) VALUES "
-                for (let m in newMapsByMapId) {
-                    const newMap = newMapsByMapId[m];
-                    if (i++)
-                        mapsQuery += ", ";
-                    mapsQuery += `('${newMap.mapId}', ${newMap.width}, ${newMap.height})`;
-                }
-                pool.query(mapsQuery, (err, res) => {
-                    if (err) return reject(err);
-                    const insertedRows = res.affectedRows;
-                    const mapRowIdsQuery = `SELECT r.id FROM (SELECT id FROM maps ORDER BY id DESC LIMIT ${insertedRows}) r ORDER BY 1`;
-                    pool.query(mapRowIdsQuery, (err, rows) => {
+
+            const callback = function () {
+                const newMapIds = Object.keys(newMapsByMapId);
+                if (newMapIds.length) {
+                    let i = 0;
+                    let mapsQuery = 'INSERT INTO maps (mapId, width, height) VALUES ';
+                    for (let m in newMapsByMapId) {
+                        const newMap = newMapsByMapId[m];
+                        if (i++)
+                            mapsQuery += ", ";
+                        mapsQuery += `('${newMap.mapId}', ${newMap.width}, ${newMap.height})`;
+                    }
+                    pool.query(mapsQuery, (err, res) => {
                         if (err) return reject(err);
-                        for (let r in rows)
-                            newMapsByMapId[newMapIds[r]].id = rows[r].id;
-                        insertCallback();
+                        const insertedRows = res.affectedRows;
+                        const mapRowIdsQuery = `SELECT r.id FROM (SELECT id FROM maps ORDER BY id DESC LIMIT ${insertedRows}) r ORDER BY 1`;
+                        pool.query(mapRowIdsQuery, (err, rows) => {
+                            if (err) return reject(err);
+                            for (let r in rows)
+                                newMapsByMapId[newMapIds[r]].id = rows[r].id;
+                            insertCallback();
+                        });
                     });
-                });
-            } else
-                insertCallback();
+                } else
+                    insertCallback();
+            };
+
+            if (removedMapIds.length)
+                deleteRemovedMaps(pool, removedMapIds).then(() => callback()).catch(err => reject(err));
+            else
+                callback();
         });
     });
 }
@@ -1085,17 +1193,362 @@ function updateMap(pool, map) {
     });
 }
 
+function deleteRemovedMaps(pool, removedMapIds) {
+    return new Promise((resolve, reject) => {
+        let i = 0;
+        let deleteMapsQuery = 'DELETE FROM maps WHERE id IN (';
+        for (let mapId of removedMapIds) {
+            if (i++)
+                deleteMapsQuery += ', ';
+            deleteMapsQuery += mapId;
+        }
+        deleteMapsQuery += ')';
+        pool.query(deleteMapsQuery, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+}
+
 function deleteRemovedWorldMaps(pool, removedWorldMapIds) {
     return new Promise((resolve, reject) => {
         let i = 0;
-        let deleteWorldMapsQuery = "DELETE FROM world_maps WHERE id IN (";
+        let deleteWorldMapsQuery = 'DELETE FROM world_maps WHERE id IN (';
         for (let worldMapId of removedWorldMapIds) {
             if (i++)
-                deleteWorldMapsQuery += ", ";
+                deleteWorldMapsQuery += ', ';
             deleteWorldMapsQuery += worldMapId;
         }
-        deleteWorldMapsQuery += ")";
+        deleteWorldMapsQuery += ')';
         pool.query(deleteWorldMapsQuery, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+}
+
+function updateMenuThemeData(pool, worldData) {
+    return new Promise((resolve, reject) => {
+        getMenuThemeWikiData(worldData).then(menuThemeData => {
+            updateMenuThemes(pool, menuThemeData).then(() => {
+                const menuThemesById = _.keyBy(menuThemeData, m => m.id);
+                const newMenuThemeLocationsByKey = {};
+                const existingMenuThemeLocations = [];
+                const existingUpdatedMenuThemeLocations = [];
+                const removedMenuThemeLocationIds = [];
+                
+                for (let menuTheme of menuThemeData) {
+                    for (let location of menuTheme.locations) {
+                        const worldId = location.worldId != null ? location.worldId : '';
+                        const key = `${menuTheme.menuThemeId}_${worldId}`;
+                        location.menuThemeId = menuTheme.id;
+                        newMenuThemeLocationsByKey[key] = location;
+                    }
+                }
+                pool.query('SELECT id, menuThemeId, worldId, method, methodJP, filename, removed FROM menu_theme_locations', (err, rows) => {
+                    if (err) return reject(err);
+                    for (let row of rows) {
+                        const worldId = row.worldId != null ? row.worldId : '';
+                        const key = `${menuThemesById[row.menuThemeId].menuThemeId}_${worldId}`;
+                        if (newMenuThemeLocationsByKey.hasOwnProperty(key)) {
+                            const location = newMenuThemeLocationsByKey[key];
+                            location.id = row.id;
+                            existingMenuThemeLocations.push(location);
+                            if (row.filename !== location.filename || row.method !== location.method || row.methodJP !== location.methodJP || row.removed !== location.removed)
+                                existingUpdatedMenuThemeLocations.push(location);
+                        } else
+                            removedMenuThemeLocationIds.push(row.id);
+                        delete newMenuThemeLocationsByKey[key];
+                    }
+
+                    const insertCallback = function () {
+                        if (existingUpdatedMenuThemeLocations.length) {
+                            const updateMenuThemeLocations = [];
+                            for (let location of existingUpdatedMenuThemeLocations)
+                                updateMenuThemeLocations.push(updateMenuThemeLocation(pool, location).catch(err => console.error(err)));
+                            Promise.allSettled(updateMenuThemeLocations).finally(() => resolve());
+                        } else
+                            resolve();
+                    };
+
+                    const callback = function () {
+                        const newMenuThemeLocationKeys = Object.keys(newMenuThemeLocationsByKey);
+                    
+                        if (newMenuThemeLocationKeys.length) {
+                            let i = 0;
+                            let menuThemeLocationsQuery = 'INSERT INTO menu_theme_locations (menuThemeId, worldId, method, methodJP, filename, removed) VALUES ';
+                            for (let m in newMenuThemeLocationsByKey) {
+                                const location = newMenuThemeLocationsByKey[m];
+                                if (i++)
+                                    menuThemeLocationsQuery += ", ";
+                                const worldId = location.worldId != null ? `'${location.worldId}'` : 'NULL';
+                                const method = location.method != null ? `'${location.method.replace(/'/g, "''")}'` : 'NULL';
+                                const methodJP = location.methodJP != null ? `'${location.methodJP.replace(/'/g, "''")}'` : 'NULL';
+                                const filename = location.filename != null ? `'${location.filename.replace(/'/g, "''")}'` : 'NULL';
+                                const removed = location.removed ? '1' : '0';
+                                menuThemeLocationsQuery += `(${location.menuThemeId}, ${worldId}, ${method}, ${methodJP}, ${filename}, ${removed})`;
+                            }
+                            pool.query(menuThemeLocationsQuery, (err, res) => {
+                                if (err) return reject(err);
+                                const insertedRows = res.affectedRows;
+                                const menuThemeLocationRowIdsQuery = `SELECT r.id FROM (SELECT id FROM menu_theme_locations ORDER BY id DESC LIMIT ${insertedRows}) r ORDER BY 1`;
+                                pool.query(menuThemeLocationRowIdsQuery, (err, rows) => {
+                                    if (err) return reject(err);
+                                    for (let r in rows)
+                                        newMenuThemeLocationsByKey[newMenuThemeLocationKeys[r]].id = rows[r].id;
+                                    insertCallback();
+                                });
+                            });
+                        } else
+                            insertCallback();
+                    };
+
+                    if (removedMenuThemeLocationIds.length)
+                        deleteRemovedMenuThemeLocations(pool, removedMenuThemeLocationIds).then(() => callback()).catch(err => reject(err));
+                    else
+                        callback();
+                });
+            }).catch(err => reject(err));
+        }).catch(err => reject(err));
+    });
+}
+
+function getMenuThemeWikiData(worldData) {
+    return new Promise((resolve, reject) => {
+        superagent.get('https://yume2kki.fandom.com/wiki/Menu_Themes', function (err, res) {
+            if (err) return reject(err);
+            const worldDataByName = _.keyBy(worldData, w => w.title);
+            const menuThemeTablesHtml = res.text.slice(res.text.indexOf('<table '), res.text.lastIndexOf('</table>'));
+            const menuThemeDataRows = menuThemeTablesHtml.split('<tr>').slice(2);
+            const rawMenuThemeData = [];
+            let removedIndex = 999;
+            for (let m = 0; m < menuThemeDataRows.length; m++) {
+                const ret = menuThemeDataRows[m].replace(/\n/g, '').split('</td><td>').slice(0, 4);
+                if (ret[3].indexOf('</table>') > -1 && m < menuThemeDataRows.length - 1) {
+                    removedIndex = m;
+                    m++;
+                }
+                ret[3] = ret[3].slice(0, ret[3].indexOf('</td>'));
+                rawMenuThemeData.push(ret);
+            }
+            const menuThemeData = [];
+            const menuThemeLocationKeys = [];
+            for (let m = 0; m < rawMenuThemeData.length; m++) {
+                const data = rawMenuThemeData[m];
+                const location = {
+                    worldId: null,
+                    method: data[2],
+                    methodJP: null,
+                    filename: null,
+                    removed: m > removedIndex
+                };
+                const worldNameStartIndex = data[1].indexOf('<a href="/wiki/') + 15;
+                if (worldNameStartIndex > -1) {
+                    const worldNameEndIndex = data[1].indexOf('"', worldNameStartIndex);
+                    const worldName = data[1].slice(worldNameStartIndex, worldNameEndIndex).replace(/%26/g, "&").replace(/%27/g, "'").replace(/\_/g, " ").replace(/#.*/, "");
+                    if (worldDataByName[worldName])
+                        location.worldId = worldDataByName[worldName].id;
+                }
+                const locationImageIndex = data[3].indexOf('<img ');
+                if (locationImageIndex > -1) {
+                    const locationImageSrcIndex = data[3].indexOf(' data-src="', locationImageIndex) > -1
+                        ? data[3].indexOf(' data-src="', locationImageIndex) + 11
+                        : data[3].indexOf(' src="', locationImageIndex) + 6;
+                    const locationImageUrl = data[3].slice(locationImageSrcIndex, data[3].indexOf('"', locationImageSrcIndex));
+                    location.filename = locationImageUrl.slice(0, locationImageUrl.indexOf("/", locationImageUrl.lastIndexOf(".")));
+                }
+
+                const keyWorldId = location.worldId != null ? location.worldId : '';
+
+                let i = 0;
+                let themeMatch;
+
+                while ((themeMatch = data[0].slice(i).match(/Theme ((?:\-)?\d+)/)) != null) {
+                    i += (themeMatch.index + themeMatch[0].length);
+                    const menuThemeId = parseInt(themeMatch[1]);
+                    const key = `${menuThemeId}_${keyWorldId}`;
+                    if (menuThemeLocationKeys.indexOf(key) > -1)
+                        continue;
+                    let menuTheme;
+                    const existingMenuTheme = menuThemeData.filter(m => m.menuThemeId === menuThemeId);
+                    if (existingMenuTheme.length)
+                        menuTheme = existingMenuTheme[0];
+                    else {
+                        const imageIndex = data[0].slice(0, i).lastIndexOf('<img ');
+                        if (imageIndex === -1)
+                            continue;
+                        const imageSrcIndex = data[0].indexOf(' src="', imageIndex) + 6;
+                        const imageUrl = data[0].slice(imageSrcIndex, data[0].indexOf('"', imageSrcIndex));
+                        menuTheme = {
+                            menuThemeId: menuThemeId,
+                            filename: imageUrl.slice(0, imageUrl.indexOf("/", imageUrl.lastIndexOf("."))),
+                            locations: []
+                        };
+                        menuThemeData.push(menuTheme);
+                    }
+                    menuTheme.locations.push(_.cloneDeep(location));
+                    menuThemeLocationKeys.push(key);
+                }
+            }
+            addMenuThemeDataJPMethods(menuThemeData).then(() => resolve(menuThemeData)).catch(err => reject(err));
+        });
+    });
+}
+
+function addMenuThemeDataJPMethods(menuThemeData, removed) {
+    return new Promise((resolve, reject) => {
+        let url = 'https://wikiwiki.jp/yume2kki-t/%E5%8F%8E%E9%9B%86%E8%A6%81%E7%B4%A0/%E3%83%A1%E3%83%8B%E3%83%A5%E3%83%BC%E3%82%BF%E3%82%A4%E3%83%97%E3%81%AE%E8%A7%A3%E6%94%BE%E6%9D%A1%E4%BB%B6';
+        if (removed)
+            url = 'https://web.archive.org/web/20200508042816/' + url;
+        superagent.get(url, function (err, res) {
+            if (err) return reject(err);
+            const menuThemesByMenuThemeId = _.keyBy(menuThemeData, m => m.menuThemeId);
+            const menuThemeTablesHtml = res.text.slice(res.text.indexOf('<table', res.text.indexOf('<div class="container-wrapper"')), res.text.lastIndexOf('</table>'));
+            const menuThemeDataRows = menuThemeTablesHtml.split('<tr>').slice(2);
+            let endOfTable = false;
+            
+            for (let m = 0; m < menuThemeDataRows.length; m++) {
+                const data = menuThemeDataRows[m].split('</td><td').slice(0, 2);
+                if (data[1].indexOf('</table>') > -1) {
+                    m++;
+                    endOfTable = true;
+                }
+                let menuThemeId = data[0].slice(data[0].lastIndexOf('>') + 1);
+                if (menuThemeId === '--')
+                    menuThemeId = '-1';
+                if (menuThemesByMenuThemeId.hasOwnProperty(menuThemeId)) {
+                    const locations = menuThemesByMenuThemeId[menuThemeId].locations.filter(l => l.removed === !!removed);
+                    if (locations.length) {
+                        const methodJP = data[1].slice(data[1].indexOf('>') + 1, data[1].indexOf('</td>'));
+                        locations[0].methodJP = methodJP;
+                    }
+                }
+                if (menuThemeId === '-1' || (removed && endOfTable))
+                    break;
+            }
+
+            if (removed)
+                resolve();
+            else
+                addMenuThemeDataJPMethods(menuThemeData, true).then(() => resolve()).catch(err => reject(err));
+        });
+    });
+}
+
+function updateMenuThemes(pool, menuThemeData) {
+    return new Promise((resolve, reject) => {
+        pool.query('SELECT id, menuThemeId, filename FROM menu_themes', (err, rows) => {
+            if (err) return reject(err);
+            const menuThemeDataByMenuThemeId = _.keyBy(menuThemeData, m => m.menuThemeId);
+            const newMenuThemesByMenuThemeId = _.keyBy(menuThemeData, m => m.menuThemeId);
+            const updatedMenuThemes = [];
+            const removedMenuThemeIds = [];
+            for (let row of rows) {
+                const menuThemeId = row.menuThemeId;
+                if (menuThemeDataByMenuThemeId.hasOwnProperty(menuThemeId)) {
+                    const menuTheme = menuThemeDataByMenuThemeId[menuThemeId];
+                    menuTheme.id = row.id;
+                    if (row.filename !== menuTheme.filename)
+                        updatedMenuThemes.push(menuTheme);
+                } else
+                    removedMenuThemeIds.push(row.id);
+                delete newMenuThemesByMenuThemeId[menuThemeId];
+            }
+
+            const insertCallback = function () {
+                if (updatedMenuThemes.length) {
+                    const updateMenuThemes = [];
+                    for (let menuTheme of updatedMenuThemes)
+                        updateMenuThemes.push(updateMenuTheme(pool, menuTheme).catch(err => console.error(err)));
+                    Promise.allSettled(updateMenuThemes).finally(() => resolve());
+                } else
+                    resolve();
+            };
+
+            const callback = function () {
+                const newMenuThemeIds = Object.keys(newMenuThemesByMenuThemeId);
+                if (newMenuThemeIds.length) {
+                    let i = 0;
+                    let menuThemesQuery = 'INSERT INTO menu_themes (menuThemeId, filename) VALUES ';
+                    for (let m in newMenuThemesByMenuThemeId) {
+                        const newMenuTheme = newMenuThemesByMenuThemeId[m];
+                        if (i++)
+                            menuThemesQuery += ", ";
+                        menuThemesQuery += `(${newMenuTheme.menuThemeId}, '${newMenuTheme.filename.replace(/'/g, "''")}')`;
+                    }
+                    pool.query(menuThemesQuery, (err, res) => {
+                        if (err) return reject(err);
+                        const insertedRows = res.affectedRows;
+                        const menuThemeRowIdsQuery = `SELECT r.id FROM (SELECT id FROM menu_themes ORDER BY id DESC LIMIT ${insertedRows}) r ORDER BY 1`;
+                        pool.query(menuThemeRowIdsQuery, (err, rows) => {
+                            if (err) return reject(err);
+                            for (let r in rows)
+                                newMenuThemesByMenuThemeId[newMenuThemeIds[r]].id = rows[r].id;
+                            insertCallback();
+                        });
+                    });
+                } else
+                    insertCallback();
+            };
+
+            if (removedMenuThemeIds.length)
+                deleteRemovedMenuThemes(pool, removedMenuThemeIds).then(() => callback()).catch(err => reject(err));
+            else
+                callback();
+        });
+    });
+}
+
+function updateMenuTheme(pool, menuTheme) {
+    return new Promise((resolve, reject) => {
+        pool.query(`UPDATE menu_themes SET filename='${menuTheme.filename.replace(/'/g, "''")}' WHERE id=${menuTheme.id}`, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+}
+
+function updateMenuThemeLocation(pool, location) {
+    return new Promise((resolve, reject) => {
+        const method = location.method ? `'${location.method.replace(/'/g, "''")}'` : 'NULL';
+        const methodJP = location.methodJP ? `'${location.methodJP.replace(/'/g, "''")}'` : 'NULL';
+        const filename = location.filename ? `'${location.filename.replace(/'/g, "''")}'` : 'NULL';
+        const removed = location.removed ? '1' : '0';
+        pool.query(`UPDATE menu_theme_locations SET method=${method}, methodJP=${methodJP}, filename=${filename}, removed=${removed} WHERE id=${location.id}`, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+}
+
+function deleteRemovedMenuThemes(pool, removedMenuThemeIds) {
+    return new Promise((resolve, reject) => {
+        let i = 0;
+        let deleteMenuThemesQuery = 'DELETE FROM menu_themes WHERE id IN (';
+        for (let menuThemeId of removedMenuThemeIds) {
+            if (i++)
+                deleteMenuThemesQuery += ', ';
+            deleteMenuThemesQuery += menuThemeId;
+        }
+        deleteMenuThemesQuery += ')';
+        pool.query(deleteMenuThemesQuery, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+}
+
+function deleteRemovedMenuThemeLocations(pool, removedMenuThemeLocationIds) {
+    return new Promise((resolve, reject) => {
+        let i = 0;
+        let deleteMenuThemeLocationsQuery = 'DELETE FROM menu_theme_locations WHERE id IN (';
+        for (let menuThemeLocationId of removedMenuThemeLocationIds) {
+            if (i++)
+                deleteMenuThemeLocationsQuery += ', ';
+            deleteMenuThemeLocationsQuery += menuThemeLocationId;
+        }
+        deleteMenuThemeLocationsQuery += ')';
+        pool.query(deleteMenuThemeLocationsQuery, (err, _) => {
             if (err) return reject(err);
             resolve();
         });

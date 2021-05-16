@@ -29,6 +29,11 @@
             "name": "ヘルプ"
         }
     },
+    "collectableControls": {
+        "menuThemes": {
+            "name": "メンユー タイプ"
+        }
+    },
     "settings": {
         "lang": {
             "name": "言語",
@@ -38,7 +43,7 @@
             }
         },
         "uiTheme": {
-            "name": "メニュータイプ",
+            "name": "アプリの メニュー タイプ",
             "values": {
                 "Default_Custom": "デフォルト（カスタム）",
                 "Default": "デフォルト",
@@ -86,7 +91,7 @@
             }
         },
         "fontStyle": {
-            "name": "フォントスタイル",
+            "name": "フォント スタイル",
             "values": {
                 "style1": "スタイル１",
                 "style2": "スタイル２",
@@ -98,14 +103,14 @@
             }
         },
         "renderMode": {
-            "name": "レンダリングモード",
+            "name": "レンダリング モード",
             "values": {
                 "2d": "２Ｄ",
                 "3d": "３Ｄ"
             }
         },
         "displayMode": {
-            "name": "ディスプレイモード",
+            "name": "ディスプレイ モード",
             "values": {
                 "vertical": "垂直",
                 "horizontal": "水平",
@@ -115,30 +120,30 @@
             }
         },
         "connMode": {
-            "name": "接続モード",
+            "name": "接続 モード",
             "values": {
                 "oneWay": "一方通行",
                 "twoWay": "双方向"
             }
         },
         "labelMode": {
-            "name": "ラベル表示",
+            "name": "ラベル 表示",
             "values": {
                 "never": "なし",
-                "hover": "マウスオーバー ",
+                "hover": "マウス オーバー",
                 "select": "セレクト",
                 "always": "いつも"
             }
         },
         "removedContentMode": {
-            "name": "旧版データ",
+            "name": "旧版 データ",
             "values": {
-                "hide": "表示しない",
+                "hide": "表示 しない",
                 "show": "表示"
             }
         },
         "pathMode": {
-            "name": "ルート表示モード",
+            "name": "ルート 表示 モード",
             "values": {
                 "simple": "単純",
                 "normal": "普通",
@@ -146,10 +151,10 @@
             }
         },
         "sizeDiff": {
-            "name": "サイズ差"
+            "name": "サイズ 差"
         },
         "stackSize": {
-            "name": "スタック限界"
+            "name": "スタック 限界"
         }
     },
     "contextMenu": {
@@ -162,6 +167,9 @@
     "nodeLabel": {
         "depth": "深度：",
         "author": "ツクラー："
+    },
+    "menuThemesModal": {
+        "previousMethods": "前の方法"
     },
     "helpModal": {
         "reportBug": "バグを報告"

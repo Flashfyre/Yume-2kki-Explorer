@@ -84,9 +84,7 @@ $.fn.extend({
 export let worldData;
 
 function initWorldData(data) {
-    worldData = config.removedContentMode === 0
-        ? data.filter(w => !w.removed)
-        : data;
+    worldData = data;
 
     removedCount = 0;
 
@@ -110,6 +108,63 @@ function initWorldData(data) {
 
     minSize = _.min(worldSizes);
     maxSize = _.max(worldSizes);
+}
+
+let menuThemeData;
+
+function initMenuThemeData(data) {
+    menuThemeData = data;
+
+    const $menuThemesContainerItems = $(".js--menu-themes-container__items");
+    const $menuThemesContainerBorders = $(".js--menu-themes-container__borders");
+    const $removedMenuThemesContainerItems = $(".js--removed-menu-themes-container__items");
+    const $removedMenuThemesContainerBorders = $(".js--removed-menu-themes-container__borders");
+    const menuThemeLocationsById = {};
+
+    $menuThemesContainerItems.empty();
+    $menuThemesContainerBorders.empty();
+    $removedMenuThemesContainerItems.empty();
+    $removedMenuThemesContainerBorders.empty();
+
+    for (let m of menuThemeData) {
+        for (let l of m.locations) {
+            const removedCollectableClass = l.removed ? ' removed-collectable' : '';
+            const worldIdAttribute = l.worldId ? ` data-world-id="${l.worldId}"` : '';
+            const menuThemeImageHtml = `<div href="javascript:void(0);" class="menu-theme collectable${removedCollectableClass} noselect"><img src="${m.filename}" referrerpolicy="no-referrer" /></div>`;
+            const menuThemeLinkHtml = `<a href="javascript:void(0);" class="js--menu-theme menu-theme collectable--border noselect" data-location-id="${l.id}"${worldIdAttribute}></a>`;
+            l.method = l.method.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
+            if (l.methodJP)
+                l.methodJP = l.methodJP.replace(/<span .*?>(.*?)<\/ *span>/ig, '$1').replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
+            $(menuThemeImageHtml).appendTo(l.removed ? $removedMenuThemesContainerItems : $menuThemesContainerItems);
+            $(menuThemeLinkHtml).appendTo(l.removed ? $removedMenuThemesContainerBorders : $menuThemesContainerBorders);
+            menuThemeLocationsById[l.id] = l;
+        }
+    }
+
+    var $tooltip = $('<div class="menu-theme-tooltip scene-tooltip display--none"></div>').prependTo('.content');
+
+    $(".js--menu-theme[data-world-id]").on("click", function () {
+        if (trySelectNode($(this).data("worldId"), true))
+            $.modal.close();
+    })
+    
+    $(".js--menu-theme").on("mousemove", function (e) {
+        $tooltip.css({
+            top: e.pageY + 10 + 'px',
+            left: (e.pageX - ($tooltip.innerWidth() / 2)) + 'px'
+        });
+    }).on("mouseenter", function () {
+        const location = menuThemeLocationsById[$(this).data("locationId")];
+        const world = location.worldId ? worldData[location.worldId] : null;
+        const worldName = world ?
+            config.lang === "en" || !world.titleJP ? world.title : world.titleJP
+            : null;
+        const worldLabel = worldName ? `<span class="menu-theme-tooltip__world">${worldName}</span><br />` : '';
+        const method = config.lang === "en" || !location.methodJP ? location.method : location.methodJP;
+        $tooltip.html(`${worldLabel}${method}`).removeClass("display--none");
+    }).on("mouseleave", function () {
+        $tooltip.addClass("display--none");
+    });
 }
 
 function loadOrInitConfig() {
@@ -151,6 +206,7 @@ function loadOrInitConfig() {
                             break;
                         case "removedContentMode":
                             $(".js--removed-content-mode").val(value);
+                            $(".js--removed-content").toggleClass("display--none", !value);
                             break;
                         case "pathMode":
                             $(".js--path-mode").val(value);
@@ -173,24 +229,65 @@ function loadOrInitConfig() {
 function updateControlsContainer(updateTabMargin) {
     const controlsHeight = $(".controls-top").outerHeight();
     const settingsHeight = $(".controls-bottom").outerHeight();
-    $(".controls--container").css({ "height": `${settingsHeight}px`, "margin-top": `-${(settingsHeight + 20)}px` });
-    $(".controls--container--tab").css({ "height": `${settingsHeight}px`, "left": `calc(50% - ${(($(".controls--container--tab").outerWidth() - 16) / 2)}px)` });
-    if (updateTabMargin && $(".controls-bottom").hasClass("visible"))
-        $(".controls--container--tab, .footer").css("margin-top", `-${(settingsHeight + 8)}px`);
+    const collectableControlsHeight = $(".controls-side").outerHeight();
+    const collectableControlsWidth = $(".controls-side").outerWidth();
+    $(".controls-top--container, .controls-bottom--container").css("margin-top", `-${(settingsHeight + 20)}px`);
+    $(".controls-top--container, controls-bottom--container, .controls-bottom--container--tab, .footer").each(function () {
+        $(this).css("height", `${settingsHeight - ($(this).outerHeight() - parseFloat(window.getComputedStyle(this, null).getPropertyValue("height")))}px`);
+    });
+    $(".controls-bottom--container--tab").css("left", `calc(50% - ${($(".controls-bottom--container--tab").outerWidth() / 2)}px`);
+    $(".controls-side--container").css({
+        "top": `${(controlsHeight + 16)}px`,
+        "margin-left": `-${(collectableControlsWidth + 20)}px`
+    });
+    $(".controls-side--container--tab").css({
+        "width": `${collectableControlsWidth}px`,
+        "top": `${(controlsHeight + 16)}px`,
+        "margin-top": `${16 + (((collectableControlsHeight + 16) - $(".controls-side--container--tab").outerHeight()) / 2)}px`
+    });
+    if (updateTabMargin) {
+        if ($(".controls-bottom").hasClass("visible"))
+            $(".controls-bottom--container--tab, .footer").css("margin-top", `-${(settingsHeight + 8)}px`);
+        if ($(".controls-side").hasClass("visible"))
+            $(".controls-side--container--tab").css("margin-left", `-${(collectableControlsWidth + 8)}px`);
+        $(".modal").css("transition", "");
+    }
+
+    let modalMaxWidth;
+    let modalLeftMargin;
+    let modalRightMargin;
+    if ($(".controls-side").hasClass("visible")) {
+        const fullModalWidth = window.innerWidth * 0.9;
+        const collectableControlsWidth = $(".controls-side").outerWidth() + parseFloat($(".controls-side").css("margin-right")) + $(".controls-side--container--tab__button").outerWidth();
+        modalMaxWidth = window.innerWidth - (collectableControlsWidth + 8);
+        modalLeftMargin =  collectableControlsWidth >= window.innerWidth - fullModalWidth
+            ? (window.innerWidth - (fullModalWidth + collectableControlsWidth + 8)) * -1
+            : 0;
+            modalLeftMargin = 0;
+        modalRightMargin = collectableControlsWidth - 12;
+    } else {
+        modalMaxWidth = window.innerWidth;
+        modalLeftMargin = 0;
+        modalRightMargin = 0;
+    }
+
     $(".modal").css({
         "margin-top": `${(controlsHeight + 16)}px`,
-        "height": `calc(100% - ${(controlsHeight + 16 + ($(".controls-bottom").hasClass("visible") ? settingsHeight + 8 : 0))}px)`
+        "height": `calc(100% - ${(controlsHeight + 16 + ($(".controls-bottom").hasClass("visible") ? settingsHeight + 8 : 0))}px)`,
+        "max-width": `${modalMaxWidth}px`,
+        "margin-left": `${modalLeftMargin}px`,
+        "margin-right": `${modalRightMargin}px`
     });
 }
 
-export function loadWorldData(update, success, fail) {
+export function loadData(update, success, fail) {
     let queryString = update ? "?update=" + update : "";
     if (config.removedContentMode === 1)
         queryString += (queryString.length ? "&" : "?") + "includeRemovedContent=true";
     const urlSearchParams = new URLSearchParams(window.location.search);
     if (urlSearchParams.has("adminKey"))
         queryString += (queryString.length ? "&" : "?") + "adminKey=" + urlSearchParams.get("adminKey");
-    $.get("/worlds" + queryString, function (data) {
+    $.get("/data" + queryString, function (data) {
         if (document.fonts.check("12px MS Gothic")) {
             fontsLoaded = true;
             success(data);
@@ -206,10 +303,11 @@ export function loadWorldData(update, success, fail) {
     }).fail(fail);
 }
 
-function reloadWorldData(update) {
+function reloadData(update) {
     const loadCallback = displayLoadingAnim($("#graphContainer"));
-    loadWorldData(update, function (data) {
+    loadData(update, function (data) {
         initWorldData(data.worldData);
+        initMenuThemeData(data.menuThemeData);
         lastUpdate = new Date(data.lastUpdate);
         lastFullUpdate = new Date(data.lastFullUpdate);
 
@@ -796,15 +894,8 @@ function initGraph(renderMode, displayMode, paths) {
         .onNodeClick(node => {
             if (isCtrl || isShift)
                 openWorldWikiPage(node.id, isShift);
-            else {
-                const world = worldData[node.id];
-                if (node && (selectedWorldId == null || selectedWorldId !== node.id)) {
-                    $(".js--search-world").addClass("selected").val(config.lang === 'en' || !world.titleJP ? world.title : world.titleJP);
-                    selectedWorldId = node.id;
-                } else
-                    focusNode(node);
-                highlightWorldSelection();
-            }
+            else
+                trySelectNode(node);
         })
         .onNodeRightClick((node, ev) => {
             contextWorldId = node.id;
@@ -840,7 +931,8 @@ function initGraph(renderMode, displayMode, paths) {
         })
         .graphData(gData);
 
-    document.querySelector(".controls--container--tab").style.display = '';
+    document.querySelector(".controls-bottom--container--tab").style.display = '';
+    document.querySelector(".controls-side--container--tab").style.display = '';
 
     document.removeEventListener('mousemove', onDocumentMouseMove, false);
     document.querySelector('#graph canvas').removeEventListener('wheel', clearTweens, false)
@@ -2302,7 +2394,7 @@ function getMissingMapIds() {
 
 function getWorldLinkForAdmin(world) {
     const removedPrefix = world.removed ? '[REMOVED] ' : '';
-    return `${removedPrefix}<a class="world-link" href="javascript:void(0);" data-world-id="${world.id}">${world.title}</a>`
+    return `${removedPrefix}<a class="world-link no-border" href="javascript:void(0);" data-world-id="${world.id}">${world.title}</a>`
 }
 
 function initLocalization(isInitial) {
@@ -2312,10 +2404,15 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "2.10.1");
+            data.footer.about = data.footer.about.replace("{VERSION}", "2.11.0");
             const formatDate = (date) => date.toLocaleString(isEn ? "en-US" : "ja-JP", { timeZoneName: "short" });
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate));
+            if (config.lang === "ja") {
+                convertJPControlLabels(data.controls);
+                convertJPControlLabels(data.collectableControls);
+                convertJPControlLabels(data.settings);
+            }
             localizedConns = data.conn;
             initContextMenu(data.contextMenu);
             localizedNodeLabel = getLocalizedNodeLabel(data.nodeLabel);
@@ -2405,6 +2502,25 @@ function initLocalization(isInitial) {
     });
 }
 
+function convertJPControlLabels(data) {
+    if (data) {
+        Object.keys(data).forEach(function (key) {
+            const value = data[key];
+            if (value) {
+                switch (typeof value) {
+                    case "object":
+                        convertJPControlLabels(value);
+                        break;
+                    case "string":
+                        if (value.indexOf(" ") > -1)
+                            data[key] = value.split(/ +/g).map(v => `<span class="jp-word-break">${v}</span>`).join("");
+                        break;
+                }
+            }
+        });
+    }
+}
+
 function initWorldSearch() {
     const $search = $(".js--search-world");
     $search.devbridgeAutocomplete("destroy");
@@ -2428,9 +2544,8 @@ function initWorldSearch() {
         },
         onSelect: function (selectedWorld) {
             $search.addClass("selected");
-            selectedWorldId = worldsByName[selectedWorld.value].id;
-            focusNode(graph.graphData().nodes.filter(n => n.id === selectedWorldId)[0]);
-            highlightWorldSelection();
+            const worldId = worldsByName[selectedWorld.value].id;
+            trySelectNode(graph.graphData().nodes.filter(n => n.id === worldId)[0], false, true);
         },
         onHide: function () {
            if (selectedWorldId != null) {
@@ -2507,6 +2622,28 @@ function openWorldWikiPage(worldId, newWindow) {
         ? 'https://yume2kki.fandom.com/wiki/' + world.title
         : ('https://wikiwiki.jp/yume2kki-t/' + (world.titleJP.indexOf("：") > -1 ? world.titleJP.slice(0, world.titleJP.indexOf("：")) : world.titleJP)),
         "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
+}
+
+function trySelectNode(node, forceFocus, ignoreSearch) {
+    if (node == null)
+        return false;
+    if (!node.hasOwnProperty("id")) {
+        const nodes = graph.graphData().nodes.filter(n => n.id === node);
+        if (!nodes.length)
+            return false;
+        node = nodes[0];
+    }
+    const world = worldData[node.id];
+    selectedWorldId = world.id;
+    if ((node && (selectedWorldId == null || selectedWorldId !== node.id))) {
+        if (!ignoreSearch)
+            $(".js--search-world").addClass("selected").val(config.lang === 'en' || !world.titleJP ? world.title : world.titleJP);
+        if (forceFocus)
+            focusNode(node);
+    } else
+        focusNode(node);
+    highlightWorldSelection();
+    return true;
 }
 
 function focusNode(node) {
@@ -2674,16 +2811,35 @@ function openHelpModal() {
 }
 
 function initControls() {
-    $(".controls--container--tab__button").on("click", function() {
+    $(".controls-bottom--container--tab__button").on("click", function() {
         if ($(".controls-bottom").hasClass("visible")) {
             $(".controls-bottom").removeClass("visible").animateCss("slideOutDown", 250, function () {
                 if (!$(this).hasClass("visible"))
                     $(this).css("opacity", 0);
             });
-            $(".controls--container--tab, .footer").css("margin-top", "0px").animateCss("slideInDown", 300);
+            $(".controls-bottom--container--tab, .footer").css("margin-top", "0px").animateCss("slideInDown", 300);
+            $(".modal").css("transition", "height 0.3s ease-out, margin-top 0.3s ease-out");
         } else {
+            const settingsHeight = $(".controls-bottom").outerHeight() + 8;
             $(".controls-bottom").addClass("visible").css("opacity", 1).animateCss("slideInUp", 250);
-            $(".controls--container--tab, .footer").css("margin-top", "-" + ($(".controls-bottom").outerHeight() + 8) + "px").animateCss("slideInUp", 250);
+            $(".controls-bottom--container--tab, .footer").css("margin-top", "-" + settingsHeight + "px").animateCss("slideInUp", 250);
+            $(".modal").css("transition", "height 0.25s ease-out, margin-top 0.25s ease-out");
+        }
+        updateControlsContainer();
+    });
+
+    $(".controls-side--container--tab__button").on("click", function() {
+        if ($(".controls-side").hasClass("visible")) {
+            $(".controls-side").removeClass("visible").animateCss("slideOutRight", 250, function () {
+                if (!$(this).hasClass("visible"))
+                    $(this).css("opacity", 0);
+            });
+            $(".controls-side--container--tab").css("margin-left", "0px").animateCss("slideInLeft", 300);
+            $(".modal").css("transition", "max-width 0.3s ease-out, margin-left 0.3s ease-out, margin-right 0.3s ease-out");
+        } else {
+            $(".controls-side").addClass("visible").css("opacity", 1).animateCss("slideInRight", 250);
+            $(".controls-side--container--tab").css("margin-left", "-" + ($(".controls-side").outerWidth() + 8) + "px").animateCss("slideInRight", 250);
+            $(".modal").css("transition", "max-width 0.25s ease-out, margin-left 0.25s ease-out, margin-right 0.25s ease-out");
         }
         updateControlsContainer();
     });
@@ -2694,18 +2850,35 @@ function initControls() {
         isShift = false;
         isCtrl = false;
     });
+
+    const onModalShown = function () {
+        const $modalContent = $(this).find(".modal__content");
+        $modalContent.css("padding-right", $modalContent[0].scrollHeight > $modalContent[0].clientHeight ? "24px" : null);
+    };
+
+    $(document).on($.modal.OPEN, ".modal", onModalShown);
     
     $(".js--lang").on("change", function() {
         config.lang = $(this).val();
         updateConfig(config);
+
+        const loadCallback = displayLoadingAnim($("#graphContainer"));
+        const callback = function () {
+            if (worldData) {
+                reloadGraph();
+                loadCallback();
+            }
+        };
+
+        if ($(".modal:visible").length)
+            $.modal.close();
+
         initLocalization();
-        if (isWebGL2) {
-            initNodeObjectMaterial().then(() => {
-                if (worldData)
-                    reloadGraph();
-            }).catch(err => console.error(err));
-        } else if (worldData)
-            reloadGraph();
+
+        if (isWebGL2)
+            initNodeObjectMaterial().then(() => callback()).catch(err => console.error(err));
+        else if (worldData)
+            callback();
     });
 
     $(".js--ui-theme").on("change", function() {
@@ -2777,11 +2950,12 @@ function initControls() {
 
     $(".js--removed-content-mode").on("change", function() {
         config.removedContentMode = parseInt($(this).val());
+        $(".js--removed-content").toggleClass("display--none", !config.removedContentMode);
         updateConfig(config);
         if (worldData) {
             if ($(".modal:visible").length)
                 $.modal.close();
-            reloadWorldData(false);
+            reloadData(false);
         }
     });
 
@@ -2810,6 +2984,19 @@ function initControls() {
         selectedAuthor = $(this).val() !== "null" ? $(this).val() || "" : null;
         if (worldData)
             highlightWorldSelection();
+    });
+
+    $(".js--menu-themes").on("click", function() {
+        if (menuThemeData && menuThemeData.length) {
+            if ($(".js--menu-themes-modal:visible").length)
+                $.modal.close();
+            else
+                $(".js--menu-themes-modal").modal({
+                    fadeDuration: 100,
+                    closeClass: 'noselect',
+                    closeText: '✖'
+                });
+        }
     });
 
     $(".js--reset").on("click", function() {
@@ -2891,7 +3078,7 @@ function initAdminControls() {
         if ($(".modal:visible").length)
             $.modal.close();
         const isReset = $(this).hasClass("js--reset-data");
-        reloadWorldData(isReset ? "reset" : true);
+        reloadData(isReset ? "reset" : true);
     });
 
     $(document).on("click", "a.world-link", function () {
@@ -2954,8 +3141,9 @@ $(function () {
 
     initLocalization(true);
 
-    loadWorldData(false, function (data) {
+    loadData(false, function (data) {
         initWorldData(data.worldData);
+        initMenuThemeData(data.menuThemeData);
         lastUpdate = new Date(data.lastUpdate);
         lastFullUpdate = new Date(data.lastFullUpdate);
 
