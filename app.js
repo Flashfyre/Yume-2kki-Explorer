@@ -206,7 +206,7 @@ app.get('/data', function(req, res) {
                                 const row = rows.length ? rows[0] : null;
                                 const lastUpdate = row ? row.lastUpdate : null;
                                 const lastFullUpdate = row ? row.lastFullUpdate : null;
-                                const isAdmin = req.query.hasOwnProperty('adminKey') && req.query.adminKey === appConfig.adminKey;
+                                const isAdmin = req.query.hasOwnProperty('adminKey') && req.query.adminKey === appConfig.ADMIN_KEY;
 
                                 if (Math.random() * 255 < 1)
                                     updateWorldDataForChance(worldData);
@@ -2178,7 +2178,7 @@ function decodeHtml(html) {
 }
 
 app.post('/updateLocationVersions', function(req, res) {
-    if (req.body.hasOwnProperty('adminKey') && req.body.adminKey === appConfig.adminKey && req.body.hasOwnProperty('version') && req.body.hasOwnProperty('entries')) {
+    if (req.body.hasOwnProperty('adminKey') && req.body.adminKey === appConfig.ADMIN_KEY && req.body.hasOwnProperty('version') && req.body.hasOwnProperty('entries')) {
         const entries = req.body.entries;
         const getPageContent = [];
         const updateEntries = [];
