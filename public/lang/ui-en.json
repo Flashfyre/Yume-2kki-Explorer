@@ -12,8 +12,13 @@
         "author": {
             "name": "Author:",
             "values": {
-                "null": "All",
-                "": "N/A"
+                "null": "All"
+            }
+        },
+        "version": {
+            "name": "Version:",
+            "values": {
+                "0": "All"
             }
         },
         "origin": {
@@ -30,6 +35,12 @@
         }
     },
     "collectableControls": {
+        "authors": {
+            "name": "Authors"
+        },
+        "versions": {
+            "name": "Versions"
+        },
         "menuThemes": {
             "name": "Menu Themes"
         }
@@ -166,7 +177,95 @@
     },
     "nodeLabel": {
         "depth": "Depth: ",
-        "author": "Author: "
+        "author": "Author: ",
+        "versionAdded": "Added: ",
+        "versionLastUpdated": "Last Updated: ",
+        "versionRemoved": "Removed: ",
+        "versionUpdateType": {
+            "CHANGE": "",
+            "MINOR_CHANGE": "Minor change",
+            "MAJOR_CHANGE": "Major change",
+            "BUG_FIX": "Bug fix",
+            "ADD_CONTENT": "Content added",
+            "REMOVE_CONTENT": "Content removed",
+            "LAYOUT_CHANGE": "Layout changed",
+            "EXPANSION": "Expansion",
+            "REDUCTION": "Reduction",
+            "ADD_SUB_AREA": "Sub-area added",
+            "REMOVE_SUB_AREA": "Sub-area removed",
+            "CONNECTION_CHANGE": "Connection(s) changed",
+            "ADD_CONNECTION": "Connection(s) added",
+            "REMOVE_CONNECTION": "Connection(s) removed",
+            "BGM_CHANGE": "BGM changed",
+            "EFFECT_CHANGE": "Effect-related changes",
+            "REWORK": "Reworked"
+        }
+    },
+    "authorLabel": {
+        "versionSeparator": " - ",
+        "worldCount": "Worlds: "
+    },
+    "versionLabel": {
+        "authors": "Contributing Author(s): ",
+        "releaseDate": "Release Date: ",
+        "worldCount": "Worlds Added: ",
+        "updatedWorldCount": "Worlds Updated: ",
+        "removedWorldCount": "Worlds Removed: "
+    },
+    "nodeIcon": {
+        "new": "NEW"
+    },
+    "versionDetails": {
+        "ADD": "Added {WORLD}",
+        "UPDATE": {
+            "CHANGE": "Updated {WORLD}",
+            "MINOR_CHANGE": "Made minor changes to {WORLD}",
+            "MAJOR_CHANGE": "Made major changes to {WORLD}",
+            "BUG_FIX": "Fixed bugs in {WORLD}",
+            "ADD_CONTENT": "Added content to {WORLD}",
+            "REMOVE_CONTENT": "Removed content from {WORLD}",
+            "LAYOUT_CHANGE": "Made layout changes to {WORLD}",
+            "EXPANSION": "Expanded {WORLD}",
+            "REDUCTION": "Reduced the size of {WORLD}",
+            "ADD_SUB_AREA": "Added a sub-area to {WORLD}",
+            "REMOVE_SUB_AREA": "Removed a sub-area from {WORLD}",
+            "CONNECTION_CHANGE": "Made connection changes to {WORLD}",
+            "ADD_CONNECTION": "Added a connection to {WORLD}",
+            "REMOVE_CONNECTION": "Removed a connection from {WORLD}",
+            "BGM_CHANGE": "Changed BGM in {WORLD}",
+            "EFFECT_CHANGE": "Made effect-related changes to {WORLD}",
+            "REWORK": "Reworked {WORLD}"
+        },
+        "REMOVE": "Removed {WORLD}"
+    },
+    "versionEntriesModal": {
+        "filters": "Filters",
+        "versionDisplayToggle": {
+            "name": "Show {ENTRY_TYPE}",
+            "entryType": {
+                "ADD": "World Additions",
+                "UPDATE": "World Updates",
+                "REMOVE": "World Removals"
+            },
+            "entryUpdateType": {
+                "MINOR_CHANGE": "Minor Changes",
+                "MAJOR_CHANGE": "Major Changes",
+                "BUG_FIX": "Bug Fixes",
+                "ADD_CONTENT": "Content Additions",
+                "REMOVE_CONTENT": "Content Removals",
+                "LAYOUT_CHANGE": "Layout Changes",
+                "EXPANSION": "World Expansions",
+                "REDUCTION": "World Size Reductions",
+                "ADD_SUB_AREA": "Sub-area Additions",
+                "REMOVE_SUB_AREA": "Sub-area Removals",
+                "CONNECTION_CHANGE": "Connection Changes",
+                "ADD_CONNECTION": "Connection Additions",
+                "REMOVE_CONNECTION": "Connection Removals",
+                "BGM_CHANGE": "BGM Changes",
+                "EFFECT_CHANGE": "Effect-related Changes",
+                "REWORK": "Reworks"
+            }
+        }
     },
     "menuThemesModal": {
         "previousMethods": "Previous Methods"
@@ -178,5 +277,6 @@
         "about": "Yume 2kki Explorer v{VERSION} by FlashfyreDev",
         "lastUpdate": "Data updated on {LAST_UPDATE}",
         "lastFullUpdate": "Data reset on {LAST_FULL_UPDATE}"
-    }
+    },
+    "na": "N/A"
 }

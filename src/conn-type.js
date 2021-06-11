@@ -15,5 +15,5 @@ const ConnType = {
 
 if (typeof exports === "object")
     module.exports = {
-        ConnType: ConnType
+        ConnType
     };

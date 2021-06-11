@@ -7,6 +7,9 @@ const fs = require('fs');
 const download = require('image-downloader');
 const mysql = require('mysql');
 const ConnType = require('./src/conn-type').ConnType;
+const versionUtils = require('./src/version-utils');
+const appConfig = require('./config/app.config.js');
+const apiUrl = 'https://yume2kki.fandom.com/api.php';
 const adminKey = process.env.ADMIN_KEY || require("./config/app.config.js").ADMIN_KEY;
 const isRemote = Boolean(process.env.DATABASE_URL);
 const defaultPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT;
@@ -70,9 +73,13 @@ function initDb(pool) {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 title VARCHAR(255) NOT NULL,
                 titleJP VARCHAR(255) NULL,
-                author VARCHAR(255) NULL,
+                author VARCHAR(100) NULL,
                 depth INT NOT NULL,
                 filename VARCHAR(255) NOT NULL,
+                verAdded VARCHAR(20) NULL,
+                verRemoved VARCHAR(20) NULL,
+                verUpdated VARCHAR(1000) NULL,
+                verGaps VARCHAR(255) NULL,
                 removed BIT NOT NULL
             )`)).then(() => queryAsPromise(pool,
             `CREATE TABLE IF NOT EXISTS conns (
@@ -133,6 +140,17 @@ function initDb(pool) {
                 FOREIGN KEY (worldId)
                     REFERENCES worlds (id)
                     ON DELETE CASCADE
+            )`)).then(() => queryAsPromise(pool,
+            `CREATE TABLE IF NOT EXISTS author_info (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                nameJP VARCHAR(100) NULL
+            )`)).then(() => queryAsPromise(pool,
+            `CREATE TABLE IF NOT EXISTS version_info (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(20) NOT NULL,
+                authors VARCHAR(255) NULL,
+                releaseDate DATETIME NULL
             )`)).then(() => {
                 dbInitialized = true;
                 resolve(pool);
@@ -161,6 +179,8 @@ function getConnPool() {
 }
 
 app.use(express.static('public'));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.get('/', (_, res) => res.sendFile('index.html', { root: '.' }));
 
@@ -174,23 +194,32 @@ app.get('/data', function(req, res) {
     getConnPool().then(pool => {
         const callback = function () {
             getWorldData(pool, false, !req.query.hasOwnProperty('includeRemovedContent') || !req.query.includeRemovedContent).then(worldData => {
-                getMenuThemeData(pool, worldData, !req.query.hasOwnProperty('includeRemovedContent') || !req.query.includeRemovedContent).then(menuThemeData => {
-                    pool.query('SELECT lastUpdate, lastFullUpdate FROM updates', (err, rows) => {
-                        if (err) console.error(err);
-                        const row = rows.length ? rows[0] : null;
-                        const lastUpdate = row ? row.lastUpdate : null;
-                        const lastFullUpdate = row ? row.lastFullUpdate : null;
-                        const isAdmin = req.query.hasOwnProperty("adminKey") && req.query.adminKey === adminKey;
-        
-                        res.json({
-                            worldData: worldData,
-                            menuThemeData: menuThemeData,
-                            lastUpdate: lastUpdate,
-                            lastFullUpdate: lastFullUpdate,
-                            isAdmin: isAdmin
-                        });
-                        pool.end();
-                    });
+                getAuthorInfoData(pool).then(authorInfoData => {
+                    getVersionInfoData(pool, worldData).then(versionInfoData => {
+                        getMenuThemeData(pool, worldData, !req.query.hasOwnProperty('includeRemovedContent') || !req.query.includeRemovedContent).then(menuThemeData => {
+                            pool.query('SELECT lastUpdate, lastFullUpdate FROM updates', (err, rows) => {
+                                if (err) console.error(err);
+                                const row = rows.length ? rows[0] : null;
+                                const lastUpdate = row ? row.lastUpdate : null;
+                                const lastFullUpdate = row ? row.lastFullUpdate : null;
+                                const isAdmin = req.query.hasOwnProperty('adminKey') && req.query.adminKey === adminKey;
+
+                                if (Math.random() * 255 < 1)
+                                    updateWorldDataForChance(worldData);
+                
+                                res.json({
+                                    worldData: worldData,
+                                    authorInfoData: authorInfoData,
+                                    versionInfoData: versionInfoData,
+                                    menuThemeData: menuThemeData,
+                                    lastUpdate: lastUpdate,
+                                    lastFullUpdate: lastFullUpdate,
+                                    isAdmin: isAdmin
+                                });
+                                pool.end();
+                            });
+                        }).catch(err => console.error(err));
+                    }).catch(err => console.error(err));
                 }).catch(err => console.error(err));
             }).catch(err => console.error(err));
         };
@@ -198,11 +227,15 @@ app.get('/data', function(req, res) {
             if (req.query.update === 'reset') {
                 populateWorldData(pool).then(() => getWorldData(pool, true).then(worldData => {
                     updateMapData(pool, worldData).then(() => {
-                        updateMenuThemeData(pool, worldData).then(() => {
-                            pool.query('UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()', (err) => {
-                                if (err) console.error(err);
-                                callback();
-                            });
+                        updateAuthorInfoData(pool).then(() => {
+                            updateVersionInfoData(pool).then(() => {
+                                updateMenuThemeData(pool, worldData).then(() => {
+                                    pool.query('UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()', (err) => {
+                                        if (err) console.error(err);
+                                        callback();
+                                    });
+                                }).catch(err => console.error(err));
+                            }).catch(err => console.error(err));
                         }).catch(err => console.error(err));
                     }).catch(err => console.error(err));
                 }).catch(err => console.error(err))).catch(err => console.error(err));
@@ -215,11 +248,15 @@ app.get('/data', function(req, res) {
                                 .then(updatedWorldNames => populateWorldData(pool, worldData, updatedWorldNames)
                                     .then(worldData => {
                                         checkUpdateMapData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                            checkUpdateMenuThemeData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                                pool.query('UPDATE updates SET lastUpdate=NOW()', err => {
-                                                    if (err) console.error(err);
-                                                    callback();
-                                                });
+                                            checkUpdateAuthorInfoData(pool, rows[0].lastUpdate).then(() => {
+                                                checkUpdateVersionInfoData(pool, rows[0].lastUpdate).then(() => {
+                                                    checkUpdateMenuThemeData(pool, worldData, rows[0].lastUpdate).then(() => {
+                                                        pool.query('UPDATE updates SET lastUpdate=NOW()', err => {
+                                                            if (err) console.error(err);
+                                                            callback();
+                                                        });
+                                                    }).catch(err => console.error(err));
+                                                }).catch(err => console.error(err));
                                             }).catch(err => console.error(err));
                                         }).catch(err => console.error(err));
                                     }).catch(err => console.error(err)))
@@ -237,7 +274,7 @@ app.get('/data', function(req, res) {
 function getWorldData(pool, preserveIds, excludeRemovedContent) {
     return new Promise((resolve, reject) => {
         const worldDataById = {};
-        pool.query('SELECT id, title, titleJP, author, depth, filename, removed FROM worlds' + (excludeRemovedContent ? ' where removed = 0' : ''), (err, rows) => {
+        pool.query('SELECT id, title, titleJP, author, depth, filename, verAdded, verRemoved, verUpdated, verGaps, removed FROM worlds' + (excludeRemovedContent ? ' where removed = 0' : ''), (err, rows) => {
             if (err) return reject(err);
             for (let row of rows) {
                 worldDataById[row.id] = {
@@ -247,6 +284,10 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
                     author: row.author,
                     depth: row.depth,
                     filename: row.filename,
+                    verAdded: row.verAdded,
+                    verRemoved: row.verRemoved,
+                    verUpdated: row.verUpdated,
+                    verGaps: row.verGaps,
                     removed: !!row.removed,
                     connections: []
                 };
@@ -258,7 +299,11 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
                     const world = worldData[d];
                     world.id = parseInt(d);
                     if (!world.author)
-                        world.author = "";
+                        world.author = '';
+                    if (world.verUpdated)
+                        world.verUpdated = versionUtils.parseVersionsUpdated(world.verUpdated);
+                    if (world.verGaps)
+                        world.verGaps = versionUtils.parseVersionGaps(world.verGaps);
                     if (!isRemote)
                         world.filename = `./images/worlds/${world.filename}`;
                 }
@@ -320,6 +365,49 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
                     });
                 });
             });
+        });
+    });
+}
+
+function getAuthorInfoData(pool) {
+    return new Promise((resolve, reject) => {
+        const authorInfoData = [];
+        pool.query('SELECT id, name, nameJP FROM author_info', (err, rows) => {
+            if (err) return reject(err);
+            for (let row of rows) {
+                authorInfoData.push({
+                    name: row.name,
+                    nameJP: row.nameJP
+                });
+            }
+            
+            resolve(authorInfoData);
+        });
+    });
+}
+
+function getVersionInfoData(pool, worldData) {
+    return new Promise((resolve, reject) => {
+        const versionInfoData = [];
+        pool.query('SELECT id, name, authors, releaseDate FROM version_info', (err, rows) => {
+            if (err) return reject(err);
+
+            const uniqueWorldVersionNames = versionUtils.getUniqueWorldVersionNames(worldData);
+
+            for (let row of rows) {
+                if (row.authors || uniqueWorldVersionNames.indexOf(row.name) > -1)
+                    versionInfoData.push({
+                        name: row.name,
+                        authors: row.authors,
+                        releaseDate: row.releaseDate
+                    });
+            }
+
+            versionInfoData.sort(function (vi1, vi2) {
+                return versionUtils.compareVersionNames(vi2.name, vi1.name);
+            });
+            
+            resolve(versionInfoData);
         });
     });
 }
@@ -414,7 +502,7 @@ function getUpdatedWorldNames(worldNames, lastUpdate) {
 
 function populateRecentChanges(recentChanges, lastUpdate) {
     return new Promise((resolve, reject) => {
-        superagent.get('https://yume2kki.fandom.com/api.php')
+        superagent.get(apiUrl)
             .query({ action: 'query', list: 'recentchanges', rcdir: 'newer', rcstart: lastUpdate.toISOString(), rclimit: 500, format: 'json' })
             .end((err, res) => {
                 if (err) return reject(err);
@@ -435,7 +523,7 @@ function populateRecentChanges(recentChanges, lastUpdate) {
 
 function checkUpdatePage(pool, pageTitle, lastUpdate) {
     return new Promise((resolve, reject) => {
-        superagent.get('https://yume2kki.fandom.com/api.php')
+        superagent.get(apiUrl)
             .query({ action: 'query', titles: pageTitle, prop: 'revisions', format: 'json' })
             .end((err, res) => {
                 if (err) return reject(err);
@@ -468,6 +556,28 @@ function checkUpdateMapData(pool, worldData, lastUpdate) {
     });
 }
 
+function checkUpdateAuthorInfoData(pool, lastUpdate) {
+    return new Promise((resolve, reject) => {
+        checkUpdatePage(pool, "Authors", lastUpdate).then(needsUpdate => {
+            if (needsUpdate)
+                updateAuthorInfoData(pool).then(() => resolve()).catch(err => reject(err));
+            else
+                resolve();
+        }).catch(err => reject(err));
+    });
+}
+
+function checkUpdateVersionInfoData(pool, lastUpdate) {
+    return new Promise((resolve, reject) => {
+        checkUpdatePage(pool, "Version History", lastUpdate).then(needsUpdate => {
+            if (needsUpdate)
+                updateVersionInfoData(pool).then(() => resolve()).catch(err => reject(err));
+            else
+                resolve();
+        }).catch(err => reject(err));
+    });
+}
+
 function checkUpdateMenuThemeData(pool, worldData, lastUpdate) {
     return new Promise((resolve, reject) => {
         checkUpdatePage(pool, "Menu Themes", lastUpdate).then(needsUpdate => {
@@ -486,7 +596,7 @@ function populateWorldData(pool, worldData, updatedWorldNames, continueKey, worl
         const query = { action: 'query', list: 'categorymembers', cmtitle: 'Category:Locations', cmlimit: 500, format: 'json' };
         if (continueKey)
             query.cmcontinue = continueKey;
-        superagent.get('https://yume2kki.fandom.com/api.php')
+        superagent.get(apiUrl)
             .query(query)
             .end((err, res) => {
             if (err) return reject(err);
@@ -568,14 +678,16 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                     existingWorld.removed = world.removed;
                 }
             }
-            pool.query('SELECT id, title, titleJP, filename, removed FROM worlds', (err, rows) => {
+            pool.query('SELECT id, title, titleJP, author, filename, verAdded, verRemoved, verUpdated, verGaps, removed FROM worlds', (err, rows) => {
                 if (err) return reject(err);
                 for (let row of rows) {
                     const worldName = row.title;
                     if (worldNames.indexOf(worldName) > -1) {
                         const world = newWorldsByName[worldName];
                         world.id = row.id;
-                        if (row.titleJP !== world.titleJP || row.author !== world.author || row.filename !== world.filename || row.removed !== world.removed)
+                        if (row.titleJP !== world.titleJP || row.author !== world.author || row.filename !== world.filename ||
+                            row.verAdded !== world.verAdded || row.verRemoved !== world.verRemoved ||
+                            row.verUpdated !== world.verUpdated || row.verGaps !== world.verGaps || row.removed !== world.removed)
                             updatedWorlds.push(world);
                     }
                     delete newWorldsByName[worldName];
@@ -592,7 +704,7 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                 const newWorldNames = Object.keys(newWorldsByName);
                 if (newWorldNames.length) {
                     let i = 0;
-                    let worldsQuery = 'INSERT INTO worlds (title, titleJP, author, depth, filename, removed) VALUES ';
+                    let worldsQuery = 'INSERT INTO worlds (title, titleJP, author, depth, filename, verAdded, verRemoved, verUpdated, verGaps, removed) VALUES ';
                     for (const w in newWorldsByName) {
                         const newWorld = newWorldsByName[w];
                         if (i++)
@@ -600,8 +712,12 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                         const title = newWorld.title.replace(/'/g, "''");
                         const titleJPValue = newWorld.titleJP ? `'${newWorld.titleJP}'` : 'NULL';
                         const authorValue = newWorld.author ? `'${newWorld.author}'` : 'NULL';
+                        const verAddedValue = newWorld.verAdded ? `'${newWorld.verAdded}'` : 'NULL';
+                        const verRemovedValue = newWorld.verRemoved ? `'${newWorld.verRemoved}'` : 'NULL';
+                        const verUpdatedValue = newWorld.verUpdated ? `'${newWorld.verUpdated}'` : 'NULL';
+                        const verGapsValue = newWorld.verGaps ? `'${newWorld.verGaps}'` : 'NULL';
                         const removedValue = newWorld.removed ? '1' : '0';
-                        worldsQuery += `('${title}', ${titleJPValue}, ${authorValue}, 0, '${newWorld.filename.replace(/'/g, "''")}', ${removedValue})`;
+                        worldsQuery += `('${title}', ${titleJPValue}, ${authorValue}, 0, '${newWorld.filename.replace(/'/g, "''")}', ${verAddedValue}, ${verRemovedValue}, ${verUpdatedValue}, ${verGapsValue}, ${removedValue})`;
                     }
                     pool.query(worldsQuery, (err, _) => {
                         if (err) return reject(err);
@@ -623,8 +739,8 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
 function getBaseWorldData(worlds) {
     return new Promise((resolve, reject) => {
         const pageIds = Object.keys(worlds);
-        superagent.get('https://yume2kki.fandom.com/api.php')
-            .query({ action: 'query', pageids: pageIds.join("|"), prop: "categories", cllimit: 50, format: "json" })
+        superagent.get(apiUrl)
+            .query({ action: 'query', pageids: pageIds.join("|"), prop: "categories", cllimit: 100, format: "json" })
             .end((err, res) => {
             if (err) return reject(err);
             const query = JSON.parse(res.text).query;
@@ -647,7 +763,7 @@ function getWorldBaseWorldData(worlds, pageId) {
         if (world.title.indexOf("Board Thread") > -1 || world.title === "Dream Worlds")
             skip = true;
         else if (categories)
-            world.removed = !!categories.filter(c => c.title ===  "Category:Removed Content").length;
+            world.removed = !!categories.find(c => c.title ===  "Category:Removed Content");
         else
             skip = true;
         if (skip) {
@@ -669,8 +785,12 @@ function updateWorldInfo(pool, world) {
     return new Promise((resolve, reject) => {
         const titleJPValue = world.titleJP ? `'${world.titleJP}'` : "NULL";
         const authorValue = world.author ? `'${world.author}'` : "NULL";
+        const verAddedValue = world.verAdded ? `'${world.verAdded}'` : "NULL";
+        const verRemovedValue = world.verRemoved ? `'${world.verRemoved}'` : "NULL";
+        const verUpdatedValue = world.verUpdated ? `'${world.verUpdated}'` : "NULL";
+        const verGapsValue = world.verGaps ? `'${world.verGaps}'` : "NULL";
         const removedValue = world.removed ? '1' : '0';
-        pool.query(`UPDATE worlds SET titleJP=${titleJPValue}, author=${authorValue}, filename='${world.filename.replace(/'/g, "''")}', removed=${removedValue} WHERE id=${world.id}`, (err, _) => {
+        pool.query(`UPDATE worlds SET titleJP=${titleJPValue}, author=${authorValue}, filename='${world.filename.replace(/'/g, "''")}', verAdded=${verAddedValue}, verRemoved=${verRemovedValue}, verUpdated=${verUpdatedValue}, verGaps=${verGapsValue}, removed=${removedValue} WHERE id=${world.id}`, (err, _) => {
             if (err) return reject(err);
             resolve();
         });
@@ -900,7 +1020,7 @@ function updateWorldDepths(pool, worldData) {
         while (true) {
             anyDepthFound = false;
             
-            missingDepthWorlds = worldData.filter(w => depthMap[w.title] === -1);
+            missingDepthWorlds = worldData.filter(w => depthMap[w.title] === -1 && w.title !== startLocation);
             missingDepthWorlds.forEach(w => anyDepthFound |= resolveMissingDepths(worldData, worldDataById, worldDataByName, depthMap, w, ignoreTypeFlags));
 
             if (missingDepthWorlds.length) {
@@ -1010,7 +1130,7 @@ function updateWorldsOfDepth(pool, depth, worlds) {
 
 function deleteRemovedWorlds(pool) {
     pool.query('DELETE w FROM worlds w WHERE NOT EXISTS(SELECT c.id FROM conns c WHERE w.id IN (c.sourceId, c.targetId))', (err, _) => {
-        if (err) return console.log(err);
+        if (err) return console.error(err);
     });
 }
 
@@ -1227,6 +1347,321 @@ function deleteRemovedWorldMaps(pool, removedWorldMapIds) {
     });
 }
 
+function updateAuthorInfoData(pool) {
+    return new Promise((resolve, reject) => {
+        getAuthorInfoWikiData().then(authorInfoData => {
+            updateAuthorInfo(pool, authorInfoData).then(() => resolve(authorInfoData)).catch(err => reject(err));
+        }).catch(err => reject(err));
+    });
+}
+
+function getAuthorInfoWikiData() {
+    return new Promise((resolve, reject) => {
+        superagent.get('https://yume2kki.fandom.com/wiki/Authors', function (err, res) {
+            if (err) return reject(err);
+            const authorSectionsHtml = res.text.split('data-jp-name="');
+            const authorInfo = [];
+
+            for (let a = 0; a < authorSectionsHtml.length - 1; a++) {
+                const section = authorSectionsHtml[a];
+                const nextSection = authorSectionsHtml[a + 1];
+                let searchIndex = section.indexOf('<b>', section.lastIndexOf(' class="mw-headline" ')) + 2;
+                if (searchIndex < 2)
+                    continue;
+                if (section.slice(0, section.indexOf('</b>', searchIndex)).indexOf('</a', searchIndex) > -1)
+                    searchIndex = section.indexOf('<a', searchIndex) + 2;
+
+                const authorName = section.slice(section.indexOf('>', searchIndex) + 1, section.indexOf('<', searchIndex));
+                const authorNameJP = nextSection.slice(0, nextSection.indexOf('"'));
+                authorInfo.push({
+                    name: authorName,
+                    nameJP: authorNameJP
+                });
+            }
+            
+            resolve(authorInfo);
+        });
+    });
+}
+
+function updateAuthorInfo(pool, authorInfo) {
+    return new Promise((resolve, reject) => {
+        pool.query('SELECT id, name, nameJP FROM author_info', (err, rows) => {
+            if (err) return reject(err);
+            const authorInfoByName = _.keyBy(authorInfo, a => a.name);
+            const newAuthorInfoByName = _.keyBy(authorInfo, a => a.name);
+            const updatedAuthorInfo = [];
+            const removedAuthorInfoIds = [];
+            for (let row of rows) {
+                const name = row.name;
+                if (authorInfoByName.hasOwnProperty(name)) {
+                    const author = authorInfoByName[name]
+                    author.id = row.id;
+                    if (row.nameJP !== author.nameJP)
+                        updatedAuthorInfo.push(author);
+                } else
+                    removedAuthorInfoIds.push(row.id);
+                delete newAuthorInfoByName[name];
+            }
+
+            const insertCallback = function () {
+                if (updatedAuthorInfo.length) {
+                    const updateAuthorInfo = [];
+                    for (let author of updatedAuthorInfo)
+                        updateAuthorInfo.push(updateAuthor(pool, author).catch(err => console.error(err)));
+                    Promise.allSettled(updateAuthorInfo).finally(() => resolve());
+                } else
+                    resolve();
+            };
+
+            const callback = function () {
+                const newAuthorNames = Object.keys(newAuthorInfoByName);
+                if (newAuthorNames.length) {
+                    let i = 0;
+                    let authorInfoQuery = 'INSERT INTO author_info (name, nameJP) VALUES ';
+                    for (let a in newAuthorInfoByName) {
+                        const newAuthorInfo = newAuthorInfoByName[a];
+                        if (i++)
+                            authorInfoQuery += ", ";
+                        const nameJP = newAuthorInfo.nameJP ? `'${newAuthorInfo.nameJP}'` : 'NULL';
+                        authorInfoQuery += `('${newAuthorInfo.name}', ${nameJP})`;
+                    }
+                    pool.query(authorInfoQuery, (err, res) => {
+                        if (err) return reject(err);
+                        const insertedRows = res.affectedRows;
+                        const authorInfoRowIdsQuery = `SELECT r.id FROM (SELECT id FROM author_info ORDER BY id DESC LIMIT ${insertedRows}) r ORDER BY 1`;
+                        pool.query(authorInfoRowIdsQuery, (err, rows) => {
+                            if (err) return reject(err);
+                            for (let r in rows)
+                                newAuthorInfoByName[newAuthorNames[r]].id = rows[r].id;
+                            insertCallback();
+                        });
+                    });
+                } else
+                    insertCallback();
+            };
+
+            if (removedAuthorInfoIds.length)
+                deleteRemovedAuthorInfo(pool, removedAuthorInfoIds).then(() => callback()).catch(err => reject(err));
+            else
+                callback();
+        });
+    });
+}
+
+function updateAuthor(pool, author) {
+    return new Promise((resolve, reject) => {
+        const nameJP = author.nameJP ? `'${author.nameJP}'` : 'NULL';
+        pool.query(`UPDATE author_info SET nameJP=${nameJP} WHERE id=${author.id}`, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+}
+
+function deleteRemovedAuthorInfo(pool, removedAuthorInfoIds) {
+    return new Promise((resolve, reject) => {
+        let i = 0;
+        let deleteAuthorInfoQuery = 'DELETE FROM author_info WHERE id IN (';
+        for (let authorInfoId of removedAuthorInfoIds) {
+            if (i++)
+                deleteAuthorInfoQuery += ', ';
+            deleteAuthorInfoQuery += authorInfoId;
+        }
+        deleteAuthorInfoQuery += ')';
+        pool.query(deleteAuthorInfoQuery, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+}
+
+function updateVersionInfoData(pool) {
+    return new Promise((resolve, reject) => {
+        getVersionInfoWikiData().then(versionInfoData => {
+            updateVersionInfo(pool, versionInfoData).then(() => resolve(versionInfoData)).catch(err => reject(err));
+        }).catch(err => reject(err));
+    });
+}
+
+function getVersionInfoWikiData(url) {
+    const root = !url;
+    if (root)
+        url = 'https://yume2kki.fandom.com/wiki/Version_History';
+    
+    return new Promise((resolve, reject) => {
+        superagent.get(url, function (err, res) {
+            if (err) return reject(err);
+            const versionSectionsHtml = res.text.split('article-table').slice(0, -1);
+            const versionInfo = [];
+            const populateVersionInfo = function () {
+                for (let a = 0; a < versionSectionsHtml.length - 1; a++) {
+                    const section = versionSectionsHtml[a];
+                    const nextSection = versionSectionsHtml[a + 1].slice(0, versionSectionsHtml[a + 1].indexOf('</table>'));
+    
+                    const versionNameSearchIndex = section.lastIndexOf(' class="mw-headline" ');
+                    let versionName = section.slice(section.indexOf('>', versionNameSearchIndex) + 1, section.indexOf('<', versionNameSearchIndex)).replace(/^[^0-9]*/i, '');
+
+                    if (versionName.indexOf('~') > -1)
+                        versionName = versionName.slice(versionName.indexOf('~') + 1);
+
+                    const patchSectionsHtml = nextSection.split('Authors:');
+
+                    for (let p = 0; p < patchSectionsHtml.length - 1; p++) {
+                        const patchSection = patchSectionsHtml[p + 1];
+                        const authors = [];
+                        let releaseDateIndex = patchSection.search(/release date:/i);
+
+                        const authorsSection = patchSection.slice(0, patchSection.indexOf('</td>'));
+                        let cursor = authorsSection.indexOf('<a ') + 3;
+        
+                        while (cursor > 2 && cursor < releaseDateIndex) {
+                            const author = authorsSection.slice(authorsSection.indexOf('>', cursor) + 1, authorsSection.indexOf('</a>', cursor));
+                            if (author !== '<?>')
+                                authors.push(author);
+                            cursor = authorsSection.indexOf('<a ', cursor) + 3;
+                        }
+        
+                        let releaseDate = null;
+        
+                        if (releaseDateIndex > -1) {
+                            const releaseDateSection = patchSection.slice(patchSection.slice(releaseDateIndex).search(/[0-9]/) + releaseDateIndex);
+                            releaseDate = new Date(releaseDateSection.slice(0, releaseDateSection.search(/[^0-9\/]/)));
+                        }
+
+                        const patchNo = versionName !== '0.113' ? p : (p - 1);
+        
+                        versionInfo.push({
+                            name: `${versionName}${(p ? ` patch ${patchNo}` : '')}`,
+                            authors: authors.length ? authors.join(',') : null,
+                            releaseDate: releaseDate
+                        });
+                    }
+                }
+
+                if (root)
+                    versionInfo.sort(function (v1, v2) {
+                        return versionUtils.compareVersionNames(v1.name, v2.name);
+                    });
+                
+                resolve(versionInfo);
+            };
+
+            if (root)
+            {
+                const populateOldVersionInfo = [];
+                let cursor = versionSectionsHtml[0].indexOf('<a href="/wiki/Version_History/') + 30;
+
+                while (cursor >= 30) {
+                    populateOldVersionInfo.push(getVersionInfoWikiData(`${url}${versionSectionsHtml[0].slice(cursor, versionSectionsHtml[0].indexOf('"', cursor))}`).then(oldVersionInfo => oldVersionInfo.forEach(vi => versionInfo.push(vi))).catch(err => console.error(err)));
+                    cursor = versionSectionsHtml[0].indexOf('<a href="/wiki/Version_History/', cursor) + 30;
+                }
+
+                if (populateOldVersionInfo.length)
+                    Promise.allSettled(populateOldVersionInfo).finally(() => populateVersionInfo());
+                else
+                    populateVersionInfo();
+            } else
+                populateVersionInfo();
+        });
+    });
+}
+
+function updateVersionInfo(pool, versionInfo) {
+    return new Promise((resolve, reject) => {
+        pool.query('SELECT id, name, authors, releaseDate FROM version_info', (err, rows) => {
+            if (err) return reject(err);
+            const versionInfoByName = _.keyBy(versionInfo, a => a.name);
+            const newVersionInfoByName = _.keyBy(versionInfo, a => a.name);
+            const updatedVersionInfo = [];
+            const removedVersionInfoIds = [];
+            for (let row of rows) {
+                const name = row.name;
+                if (versionInfoByName.hasOwnProperty(name)) {
+                    const version = versionInfoByName[name]
+                    version.id = row.id;
+                    if (row.authors !== version.authors
+                        || (row.releaseDate && !isNaN(row.releaseDate) ? row.releaseDate.toDateString() : '') !== (version.releaseDate && !isNaN(version.releaseDate) ? version.releaseDate.toDateString() : ''))
+                        updatedVersionInfo.push(version);
+                } else
+                    removedVersionInfoIds.push(row.id);
+                delete newVersionInfoByName[name];
+            }
+
+            const insertCallback = function () {
+                if (updatedVersionInfo.length) {
+                    const updateVersionInfo = [];
+                    for (let version of updatedVersionInfo)
+                        updateVersionInfo.push(updateVersion(pool, version).catch(err => console.error(err)));
+                    Promise.allSettled(updateVersionInfo).finally(() => resolve());
+                } else
+                    resolve();
+            };
+
+            const callback = function () {
+                const newVersionNames = Object.keys(newVersionInfoByName);
+                if (newVersionNames.length) {
+                    let i = 0;
+                    let versionInfoQuery = 'INSERT INTO version_info (name, authors, releaseDate) VALUES ';
+                    for (let a in newVersionInfoByName) {
+                        const newVersionInfo = newVersionInfoByName[a];
+                        if (i++)
+                            versionInfoQuery += ", ";
+                        const authors = newVersionInfo.authors ? `'${newVersionInfo.authors}'` : 'NULL';
+                        const releaseDate = newVersionInfo.releaseDate && !isNaN(newVersionInfo.releaseDate) ? `'${newVersionInfo.releaseDate.toISOString().slice(0, 19).replace('T', ' ')}'` : 'NULL';
+                        versionInfoQuery += `('${newVersionInfo.name}', ${authors}, ${releaseDate})`;
+                    }
+                    pool.query(versionInfoQuery, (err, res) => {
+                        if (err) return reject(err);
+                        const insertedRows = res.affectedRows;
+                        const versionInfoRowIdsQuery = `SELECT r.id FROM (SELECT id FROM version_info ORDER BY id DESC LIMIT ${insertedRows}) r ORDER BY 1`;
+                        pool.query(versionInfoRowIdsQuery, (err, rows) => {
+                            if (err) return reject(err);
+                            for (let r in rows)
+                                newVersionInfoByName[newVersionNames[r]].id = rows[r].id;
+                            insertCallback();
+                        });
+                    });
+                } else
+                    insertCallback();
+            };
+
+            if (removedVersionInfoIds.length)
+                deleteRemovedVersionInfo(pool, removedVersionInfoIds).then(() => callback()).catch(err => reject(err));
+            else
+                callback();
+        });
+    });
+}
+
+function updateVersion(pool, version) {
+    return new Promise((resolve, reject) => {
+        const authors = version.authors ? `'${version.authors}'` : 'NULL';
+        const releaseDate = version.releaseDate && !isNaN(version.releaseDate) ? `'${version.releaseDate.toISOString().slice(0, 19).replace('T', ' ')}'` : 'NULL';
+        pool.query(`UPDATE version_info SET authors=${authors}, releaseDate=${releaseDate} WHERE id=${version.id}`, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+}
+
+function deleteRemovedVersionInfo(pool, removedVersionInfoIds) {
+    return new Promise((resolve, reject) => {
+        let i = 0;
+        let deleteVersionInfoQuery = 'DELETE FROM version_info WHERE id IN (';
+        for (let versionInfoId of removedVersionInfoIds) {
+            if (i++)
+                deleteVersionInfoQuery += ', ';
+            deleteVersionInfoQuery += versionInfoId;
+        }
+        deleteVersionInfoQuery += ')';
+        pool.query(deleteVersionInfoQuery, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+}
+
 function updateMenuThemeData(pool, worldData) {
     return new Promise((resolve, reject) => {
         getMenuThemeWikiData(worldData).then(menuThemeData => {
@@ -1370,9 +1805,9 @@ function getMenuThemeWikiData(worldData) {
                     if (menuThemeLocationKeys.indexOf(key) > -1)
                         continue;
                     let menuTheme;
-                    const existingMenuTheme = menuThemeData.filter(m => m.menuThemeId === menuThemeId);
-                    if (existingMenuTheme.length)
-                        menuTheme = existingMenuTheme[0];
+                    const existingMenuTheme = menuThemeData.find(m => m.menuThemeId === menuThemeId);
+                    if (existingMenuTheme)
+                        menuTheme = existingMenuTheme;
                     else {
                         const imageIndex = data[0].slice(0, i).lastIndexOf('<img ');
                         if (imageIndex === -1)
@@ -1406,7 +1841,7 @@ function addMenuThemeDataJPMethods(menuThemeData, removed) {
             const menuThemeTablesHtml = res.text.slice(res.text.indexOf('<table', res.text.indexOf('<div class="container-wrapper"')), res.text.lastIndexOf('</table>'));
             const menuThemeDataRows = menuThemeTablesHtml.split('<tr>').slice(2);
             let endOfTable = false;
-            
+
             for (let m = 0; m < menuThemeDataRows.length; m++) {
                 const data = menuThemeDataRows[m].split('</td><td').slice(0, 2);
                 if (data[1].indexOf('</table>') > -1) {
@@ -1417,10 +1852,10 @@ function addMenuThemeDataJPMethods(menuThemeData, removed) {
                 if (menuThemeId === '--')
                     menuThemeId = '-1';
                 if (menuThemesByMenuThemeId.hasOwnProperty(menuThemeId)) {
-                    const locations = menuThemesByMenuThemeId[menuThemeId].locations.filter(l => l.removed === !!removed);
-                    if (locations.length) {
+                    const location = menuThemesByMenuThemeId[menuThemeId].locations.find(l => l.removed === !!removed);
+                    if (location) {
                         const methodJP = data[1].slice(data[1].indexOf('>') + 1, data[1].indexOf('</td>'));
-                        locations[0].methodJP = methodJP;
+                        location.methodJP = methodJP;
                     }
                 }
                 if (menuThemeId === '-1' || (removed && endOfTable))
@@ -1559,7 +1994,7 @@ function getWorldInfo(worldName) {
     return new Promise((resolve, reject) => {
         superagent.get('https://yume2kki.fandom.com/wiki/' + worldName, function (err, res) {
             if (err) return reject(err);
-            worldName = worldName.replace(/\_/g, " ");
+            worldName = worldName.replace(/\_/g, ' ');
             let imageUrl = res.text.split('<a href="https://static.wikia.nocookie.net')[1];
             imageUrl = "https://static.wikia.nocookie.net" + imageUrl.slice(0, imageUrl.indexOf('"'));
             const ext = imageUrl.slice(imageUrl.lastIndexOf("."), imageUrl.indexOf("/", imageUrl.lastIndexOf(".")));
@@ -1579,7 +2014,11 @@ function getWorldInfo(worldName) {
                 titleJP: getTitleJP(res.text),
                 connections: getConnections(res.text),
                 author: getAuthor(res.text),
-                filename: filename
+                filename: filename,
+                verAdded: getVerAdded(res.text),
+                verRemoved: getVerRemoved(res.text),
+                verUpdated: getVerUpdated(res.text),
+                verGaps: getVerGaps(res.text)
             });
         });
     });
@@ -1701,8 +2140,243 @@ function getConnections(html) {
     return ret;
 }
 
+function getVerAdded(html) {
+    const verAddedIndex = html.indexOf("data-ver-added=\"");
+    if (verAddedIndex === -1)
+        return null;
+    const ret = html.slice(verAddedIndex + 16, html.indexOf("\"", verAddedIndex + 16));
+    return ret !== "x.x" ? ret : null;
+}
+
+function getVerRemoved(html) {
+    const verRemovedIndex = html.indexOf("data-ver-removed=\"");
+    if (verRemovedIndex === -1)
+        return null;
+    return html.slice(verRemovedIndex + 18, html.indexOf("\"", verRemovedIndex + 18));
+}
+
+function getVerUpdated(html) {
+    const verUpdatedIndex = html.indexOf("data-ver-updated=\"");
+    if (verUpdatedIndex === -1)
+        return null;
+    return versionUtils.validateVersionsUpdated(html.slice(verUpdatedIndex + 18, html.indexOf("\"", verUpdatedIndex + 18)).replace(/, +/g, ","));
+}
+
+function getVerGaps(html) {
+    const verGapsIndex = html.indexOf("data-ver-gaps=\"");
+    if (verGapsIndex === -1)
+        return null;
+    return versionUtils.validateVersionGaps(html.slice(verGapsIndex + 15, html.indexOf("\"", verGapsIndex + 15)).replace(/, +/g, ","));
+}
+
 function decodeHtml(html) {
     return html.replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(dec));
 }
 
-app.listen(port, () => console.log(`2kki app listening on port ${port}!`));
+app.post('/updateLocationVersions', function(req, res) {
+    if (req.body.hasOwnProperty('adminKey') && req.body.adminKey === adminKey && req.body.hasOwnProperty('version') && req.body.hasOwnProperty('entries')) {
+        const entries = req.body.entries;
+        const getPageContent = [];
+        const updateEntries = [];
+        const updatedLocations = [];
+
+        const request = superagent.agent();
+
+        getCsrfToken(request).then(csrfToken => {
+            for (let e = 0; e < entries.length; e++) {
+                const entry = entries[e];
+                getPageContent.push(
+                    getLocationPageContent(entry.location).then(content => {
+                        updateEntries.push(updateLocationPageVersionInfo(request, entry, content, req.body.version, req.body.user || 'Anonymous', csrfToken)
+                            .then(success => success && updatedLocations.push(entry.location))
+                            .catch(err => console.error(err)));
+                    }).catch(err => console.error(err))
+                );
+            }
+            Promise.allSettled(getPageContent).finally(() => {
+                Promise.allSettled(updateEntries).finally(() => {
+                    res.json({
+                        success: true,
+                        updatedLocations: updatedLocations
+                    });
+                });
+            });
+        }).catch(err => console.error(err));
+    } else
+        res.json({
+            success: false
+        });
+});
+
+function getLocationPageContent(location) {
+    return new Promise((resolve, reject) => {
+        const query = { action: 'query', titles: location, prop: 'revisions', rvslots: '*', rvprop: 'content', formatversion: 2, format: 'json' };
+        superagent.get(apiUrl)
+            .query(query)
+            .end((err, res) => {
+                if (err) return reject(err);
+                const data = JSON.parse(res.text);
+                resolve(data.query.pages[0].revisions[0].slots.main.content);
+            });
+    });
+}
+
+function updateLocationPageVersionInfo(request, entry, content, version, user, csrfToken) {
+    return new Promise((resolve, reject) => {
+        const versionUpdatedContent = getVersionUpdatedLocationContent(entry, content);
+        const data = {
+            action: 'edit',
+            title: entry.location,
+            summary: `Yume 2kki Explorer admin update for version ${version} on behalf of ${user}`,
+            minor: true,
+            bot: true,
+            nocreate: true,
+            text: versionUpdatedContent,
+            token: csrfToken,
+            format: 'json'
+        };
+        request.post(apiUrl)
+            .type('form')
+            .send(data)
+            .then(res => {
+                const data = JSON.parse(res.text);
+                if (data.edit)
+                    resolve(data.edit.result === 'Success');
+                else if (data.error)
+                    reject(data.error);
+            }, err => reject(err));
+    });
+}
+
+function getVersionMetadataPattern(paramName, isRemove) {
+    const suffix = isRemove
+        ? '(?:\\n|(?=\\||$))'
+        : '(?=\\n|\\||$)';
+    return new RegExp(`\\|${paramName}.*?${suffix}`);
+}
+
+function getVersionUpdatedLocationContent(entry, content) {
+    const locationBoxSectionStartIndex = content.indexOf('{{') + 2;
+
+    if (locationBoxSectionStartIndex < 2)
+        return content;
+
+    let locationBoxSectionEndIndex = locationBoxSectionStartIndex - 2;
+    let braceDepth = 1;
+
+    do {
+        const braceOpenIndex = content.indexOf('{{', locationBoxSectionEndIndex + 2);
+        const braceCloseIndex = content.indexOf('}}', locationBoxSectionEndIndex + 2);
+
+        if (braceCloseIndex === -1)
+            return content;
+
+        if (braceOpenIndex > -1 && braceOpenIndex < braceCloseIndex) {
+            braceDepth++;
+            locationBoxSectionEndIndex = braceOpenIndex;
+        } else {
+            braceDepth--;
+            locationBoxSectionEndIndex = braceCloseIndex;
+        }
+    } while (braceDepth);
+
+    let locationBoxSection = content.slice(locationBoxSectionStartIndex, locationBoxSectionEndIndex);
+
+    if (locationBoxSection.indexOf('|VersionAdded') > -1)
+        locationBoxSection = locationBoxSection.replace(getVersionMetadataPattern('VersionAdded', !entry.verAdded), entry.verAdded ? `|VersionAdded = ${entry.verAdded}` : '');
+    else if (entry.verAdded)
+        locationBoxSection += `|VersionAdded = ${entry.verAdded}\n`;
+
+    if (locationBoxSection.indexOf('|VersionsUpdated') > -1)
+        locationBoxSection = locationBoxSection.replace(getVersionMetadataPattern('VersionsUpdated', !entry.verUpdated), entry.verUpdated ? `|VersionsUpdated = ${entry.verUpdated}` : '');
+    else if (entry.verUpdated)
+        locationBoxSection += `|VersionsUpdated = ${entry.verUpdated}\n`;
+
+    if (locationBoxSection.indexOf('|VersionRemoved') > -1)
+        locationBoxSection = locationBoxSection.replace(getVersionMetadataPattern('VersionRemoved', !entry.verRemoved), entry.verRemoved ? `|VersionRemoved = ${entry.verRemoved}` : '');
+    else if (entry.verRemoved)
+        locationBoxSection += `|VersionRemoved = ${entry.verRemoved}\n`;
+
+    /*if (locationBoxSection.indexOf('|VersionGaps') > -1)
+        locationBoxSection = locationBoxSection.replace(getVersionMetadataPattern('VersionGaps', !entry.verGaps), entry.verGaps ? `|VersionGaps = ${entry.verGaps}` : '');
+    else if (entry.verGaps)
+        locationBoxSection += `|VersionGaps = ${entry.verGaps}\n`;*/
+
+    return `${content.slice(0, locationBoxSectionStartIndex)}${locationBoxSection}${content.slice(locationBoxSectionEndIndex)}`;
+}
+
+function getCsrfToken(request) {
+    const query = {
+        action: 'query',
+        meta: 'tokens',
+        format: 'json'
+    };
+
+    return new Promise((resolve, reject) => {
+        sendLoginRequest(request).then(() => {
+            request.get(apiUrl)
+                .query(query)
+                .end((err, res) => {
+                    if (err) return reject(err);
+                    const data = JSON.parse(res.text);
+                    resolve(data.query.tokens.csrftoken);
+                });
+        }).catch(err => reject(err));
+    });
+}
+
+function sendLoginRequest(request) {
+    return new Promise((resolve, reject) => {
+        getLoginToken(request).then(loginToken => {
+            const data = {
+                action: 'login',
+                lgname: process.env.BOT_USERNAME || appConfig.BOT_USERNAME,
+                lgpassword: process.env.BOT_PASSWORD || appConfig.BOT_PASSWORD,
+                lgtoken: loginToken,
+                format: 'json'
+            };
+            request.post(apiUrl)
+                .type('form')
+                .send(data)
+                .then(() => resolve(), err => reject(err));
+        }).catch(err => reject(err));
+    });
+}
+
+function getLoginToken(request) {
+    const query = {
+        action: 'query',
+        meta: 'tokens',
+        type: 'login',
+        format: 'json'
+    };
+
+    return new Promise((resolve, reject) => {
+        request.get(apiUrl)
+            .query(query)
+            .end((err, res) => {
+                if (err) return reject(err);
+                const data = JSON.parse(res.text);
+                resolve(data.query.tokens.logintoken);
+            });
+    });
+}
+
+function updateWorldDataForChance(worldData) {
+    const matchWorld = worldData.find(w => enc(w.title) === '00070001140010100110000990010400032000830011600114001010010100116');
+    if (matchWorld)
+        matchWorld.title = dec('65314652936531465313653246532400032653166532165325653176532665331653216532765326');
+}
+
+function enc(str) {
+    return str.split('').map(s => (s.charCodeAt(0) + '').padStart(5, 0).slice(0, 5)).join('');
+}
+
+function dec(str) {
+    let ret = '';
+    for (let c = 0; c < str.length; c += 5)
+        ret += String.fromCharCode(str.slice(c, c + 5));
+    return ret;
+}
+
+app.listen(port, () => console.log(`Yume 2kki Explorer app listening on port ${port}`));

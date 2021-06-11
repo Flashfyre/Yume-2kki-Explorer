@@ -1,5 +1,6 @@
 <html>
     <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title data-localize="title">Yume 2kki Explorer</title>
         <link rel="shortcut icon" href="/favicon.ico">
         <link rel="stylesheet" href="/css/index.css" />
@@ -30,6 +31,7 @@
                 -webkit-background-clip: text;
 	            -webkit-text-fill-color: transparent;
                 background-clip: text;
+                image-rendering: crisp-edges;
                 image-rendering: pixelated;
             }
 
@@ -37,12 +39,16 @@
                 color: rgba(255, 255, 157, 1); /*alt*/
             }
 
+            label, p, li, h1, h2, h3, h4, .loading-container .loading-container__text {
+                background-position-y: 2px;
+            }
+
             label {
                 background-size: 18px;
             }
 
-            h1 {
-                background-size: 32px;
+            h1, .loading-container .loading-container__text {
+                background-size: 36px;
             }
 
             h2 {
@@ -50,28 +56,31 @@
             }
 
             h3 {
-                background-size: 18.67px;
+                background-size: 18.72px;
             }
 
             p, li, h4 {
-                background-size: 16px;
+                background-size: 20px;
             }
 
             hr {
                 border: none;
                 border-top: 10px solid transparent;
                 border-image: url(/images/ui/Default_Custom/border.png) 12 repeat;
+                image-rendering: crisp-edges;
                 image-rendering: pixelated;
             }
 
-            .modal__content::-webkit-scrollbar-track {
+            .modal__content::-webkit-scrollbar-track, .modal__controls--expand + .modal__controls::-webkit-scrollbar-track, .collectable-entry--content__list::-webkit-scrollbar-track {
                 border-image: url(/images/ui/Default_Custom/border.png) 12 repeat !important;
                 background-color: rgba(45, 17, 23, 1); /*base*/
+                image-rendering: crisp-edges;
                 image-rendering: pixelated;
             }
 
-            .modal__content::-webkit-scrollbar-thumb {
+            .modal__content::-webkit-scrollbar-thumb, .modal__controls--expand + .modal__controls::-webkit-scrollbar-thumb, .collectable-entry--content__list::-webkit-scrollbar-thumb {
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round !important;
+                image-rendering: crisp-edges;
                 image-rendering: pixelated;
             }
 
@@ -83,12 +92,14 @@
                 color: rgba(216, 216, 216, 1); /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
                 background-image: url(/images/ui/Default_Custom/containerbg.png);
+                image-rendering: crisp-edges;
                 image-rendering: pixelated;
             }
 
             input[type='text'], select, .slider {
                 color: rgba(216, 216, 216, 1); /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
+                image-rendering: crisp-edges;
                 background-color: rgba(45, 17, 23, 1); /*base*/
                 image-rendering: pixelated;
             }
@@ -97,15 +108,25 @@
                 color: rgba(255, 255, 157, 1); /*alt*/
             }
 
+            select.temp-select {
+                color: rgba(255, 255, 157, 1); /*alt*/
+            }
+
+            .control.reverse-control > select.temp-select + label {
+                background-image: url(/images/ui/Default_Custom/font4.png) !important; /*alt*/
+            }
+
             .slider::-webkit-slider-thumb {
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
                 background-color: rgba(45, 17, 23, 1); /*base*/
+                image-rendering: crisp-edges;
                 image-rendering: pixelated;
             }
 
             .slider::-moz-range-thumb {
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
                 background-color: rgba(45, 17, 23, 1); /*base*/
+                image-rendering: crisp-edges;
                 image-rendering: pixelated;
             }
 
@@ -113,6 +134,7 @@
                 color: rgba(216, 216, 216, 1); /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
                 background-color: rgba(45, 17, 23, 1); /*base*/
+                image-rendering: crisp-edges;
                 image-rendering: pixelated;
             }
 
@@ -124,16 +146,21 @@
                 color: rgba(255, 255, 157, 1); /*alt*/
             }
 
-            .context-menu-item, .graph-tooltip, .scene-tooltip:not(:empty) {
+            .context-menu-item, .graph-tooltip, .scene-tooltip:not(:empty), .collectable-entry--content {
                 color: rgba(216, 216, 216, 1) !important; /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round !important;
                 background-color: rgba(45, 17, 23, 1) !important; /*base*/
                 background-image: url(/images/ui/Default_Custom/containerbg.png) !important;
+                image-rendering: crisp-edges;
                 image-rendering: pixelated;
             }
 
             .context-menu-item.context-menu-hover {
                 color: rgba(255, 255, 157, 1) !important; /*alt*/
+            }
+
+            .author-entry.collectable--border:hover .author-entry__name {
+                background-image: url(/images/ui/Default_Custom/font4.png) !important; /*alt*/
             }
         </style>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css" />
@@ -149,11 +176,17 @@
                         <label data-localize="controls.search.name" class="noselect">Search:</label>
                         <input name="searchWorld" type="text" class="js--world-input js--search-world" />
                     </div>
-                    <div class="control">
-                        <label data-localize="controls.author.name" class="noselect">Author:</label>
+                    <div class="control reverse-control">
                         <select name="author" class="js--author">
-                            <option data-localize="controls.author.values.null" value="null"></option>
+                            <option data-localize="controls.author.values.null" value="null">All</option>
                         </select>
+                        <label data-localize="controls.author.name" class="noselect">Author:</label>
+                    </div>
+                    <div class="control reverse-control">
+                        <select name="version" class="js--version">
+                            <option data-localize="controls.version.values.0" value="0">All</option>
+                        </select>
+                        <label data-localize="controls.version.name" class="noselect">Version:</label>
                     </div>
                     <div class="control">
                         <label data-localize="controls.origin.name" class="noselect">Origin:</label>
@@ -171,6 +204,7 @@
                 <div class="admin-controls controls__container admin-only">
                     <div class="control">
                         <button class="js--check-data-issues noselect">Check for Data Issues</button>
+                        <button class="js--version-update noselect">Manage Versions</button>
                         <button class="js--update-data noselect">Update Data</button>
                         <button class="js--reset-data noselect">Emergency Data Reset</button>
                     </div>
@@ -185,6 +219,8 @@
             <div class="controls--container controls-side--container">
                 <div class="controls controls-side" style="opacity: 0;">
                     <div class="control">
+                        <button data-localize="collectableControls.authors.name" class="js--author-entries noselect">Authors</button>
+                        <button data-localize="collectableControls.versions.name" class="js--version-entries noselect">Versions</button>
                         <button data-localize="collectableControls.menuThemes.name" class="js--menu-themes noselect">Menu Themes</button>
                     </div>
                 </div>
@@ -294,6 +330,10 @@
                         <div class="js--data-issues__invalid-conn-pairs"></div>
                     </div>
                     <div class="data-issues-module">
+                        <label>Missing Versions</label>
+                        <div class="js--data-issues__missing-versions"></div>
+                    </div>
+                    <div class="data-issues-module">
                         <label>Missing Location Parameters</label>
                         <div class="js--data-issues__missing-location-params"></div>
                     </div>
@@ -304,8 +344,36 @@
                 </div>
             </div>
         </div>
+        <div id="versionUpdateModal" class="js--version-update-modal modal">
+            <div class="modal__content--container">
+                <div class="js--version-update-modal__content modal__content">
+                </div>
+            </div>
+        </div>
+        <div id="authorEntriesModal" class="js--author-entries-modal modal">
+            <div class="modal__content--container">
+                <div class="js--author-entries-modal__content modal__content">
+                    <div class="js--author-entries-container collectables-container">
+                        <div class="js--author-entries-container__items collectables-container__items"></div>
+                        <div class="js--author-entries-container__borders collectables-container__borders"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="versionEntriesModal" class="js--version-entries-modal modal">
+            <div class="modal__content--container">
+                <div class="js--version-entries-modal__content modal__content">
+                    <h2 class="js--modal__controls--expand modal__controls--expand"><a href="javascript:void(0);" class="js--modal__controls--expand__link no-border" data-localize="versionEntriesModal.filters">Filters</a></h2>
+                    <div class="js--version-entries-controls js--modal__controls modal__controls"></div>
+                    <div class="js--version-entries-container collectables-container">
+                        <div class="js--version-entries-container__items collectables-container__items"></div>
+                        <div class="js--version-entries-container__borders collectables-container__borders"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div id="menuThemesModal" class="js--menu-themes-modal modal">
-            <div>
+            <div class="modal__content--container">
                 <div class="js--menu-themes-modal__content modal__content">
                     <div class="js--menu-themes-container collectables-container">
                         <div class="js--menu-themes-container__items collectables-container__items"></div>

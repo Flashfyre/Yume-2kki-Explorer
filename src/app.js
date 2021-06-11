@@ -10,9 +10,10 @@ import * as THREE from 'three';
 import SpriteText from 'three-spritetext';
 import ForceGraph3D from '3d-force-graph';
 import TWEEN from '@tweenjs/tween.js';
-import { hueToRGBA, uiThemeFontColors, uiThemeBgColors, getFontColor, getBaseBgColor } from './utils';
+import { checkIsMobile, formatDate, hueToRGBA, uiThemeFontColors, uiThemeBgColors, getFontColor, getBaseBgColor } from './utils';
 import { updateConfig } from './config.js';
 import { ConnType } from './conn-type.js';
+import * as versionUtils from './version-utils.js';
 
 $(document).on("keydown", function (event) {
     if (event.which === 16)
@@ -37,6 +38,7 @@ let is2d;
 let graphCanvas;
 let graphContext;
 const nodeImgDimensions = { x: 320, y: 240 };
+const nodeIconImgDimensions = { x: nodeImgDimensions.x / 4, y: nodeImgDimensions.y / 4 };
 let nodeObjectMaterial;
 let iconTexts = [];
 let removedCount;
@@ -52,6 +54,8 @@ THREE.ImageLoader.prototype.load = function (url, onLoad, onProgress, onError) {
 };
 
 const imageLoader = new THREE.ImageLoader();
+
+const isMobile = checkIsMobile(navigator.userAgent);
 
 $.fn.extend({
     animateCss: function (animation, duration, endCallback) {
@@ -82,15 +86,45 @@ $.fn.extend({
 });
 
 export let worldData;
+let versionData;
+let authoredVersionData;
+let authorData;
+let menuThemeData;
 
 function initWorldData(data) {
     worldData = data;
 
     removedCount = 0;
 
+    const verAddedWorlds = worldData.filter(w => w.verAdded);
+    const versionNames = versionUtils.getUniqueWorldVersionNames(worldData).sort(versionUtils.compareVersionNames).reverse();
+    versionData = versionUtils.parseVersionNames(versionNames);
+
     for (let w in worldData) {
         const world = worldData[w];
         world.id = parseInt(w);
+        if (world.verAdded) {
+            world.verAdded = versionData[versionNames.indexOf(world.verAdded)];
+            world.verAdded.addedWorldIds.push(world.id);
+        }
+        if (world.verUpdated) {
+            world.verUpdated.forEach(vu => {
+                vu.verUpdated = versionData[versionNames.indexOf(vu.verUpdated)];
+                vu.verUpdated.updatedWorldIds.push(world.id);
+            });
+        }
+        if (world.verRemoved) {
+            world.verRemoved = versionData[versionNames.indexOf(world.verRemoved)];
+            world.verRemoved.removedWorldIds.push(world.id);
+        }
+        if (world.verGaps) {
+            world.verGaps.forEach(vg => {
+                vg.verRemoved = versionData[versionNames.indexOf(vg.verRemoved)];
+                vg.verReadded = versionData[versionNames.indexOf(vg.verReadded)];
+                vg.verRemoved.removedWorldIds.push(world.id);
+                vg.verReadded.addedWorldIds.push(world.id);
+            });
+        }
         if (world.removed)
             world.rId = removedCount++;
         for (let world of worldData) {
@@ -104,21 +138,490 @@ function initWorldData(data) {
         }
     }
 
+    if (verAddedWorlds.length < worldData.length)
+        versionData.push(versionUtils.getMissingVersion(versionData.length + 1));
+
     const worldSizes = worldData.map(w => w.size); 
 
     minSize = _.min(worldSizes);
     maxSize = _.max(worldSizes);
 }
 
-let menuThemeData;
+function initAuthorData(authorInfoData, versionInfoData) {
+    const worldSortFunc = versionUtils.getVersionSortFunction(w => w.verAdded, w => w.id, versionData);
+    const versionSortFunc = versionUtils.getVersionSortFunction(v => v, v => v.index, versionData);
+    const primaryAuthorSortFunc = versionUtils.getVersionSortFunction(a => a.lastVer, _ => 0, versionData);
+    const secondaryAuthorSortFunc = versionUtils.getVersionSortFunction(a => a.firstVer, a => a.name, versionData);
+    const authorSortFunc = function (a1, a2) {
+        let ret = primaryAuthorSortFunc(a1, a2);
+        if (ret === 0)
+            ret = secondaryAuthorSortFunc(a1, a2);
+        return ret;
+    }
+    const worldsByAuthor = _.groupBy(worldData.filter(w => w.author).sort(worldSortFunc), w => w.author);
+    const authors = Object.keys(worldsByAuthor);
+
+    const versionsByName = _.keyBy(versionData, v => v.name);
+    const versionsByAuthorNameLower = {};
+
+    authoredVersionData = [];
+    
+    for (let vi of versionInfoData) {
+        if (!vi.authors)
+            continue;
+        
+        if (!versionsByName.hasOwnProperty(vi.name)) {
+            const newVer = versionUtils.getEmptyVersion(-1, vi.name);
+            if (vi.authors)
+                newVer.authors = vi.authors.split(',');
+            if (vi.releaseDate) {
+                const releaseDate = new Date(vi.releaseDate);
+                if (!isNaN(releaseDate))
+                    newVer.releaseDate = releaseDate;
+            }
+            versionsByName[vi.name] = newVer;
+            authoredVersionData.push(newVer);
+        } else
+            authoredVersionData.push(versionsByName[vi.name]);
+
+        authoredVersionData[authoredVersionData.length - 1].authoredIndex = authoredVersionData.length;
+
+        const ver = versionsByName[vi.name];
+
+        ver.authors.forEach(va => {
+            const authorNameLower = va.toLowerCase();
+            if (!versionsByAuthorNameLower.hasOwnProperty(authorNameLower))
+                versionsByAuthorNameLower[authorNameLower] = [];
+            versionsByAuthorNameLower[authorNameLower].push(ver);
+        });
+    }
+
+    authorData = authors.map(a => {
+        const authorWorlds = worldsByAuthor[a];
+        const authorNameLower = a.toLowerCase();
+        const authorVersions = versionsByAuthorNameLower.hasOwnProperty(authorNameLower)
+            ? versionsByAuthorNameLower[authorNameLower].sort(versionSortFunc)
+            : [];
+        const authorInfo = authorInfoData.find(ai => ai.name.toLowerCase() === authorNameLower);
+        return {
+            name: a,
+            displayName: authorInfo ? authorInfo.name : a,
+            displayNameJP: authorInfo ? authorInfo.nameJP : null,
+            worldIds: authorWorlds.map(w => w.id),
+            worldCount: authorWorlds.length,
+            firstVer: authorVersions.length ? authorVersions[authorVersions.length - 1] : null,
+            lastVer: authorVersions.length ? authorVersions[0] : null
+        };
+    }).sort(authorSortFunc);
+
+    const $authorEntriesContainerItems = $('.js--author-entries-container__items');
+    const $authorEntriesContainerBorders = $('.js--author-entries-container__borders');
+
+    $authorEntriesContainerItems.empty();
+    $authorEntriesContainerBorders.empty();
+
+    const authorEntryHtmlTemplate = '<div href="javascript:void(0);" class="author-entry collectable-entry collectable noselect"></div>';
+    const authorEntryImageContainerHtmlTemplate = '<div class="author-entry__image-container collectable-entry__image-container"></div>';
+    const authorEntryImageHtmlTemplate = '<img src="{FILENAME}" referrerpolicy="no-referrer" />';
+    const authorsByName = {};
+
+    for (let a of authorData) {
+        const authorWorldIds = a.worldIds;
+        const $authorEntry = $(authorEntryHtmlTemplate);
+        const maxDisplayCount = Math.min(authorWorldIds.length, 4);
+        if (maxDisplayCount > 1) {
+            const $authorEntryImageContainer = $(authorEntryImageContainerHtmlTemplate).addClass(`collectable-entry__image-container--${maxDisplayCount}`);
+            const displayWorldIds = getDisplayWorldIdsForEntryImage(authorWorldIds, 4);
+            displayWorldIds.forEach(w => {
+                const world = worldData[w];
+                const $entryImage = $(authorEntryImageHtmlTemplate.replace('{FILENAME}', world.filename));
+                if (world.removed)
+                    $entryImage.addClass('removed');
+                $authorEntryImageContainer.append($entryImage);
+            });
+            $authorEntry.append($authorEntryImageContainer);
+        } else {
+            const world = worldData[authorWorldIds[authorWorldIds.length - 1]];
+            const $entryImage = $(authorEntryImageHtmlTemplate.replace('{FILENAME}', world.filename));
+            if (world.removed)
+                $entryImage.addClass('removed');
+            $authorEntry.append($entryImage)
+        }
+        const authorEntryLinkHtml =
+            `<a href="javascript:void(0);" class="js--author-entry author-entry collectable-entry collectable--border noselect" data-id="${a.name}" data-display-name="${a.displayName}" data-display-name-jp="${(a.displayNameJP || a.displayName)}">
+                <h1 class="author-entry__name--shadow collectable-entry__name--shadow">${a.name}</h1>
+                <h1 class="author-entry__name collectable-entry__name">${a.name}</h1>
+            </a>`;
+        $authorEntry.appendTo($authorEntriesContainerItems);
+        $(authorEntryLinkHtml).appendTo($authorEntriesContainerBorders);
+        authorsByName[a.name] = a;
+    }
+
+    const $tooltip = $('<div class="author-entry-tooltip scene-tooltip display--none"></div>').prependTo('.content');
+
+    $('.js--author-entry[data-id]').on('click', function () {
+        $tooltip.addClass('display--none');
+        tempSelectAuthor($(this).data('id'));
+        $.modal.close();
+    });
+    
+    $('.js--author-entry').on('mousemove', function (e) {
+        $tooltip.css({
+            top: e.pageY + 10 + 'px',
+            left: (e.pageX - ($tooltip.innerWidth() / 2)) + 'px'
+        });
+    }).on('mouseenter', function () {
+        const isEn = config.lang === 'en';
+        const author = authorsByName[$(this).data('id')];
+        $tooltip.html(localizedAuthorLabel
+            .replace('{AUTHOR}', config.lang === 'en' || !author.displayNameJP ? author.displayName : author.displayNameJP)
+            .replace('{FIRST_VERSION}', author.firstVer ? isEn ? author.firstVer.name : author.firstVer.nameJP : '')
+            .replace('{LAST_VERSION}', author.lastVer !== author.firstVer ? isEn ? author.lastVer.name : author.lastVer.nameJP : '')
+            .replace('{WORLD_COUNT}', author.worldIds.length)
+        ).removeClass('display--none');
+        if (!author.firstVer)
+            $tooltip.find('.js--author-entry-tooltip__first-version').remove();
+        if (!author.lastVer || author.lastVer === author.firstVer)
+            $tooltip.find('.js--author-entry-tooltip__last-version').remove();
+        $($authorEntriesContainerItems.children()[$(this).index()]).addClass('hover');
+    }).on('mouseleave', function () {
+        $tooltip.addClass('display--none');
+        $($authorEntriesContainerItems.children()[$(this).index()]).removeClass('hover');
+    });
+}
+
+function getAuthorDisplayName(author, appendShi) {
+    let ret = author;
+    const authorLower = author.toLowerCase();
+    const authorNameMatches = !authorData
+        ? author
+        : authorData.filter(a => a.name.toLowerCase() === authorLower).map(a => config.lang === 'en' || !a.displayNameJP ? a.displayName : a.displayNameJP);
+    if (authorNameMatches.length)
+        ret = authorNameMatches[0];
+    if (appendShi && config.lang !== 'en')
+        ret += '氏';
+    return ret;
+}
+
+function initVersionData(versionInfoData) {
+    const isEn = config.lang === 'en';
+
+    const $versionEntriesControls = $('.js--version-entries-controls');
+    const $versionEntriesContainerItems = $('.js--version-entries-container__items');
+    const $versionEntriesContainerBorders = $('.js--version-entries-container__borders');
+
+    $versionEntriesControls.empty();
+    $versionEntriesContainerItems.empty();
+    $versionEntriesContainerBorders.empty();
+
+    const versionEntryHtmlTemplate = '<div href="javascript:void(0);" class="js--version-entry version-entry collectable-entry collectable noselect"></div>';
+    const versionEntryImageContainerHtmlTemplate = '<div class="version-entry__image-container collectable-entry__image-container"></div>';
+    const versionEntryImageHtmlTemplate = '<img src="{FILENAME}" referrerpolicy="no-referrer" />';
+    const versionsByIndex = {};
+
+    const versionIndexAddedWorldIds = {};
+    const versionIndexUpdatedWorldIds = {};
+    const versionIndexRemovedWorldIds = {};
+
+    for (let v of versionData) {
+        if (v.index === versionData.length)
+            break;
+        if (versionInfoData) {
+            for (let vi of versionInfoData) {
+                if (vi.name === v.name) {
+                    if (vi.authors)
+                        v.authors = vi.authors.split(',');
+                    if (vi.releaseDate) {
+                        const releaseDate = new Date(vi.releaseDate);
+                        if (!isNaN(releaseDate))
+                            v.releaseDate = releaseDate;
+                    }
+                    break;
+                }
+            }
+        }
+        
+        let versionAddedWorldIds = v.addedWorldIds.slice(0);
+        let versionUpdatedWorldIds = v.updatedWorldIds.slice(0);
+        let versionRemovedWorldIds = v.removedWorldIds.slice(0);
+
+        versionIndexAddedWorldIds[v.index] = versionAddedWorldIds;
+        versionIndexUpdatedWorldIds[v.index] = versionUpdatedWorldIds;
+        versionIndexRemovedWorldIds[v.index] = versionRemovedWorldIds;
+
+        const versionDisplayToggles = config.versionDisplayToggles;
+
+        const $versionEntry = $(versionEntryHtmlTemplate);
+        if (versionAddedWorldIds.length && !versionDisplayToggles.ADD)
+            versionAddedWorldIds.slice(0, versionAddedWorldIds.splice(0, versionAddedWorldIds.length));
+        if (versionUpdatedWorldIds.length) {
+            if (versionDisplayToggles.UPDATE && versionDisplayToggles.UPDATE['']) {
+                const updateDisplayToggles = versionDisplayToggles.UPDATE;
+                const updateTypeKeys = Object.keys(versionUtils.VersionEntryUpdateType).slice(1);
+                for (let utk of updateTypeKeys) {
+                    if (!updateDisplayToggles[utk])
+                        removeVersionUpdatedWorldIdsOfUpdateTypes(v.name, versionUpdatedWorldIds, versionUtils.VersionEntryUpdateType[utk]);
+                }
+
+                const excludeMinorUpdates = (updateDisplayToggles.MINOR_CHANGE || updateDisplayToggles.BUG_FIX) && (versionAddedWorldIds.length || versionRemovedWorldIds.length || versionUpdatedWorldIds.find(
+                        vuw => worldData[vuw].verUpdated.find(vu => vu.verUpdated.name === v.name && vu.updateType !== versionUtils.VersionEntryUpdateType.MINOR_CHANGE && vu.updateType !== versionUtils.VersionEntryUpdateType.BUG_FIX)
+                    ));
+                if (excludeMinorUpdates) {
+                    versionUpdatedWorldIds = versionUpdatedWorldIds.slice(0);
+                    removeVersionUpdatedWorldIdsOfUpdateTypes(v.name, versionUpdatedWorldIds, [versionUtils.VersionEntryUpdateType.MINOR_CHANGE, versionUtils.VersionEntryUpdateType.BUG_FIX]);
+                }
+            } else
+                versionUpdatedWorldIds.splice(0, versionUpdatedWorldIds.length);
+        }
+        if (versionRemovedWorldIds.length && !versionDisplayToggles.REMOVE)
+            versionRemovedWorldIds.slice(0, versionRemovedWorldIds.splice(0, versionRemovedWorldIds.length));
+        if (!versionAddedWorldIds.length && !versionUpdatedWorldIds.length && !versionRemovedWorldIds.length)
+            continue;
+        if (versionAddedWorldIds.length + versionUpdatedWorldIds.length + versionRemovedWorldIds.length > 1) {
+            const maxDisplayCount = Math.min(versionAddedWorldIds.length + versionUpdatedWorldIds.length + versionRemovedWorldIds.length, 4);
+            const $versionEntryImageContainer = $(versionEntryImageContainerHtmlTemplate).addClass(`collectable-entry__image-container--${maxDisplayCount}`);
+            let addedDisplayCount = maxDisplayCount;
+            let updatedDisplayCount = 0;
+            let removedDisplayCount = 0;
+            if (versionRemovedWorldIds.length) {
+                addedDisplayCount = versionAddedWorldIds.length
+                    ? Math.min(Math.max(Math.ceil(versionAddedWorldIds.length / versionRemovedWorldIds.length), 1), maxDisplayCount)
+                    : 0;
+                removedDisplayCount = Math.min(maxDisplayCount - addedDisplayCount, versionRemovedWorldIds.length);
+                updatedDisplayCount = maxDisplayCount - (addedDisplayCount + removedDisplayCount);
+            } else if (versionUpdatedWorldIds.length) {
+                addedDisplayCount = versionAddedWorldIds.length
+                    ? Math.min(versionAddedWorldIds.length, maxDisplayCount)
+                    : 0;
+                updatedDisplayCount = maxDisplayCount - addedDisplayCount;
+            }
+            const addedDisplayWorldIds = getDisplayWorldIdsForEntryImage(versionAddedWorldIds, addedDisplayCount);
+            const updatedDisplayWorldIds = getDisplayWorldIdsForEntryImage(versionUpdatedWorldIds, updatedDisplayCount);
+            const removedDisplayWorldIds = getDisplayWorldIdsForEntryImage(versionRemovedWorldIds, removedDisplayCount);
+            const displayWorldIds = addedDisplayWorldIds.concat(updatedDisplayWorldIds).concat(removedDisplayWorldIds);
+            displayWorldIds.forEach((w, i) => {
+                const $entryImage = $(versionEntryImageHtmlTemplate.replace('{FILENAME}', worldData[w].filename));
+                if (i >= addedDisplayCount + updatedDisplayCount)
+                    $entryImage.addClass('removed');
+                $versionEntryImageContainer.append($entryImage);
+            });
+            $versionEntry.append($versionEntryImageContainer);
+        } else {
+            const worldId = versionAddedWorldIds.length ? versionAddedWorldIds[0] : versionUpdatedWorldIds.length ? versionUpdatedWorldIds[0] : versionRemovedWorldIds[0];
+            const $entryImage = $(versionEntryImageHtmlTemplate.replace('{FILENAME}', worldData[worldId].filename));
+            if (versionRemovedWorldIds.length)
+                $entryImage.addClass('removed');
+            $versionEntry.append($entryImage);
+        }
+        const $versionEntryLink = $(`
+            <div class="js--version-entry--container collectable-entry--container">
+                <a href="javascript:void(0);" class="js--version-entry-link version-entry collectable-entry collectable--border noselect" data-id="${v.index}">
+                    <div class="collectable-entry__name--container">
+                        <h1 class="version-entry__name--shadow collectable-entry__name--shadow">${isEn ? v.name : v.nameJP}</h1>
+                        <h1 class="version-entry__name collectable-entry__name">${isEn ? v.name : v.nameJP}</h1>
+                    </div>
+                </a>
+            </div>
+        `);
+
+        const versionDetailsEntries = getVersionDetailsEntries(v);
+        
+        const $versionEntryContent = $('<div class="js--version-entry--content collectable-entry--content"></div>');
+        const $versionEntryContentList = $('<ul class="js--version-entry--content__list collectable-entry--content__list"></ul>');
+        for (let vde of versionDetailsEntries)
+            $versionEntryContentList.append(`<li>${vde}</li>`);
+        $versionEntryContent.append($versionEntryContentList);
+        $versionEntryLink.append($versionEntryContent);
+        $versionEntryLink.append('<button class="js--version-entry--expand collectable-entry--expand noselect">▶</button>');
+        
+        $versionEntry.appendTo($versionEntriesContainerItems);
+        $versionEntryLink.appendTo($versionEntriesContainerBorders);
+        versionsByIndex[v.index] = v;
+    }
+
+    const $tooltip = $('<div class="version-entry-tooltip scene-tooltip display--none"></div>').prependTo('.content');
+
+    $('.js--version-entry-link[data-id]').on('click', function () {
+        $tooltip.addClass('display--none');
+        tempSelectVersion($(this).data('id'));
+        $.modal.close();
+    });
+    
+    $('.js--version-entry-link').on('mousemove', function (e) {
+        $tooltip.css({
+            top: e.pageY + 10 + 'px',
+            left: (e.pageX - ($tooltip.innerWidth() / 2)) + 'px'
+        });
+    }).on('mouseenter', function () {
+        const verIndex = $(this).data('id');
+        const version = versionsByIndex[verIndex];
+        $tooltip.html(localizedVersionLabel
+            .replace('{VERSION}', isEn ? version.name : version.nameJP)
+            .replace('{AUTHORS}', version.authors.map(a => `<span class='tooltip__value'>${(a ? getAuthorDisplayName(a, true) : localizedNA)}</span>`).join(isEn ? ', ' : 'と'))
+            .replace('{RELEASE_DATE}', version.releaseDate ? formatDate(version.releaseDate, config.lang) : localizedNA)
+            .replace('{WORLD_COUNT}', versionIndexAddedWorldIds[verIndex].length)
+            .replace('{UPDATED_WORLD_COUNT}', versionIndexUpdatedWorldIds[verIndex].length)
+            .replace('{REMOVED_WORLD_COUNT}', versionIndexRemovedWorldIds[verIndex].length)
+        ).removeClass('display--none');
+        if (!versionIndexAddedWorldIds[verIndex].length)
+            $tooltip.find('.js--version-entry-tooltip__world-count').remove();
+        if (!versionIndexUpdatedWorldIds[verIndex].length)
+            $tooltip.find('.js--version-entry-tooltip__updated-world-count').remove();
+        if (!versionIndexRemovedWorldIds[verIndex].length)
+            $tooltip.find('.js--version-entry-tooltip__removed-world-count').remove();
+        $($versionEntriesContainerItems.children()[$(this).index()]).addClass('hover');
+    }).on('mouseleave', function () {
+        $tooltip.addClass('display--none');
+        $($versionEntriesContainerItems.children()[$(this).index()]).removeClass('hover');
+    });
+
+    const entryTypeKeys = Object.keys(versionUtils.VersionEntryType);
+    const entryUpdateTypeKeys = Object.keys(versionUtils.VersionEntryUpdateType).slice(1);
+
+    for (let t of entryTypeKeys) {
+        const isUpdate = t === 'UPDATE';
+        const isEntryTypeChecked = isUpdate ? config.versionDisplayToggles[t][''] : config.versionDisplayToggles[t];
+        const $entryTypeCheck = $(`
+            <div class="control">
+                <input class="checkbox js--version-entries-modal__entry-type-check noselect" type="checkbox" data-entry-type="${t}"${(isEntryTypeChecked ? ' checked' : '')}>
+                <button class="checkbox-button noselect"><span></span></button>
+                <label>${localizedVersionDisplayToggle.name.replace('{ENTRY_TYPE}', localizedVersionDisplayToggle.entryType[t])}</label>
+            </div>
+        `);
+        $versionEntriesControls.append($entryTypeCheck);
+        if (isUpdate && isEntryTypeChecked) {
+            for (let ut of entryUpdateTypeKeys) {
+                const isEntryUpdateTypeChecked = config.versionDisplayToggles[t][ut];
+                const $entryUpdateTypeCheck = $(`
+                    <div class="control">
+                        <input class="checkbox js--version-entries-modal__entry-update-type-check noselect" type="checkbox" data-entry-type="${t}" data-entry-update-type="${ut}"${(isEntryUpdateTypeChecked ? ' checked' : '')}>
+                        <button class="checkbox-button noselect"><span></span></button>
+                        <label>${localizedVersionDisplayToggle.name.replace('{ENTRY_TYPE}', localizedVersionDisplayToggle.entryUpdateType[ut])}</label>
+                    </div>
+                `);
+                $versionEntriesControls.append($entryUpdateTypeCheck);
+            }
+        }
+    }
+
+    $('.js--version-entries-modal__entry-type-check').on('change', function() {
+        const entryType = $(this).data('entryType');
+        if (entryType === 'UPDATE')
+            config.versionDisplayToggles[entryType][''] = $(this).prop('checked');
+        else
+            config.versionDisplayToggles[entryType] = $(this).prop('checked');
+        updateConfig(config);
+        initVersionData(versionInfoData);
+    });
+
+    $('.js--version-entries-modal__entry-update-type-check').on('change', function() {
+        config.versionDisplayToggles[$(this).data('entryType')][$(this).data('entryUpdateType')] = $(this).prop('checked');
+        updateConfig(config);
+        initVersionData(versionInfoData);
+    });
+
+    $('.js--version-entry--expand').on('click', function () {
+        const $entryContainer = $(this).parent('.js--version-entry--container');
+        $(this).prev('.js--version-entry--content').toggleClass('expanded');
+        $entryContainer.parent('.js--version-entries-container__borders')
+            .prev('.js--version-entries-container__items')
+            .children(`.js--version-entry:nth-child(${$entryContainer.index() + 1})`)
+            .toggleClass('expanded');
+    });
+}
+
+function removeVersionUpdatedWorldIdsOfUpdateTypes(verName, versionUpdatedWorldIds, updateTypes) {
+    if (!versionUpdatedWorldIds.length)
+        return;
+    const updateTypeCheckFunc = Array.isArray(updateTypes)
+        ? vu => updateTypes.indexOf(vu.updateType) > -1
+        : vu => vu.updateType === updateTypes;
+    for (let uw = versionUpdatedWorldIds.length - 1; uw >= 0; uw--) {
+        if (worldData[versionUpdatedWorldIds[uw]].verUpdated.find(vu => vu.verUpdated.name === verName && updateTypeCheckFunc(vu)))
+            versionUpdatedWorldIds.splice(uw, 1);
+    }
+}
+
+function getVersionDetailsEntries(ver) {
+    const ret = [];
+    const verIndex = ver.index;
+
+    for (let aw of ver.addedWorldIds)
+        ret.push(getVersionDetailsEntryText(aw, versionUtils.VersionEntryType.ADD));
+
+    const updateTypes = Object.values(versionUtils.VersionEntryUpdateType);
+    const worldUpdateVers = _.sortBy(
+        ver.updatedWorldIds.map(uw => {
+            return {
+                worldId: uw,
+                verUpdated: worldData[uw].verUpdated.find(vu => vu.verUpdated.index === verIndex)
+            };
+        }).filter(wvu => wvu.verUpdated), wvu => updateTypes.indexOf(wvu.verUpdated.updateType));
+
+    for (let wvu of worldUpdateVers)
+        ret.push(getVersionDetailsEntryText(wvu.worldId, versionUtils.VersionEntryType.UPDATE, wvu.verUpdated.updateType));
+
+    for (let rw of ver.removedWorldIds)
+        ret.push(getVersionDetailsEntryText(rw, versionUtils.VersionEntryType.REMOVE));
+
+    return ret;
+}
+
+function getVersionDetailsEntryText(worldId, entryType, updateType) {
+    let ret;
+    const versionDetails = localizedVersionDetails[entryType];
+
+    if (entryType === versionUtils.VersionEntryType.UPDATE)
+        ret = versionDetails[updateType && versionDetails.hasOwnProperty(updateType) ? updateType : ''];
+    else
+        ret = versionDetails;
+
+    const world = worldData[worldId];
+
+    return ret.replace('{WORLD}', config.lang === 'en' ? world.title : world.titleJP);
+}
+
+function getDisplayWorldIdsForEntryImage(worldIds, displayCount) {
+    let ret = [];
+    if (worldIds.length) {
+        const firstWorldId = worldIds[0];
+        const lastWorldId = worldIds[worldIds.length - 1];
+        switch (Math.min(worldIds.length, displayCount)) {
+            case 0:
+                break;
+            case 1:
+                ret = [firstWorldId];
+                break;
+            case 2:
+                ret = [firstWorldId, lastWorldId];
+                break;
+            case 3:
+                ret = [
+                    firstWorldId,
+                    worldIds[Math.ceil(worldIds.length / 2) - 1],
+                    lastWorldId
+                ];
+                break;
+            default:
+                ret = [
+                    firstWorldId,
+                    worldIds[Math.ceil((worldIds.length / 4) * 2) - 1],
+                    worldIds[Math.ceil((worldIds.length / 4) * 3) - 1],
+                    lastWorldId
+                ];
+                break;
+        }
+    }
+    return ret;
+}
 
 function initMenuThemeData(data) {
     menuThemeData = data;
 
-    const $menuThemesContainerItems = $(".js--menu-themes-container__items");
-    const $menuThemesContainerBorders = $(".js--menu-themes-container__borders");
-    const $removedMenuThemesContainerItems = $(".js--removed-menu-themes-container__items");
-    const $removedMenuThemesContainerBorders = $(".js--removed-menu-themes-container__borders");
+    const $menuThemesContainerItems = $('.js--menu-themes-container__items');
+    const $menuThemesContainerBorders = $('.js--menu-themes-container__borders');
+    const $removedMenuThemesContainerItems = $('.js--removed-menu-themes-container__items');
+    const $removedMenuThemesContainerBorders = $('.js--removed-menu-themes-container__borders');
     const menuThemeLocationsById = {};
 
     $menuThemesContainerItems.empty();
@@ -129,7 +632,7 @@ function initMenuThemeData(data) {
     for (let m of menuThemeData) {
         for (let l of m.locations) {
             const removedCollectableClass = l.removed ? ' removed-collectable' : '';
-            const worldIdAttribute = l.worldId ? ` data-world-id="${l.worldId}"` : '';
+            const worldIdAttribute = l.worldId ? ` data-id="${l.worldId}"` : '';
             const menuThemeImageHtml = `<div href="javascript:void(0);" class="menu-theme collectable${removedCollectableClass} noselect"><img src="${m.filename}" referrerpolicy="no-referrer" /></div>`;
             const menuThemeLinkHtml = `<a href="javascript:void(0);" class="js--menu-theme menu-theme collectable--border noselect" data-location-id="${l.id}"${worldIdAttribute}></a>`;
             l.method = l.method.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
@@ -141,29 +644,31 @@ function initMenuThemeData(data) {
         }
     }
 
-    var $tooltip = $('<div class="menu-theme-tooltip scene-tooltip display--none"></div>').prependTo('.content');
+    const $tooltip = $('<div class="menu-theme-tooltip scene-tooltip display--none"></div>').prependTo('.content');
 
-    $(".js--menu-theme[data-world-id]").on("click", function () {
-        if (trySelectNode($(this).data("worldId"), true))
+    $('.js--menu-theme[data-id]').on('click', function () {
+        if (trySelectNode($(this).data('id'), true, true)) {
+            $tooltip.addClass('display--none');
             $.modal.close();
-    })
+        }
+    });
     
-    $(".js--menu-theme").on("mousemove", function (e) {
+    $('.js--menu-theme').on('mousemove', function (e) {
         $tooltip.css({
             top: e.pageY + 10 + 'px',
             left: (e.pageX - ($tooltip.innerWidth() / 2)) + 'px'
         });
-    }).on("mouseenter", function () {
-        const location = menuThemeLocationsById[$(this).data("locationId")];
+    }).on('mouseenter', function () {
+        const location = menuThemeLocationsById[$(this).data('locationId')];
         const world = location.worldId ? worldData[location.worldId] : null;
         const worldName = world ?
-            config.lang === "en" || !world.titleJP ? world.title : world.titleJP
+            config.lang === 'en' || !world.titleJP ? world.title : world.titleJP
             : null;
-        const worldLabel = worldName ? `<span class="menu-theme-tooltip__world">${worldName}</span><br />` : '';
-        const method = config.lang === "en" || !location.methodJP ? location.method : location.methodJP;
-        $tooltip.html(`${worldLabel}${method}`).removeClass("display--none");
-    }).on("mouseleave", function () {
-        $tooltip.addClass("display--none");
+        const worldLabel = worldName ? `<span class="menu-theme-tooltip__world tooltip__value">${worldName}</span><br>` : '';
+        const method = config.lang === 'en' || !location.methodJP ? location.method : location.methodJP;
+        $tooltip.html(`${worldLabel}${method}`).removeClass('display--none');
+    }).on('mouseleave', function () {
+        $tooltip.addClass('display--none');
     });
 }
 
@@ -175,11 +680,13 @@ function loadOrInitConfig() {
             const savedConfig = JSON.parse(window.localStorage.getItem("config"));
             for (let key of Object.keys(savedConfig)) {
                 if (config.hasOwnProperty(key)) {
-                    const value = savedConfig[key];
-                    config[key] = value;
+                    let value = savedConfig[key];
                     switch (key) {
                         case "debug":
                             isDebug = value;
+                            break;
+                        case "username":
+                            username = value;
                             break;
                         case "lang":
                             $(".js--lang").val(value);
@@ -217,13 +724,70 @@ function loadOrInitConfig() {
                         case "stackSize":
                             $(".js--stack-size").val(value);
                             break;
+                        case "versionDisplayToggles":
+                            value = getUpdatedVersionDisplayToggles(value);
+                            break;
                     }
+                    config[key] = value;
                 }
             }
         }
     } catch (error) {
         console.log(error);
     }
+}
+
+function getDefaultVersionDisplayToggles() {
+    return {
+        ADD: true,
+        UPDATE: {
+            '': false,
+            MINOR_CHANGE: false,
+            MAJOR_CHANGE: true,
+            BUG_FIX: false,
+            ADD_CONTENT: true,
+            REMOVE_CONTENT: true,
+            LAYOUT_CHANGE: true,
+            EXPANSION: true,
+            REDUCTION: true,
+            ADD_SUB_AREA: true,
+            REMOVE_SUB_AREA: true,
+            CONNECTION_CHANGE: true,
+            ADD_CONNECTION: true,
+            REMOVE_CONNECTION: true,
+            BGM_CHANGE: false,
+            EFFECT_CHANGE: false,
+            REWORK: true
+        },
+        REMOVE: true
+    };
+}
+
+function getUpdatedVersionDisplayToggles(value) {
+    let ret;
+    const defaultValue = getDefaultVersionDisplayToggles();
+    if (typeof value === 'object') {
+        ret = {};
+        Object.keys(defaultValue).forEach(et => {
+            const defaultEntryTypeValue = defaultValue[et];
+            if (value.hasOwnProperty(et)) {
+                const entryTypeValue = value[et];
+                if (typeof defaultEntryTypeValue === 'object') {
+                    if (typeof entryTypeValue === 'object') {
+                        ret[et] = {};
+                        Object.keys(defaultEntryTypeValue)
+                            .forEach(eut => ret[et][eut] = entryTypeValue.hasOwnProperty(eut) ? entryTypeValue[eut] : defaultEntryTypeValue[eut]);
+                    } else
+                        ret[et] = defaultEntryTypeValue;
+                } else
+                    ret[et] = entryTypeValue;
+            } else
+                ret[et] = defaultEntryTypeValue;
+        });
+    } else
+        ret = defaultValue;
+
+    return ret;
 }
 
 function updateControlsContainer(updateTabMargin) {
@@ -307,6 +871,8 @@ function reloadData(update) {
     const loadCallback = displayLoadingAnim($("#graphContainer"));
     loadData(update, function (data) {
         initWorldData(data.worldData);
+        initVersionData(data.versionInfoData);
+        initAuthorData(data.authorInfoData, data.versionInfoData);
         initMenuThemeData(data.menuThemeData);
         lastUpdate = new Date(data.lastUpdate);
         lastFullUpdate = new Date(data.lastFullUpdate);
@@ -333,6 +899,10 @@ let contextWorldId = null, startWorldId = null, endWorldId = null, hoverWorldId 
 let searchWorldIds = [], visibleWorldIds = [];
 
 let selectedAuthor = null;
+let selectedVersionIndex = null;
+
+let tempSelectedAuthor = null;
+let tempSelectedVersionIndex = null;
 
 let visibleTwoWayLinks = [];
 let visibleOneWayLinks = [];
@@ -342,6 +912,7 @@ let linksOneWayBuffered;
 
 let nodeObject;
 let iconObject;
+let nodeIconObject;
 
 let icons3D;
 
@@ -350,12 +921,20 @@ const nodeTextColors = ["#FFFFFF", "#AAAAAA", "#888888"];
 
 let localizedNodeLabel;
 let localizedPathNodeLabel;
+let localizedNodeLabelVersionLastUpdated;
+let localizedNodeLabelVersionLastUpdatedWithUpdateType;
+let localizedNodeLabelVersionRemoved;
+let localizedNodeLabelVersionUpdateTypes;
+let localizedAuthorLabel;
+let localizedVersionLabel;
+let localizedNodeIconNew;
+let localizedVersionDetails;
+let localizedVersionDisplayToggle;
+let localizedNA;
 
 let iconLabel;
 
 let raycaster, mousePos = { x: 0, y: 0 };
-
-let localizedUnknownAuthor;
 
 let localizedConns;
 
@@ -363,6 +942,7 @@ let effectsJP;
 
 let config = {
     debug: false,
+    username: null,
     lang: "en",
     uiTheme: "Default_Custom",
     fontStyle: 0,
@@ -373,7 +953,8 @@ let config = {
     removedContentMode: 0,
     pathMode: 1,
     sizeDiff: 1,
-    stackSize: 20
+    stackSize: 20,
+    versionDisplayToggles: getDefaultVersionDisplayToggles()
 };
 
 let lastUpdate, lastFullUpdate;
@@ -392,12 +973,14 @@ function initGraph(renderMode, displayMode, paths) {
 
     const worldDepths = {};
     const worldRealDepths = {};
+    const worldIsNew = {};
     const worldRemoved = {};
 
     iconTexts = [];
 
     for (let w of worldData) {
         worldScales[w.id] = 1 + (Math.round((w.size - minSize) / (maxSize - minSize) * 10 * (config.sizeDiff - 1)) / 10);
+        worldIsNew[w.id] = (w.verAdded && w.verAdded.index === versionData.length - 1);
         worldRemoved[w.id] = w.removed;
     }
 
@@ -414,9 +997,9 @@ function initGraph(renderMode, displayMode, paths) {
         let maxPathScore;
         let filteredPathConnTypes = ConnType.LOCKED | ConnType.EFFECT | ConnType.CHANCE | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT;
         do {
-            const filteredPaths = paths.filter(p => !p.filter(pi => filteredPathConnTypes & pi.connType).length);
-            if (filteredPaths.length)
-                pathDepthLimit = filteredPaths[0].length;
+            const filteredPath = paths.find(p => !p.find(pi => filteredPathConnTypes & pi.connType));
+            if (filteredPath)
+                pathDepthLimit = filteredPath.length;
             else {
                 if (filteredPathConnTypes & ConnType.EFFECT)
                     filteredPathConnTypes ^= ConnType.EFFECT;
@@ -492,7 +1075,7 @@ function initGraph(renderMode, displayMode, paths) {
             worldDepths[endWorldId] = ++maxDepth;
 
         const nexusWorldName = "The Nexus";
-        const nexusWorldId = worldData.filter(w => w.title === nexusWorldName)[0].id;
+        const nexusWorldId = worldData.find(w => w.title === nexusWorldName).id;
         const nexusShortcutLinks = links.filter(l => l.target === nexusWorldId && l.connType & ConnType.EFFECT && !worldData[l.source].connections.filter(c => c.targetId === nexusWorldId).length);
         const nexusShortcutWorldIds = nexusShortcutLinks.map(l => l.source);
         
@@ -501,7 +1084,7 @@ function initGraph(renderMode, displayMode, paths) {
             let connections = world.connections;
             const dagIgnoreIds = dagIgnore[w] || (dagIgnore[w] = []);
             if (nexusShortcutWorldIds.indexOf(w) > -1) {
-                const nexusShortcutLink = nexusShortcutLinks.filter(l => l.source === w)[0];
+                const nexusShortcutLink = nexusShortcutLinks.find(l => l.source === w);
                 connections = connections.concat([{
                     targetId: nexusShortcutLink.target,
                     type: nexusShortcutLink.connType,
@@ -512,10 +1095,10 @@ function initGraph(renderMode, displayMode, paths) {
                 const linkId = `${w}_${conn.targetId}`;
                 if (addedLinks.indexOf(linkId) === -1)
                     continue;
-                const link = links.filter(l => l.key === linkId)[0];
+                const link = links.find(l => l.key === linkId);
                 const connWorld = worldData[conn.targetId];
                 const reverseLinkId = `${connWorld.id}_${w}`;
-                const reverseConn = connWorld.connections.filter(c => c.targetId === w);
+                const reverseConn = connWorld.connections.find(c => c.targetId === w);
                 let hidden = false;
                 if (conn.type & ConnType.NO_ENTRY) {
                     hidden = true;
@@ -524,7 +1107,7 @@ function initGraph(renderMode, displayMode, paths) {
                     dagIgnoreIds.push(connWorld.id);
                     if (worldDepths[w] >= worldDepths[connWorld.id]) {
                         const sameDepth = worldDepths[w] === worldDepths[connWorld.id];
-                        hidden = (!sameDepth && !reverseConn.length) || (reverseConn.length && !(reverseConn[0].type & ConnType.NO_ENTRY) && (!sameDepth || (!(conn.type & ConnType.ONE_WAY) && w > connWorld.id)));
+                        hidden = (!sameDepth && !reverseConn) || (reverseConn && !(reverseConn.type & ConnType.NO_ENTRY) && (!sameDepth || (!(conn.type & ConnType.ONE_WAY) && w > connWorld.id)));
                     }
                 }
                 if (hidden) {
@@ -536,14 +1119,14 @@ function initGraph(renderMode, displayMode, paths) {
                         key: reverseLinkId,
                         source: connWorld.id,
                         target: w,
-                        connType: reverseConn.length
-                            ? reverseConn[0].type
+                        connType: reverseConn
+                            ? reverseConn.type
                             : conn.type & ConnType.ONE_WAY
                             ? ConnType.NO_ENTRY
                             : conn.type & ConnType.NO_ENTRY
                             ? ConnType.ONE_WAY
                             : 0,
-                        typeParams: reverseConn.length ? reverseConn[0].typeParams : {},
+                        typeParams: reverseConn ? reverseConn.typeParams : {},
                         icons: [],
                         hidden: !hidden,
                         defaultColor: link.defaultColor,
@@ -576,8 +1159,8 @@ function initGraph(renderMode, displayMode, paths) {
                     hidden = true;
                 else if (world.depth >= connWorld.depth) {
                     const sameDepth = world.depth === connWorld.depth;
-                    const reverseConn = connWorld.connections.filter(c => c.targetId === w);
-                    hidden = (!sameDepth && !reverseConn.length) || (reverseConn.length && !(reverseConn[0].type & ConnType.NO_ENTRY) && (!sameDepth || (!(conn.type & ConnType.ONE_WAY) && w > connWorld.id)));
+                    const reverseConn = connWorld.connections.find(c => c.targetId === w);
+                    hidden = (!sameDepth && !reverseConn) || (reverseConn && !(reverseConn.type & ConnType.NO_ENTRY) && (!sameDepth || (!(conn.type & ConnType.ONE_WAY) && w > connWorld.id)));
                     if (!hidden)
                         dagIgnoreIds.push(connWorld.id);
                 }
@@ -652,8 +1235,9 @@ function initGraph(renderMode, displayMode, paths) {
         const id = parseInt(img.id);
         const rId = parseInt(img.rId);
         const scale = worldScales[id];
+        const isNew = worldIsNew[id];
         const removed = worldRemoved[id];
-        const ret = { id, rId, index: n++, img, scale: scale, removed: removed };
+        const ret = { id, rId, index: n++, img, scale: scale, isNew: isNew, removed: removed };
         ret.depth = worldDepths[id];
         ret.depthColor = depthColors[ret.depth];
         if (paths)
@@ -668,7 +1252,7 @@ function initGraph(renderMode, displayMode, paths) {
         return ret;
     });
 
-    const radius = 12;
+    const radius = parseInt(Math.min(window.innerWidth, window.innerHeight) / 100);
     const gData = {
         nodes: nodes,
         links: _.sortBy(links, l => (endWorldId == null || l.target !== endWorldId ? worldDepths[l.source] : maxDepth) + (maxDepth + 1) * (l.connType & ConnType.ONE_WAY ? 1 : 0))
@@ -721,7 +1305,7 @@ function initGraph(renderMode, displayMode, paths) {
             let ret;
             const scale = worldScales[node.id];
             const world = worldData[node.id];
-            const box = new THREE.BoxGeometry(13 * scale, 9.75 * scale, is2d ? 0.1 : 13 * scale);
+            const box = new THREE.BoxGeometry(13 * scale, 9.75 * scale, is2d ? 1 : 13 * scale);
             let material;
             if (isWebGL2) {
                 material = new THREE.MeshBasicMaterial();
@@ -745,12 +1329,12 @@ function initGraph(renderMode, displayMode, paths) {
             if (!(isWebGL2 && is2d)) {
                 const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
                 const text = new SpriteText(worldName, 1.5, node.removed ? getNodeTextColor(node, ret.material.grayscale) : 'white');
-                text.__graphObjType = 'label';
                 text.fontFace = 'MS Gothic';
                 text.fontSize = 80;
-                text.strokeWidth = is2d ? 1.5 : 2;
-                text.strokeColor = '#000000';
+                text.strokeWidth = is2d ? 1.5 : 2 - (scale - 1) * 0.1;
+                text.strokeColor = 'black';
                 text.backgroundColor = false;
+
                 if (is2d) {
                     text.material.depthTest = false;
                     text.renderOrder = world.id;
@@ -762,13 +1346,14 @@ function initGraph(renderMode, displayMode, paths) {
                     text.renderOrder = 2;
                     text.material.depthWrite = false;
                 }
-                let textLines = worldName.split(" ");
+
+                let textLines = worldName.split(' ');
                 for (let l = 0; l < textLines.length; l++) {
                     text.text = textLines[l];
                     if (text.scale.x * scale < 13 * scale) {
                         let mergeIndex = 0;
                         for (let l2 = l + 1; l2 < textLines.length; l2++) {
-                            const mergedLine = textLines.slice(l, l2 + 1).join(" ");
+                            const mergedLine = textLines.slice(l, l2 + 1).join(' ');
                             text.text = mergedLine;
                             if (text.scale.x * scale < 13 * scale)
                                 mergeIndex = l2;
@@ -776,19 +1361,62 @@ function initGraph(renderMode, displayMode, paths) {
                                 break;
                         }
                         if (mergeIndex)
-                            textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
-                    } else if (textLines[l].indexOf("：") > -1)
-                        textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
+                            textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(' ')], textLines.slice(mergeIndex + 1));
+                    } else if (textLines[l].indexOf('：') > -1)
+                        textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, '： ').split(' ')).concat(textLines.slice(l + 1));
                 }
+                
                 text.text = textLines.join('\n');
-                text.defaultScale = { "x": text.scale.x, "y": text.scale.y };
+                text.defaultScale = { 'x': text.scale.x, 'y': text.scale.y };
                 text.material.transparent = true;
                 text.material.opacity = ret.material.opacity;
                 if (config.labelMode < 3)
                     text.visible = false;
 
+                text.scale.x *= scale;
+                text.scale.y *= scale;
+
                 ret.add(text);
+               
+                if (worldIsNew[node.id]) {
+                    const iconText = new SpriteText(is2d ? ` ${localizedNodeIconNew} ` : localizedNodeIconNew, 2, 'gold');
+                    iconText.__graphObjType = 'label';
+                    iconText.fontFace = 'MS Gothic';
+                    iconText.fontSize = 80;
+                    iconText.strokeWidth = 1;
+                    iconText.strokeColor = '#4d4000';
+                    iconText.backgroundColor = false;
+    
+                    if (is2d) {
+                        iconText.material.depthTest = false;
+                        iconText.renderOrder = world.id;
+                    } else {
+                        iconText.borderWidth = 1;
+                        iconText.borderColor = 'transparent';
+                    }
+                    if (isWebGL2) {
+                        iconText.renderOrder = 2;
+                        iconText.material.depthWrite = false;
+                    }
+                    
+                    iconText.defaultScale = { 'x': iconText.scale.x, 'y': iconText.scale.y };
+                    iconText.material.transparent = true;
+                    iconText.material.opacity = ret.material.opacity;
+                    iconText.visible = isNodeLabelVisible(node);
+                    iconText.scale.x *= scale;
+                    iconText.scale.y *= scale;
+    
+                    if (is2d) {
+                        iconText.position.set(7 * scale, 4.75 * scale, 0);
+                        iconText.center.set(1, 1);
+                    } else {
+                        iconText.center.set(1 - ((6.5 * scale) / iconText.scale.x), 1 - ((4.875 * scale) / iconText.scale.y));
+                    }
+    
+                    ret.add(iconText);
+                }
             }
+
             return ret;
         })
         .onEngineTick(() => {
@@ -827,7 +1455,7 @@ function initGraph(renderMode, displayMode, paths) {
                     }
                 }
                 if (link.connType & ConnType.ONE_WAY) {
-                    const oneWayIcon = linkIcons.filter(i => i.connType & ConnType.ONE_WAY)[0];
+                    const oneWayIcon = linkIcons.find(i => i.connType & ConnType.ONE_WAY);
                     oneWayIcon.material.map.repeat.x = link.source.x <= link.target.x ? 1 : -1;
                 }
             }
@@ -835,19 +1463,27 @@ function initGraph(renderMode, displayMode, paths) {
         .connMode(() => config.connMode)
         .nodeVal(node => node.width)
         .nodeLabel(node => {
+            const isEn = config.lang === 'en';
+            const world = worldData[node.id];
             let ret = (paths && node.depth !== node.minDepth ? localizedPathNodeLabel : localizedNodeLabel)
-                .replace('{WORLD}', node.img.title).replace('{DEPTH}', node.depth).replace('{DEPTH_COLOR}', node.depthColor).replace('{AUTHOR}', worldData[node.id].author || localizedUnknownAuthor);
+                .replace('{WORLD}', node.img.title).replace('{DEPTH}', node.depth).replace('{DEPTH_COLOR}', node.depthColor).replace('{AUTHOR}', world.author ? getAuthorDisplayName(world.author, true) : localizedNA)
+                .replace('{VERSION_ADDED}', world.verAdded ? (isEn ? world.verAdded.name : world.verAdded.nameJP) : localizedNA);
             if (paths)
                 ret = ret.replace('{MIN_DEPTH}', node.minDepth).replace('{MIN_DEPTH_COLOR}', node.minDepthColor);
+            if (world.verUpdated) {
+                const verUpdated = world.verUpdated[world.verUpdated.length - 1];
+                let nodeLabelLastUpdated = (verUpdated.updateType ? localizedNodeLabelVersionLastUpdatedWithUpdateType : localizedNodeLabelVersionLastUpdated)
+                    .replace('{VERSION_LAST_UPDATED}', isEn ? verUpdated.verUpdated.name : verUpdated.verUpdated.nameJP);
+                if (verUpdated.updateType)
+                    nodeLabelLastUpdated = nodeLabelLastUpdated.replace('{VERSION_LAST_UPDATED_TYPE}', localizedNodeLabelVersionUpdateTypes[verUpdated.updateType]);
+                ret += nodeLabelLastUpdated;
+            }
+            if (node.removed)
+                ret += localizedNodeLabelVersionRemoved.replace('{VERSION_REMOVED}', world.verRemoved ? (isEn ? world.verRemoved.name : world.verRemoved.nameJP) : localizedNA);
             return ret;
         })
         .nodesPerStack(config.stackSize)
-        .onNodeDragEnd(node => {
-            node.fx = node.x;
-            node.fy = node.y;
-            if (!is2d)
-                node.fz = node.z;
-        })
+        .onNodeDragEnd(node => ['x', 'y'].concat(is2d ? [] : ['z']).forEach(c => node[`f${c}`] = node[c]))
         .onNodeHover((node, prevNode) => {
             elem.style.cursor = node ? 'pointer' : null;
 
@@ -892,6 +1528,7 @@ function initGraph(renderMode, displayMode, paths) {
                 updateNodeLabels2D();
         })
         .onNodeClick(node => {
+            ['x', 'y'].concat(is2d ? [] : ['z']).forEach(d => node[`f${d}`] = node[d]);
             if (isCtrl || isShift)
                 openWorldWikiPage(node.id, isShift);
             else
@@ -899,14 +1536,18 @@ function initGraph(renderMode, displayMode, paths) {
         })
         .onNodeRightClick((node, ev) => {
             contextWorldId = node.id;
-            $(".graph canvas").contextMenu({
+            $('.graph canvas').contextMenu({
                 x: ev.x,
                 y: ev.y
             });
         })
         .onBackgroundClick(node => {
-            $(".js--search-world").removeClass("selected").val("");
+            $('.js--search-world').removeClass('selected').val('');
             selectedWorldId = null;
+            if (tempSelectedAuthor)
+                tempSelectAuthor(null);
+            if (tempSelectedVersionIndex)
+                tempSelectVersion(0);
             highlightWorldSelection();
         })
         .cooldownTicks(400)
@@ -914,18 +1555,20 @@ function initGraph(renderMode, displayMode, paths) {
         // Add collision and bounding box forces
         .d3Force('collide', forceCollide(node => radius * worldScales[node.id]))
         .d3Force('box', () => {
-            const SQUARE_HALF_SIDE = radius * 50;
 
             gData.nodes.forEach(node => {
                 const x = node.x || 0, y = node.y || 0;
 
                 // bounce on box walls
-                if (Math.abs(x) > SQUARE_HALF_SIDE) { node.vx += 0.1 * (x > 0 ? -1 : 1); }
-                if (Math.abs(y) > SQUARE_HALF_SIDE) { node.vy += 0.1 * (y > 0 ? -1 : 1); }
+                if (Math.abs(x) > radius)
+                    node.vx += 0.1 * (x > 0 ? -1 : 1);
+                if (Math.abs(y) > radius)
+                    node.vy += 0.1 * (y > 0 ? -1 : 1);
 
                 if (!is2d) {
                     const z = node.z || 0;
-                    if (Math.abs(z) > SQUARE_HALF_SIDE) { node.vz += 0.1 * (z > 0 ? -1 : 1); }
+                    if (Math.abs(z) > radius)
+                        node.vz += 0.1 * (z > 0 ? -1 : 1);
                 }
             });
         })
@@ -937,15 +1580,23 @@ function initGraph(renderMode, displayMode, paths) {
     document.removeEventListener('mousemove', onDocumentMouseMove, false);
     document.querySelector('#graph canvas').removeEventListener('wheel', clearTweens, false)
 
+    const controls = graph.controls();
+    controls.screenSpacePanning = true;
+
     if (is2d) {
-        const controls = graph.controls();
-        controls.minAzimuthAngle = 0;
-        controls.maxAzimuthAngle = 0;
-        controls.mouseButtons.PAN = THREE.MOUSE.LEFT;
-        controls.mouseButtons.ORBIT = THREE.MOUSE.MIDDLE;
+        controls.maxPolarAngle = controls.minPolarAngle = Math.PI / 2;
+        controls.maxAzimuthAngle = controls.minAzimuthAngle = 0;
+        controls.mouseButtons = {
+            LEFT: THREE.MOUSE.PAN,
+            RIGHT: THREE.MOUSE.PAN
+        };
+        controls.touches = {
+            ONE: THREE.TOUCH.PAN
+        };
         controls.enableRotate = false;
-        controls.update();
     }
+
+    controls.update();
 
      // when the mouse moves, call the given function
      document.addEventListener('mousemove', onDocumentMouseMove, false);
@@ -955,8 +1606,8 @@ function initGraph(renderMode, displayMode, paths) {
         let _animationCycle = graph._animationCycle
         graph._animationCycle = function () {
             onRender(is2d);
-            _animationCycle.apply(this)
-        }
+            _animationCycle.apply(this);
+        };
     })();
 
     if (isWebGL2) {
@@ -968,8 +1619,10 @@ function initGraph(renderMode, displayMode, paths) {
             link.icons.forEach(icon => iconTexts[index++] = icon.text);
         });
         updateConnectionModeIcons();
-        if (is2d)
+        if (is2d) {
+            makeNodeIconObject();
             updateNodeLabels2D();
+        }
     } else
         makeLinkIcons(is2d);
 
@@ -1000,9 +1653,12 @@ const dashLineSpeed = 20;
 function onRender(is2d) {
     time -= clock.getDelta() * dashLineSpeed;
     if (!(isWebGL2 && is2d))
-        updateNodeLabels(is2d);
-    if (isWebGL2)
+        updateNodeLabels(is2d, time * -1);
+    if (isWebGL2) {
         updateIconPositions(is2d);
+        if (is2d)
+            updateNodeIconAnimation(time);
+    }
     updateLinkAnimation(linksOneWayBuffered, time);
 }
 
@@ -1046,15 +1702,16 @@ const instanceVS = `#version 300 es
     uniform mat4 projectionMatrix;
     in mat4 instanceMatrix;
     in vec3 position;
-    in vec2 uv;
-
+    
     in float opacity;
     out float vOpacity;
     in float grayscale;
     out float vGrayscale;
-    out vec2 vUv;
     in float texIndex;
     out float vTexIndex;
+    in vec2 uv;
+    out vec2 vUv;
+
     void main() {
         vOpacity = opacity;
         vGrayscale = grayscale;
@@ -1072,15 +1729,16 @@ const instanceIconVS = `#version 300 es
     uniform mat4 projectionMatrix;
     in mat4 instanceMatrix;
     in vec3 position;
-    in vec2 uv;
-
+    
     in float opacity;
     out float vOpacity;
     in float grayscale;
     out float vGrayscale;
-    out vec2 vUv;
     in float texIndex;
     out float vTexIndex;
+    in vec2 uv;
+    out vec2 vUv;
+   
     void main() {
         vOpacity = opacity;
         vGrayscale = grayscale;
@@ -1092,16 +1750,39 @@ const instanceIconVS = `#version 300 es
     }
 `;
 
+const instanceNodeIconVS = `#version 300 es
+    precision highp float;
+
+    uniform mat4 modelViewMatrix;
+    uniform mat4 projectionMatrix;
+    in mat4 instanceMatrix;
+    in vec3 position;
+    
+    in float opacity;
+    out float vOpacity;
+    in vec2 uv;
+    out vec2 vUv;
+
+    void main() {
+        vOpacity = opacity;
+        vUv = vec2(uv.x, 1.0 - uv.y); // flip texture vertically, because of how it's stored
+        vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * mvPosition;
+    }
+`;
+
 const instanceFS = `#version 300 es
     precision highp float;
+    precision highp int;
     precision highp sampler2DArray;
 
     in float vOpacity;
     in float vGrayscale;
-    uniform sampler2DArray diffuse;
-    in vec2 vUv;
-    out vec4 fragmentColor;
     in float vTexIndex;
+    in vec2 vUv;
+
+    uniform sampler2DArray diffuse;
+    out vec4 fragmentColor;
 
     void main() {
         vec4 temp = texture(diffuse, vec3(vUv, int(vTexIndex + 0.1)));
@@ -1123,10 +1804,11 @@ const instanceIconFS = `#version 300 es
 
     in float vOpacity;
     in float vGrayscale;
-    uniform sampler2DArray diffuse;
-    in vec2 vUv;
-    out vec4 fragmentColor;
     in float vTexIndex;
+    in vec2 vUv;
+
+    uniform sampler2DArray diffuse;
+    out vec4 fragmentColor;
 
     void main() {
         vec4 temp = texture(diffuse, vec3(vUv, int(vTexIndex + 0.1)));
@@ -1141,11 +1823,38 @@ const instanceIconFS = `#version 300 es
     }
 `;
 
+const instanceNodeIconFS = `#version 300 es
+    precision highp float;
+    precision highp int;
+    precision highp sampler2DArray;
+    
+    uniform float time;
+    uniform sampler2DArray diffuse;
+    in float vOpacity;
+    in vec2 vUv;
+    out vec4 fragmentColor;
+
+    void main() {
+        float modulo = mod(time, 50.0);
+        if (modulo > 50.0) {
+            discard;
+        }
+        vec4 temp = texture(diffuse, vec3(vUv, 0));
+        if (modulo < 25.0) {
+            temp.a = temp.a * vOpacity * (modulo / 25.0);
+        } else {
+            temp.a = temp.a * vOpacity * (1.0 - (modulo - 25.0) / 25.0);
+        }
+        fragmentColor = temp;
+    }
+`;
+
 let unsortedIconOpacities = [];
 let unsortedIconGrayscales = [];
 let unsortedIconTexIndexes = [];
 let sortedIconIds = [];
 let iconCount;
+
 function makeIconObject(is2d) {
     const connTypes = [
         ConnType.ONE_WAY,
@@ -1294,12 +2003,12 @@ function updateIconPositions(is2d) {
                 iconIndex++;
             });
         });
-        sortInstances(iconObject, unsortedIconOpacities, unsortedIconGrayscales, unsortedIconTexIndexes);
+        sortIconInstances(iconObject, unsortedIconOpacities, unsortedIconGrayscales, unsortedIconTexIndexes);
         iconObject.instanceMatrix.needsUpdate = true;
     }
 }
 
-function sortInstances(instanceObject, unsortedOpacities, unsortedGrayscales, unsortedTexIndexes) {
+function sortIconInstances(instanceObject, unsortedOpacities, unsortedGrayscales, unsortedTexIndexes) {
     const camera = graph.camera();
     let dummy = new THREE.Object3D();
     let index = 0;
@@ -1487,6 +2196,7 @@ function updateNodePositions(is2d) {
     const dummy = new THREE.Object3D();
     if (nodeObject) {
         let index = 0;
+        let iconIndex = 0;
         graph.graphData().nodes.forEach(node => {
             nodeObject.getMatrixAt(index, dummy.matrix);
             if (!is2d)
@@ -1494,12 +2204,25 @@ function updateNodePositions(is2d) {
             else
                 dummy.position.set(node.x, node.y, 0);
             const scale = worldScales[node.id];
-            dummy.scale.set(13 * scale, 9.75 * scale, is2d ? 0.1 : 13 * scale);
+            dummy.scale.set(13 * scale, 9.75 * scale, is2d ? 1 : 13 * scale);
             dummy.updateMatrix();
             nodeObject.setMatrixAt(index, dummy.matrix);
             index++;
+            
+            if (is2d && nodeIconObject && node.isNew) {
+                nodeIconObject.getMatrixAt(iconIndex, dummy.matrix);
+                dummy.position.set(node.x + (dummy.scale.x / 2) - (1.625 + (4 / 13)) * scale, node.y + (dummy.scale.y / 2) - 1.21875 * scale, 0);
+                dummy.scale.set(13 * scale, 9.75 * scale, is2d ? 1 : 13 * scale);
+                var x = new THREE.Vector3();
+                x.setFromMatrixScale(dummy.matrix);
+                dummy.updateMatrix();
+                nodeIconObject.setMatrixAt(iconIndex, dummy.matrix);
+                iconIndex++;
+            }
         });
         nodeObject.instanceMatrix.needsUpdate = true;
+        if (is2d && nodeIconObject)
+            nodeIconObject.instanceMatrix.needsUpdate = true;
     }
 }
 
@@ -1507,11 +2230,12 @@ function updateNodeLabels2D() {
     if (nodeObject) {
         let index = 0;
         let rIndex = 0;
+        let iconIndex = 0;
         const nodes = graph.graphData().nodes;
         const totalNodeCount = nodes.length;
         const removedNodeCount = nodes.filter(n => n.removed).length;
         nodes.forEach(node => {
-            if (is2d && (config.labelMode === 3 || (config.labelMode === 1 && node.id === hoverWorldId) || (config.labelMode === 2 && node.id === selectedWorldId))) {
+            if (isNodeLabelVisible(node)) {
                 const layerIndex = node.removed
                     ? nodeTextColors.indexOf(getNodeTextColor(node))
                     : 0;
@@ -1523,18 +2247,143 @@ function updateNodeLabels2D() {
             index++;
             if (node.removed)
                 rIndex++;
+            if (nodeIconObject && node.isNew)
+                nodeIconObject.geometry.attributes.opacity.array[iconIndex++] = getNodeOpacity(node.id);
         });
         nodeObject.geometry.attributes.texIndex.needsUpdate = true;
+        if (nodeIconObject)
+            nodeIconObject.geometry.attributes.opacity.needsUpdate = true;
     }
+}
+
+function makeNodeIconObject() {
+    const opacities = [];
+    let iconCount = 0;
+
+    iconCount = 0;
+    graph.graphData().nodes.forEach(node => {
+        if (node.isNew)
+            opacities[iconCount++] = 1.0;
+    });
+
+    const buffer = new ArrayBuffer(nodeIconImgDimensions.x * nodeIconImgDimensions.y * 4);
+
+    let nodeIconImgData = new Uint8ClampedArray(buffer);
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.width = nodeIconImgDimensions.x;
+    canvas.height = nodeIconImgDimensions.y;
+    context.font = '50px MS Gothic';
+    context.textAlign = 'right';
+    context.textBaseline = 'top';
+    context.fillStyle = 'gold';
+    context.strokeStyle = '#4d4000';
+    context.lineWidth = 5;
+    context.strokeText(localizedNodeIconNew, nodeIconImgDimensions.x - 4, 2);
+    context.fillText(localizedNodeIconNew, nodeIconImgDimensions.x - 4, 2);
+    nodeIconImgData.set(context.getImageData(0, 0, nodeIconImgDimensions.x, nodeIconImgDimensions.y).data, 0);
+
+    const texture = new THREE.DataTexture2DArray(nodeIconImgData, nodeIconImgDimensions.x, nodeIconImgDimensions.y, 1);
+    texture.format = THREE.RGBAFormat;
+    texture.type = THREE.UnsignedByteType;
+    const material = new THREE.RawShaderMaterial({
+        uniforms: {
+            diffuse: { value: texture },
+            time: { value: 0 }
+        },
+        vertexShader: instanceNodeIconVS,
+        fragmentShader: instanceNodeIconFS,
+        transparent: true,
+        depthTest: !is2d,
+        depthWrite: false
+    });
+
+    const geometry = new THREE.PlaneBufferGeometry(0.25, 0.25);
+    geometry.attributes.opacity = new THREE.InstancedBufferAttribute(new Float32Array(opacities), 1);
+
+    nodeIconObject = new THREE.InstancedMesh(geometry, material, iconCount);
+    nodeIconObject.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    nodeIconObject.renderOrder = 1;
+    graph.scene().add(nodeIconObject);
 }
 // END WEBGL2.0 SPECIFIC CODE
 
-function getLocalizedNodeLabel(localizedNodeLabel, forPath)
-{
-    return `<span class='node-label__world node-label__value'>{WORLD}</span><br>`
-        + `${localizedNodeLabel.depth}<span class='node-label__value' style='color:{DEPTH_COLOR}'>{DEPTH}</span>`
-        + `${forPath ? " <span class='node-label__value' style='color:{MIN_DEPTH_COLOR}'>({MIN_DEPTH})</span>" : ""}<br>`
-        + `${localizedNodeLabel.author}<span class='node-label__value'>{AUTHOR}</span>`
+function getLocalizedNodeLabel(localizedNodeLabel, forPath) {
+    return `<span class='node-label__world node-label__value'>{WORLD}</span><br>
+        ${localizedNodeLabel.depth}<span class='node-label__value' style='color:{DEPTH_COLOR}'>{DEPTH}</span>
+        ${forPath ? " <span class='node-label__value' style='color:{MIN_DEPTH_COLOR}'>({MIN_DEPTH})</span>" : ""}<br>
+        ${localizedNodeLabel.author}<span class='node-label__value'>{AUTHOR}</span><br>
+        ${localizedNodeLabel.versionAdded}<span class='node-label__value'>{VERSION_ADDED}</span>`;
+}
+
+function getLocalizedNodeLabelVersionLastUpdated(localizedNodeLabel, includeUpdateType) {
+    return `
+        <br><span class='node-label__last-updated'>
+            <span>${localizedNodeLabel.versionLastUpdated}<span class='node-label__value'>{VERSION_LAST_UPDATED}</span></span>
+            <span class='node-label__value node-label__last-updated__update-type'>${(includeUpdateType ? '{VERSION_LAST_UPDATED_TYPE}' : '')}</span>
+        </span>`;
+}
+
+function getLocalizedNodeLabelVersionRemoved(localizedNodeLabel) {
+    return `<br>${localizedNodeLabel.versionRemoved}<span class='node-label__value'>{VERSION_REMOVED}</span>`;
+}
+
+function getLocalizedNodeLabelVersionUpdateTypes(localizedNodeLabel) {
+    const ret = {};
+    const versionUpdateTypeKeys = Object.keys(versionUtils.VersionEntryUpdateType);
+    const versionUpdateTypeCodes = Object.values(versionUtils.VersionEntryUpdateType);
+    versionUpdateTypeCodes.forEach((vut, i) => {
+        const key = versionUpdateTypeKeys[i];
+        ret[vut] = localizedNodeLabel.versionUpdateType.hasOwnProperty(key)
+            ? localizedNodeLabel.versionUpdateType[key]
+            : "";
+    });
+    return ret;
+}
+
+function getLocalizedAuthorLabel(localizedAuthorLabel) {
+    return `<span class='author-entry-tooltip__author tooltip__value'>{AUTHOR}</span><br>
+        <span class='js--author-entry-tooltip__first-version tooltip__value'>{FIRST_VERSION}</span><span class='js--author-entry-tooltip__last-version'>${localizedAuthorLabel.versionSeparator}<span class='tooltip__value'>{LAST_VERSION}</span></span><br>
+        ${localizedAuthorLabel.worldCount}<span class='tooltip__value'>{WORLD_COUNT}</span></span>`;
+}
+
+function getLocalizedVersionLabel(localizedVersionLabel) {
+    return `<span class='version-entry-tooltip__version tooltip__value'>{VERSION}</span><br>
+        ${localizedVersionLabel.authors}{AUTHORS}
+        <br>${localizedVersionLabel.releaseDate}{RELEASE_DATE}
+        <span class='js--version-entry-tooltip__world-count'><br>${localizedVersionLabel.worldCount}<span class='tooltip__value'>{WORLD_COUNT}</span></span>
+        <span class='js--version-entry-tooltip__updated-world-count'><br>${localizedVersionLabel.updatedWorldCount}<span class='tooltip__value'>{UPDATED_WORLD_COUNT}</span></span>
+        <span class='js--version-entry-tooltip__removed-world-count'><br>${localizedVersionLabel.removedWorldCount}<span class='tooltip__value'>{REMOVED_WORLD_COUNT}</span></span>`;
+}
+
+function getLocalizedVersionDetails(localizedVersionDetails) {
+    const ret = {};
+    const entryTypeKeys = Object.keys(versionUtils.VersionEntryType);
+    const entryUpdateTypeKeys = Object.keys(versionUtils.VersionEntryUpdateType);
+    
+    const keys = Object.keys(localizedVersionDetails);
+
+    for (let k of keys) {
+        const keyIndex = entryTypeKeys.indexOf(k);
+        if (keyIndex > -1) {
+            const entryType = versionUtils.VersionEntryType[entryTypeKeys[keyIndex]];
+            if (entryType === versionUtils.VersionEntryType.UPDATE) {
+                ret[entryType] = {};
+                const updateTypeKeys = Object.keys(localizedVersionDetails[k]).filter(k => k !== 'label');
+                for (let utk of updateTypeKeys) {
+                    const updateTypeKeyIndex = entryUpdateTypeKeys.indexOf(utk);
+                    if (updateTypeKeyIndex > -1) {
+                        const entryUpdateType = versionUtils.VersionEntryUpdateType[entryUpdateTypeKeys[updateTypeKeyIndex]];
+                        ret[entryType][entryUpdateType] = localizedVersionDetails[k][utk];
+                    }
+                }
+            } else {
+                ret[entryType] = localizedVersionDetails[k];
+            }
+        }
+    }
+
+    return ret;
 }
 
 /**
@@ -1555,43 +2404,65 @@ function getImageRawData(imageSources) {
     });
 }
 
-function updateNodeLabels(is2d) {
-    if (config.labelMode > 0) {
+function updateNodeLabels(is2d, time) {
+    if (config.labelMode > 0 || !is2d) {
         const camera = graph.camera();
+        const modTime = time % 50;
+        const opacityMultiplier = (modTime < 25 ? modTime : 50 - modTime) / 25;
         graph.graphData().nodes.forEach(node => {
             const obj = node.__threeObj;
             if (obj) {
+                const showLabel = isNodeLabelVisible(node);
                 const text = obj.children[0];
-                if (config.labelMode === 3 || (config.labelMode === 1 && node.id === hoverWorldId) || (config.labelMode === 2 && node.id === selectedWorldId)) {
-                    const scale = worldScales[node.id];
+                const scale = worldScales[node.id];
+                const textOpacity = showLabel ? getNodeOpacity(node.id) : 0;
+                let dir;
+                if (!is2d && showLabel) {
+                    dir = new THREE.Vector3();
+                    dir.subVectors(camera.position, obj.getWorldPosition(dir)).normalize();
+                }
+                if (showLabel) {
                     if (!is2d) {
-                        const dist = new THREE.Vector3(camera.position.x, camera.position.y, camera.position.z).distanceTo(new THREE.Vector3(node.x, node.y, node.z));
-                        let resX, resY, resZ;
-                        const rat = (13 * scale) / dist;
-                        resX = (1 - rat) * node.x + rat * camera.position.x;
-                        resY = (1 - rat) * node.y + rat * camera.position.y;
-                        resZ = (1 - rat) * node.z + rat * camera.position.z;
-                        text.position.set(resX - node.x, resY - node.y, resZ - node.z);
+                        text.position.set(0, 0, 0);
+                        text.translateOnAxis(dir, 10.5 * scale);
                     }
+                    text.material.opacity = textOpacity;
+                    text.color = getNodeTextColor(node);
                     text.scale.x = text.defaultScale.x * scale;
                     text.scale.y = text.defaultScale.y * scale;
-                    text.material.opacity = getNodeOpacity(node.id);
-                    text.color = getNodeTextColor(node);
                     
                     text.visible = true;
                 } else
                     text.visible = false;
+
+                if (((isWebGL2 && node.isNew && !is2d) || (!isWebGL2 && obj.children.length > 1))) {
+                    const iconLabel = obj.children[1];
+                    if (showLabel) {
+                        if (!is2d) {
+                            iconLabel.position.set(0, 0, 0);
+                            iconLabel.translateOnAxis(dir, 9.75 * scale);
+                        }
+                        iconLabel.scale.x = iconLabel.defaultScale.x * scale;
+                        iconLabel.scale.y = iconLabel.defaultScale.y * scale;
+                        iconLabel.material.opacity = textOpacity * opacityMultiplier;
+                        iconLabel.visible = true;
+                    } else
+                        iconLabel.visible = false;
+                }
             }
         });
     }
 }
 
 function getNodeOpacity(id) {
-    const filterForAuthor = selectedAuthor != null && worldData[id].author !== selectedAuthor;
-    const opacity = ((selectedWorldId == null && !filterForAuthor)
+    const author = tempSelectedAuthor || selectedAuthor;
+    const versionIndex = tempSelectedVersionIndex || selectedVersionIndex;
+    const filterForAuthor = author != null && worldData[id].author !== author;
+    const filterForVersion = versionIndex && !versionUtils.isWorldInVersion(worldData[id], versionIndex, versionData.length, tempSelectedVersionIndex);
+    const opacity = ((selectedWorldId == null && !filterForAuthor && !filterForVersion)
         || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1)
         ? 1
-        : selectedWorldId != null && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length
+        : selectedWorldId != null && worldData[selectedWorldId].connections.find(c => c.targetId === id) || (!filterForAuthor && filterForVersion && !tempSelectedVersionIndex && versionIndex !== versionData.length && !worldData[id].verAdded)
         ? 0.625
         : 0.1;
     return opacity;
@@ -1602,9 +2473,12 @@ function getNodeGrayscale(node) {
         return 0;
 
     const id = node.id;
-    const grayscale = id === selectedWorldId
+    const author = tempSelectedAuthor || selectedAuthor;
+    const versionIndex = tempSelectedVersionIndex || selectedVersionIndex;
+    const grayscale = id === selectedWorldId || (versionIndex && !versionUtils.isWorldInVersion(worldData[id], versionIndex, versionData.length, tempSelectedVersionIndex))
         ? 0
-        : id === hoverWorldId || (selectedAuthor != null && worldData[id].author === selectedAuthor) || (searchWorldIds.length && searchWorldIds.indexOf(id) > -1) || (selectedWorldId != null && worldData[selectedWorldId].connections.filter(c => c.targetId === id).length)
+        : id === hoverWorldId || (author != null && worldData[id].author === author)
+            || (searchWorldIds.length && searchWorldIds.indexOf(id) > -1) || (selectedWorldId != null && worldData[selectedWorldId].connections.find(c => c.targetId === id))
         ? 0.625
         : 1;
     return grayscale;
@@ -1614,6 +2488,10 @@ function getNodeTextColor(node, grayscale) {
     if (grayscale === undefined && node)
         grayscale = getNodeGrayscale(node);
     return nodeTextColors[!grayscale ? 0 : grayscale === 1 ? 2 : 1];
+}
+
+function isNodeLabelVisible(node) {
+    return config.labelMode === 3 || (config.labelMode > 0 && ((config.labelMode === 1 && node.id === hoverWorldId) || (config.labelMode === 2 && node.id === selectedWorldId)));
 }
 
 function makeLinkIcons(is2d) {
@@ -1640,7 +2518,8 @@ function makeLinkIcons(is2d) {
                 text.material.grayscale = linkGrayscale;
                 if (icon.type & ConnType.ONE_WAY) {
                     text.material.map.wrapS = THREE.RepeatWrapping;
-                    link.source.x > link.target.x && (text.material.map.repeat.x = -1);
+                    if (link.source.x > link.target.x)
+                        text.material.map.repeat.x = -1;
                 }
                 if (!config.connMode && link.hidden)
                     text.visible = false;
@@ -1658,9 +2537,9 @@ function makeLinkIconTooltip() {
         element.parentNode.removeChild(element);
     }
     iconLabel = document.createElement('div');
-    iconLabel.innerHTML = ' ';
+    iconLabel.innerHTML = '';
     iconLabel.id = 'iconLabel';
-    iconLabel.className = "scene-tooltip";
+    iconLabel.className = 'scene-tooltip';
     iconLabel.style.position = 'absolute';
     iconLabel.style.top = 0;
     iconLabel.style.color = 'transparent';
@@ -1791,9 +2670,15 @@ function updateLinkAnimation(bufferedObject, time) {
     bufferedObject.material.uniforms.time.value = time;
 }
 
+function updateNodeIconAnimation(time) {
+    nodeIconObject.material.uniforms.time.value = time;
+}
+
 function updateLinkColors(linkData, bufferedObject, unfilteredLinkData) {
     const colors = bufferedObject.geometry.attributes.color.array;
     const opacities = bufferedObject.geometry.attributes.opacity.array;
+    const author = tempSelectedAuthor || selectedAuthor;
+    const versionIndex = tempSelectedVersionIndex || selectedVersionIndex;
     let index = 0;
     let opacityIndex = 0;
     linkData.forEach(link => {
@@ -1802,11 +2687,13 @@ function updateLinkColors(linkData, bufferedObject, unfilteredLinkData) {
         const grayscale = getLinkGrayscale(link);
         const sourceId = link.source.id !== undefined ? link.source.id : link.source;
         const targetId = link.target.id !== undefined ? link.target.id : link.target;
-        const filterForAuthor = selectedAuthor != null && (worldData[sourceId].author !== selectedAuthor || worldData[targetId].author !== selectedAuthor);
+        const filterForAuthor = author != null && (worldData[sourceId].author !== author || worldData[targetId].author !== author);
+        const filterForVersion = versionIndex && (!versionUtils.isWorldInVersion(worldData[sourceId], versionIndex, versionData.length, tempSelectedVersionIndex) || !versionUtils.isWorldInVersion(worldData[targetId], versionIndex, versionData.length, tempSelectedVersionIndex));
         if (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)) {
             opacity = 1.0;
             color = colorLinkSelected;
-        } else if ((selectedWorldId == null && !filterForAuthor) && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)) {
+        } else if ((selectedWorldId == null && !filterForAuthor && !filterForVersion)
+            && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)) {
             opacity = 0.625;
             color = new THREE.Color(link.defaultColor);
         } else {
@@ -1865,11 +2752,14 @@ function getWorldLinkRemoved(worldId, link, worldRemoved) {
 function getLinkOpacity(link) {
     const sourceId = link.source.id !== undefined ? link.source.id : link.source;
     const targetId = link.target.id !== undefined ? link.target.id : link.target;
-    const filterForAuthor = selectedAuthor != null && (worldData[sourceId].author !== selectedAuthor || worldData[targetId].author !== selectedAuthor);
-    return ((selectedWorldId == null && !filterForAuthor) || (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)))
+    const author = tempSelectedAuthor || selectedAuthor;
+    const versionIndex = tempSelectedVersionIndex || selectedVersionIndex;
+    const filterForAuthor = author != null && (worldData[sourceId].author !== author || worldData[targetId].author !== author);
+    const filterForVersion = versionIndex && (!versionUtils.isWorldInVersion(worldData[sourceId], versionIndex, versionData.length, tempSelectedVersionIndex) || !versionUtils.isWorldInVersion(worldData[targetId], versionIndex, versionData.length, tempSelectedVersionIndex));
+    return ((selectedWorldId == null && !filterForAuthor && !filterForVersion) || (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)))
         && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)
         ? 1
-        : selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)
+        : (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)) || (!filterForAuthor && filterForVersion && !tempSelectedVersionIndex && versionIndex !== versionData.length && (!worldData[sourceId].verAdded || !worldData[targetId].verAdded))
         ? 0.625
         : 0.1;
 }
@@ -1877,6 +2767,8 @@ function getLinkOpacity(link) {
 function getLinkGrayscale(link) {
     const sourceId = link.source.id !== undefined ? link.source.id : link.source;
     const targetId = link.target.id !== undefined ? link.target.id : link.target;
+    const author = tempSelectedAuthor || selectedAuthor;
+    const versionIndex = tempSelectedVersionIndex || selectedVersionIndex;
     const sourceWorld = worldData[sourceId];
     const targetWorld = worldData[targetId];
 
@@ -1885,7 +2777,8 @@ function getLinkGrayscale(link) {
 
     return sourceId === selectedWorldId || targetId === selectedWorldId
         ? 0
-        : (sourceId === hoverWorldId || targetId === hoverWorldId) || (selectedAuthor != null && (sourceWorld.author === selectedAuthor || targetWorld.author === selectedAuthor))
+        : (sourceId === hoverWorldId || targetId === hoverWorldId) || (author != null && (sourceWorld.author === author || targetWorld.author === author))
+            || (versionIndex && versionUtils.isWorldInVersion(sourceWorld, versionIndex, versionData.length, tempSelectedVersionIndex) && versionUtils.isWorldInVersion(targetWorld, versionIndex, versionData.length, tempSelectedVersionIndex))
             || (searchWorldIds.length && (searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1))
         ? 0.375
         : 0.85;
@@ -1965,7 +2858,27 @@ function getConnTypeChar(connType) {
     return char;
 }
 
+function tempSelectAuthor(author, ignoreChange) {
+    tempSelectedAuthor = author;
+    if (author && tempSelectedVersionIndex)
+        tempSelectVersion(0, true);
+    $('.js--author').toggleClass('temp-select', !!author).val(author || selectedAuthor || 'null');
+    if (!ignoreChange)
+        $('.js--author').trigger('change');
+}
+
+function tempSelectVersion(versionIndex, ignoreChange) {
+    tempSelectedVersionIndex = versionIndex;
+    if (versionIndex && tempSelectedAuthor != null)
+        tempSelectAuthor(null, true);
+    $('.js--version').toggleClass('temp-select', !!versionIndex).val(versionIndex || selectedVersionIndex || '0');
+    if (!ignoreChange)
+        $('.js--version').trigger('change');
+}
+
 function reloadGraph() {
+    tempSelectAuthor(null, true);
+    tempSelectVersion(0, true);
     const startWorld = startWorldId != null ? worldData[startWorldId] : null;
     const endWorld = endWorldId != null ? worldData[endWorldId] : null;
     const matchPaths = startWorld && endWorld && startWorld != endWorld
@@ -2089,11 +3002,11 @@ function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
         let accessiblePathIndex = -1;
         for (let it = 0; it <= ignoreTypesList.length; it++) {
             const ignoreType = it < ignoreTypesList.length ? ignoreTypesList[it] : 0;
-            if (matchPaths.slice(0, pathCount).filter(mp => mp.filter(p => p.connType && (p.connType & ignoreTypes)).length).length === pathCount) {
+            if (matchPaths.slice(0, pathCount).filter(mp => mp.find(p => p.connType && (p.connType & ignoreTypes))).length === pathCount) {
                 if (matchPaths.length > rootLimit) {
                     for (let mp = rootLimit + 1; mp < matchPaths.length; mp++) {
                         const path = matchPaths[mp];
-                        if (!path.filter(p => p.connType && (p.connType & ignoreTypes)).length) {
+                        if (!path.find(p => p.connType && (p.connType & ignoreTypes))) {
                             isDebug && console.log("Found unconditionally accessible path at index", mp);
                             if (mp >= rootLimit) {
                                 isDebug && console.log("Truncating paths to limit of", limit, "with unconditionally accessible path as last element");
@@ -2179,12 +3092,12 @@ function traverseConns(checkedNodes, path, nextGenWorlds, world, ignoreTypeFlags
                 connPath[connPath.length - 1].typeParams = typeParams;
                 connType = null;
             } else {
-                const reverseConn = connWorld.connections.filter(c => c.targetId === world.id);
+                const reverseConn = connWorld.connections.find(c => c.targetId === world.id);
                 let reverseConnType = 0;
                 let reverseConnTypeParams = {};
-                if (reverseConn.length) {
-                    reverseConnType = reverseConn[0].type;
-                    reverseConnTypeParams = reverseConn[0].typeParams;
+                if (reverseConn) {
+                    reverseConnType = reverseConn.type;
+                    reverseConnTypeParams = reverseConn.typeParams;
                 } else {
                     if (connType & ConnType.ONE_WAY)
                         reverseConnType |= ConnType.NO_ENTRY;
@@ -2223,15 +3136,15 @@ function traverseConns(checkedNodes, path, nextGenWorlds, world, ignoreTypeFlags
 
 function tryAddNexusPath(matchPaths, existingMatchPaths, worldData, sourceId, targetId) {
     const nexusWorldName = "The Nexus";
-    const nexusWorldId = worldData.filter(w => w.title === nexusWorldName)[0].id;
+    const nexusWorldId = worldData.find(w => w.title === nexusWorldName).id;
 
     if (sourceId !== nexusWorldId) {
         isDebug && console.log("Searching for paths eligible for Eyeball Bomb Nexus shortcut...");
-        const nexusPaths = existingMatchPaths.concat(matchPaths).filter(p => (p.length > targetId !== nexusWorldId ? 2 : 3) && p.filter(w => w.id === nexusWorldId).length);
+        const nexusPaths = existingMatchPaths.concat(matchPaths).filter(p => (p.length > targetId !== nexusWorldId ? 2 : 3) && p.find(w => w.id === nexusWorldId));
         if (nexusPaths.length) {
             isDebug && console.log("Found", nexusPaths.length, "paths eligible for Eyeball Bomb Nexus shortcut: creating shortcut paths");
             for (let nexusPath of nexusPaths) {
-                const nexusWorldIndex = nexusPath.indexOf(nexusPath.filter(w => w.id === nexusWorldId)[0]);
+                const nexusWorldIndex = nexusPath.indexOf(nexusPath.find(w => w.id === nexusWorldId));
                 const nexusShortcutPath = _.cloneDeep([nexusPath[0]].concat(nexusPath.slice(nexusWorldIndex)));
                 const nexusSource = nexusShortcutPath[0];
                 nexusSource.connType = (nexusWorldIndex > 1 ? ConnType.ONE_WAY : 0) | ConnType.EFFECT;
@@ -2274,7 +3187,7 @@ function findRealPathDepth(paths, worldId, pathWorldIds, worldDepthsMap, maxDept
 
         if (pathWorldDepth)
         {
-            let skipPath = pathWorldDepth > 0 && path.slice(0, pathWorldDepth).filter(w => w.connType & ignoreTypeFlags).length;
+            let skipPath = pathWorldDepth > 0 && path.slice(0, pathWorldDepth).find(w => w.connType & ignoreTypeFlags);
             if (skipPath)
                 continue;
         }
@@ -2286,117 +3199,6 @@ function findRealPathDepth(paths, worldId, pathWorldIds, worldDepthsMap, maxDept
     return ret > -1 ? ret : findRealPathDepth(paths, worldId, pathWorldIds, worldDepthsMap, maxDepth, minDepth, ignoreTypeFlags);
 }
 
-function getMissingConnections() {
-    const ret = [];
-    const connData = {};
-    
-    worldData.forEach(w => {
-        connData[w.id] = [];
-        worldData[w.id].connections.map(c => worldData[c.targetId]).forEach(c => connData[w.id].push(c.id));
-    });
-
-    Object.keys(connData).forEach(id => {
-        let connIds = connData[id].slice(0);
-        connIds.forEach(c => {
-            const index = connData[c].indexOf(parseInt(id));
-            if (index > -1) {
-                connData[id].splice(connData[id].indexOf(c), 1);
-                connData[c].splice(index, 1);
-            }
-        });
-    });
-
-    Object.keys(connData).forEach(id => {
-        if (connData[id].length)
-            connData[id].forEach(c => ret.push(`${getWorldLinkForAdmin(worldData[c])} is missing a connection to ${getWorldLinkForAdmin(worldData[id])}`));
-    });
-
-    return ret;
-}
-
-function getInvalidConnectionPairs() {
-    const ret = [];
-
-    const checkedReverseConnIds = [];
-    const expectedReverseConnTypes = {};
-
-    var addConnTypePair = function(x, y) {
-        expectedReverseConnTypes[x] = y;
-        expectedReverseConnTypes[y] = x;
-    };
-
-    addConnTypePair(ConnType.ONE_WAY, ConnType.NO_ENTRY);
-    addConnTypePair(ConnType.UNLOCK, ConnType.LOCKED);
-    addConnTypePair(ConnType.DEAD_END, ConnType.ISOLATED);
-    addConnTypePair(ConnType.SHORTCUT, ConnType.EXIT_POINT);
-    
-    worldData.forEach(w =>
-        worldData[w.id].connections.forEach(c => {
-            const connId = `${w.id}_${c.targetId}`;
-            if (checkedReverseConnIds.indexOf(connId) === -1) {
-                const conns = worldData[c.targetId].connections;
-                for (let reverseConn of conns) {
-                    if (reverseConn.targetId === w.id) {
-                        const reverseConnId = `${c.targetId}_${w.id}`;
-                        Object.keys(expectedReverseConnTypes).forEach(ct => {
-                            const connType = parseInt(ct);
-                            const expectedReverseConnType = expectedReverseConnTypes[ct];
-                            if (c.type & connType && !(reverseConn.type & expectedReverseConnType))
-                                ret.push(`${localizedConns[ct].name} connection between ${getWorldLinkForAdmin(worldData[w.id])} and ${getWorldLinkForAdmin(worldData[c.targetId])} expects ${localizedConns[expectedReverseConnType + ''].name} connection on the opposite side`);
-                            else if (reverseConn.type & connType && !(c.type & expectedReverseConnType))
-                                ret.push(`${localizedConns[ct].name} connection between ${getWorldLinkForAdmin(worldData[c.targetId])} and ${getWorldLinkForAdmin(worldData[w.id])} expects ${localizedConns[expectedReverseConnType + ''].name} connection on the opposite side`);
-                        });
-                        checkedReverseConnIds.push(reverseConnId);
-                        break;
-                    }
-                }
-            }
-        })
-    );
-
-    return ret;
-}
-
-function getMissingLocationParams() {
-    const ret = [];
-
-    worldData.forEach(w => {
-        if (!w.titleJP || w.titleJP === "None")
-            ret.push(`${getWorldLinkForAdmin(w)} is missing its Japanese name parameter`);
-            
-        w.connections.forEach(conn => {
-            const connWorld = worldData[conn.targetId];
-            if (conn.type & ConnType.EFFECT) {
-                if (!conn.typeParams || !conn.typeParams[ConnType.EFFECT] || !conn.typeParams[ConnType.EFFECT].params)
-                    ret.push(`${getWorldLinkForAdmin(w)} is missing the effects parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
-            }
-            if (conn.type & ConnType.CHANCE) {
-                if (!conn.typeParams || !conn.typeParams[ConnType.CHANCE] || !conn.typeParams[ConnType.CHANCE].params)
-                    ret.push(`${getWorldLinkForAdmin(w)} is missing the chance percentage parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
-                else if (conn.typeParams[ConnType.CHANCE].params === "0%")
-                    ret.push(`${getWorldLinkForAdmin(w)} has a chance percentage parameter of 0% for its connection to ${getWorldLinkForAdmin(connWorld)}`);
-            }
-            if (conn.type & ConnType.LOCKED_CONDITION) {
-                if (!conn.typeParams || !conn.typeParams[ConnType.LOCKED_CONDITION] || !conn.typeParams[ConnType.LOCKED_CONDITION].params)
-                    ret.push(`${getWorldLinkForAdmin(w)} is missing the lock condition parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
-                if (!conn.typeParamsJP || !conn.typeParams[ConnType.LOCKED_CONDITION] || !conn.typeParams[ConnType.LOCKED_CONDITION].paramsJP)
-                    ret.push(`${getWorldLinkForAdmin(w)} is missing the Japanese lock condition parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
-            }
-        });
-    });
-
-    return ret;
-}
-
-function getMissingMapIds() {
-    return worldData.filter(w => w.noMaps).map(w => `${getWorldLinkForAdmin(w)} has no associated Map IDs`);
-}
-
-function getWorldLinkForAdmin(world) {
-    const removedPrefix = world.removed ? '[REMOVED] ' : '';
-    return `${removedPrefix}<a class="world-link no-border" href="javascript:void(0);" data-world-id="${world.id}">${world.title}</a>`
-}
-
 function initLocalization(isInitial) {
     const isEn = config.lang === "en";
 
@@ -2404,10 +3206,9 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "2.11.0");
-            const formatDate = (date) => date.toLocaleString(isEn ? "en-US" : "ja-JP", { timeZoneName: "short" });
-            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate));
-            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate));
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.0.0");
+            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
+            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
                 convertJPControlLabels(data.controls);
                 convertJPControlLabels(data.collectableControls);
@@ -2417,14 +3218,26 @@ function initLocalization(isInitial) {
             initContextMenu(data.contextMenu);
             localizedNodeLabel = getLocalizedNodeLabel(data.nodeLabel);
             localizedPathNodeLabel = getLocalizedNodeLabel(data.nodeLabel, true)
-            localizedUnknownAuthor = data.controls.author.values[''];
+            localizedNodeLabelVersionLastUpdated = getLocalizedNodeLabelVersionLastUpdated(data.nodeLabel);
+            localizedNodeLabelVersionLastUpdatedWithUpdateType = getLocalizedNodeLabelVersionLastUpdated(data.nodeLabel, true);
+            localizedNodeLabelVersionRemoved = getLocalizedNodeLabelVersionRemoved(data.nodeLabel);
+            localizedNodeLabelVersionUpdateTypes = getLocalizedNodeLabelVersionUpdateTypes(data.nodeLabel);
+            localizedAuthorLabel = getLocalizedAuthorLabel(data.authorLabel);
+            localizedVersionLabel = getLocalizedVersionLabel(data.versionLabel);
+            localizedNodeIconNew = data.nodeIcon.new;
+            localizedVersionDetails = getLocalizedVersionDetails(data.versionDetails);
+            localizedVersionDisplayToggle = data.versionEntriesModal.versionDisplayToggle;
+            localizedNA = data.na;
+
             if (isInitial) {
                 Object.keys(data.settings.uiTheme.values).forEach(t => {
                     $(".js--ui-theme").append('<option data-localize="settings.uiTheme.values.' + t + '" value="' + t + '">' + data.settings.uiTheme.values[t] + '</option>');
                 });
                 $(".js--ui-theme").val(config.uiTheme).trigger("change");
-            } else
-                initAuthorSelectOptions(localizedUnknownAuthor);
+            } else {
+                initAuthorSelectOptions();
+                initVersionSelectOptions();
+            }
             window.setTimeout(() => updateControlsContainer(true), 0);
             defaultCallback(data);
         }
@@ -2450,56 +3263,63 @@ function initLocalization(isInitial) {
             }
         });
     } else {
+        if (worldsByName) {
+            $(".js--world-input").each(function() {
+                const val = $(this).val();
+                if (val && worldNames.indexOf(val) > -1) {
+                    const world = worldsByName[worldNames[worldNames.indexOf(val)]];
+                    $(this).val(isEn || !world.titleJP ? world.title : world.titleJP);
+                }
+            });
+        }
+
         worldsByName = isEn ? _.keyBy(worldData, w => w.title) : _.keyBy(worldData, w => w.titleJP || w.title);
 
         worldNames = Object.keys(worldsByName);
-    }
 
-    $(".js--world-input").each(function() {
-        const val = $(this).val();
-        if (val && worldNames.indexOf(val) > -1) {
-            const world = worldsByName[worldNames[worldNames.indexOf(val)]];
-            $(this).val(isEn || !world.titleJP ? world.title : world.titleJP);
-        }
-    });
-
-    $(".js--path--world-input").each(function () {
-        $(this).off("change").devbridgeAutocomplete("destroy");
-        $(this).on("change", function () {
-            const currentWorldId = $(this).is(".js--start-world") ? startWorldId : endWorldId;
-            const currentWorld = worldData[currentWorldId];
-            if (currentWorld != null && $(this).val() !== (config.lang === 'en' || !currentWorld.titleJP ? currentWorld.title : currentWorld.titleJP)) {
-                let isReloadGraph;
-                $(this).removeClass("selected");
-                if ($(this).is(".js--start-world")) {
-                    isReloadGraph = endWorldId != null && endWorldId !== startWorldId;
-                    startWorldId = null;
-                } else {
-                    isReloadGraph = startWorldId != null && startWorldId !== endWorldId;
-                    endWorldId = null;
+        $(".js--path--world-input").each(function () {
+            $(this).off("change").devbridgeAutocomplete("destroy");
+            $(this).on("change", function () {
+                const currentWorldId = $(this).is(".js--start-world") ? startWorldId : endWorldId;
+                const currentWorld = worldData[currentWorldId];
+                if (currentWorld != null && $(this).val() !== (config.lang === 'en' || !currentWorld.titleJP ? currentWorld.title : currentWorld.titleJP)) {
+                    let isReloadGraph;
+                    $(this).removeClass("selected");
+                    if ($(this).is(".js--start-world")) {
+                        isReloadGraph = endWorldId != null && endWorldId !== startWorldId;
+                        startWorldId = null;
+                    } else {
+                        isReloadGraph = startWorldId != null && startWorldId !== endWorldId;
+                        endWorldId = null;
+                    }
+                    if (isReloadGraph)
+                        reloadGraph();
                 }
-                if (isReloadGraph)
-                    reloadGraph();
-            }
-        }).devbridgeAutocomplete({
-            lookup: worldNames,
-            triggerSelectOnValidInput: false,
-            onSelect: function (selectedWorld) {
-                let isReloadGraph;
-                const worldId = worldsByName[selectedWorld.value].id;
-                $(this).addClass("selected");
-                if ($(this).is(".js--start-world")) {
-                    startWorldId = worldId;
-                    isReloadGraph = endWorldId != null && endWorldId !== startWorldId;
-                } else {
-                    endWorldId = worldId;
-                    isReloadGraph = startWorldId != null && startWorldId !== endWorldId;
+            }).devbridgeAutocomplete({
+                lookup: worldNames,
+                triggerSelectOnValidInput: false,
+                onSelect: function (selectedWorld) {
+                    let isReloadGraph;
+                    const worldId = worldsByName[selectedWorld.value].id;
+                    $(this).addClass("selected");
+                    if ($(this).is(".js--start-world")) {
+                        startWorldId = worldId;
+                        isReloadGraph = endWorldId != null && endWorldId !== startWorldId;
+                    } else {
+                        endWorldId = worldId;
+                        isReloadGraph = startWorldId != null && startWorldId !== endWorldId;
+                    }
+                    if (isReloadGraph)
+                        reloadGraph();
                 }
-                if (isReloadGraph)
-                    reloadGraph();
-            }
+            });
         });
-    });
+
+        $(".js--author-entry").each(function () {
+            const displayName = $(this).data(isEn ? "displayName" : "displayNameJp");
+            $(this).find('h1').text(displayName);
+        });
+    }
 }
 
 function convertJPControlLabels(data) {
@@ -2535,7 +3355,7 @@ function initWorldSearch() {
         onSearchComplete: function (query, searchWorlds) {
             const selectedWorld = selectedWorldId != null ? worldData[selectedWorldId] : null;
             const selectedWorldName = selectedWorld ? config.lang === 'en' || !selectedWorld.titleJP ? selectedWorld.title : selectedWorld.titleJP : null;
-            searchWorldIds = searchWorlds.length && (!selectedWorld || (searchWorlds.length > 1 || searchWorlds.filter(w => w.value !== selectedWorldName).length)) ? searchWorlds.map(w => worldsByName[w.value].id) : [];
+            searchWorldIds = searchWorlds.length && (!selectedWorld || (searchWorlds.length > 1 || searchWorlds.find(w => w.value !== selectedWorldName))) ? searchWorlds.map(w => worldsByName[w.value].id) : [];
             if (searchWorldIds.length && selectedWorld && (searchWorldIds.length !== 1 || selectedWorldId !== searchWorldIds[0])) {
                 $search.removeClass("selected");
                 selectedWorldId = null;
@@ -2545,7 +3365,7 @@ function initWorldSearch() {
         onSelect: function (selectedWorld) {
             $search.addClass("selected");
             const worldId = worldsByName[selectedWorld.value].id;
-            trySelectNode(graph.graphData().nodes.filter(n => n.id === worldId)[0], false, true);
+            trySelectNode(graph.graphData().nodes.find(n => n.id === worldId), true, true);
         },
         onHide: function () {
            if (selectedWorldId != null) {
@@ -2562,7 +3382,7 @@ function initWorldSearch() {
     });
 }
 
-function initAuthorSelectOptions(localizedEmptyAuthor) {
+function initAuthorSelectOptions() {
     const authors = _.uniq(worldData.map(w => w.author)).sort((a, b) => {
         const authorA = a ? a.toUpperCase() : 'ZZZ';
         const authorB = b ? b.toUpperCase() : 'ZZZ';
@@ -2573,7 +3393,7 @@ function initAuthorSelectOptions(localizedEmptyAuthor) {
     authors.forEach(a => {
         const $opt = $('<option>');
         $opt.val(a || '');
-        $opt.text(a || localizedEmptyAuthor);
+        $opt.text(a ? getAuthorDisplayName(a) : localizedNA);
         $authorSelect.append($opt);
     });
     if (selectedAuthor === '')
@@ -2583,6 +3403,27 @@ function initAuthorSelectOptions(localizedEmptyAuthor) {
         if (!validAuthor)
             selectedAuthor = null;
         $authorSelect.val(validAuthor ? selectedAuthor : 'null');
+    }
+}
+
+function initVersionSelectOptions() {
+    const $versionSelect = $('.js--version');
+    $versionSelect.find('option:not(:first-child)').remove();
+    versionData.forEach(v => {
+        const $opt = $('<option>');
+        if (!v.addedWorldIds.length && !v.removedWorldIds.length && v.index !== versionData.length)
+            $opt.addClass('temp-select-only');
+        $opt.val(v.index);
+        $opt.text(config.lang === 'en' ? v.name : v.nameJP);
+        $versionSelect.append($opt);
+    });
+    if (!selectedVersionIndex)
+        $versionSelect.val(0);
+    else if (selectedVersionIndex) {
+        const validVersionIndex = selectedVersionIndex && selectedVersionIndex <= versionData.length;
+        if (!validVersionIndex)
+            selectedVersionIndex = null;
+        $versionSelect.val(validVersionIndex ? selectedVersionIndex : 0);
     }
 }
 
@@ -2628,13 +3469,11 @@ function trySelectNode(node, forceFocus, ignoreSearch) {
     if (node == null)
         return false;
     if (!node.hasOwnProperty("id")) {
-        const nodes = graph.graphData().nodes.filter(n => n.id === node);
-        if (!nodes.length)
+        node = graph.graphData().nodes.find(n => n.id === node);
+        if (!node)
             return false;
-        node = nodes[0];
     }
     const world = worldData[node.id];
-    selectedWorldId = world.id;
     if ((node && (selectedWorldId == null || selectedWorldId !== node.id))) {
         if (!ignoreSearch)
             $(".js--search-world").addClass("selected").val(config.lang === 'en' || !world.titleJP ? world.title : world.titleJP);
@@ -2642,16 +3481,16 @@ function trySelectNode(node, forceFocus, ignoreSearch) {
             focusNode(node);
     } else
         focusNode(node);
+    selectedWorldId = world.id;
     highlightWorldSelection();
     return true;
 }
 
 function focusNode(node) {
     const scale = worldScales[node.id];
-    const distance = 50 * scale;
     if (!config.renderMode) {
         const camera = graph.camera();
-        graph.cameraPosition({ x: node.x, y: node.y, z: distance }, node, 1000);
+        graph.cameraPosition({ x: node.x, y: node.y, z: 1000 }, node, 1000);
         const oldZoom = { zoom: camera.zoom };
         const newZoom = { zoom: 20 / scale };
         new TWEEN.Tween(oldZoom).to(newZoom, graph.controls().zoomSpeed * 1000).easing(TWEEN.Easing.Quadratic.Out).onUpdate(zoom => {
@@ -2659,6 +3498,7 @@ function focusNode(node) {
             camera.updateProjectionMatrix();
         }).start();
     } else {
+        const distance = 50 * scale;
         const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
         graph.cameraPosition({ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }, node, 1000);
     }
@@ -2857,6 +3697,15 @@ function initControls() {
     };
 
     $(document).on($.modal.OPEN, ".modal", onModalShown);
+
+    $(document).on("click", ".checkbox-button", function() {
+        const $checkbox = $(this).prev("input[type=checkbox].checkbox");
+        $checkbox.prop("checked", !$checkbox.prop("checked")).trigger("change");
+    });
+
+    $(document).on("click", ".js--modal__controls--expand > .js--modal__controls--expand__link", function() {
+        $(this).parent().next(".js--modal__controls").toggleClass("expanded");
+    });
     
     $(".js--lang").on("change", function() {
         config.lang = $(this).val();
@@ -2874,6 +3723,7 @@ function initControls() {
             $.modal.close();
 
         initLocalization();
+        initVersionData();
 
         if (isWebGL2)
             initNodeObjectMaterial().then(() => callback()).catch(err => console.error(err));
@@ -2937,14 +3787,16 @@ function initControls() {
         updateConfig(config);
         if (isWebGL2 && is2d)
             updateNodeLabels2D();
-        if (!config.labelMode) {
-            if (!isWebGL2 || !is2d) {
-                graph.graphData().nodes.forEach(node => {
-                    const obj = node.__threeObj;
-                    if (obj)
-                        obj.children[0].visible = false;
-                });
-            }
+        if (!isWebGL2 || !is2d) {
+            graph.graphData().nodes.forEach(node => {
+                const obj = node.__threeObj;
+                if (obj) {
+                    const showLabel = isNodeLabelVisible(node);
+                    obj.children[0].visible = showLabel;
+                    if (obj.children.length > 1)
+                        obj.children[1].visible = showLabel;
+                }
+            });
         }
     });
 
@@ -2981,9 +3833,53 @@ function initControls() {
     });
 
     $(".js--author").on("change", function() {
-        selectedAuthor = $(this).val() !== "null" ? $(this).val() || "" : null;
+        const val = $(this).val() !== "null" ? $(this).val() || "" : null;
+        if (!tempSelectedAuthor || !val) {
+            if (tempSelectedAuthor && !val)
+                tempSelectAuthor(null, true);
+            selectedAuthor = val;
+        } else
+            tempSelectedAuthor = val;
         if (worldData)
             highlightWorldSelection();
+    });
+
+    $(".js--version").on("change", function() {
+        const val = parseInt($(this).val());
+        if (!tempSelectedVersionIndex || !val) {
+            if (tempSelectedVersionIndex && !val)
+                tempSelectVersion(0, true);
+            selectedVersionIndex = val;
+        } else
+            tempSelectedVersionIndex = val;
+        if (worldData)
+            highlightWorldSelection();
+    });
+
+    $(".js--author-entries").on("click", function() {
+        if (authorData && authorData.length) {
+            if ($(".js--author-entries-modal:visible").length)
+                $.modal.close();
+            else
+                $(".js--author-entries-modal").modal({
+                    fadeDuration: 100,
+                    closeClass: 'noselect',
+                    closeText: '✖'
+                });
+        }
+    });
+
+    $(".js--version-entries").on("click", function() {
+        if (versionData && versionData.length) {
+            if ($(".js--version-entries-modal:visible").length)
+                $.modal.close();
+            else
+                $(".js--version-entries-modal").modal({
+                    fadeDuration: 100,
+                    closeClass: 'noselect',
+                    closeText: '✖'
+                });
+        }
     });
 
     $(".js--menu-themes").on("click", function() {
@@ -3014,7 +3910,7 @@ function initControls() {
     $(".js--help").on("click", function() {
         if ($(".js--help-modal:visible").length)
             $.modal.close();
-        else if ($(".js--help-modal__content--localized").text())
+        else if ($('.js--help-modal__content--localized').text())
             openHelpModal();
         else {
             $.get("/help", function (data) {
@@ -3027,62 +3923,6 @@ function initControls() {
                 openHelpModal();
             });
         }
-    });
-}
-
-function initAdminControls() {
-    $(".js--check-data-issues").on("click", function() {
-        if ($(".js--data-issues-modal:visible").length) {
-            $.modal.close();
-            return;
-        }
-
-        $(".js--data-issues-modal").modal({
-            fadeDuration: 100,
-            closeClass: 'noselect',
-            closeText: '✖'
-        });
-
-        const dataIssues = {
-            "missing-conns": {
-                data: getMissingConnections(),
-                emptyMessage: "No missing connections found"
-            },
-            "invalid-conn-pairs": {
-                data: getInvalidConnectionPairs(),
-                emptyMessage: "No invalid connection pairs found"
-            },
-            "missing-location-params": {
-                data: getMissingLocationParams(),
-                emptyMessage: "No missing location parameters found"
-            },
-            "missing-map-ids": {
-                data: getMissingMapIds(),
-                emptyMessage: "No locations with missing map IDs found"
-            }
-        };
-
-        Object.keys(dataIssues).forEach(di => {
-            const data = dataIssues[di].data;
-            const $dataList = $("<ul></ul>");
-            if (data.length) {
-                for (let d of data)
-                    $dataList.append(`<li>${d}</li>`);
-            } else
-                $dataList.append(`<li>${dataIssues[di].emptyMessage}</li>`);
-            $(".js--data-issues__" + di).html($dataList);
-        });
-    });
-
-    $(".js--update-data, .js--reset-data").on("click", function() {
-        if ($(".modal:visible").length)
-            $.modal.close();
-        const isReset = $(this).hasClass("js--reset-data");
-        reloadData(isReset ? "reset" : true);
-    });
-
-    $(document).on("click", "a.world-link", function () {
-        openWorldWikiPage($(this).data("worldId"), isShift);
     });
 }
 
@@ -3132,8 +3972,682 @@ function displayLoadingAnim($container) {
     };
 }
 
+/* Admin */
+
+let username = null;
+
+function getMissingConnections() {
+    const ret = [];
+    const connData = {};
+    
+    worldData.forEach(w => {
+        connData[w.id] = [];
+        worldData[w.id].connections.map(c => worldData[c.targetId]).forEach(c => connData[w.id].push(c.id));
+    });
+
+    Object.keys(connData).forEach(id => {
+        let connIds = connData[id].slice(0);
+        connIds.forEach(c => {
+            const index = connData[c].indexOf(parseInt(id));
+            if (index > -1) {
+                connData[id].splice(connData[id].indexOf(c), 1);
+                connData[c].splice(index, 1);
+            }
+        });
+    });
+
+    Object.keys(connData).forEach(id => {
+        if (connData[id].length)
+            connData[id].forEach(c => ret.push(`${getWorldLinkForAdmin(worldData[c])} is missing a connection to ${getWorldLinkForAdmin(worldData[id])}`));
+    });
+
+    return ret;
+}
+
+function getInvalidConnectionPairs() {
+    const ret = [];
+
+    const checkedReverseConnIds = [];
+    const expectedReverseConnTypes = {};
+
+    var addConnTypePair = function(x, y) {
+        expectedReverseConnTypes[x] = y;
+        expectedReverseConnTypes[y] = x;
+    };
+
+    addConnTypePair(ConnType.ONE_WAY, ConnType.NO_ENTRY);
+    addConnTypePair(ConnType.UNLOCK, ConnType.LOCKED);
+    addConnTypePair(ConnType.DEAD_END, ConnType.ISOLATED);
+    addConnTypePair(ConnType.SHORTCUT, ConnType.EXIT_POINT);
+    
+    worldData.forEach(w =>
+        worldData[w.id].connections.forEach(c => {
+            const connId = `${w.id}_${c.targetId}`;
+            if (checkedReverseConnIds.indexOf(connId) === -1) {
+                const conns = worldData[c.targetId].connections;
+                for (let reverseConn of conns) {
+                    if (reverseConn.targetId === w.id) {
+                        const reverseConnId = `${c.targetId}_${w.id}`;
+                        Object.keys(expectedReverseConnTypes).forEach(ct => {
+                            const connType = parseInt(ct);
+                            const expectedReverseConnType = expectedReverseConnTypes[ct];
+                            if (c.type & connType && !(reverseConn.type & expectedReverseConnType))
+                                ret.push(`${localizedConns[ct].name} connection between ${getWorldLinkForAdmin(worldData[w.id])} and ${getWorldLinkForAdmin(worldData[c.targetId])} expects ${localizedConns[expectedReverseConnType + ''].name} connection on the opposite side`);
+                            else if (reverseConn.type & connType && !(c.type & expectedReverseConnType))
+                                ret.push(`${localizedConns[ct].name} connection between ${getWorldLinkForAdmin(worldData[c.targetId])} and ${getWorldLinkForAdmin(worldData[w.id])} expects ${localizedConns[expectedReverseConnType + ''].name} connection on the opposite side`);
+                        });
+                        checkedReverseConnIds.push(reverseConnId);
+                        break;
+                    }
+                }
+            }
+        })
+    );
+
+    return ret;
+}
+
+function getMissingVersions() {
+    const ret = [];
+
+    worldData.forEach(w => {
+        if (!w.verAdded)
+            ret.push(`${getWorldLinkForAdmin(w)} is missing version added`);
+        if (w.removed && !w.verRemoved)
+            ret.push(`${getWorldLinkForAdmin(w)} is missing version removed`);
+    });
+
+    return ret;
+}
+
+function getMissingLocationParams() {
+    const ret = [];
+
+    worldData.forEach(w => {
+        if (!w.titleJP || w.titleJP === "None")
+            ret.push(`${getWorldLinkForAdmin(w)} is missing its Japanese name parameter`);
+            
+        w.connections.forEach(conn => {
+            const connWorld = worldData[conn.targetId];
+            if (conn.type & ConnType.EFFECT) {
+                if (!conn.typeParams || !conn.typeParams[ConnType.EFFECT] || !conn.typeParams[ConnType.EFFECT].params)
+                    ret.push(`${getWorldLinkForAdmin(w)} is missing the effects parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
+            }
+            if (conn.type & ConnType.CHANCE) {
+                if (!conn.typeParams || !conn.typeParams[ConnType.CHANCE] || !conn.typeParams[ConnType.CHANCE].params)
+                    ret.push(`${getWorldLinkForAdmin(w)} is missing the chance percentage parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
+                else if (conn.typeParams[ConnType.CHANCE].params === "0%")
+                    ret.push(`${getWorldLinkForAdmin(w)} has a chance percentage parameter of 0% for its connection to ${getWorldLinkForAdmin(connWorld)}`);
+            }
+            if (conn.type & ConnType.LOCKED_CONDITION) {
+                if (!conn.typeParams || !conn.typeParams[ConnType.LOCKED_CONDITION] || !conn.typeParams[ConnType.LOCKED_CONDITION].params)
+                    ret.push(`${getWorldLinkForAdmin(w)} is missing the lock condition parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
+                if (!conn.typeParamsJP || !conn.typeParams[ConnType.LOCKED_CONDITION] || !conn.typeParams[ConnType.LOCKED_CONDITION].paramsJP)
+                    ret.push(`${getWorldLinkForAdmin(w)} is missing the Japanese lock condition parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
+            }
+        });
+    });
+
+    return ret;
+}
+
+function getMissingMapIds() {
+    return worldData.filter(w => w.noMaps).map(w => `${getWorldLinkForAdmin(w)} has no associated Map IDs`);
+}
+
+function getWorldLinkForAdmin(world) {
+    const removedPrefix = world.removed ? '[REMOVED] ' : '';
+    return `${removedPrefix}<a class="world-link no-border" href="javascript:void(0);" data-world-id="${world.id}">${world.title}</a>`
+}
+
+let versionUpdateState;
+const versionUpdateEntryEditHtml = `
+    <span class="version-update__version__entry-edit display--none">
+        <select class="version-update__version__entry-edit__entry-type">
+            <option value="${versionUtils.VersionEntryType.ADD}">Add</option>
+            <option value="${versionUtils.VersionEntryType.UPDATE}">Update</option>
+            <option value="${versionUtils.VersionEntryType.REMOVE}">Remove</option>
+        </select>
+        <input type="text" class="version-update__version__entry-edit__world" />
+        <select class="version-update__version__entry-edit__entry-update-type display--none">
+            <option value="${versionUtils.VersionEntryUpdateType.CHANGE}">Change</option>
+            <option value="${versionUtils.VersionEntryUpdateType.MINOR_CHANGE}">Minor Change</option>
+            <option value="${versionUtils.VersionEntryUpdateType.MAJOR_CHANGE}">Major Change</option>
+            <option value="${versionUtils.VersionEntryUpdateType.BUG_FIX}">Bug Fix</option>
+            <option value="${versionUtils.VersionEntryUpdateType.ADD_CONTENT}">Add New Content</option>
+            <option value="${versionUtils.VersionEntryUpdateType.REMOVE_CONTENT}">Remove Content</option>
+            <option value="${versionUtils.VersionEntryUpdateType.LAYOUT_CHANGE}">Layout Change</option>
+            <option value="${versionUtils.VersionEntryUpdateType.EXPANSION}">Expansion</option>
+            <option value="${versionUtils.VersionEntryUpdateType.REDUCTION}">Reduction</option>
+            <option value="${versionUtils.VersionEntryUpdateType.ADD_SUB_AREA}">Add Sub Area</option>
+            <option value="${versionUtils.VersionEntryUpdateType.REMOVE_SUB_AREA}">Remove Sub Area</option>
+            <option value="${versionUtils.VersionEntryUpdateType.CONNECTION_CHANGE}">Connection Change</option>
+            <option value="${versionUtils.VersionEntryUpdateType.ADD_CONNECTION}">Add Connection</option>
+            <option value="${versionUtils.VersionEntryUpdateType.REMOVE_CONNECTION}">Remove Connection</option>
+            <option value="${versionUtils.VersionEntryUpdateType.BGM_CHANGE}">BGM Change</option>
+            <option value="${versionUtils.VersionEntryUpdateType.EFFECT_CHANGE}">Effect-related Change</option>
+            <option value="${versionUtils.VersionEntryUpdateType.REWORK}">Rework</option>
+        </select>
+        <a href="javascript:void(0);" class="js--version-update__version__entry__delete-btn icon-link no-border">🗑️</a>
+    </span>
+`;
+
+function getWorldVersionInfo(worldId) {
+    if (versionUpdateState.worldVerInfoCache.hasOwnProperty(worldId))
+        return versionUpdateState.worldVerInfoCache[worldId];
+    const world = worldData[worldId];
+    const verAdded = world.verAdded ? world.verAdded.name : null;
+    const verUpdated = world.verUpdated ? world.verUpdated.map(vu => `${vu.verUpdated.name}${(vu.updateType ? '-' : '')}${vu.updateType || ''}`).join(',') : null;
+    const verRemoved = world.verRemoved ? world.verRemoved.name : null;
+    //const verGaps = world.verGaps ? world.verGaps.map(vg => `${vg.verRemoved.name}-${vg.verReadded.name}`).join(',') : null;
+
+    return {
+        verAdded: verAdded,
+        verUpdated: verUpdated,
+        verRemoved: verRemoved,
+        //verGaps: verGaps
+    };
+}
+
+function initVersionUpdate() {
+    versionUpdateState = {
+        hasChanges: false,
+        editVerIndex: null,
+        worldVerInfoCache: {},
+        updatedWorldVerInfo: {}
+    };
+
+    const $content = $('.js--version-update-modal__content');
+
+    $content.empty();
+
+    const $usernameInput = $(`
+        <div class="control" style="margin-left:-20px">
+            <label class="noselect">Username:</label>
+            <input name="username" type="text" class="js--username-input" />
+        </div>
+    `).appendTo($content);
+    $usernameInput.find('input').val(username);
+
+    let versionNum = null;
+    let subVersion = null;
+    const $versionContainer = $('<div class="version-update__version-container"></div>').appendTo($content);
+    let $subVersionContainer;
+    let $patchVersionContainer;
+
+    for (let v = 0; v < authoredVersionData.length - 1; v++) {
+        const ver = authoredVersionData[v];
+
+        const match = ver.name.match(versionUtils.versionPattern);
+        if (match.length) {
+
+            const versionEntries = versionUtils.getVersionEntries(ver, worldData);
+
+            ver.addEntries = versionEntries.filter(v => v.type === versionUtils.VersionEntryType.ADD);
+            ver.updateEntries = versionEntries.filter(v => v.type === versionUtils.VersionEntryType.UPDATE);
+            ver.removeEntries = versionEntries.filter(v => v.type === versionUtils.VersionEntryType.REMOVE);
+
+            const patchVersion = match[4];
+            const $versionControls = $(`
+                <span class="version-update__version__controls" data-ver-index="${ver.authoredIndex}">
+                    <a href="javascript:void(0);" class="js--version-update__version__edit-btn icon-link no-border">✏️</a>
+                    <a href="javascript:void(0);" class="js--version-update__version__cancel-btn icon-link no-border display--none">❌</a>
+                    <a href="javascript:void(0);" class="js--version-update__version__save-btn icon-link no-border display--none">✅</a>
+                </span>
+            `);
+
+            if (match[2] !== versionNum) {
+                versionNum = match[2];
+                $versionContainer.append(`<h2><a href="javascript:void(0);" class="js--version-update__version-display-toggle no-border">${match[1] || ''}${match[2]}</a></h2>`);
+                $subVersionContainer = $(`<div class="version-update__sub-version-container"${(v > 0 ? ' style="display: none;"' : '')}></div>`).appendTo($versionContainer);
+            }
+            
+            if ((match[3] || null) !== subVersion) {
+                subVersion = match[3] || null;
+                const $subVersionTitle = $('<div class="version-update__sub-version-title"></div>').appendTo($subVersionContainer);
+                $subVersionTitle.append(`<h3>${match[1] || ''}${match[2]}${subVersion || ''}</h3>`);
+                $patchVersionContainer = $('<div class="version-update__patch-version-container"></div>').appendTo($subVersionContainer);
+            }
+            
+            const $ver = $(`<div class="version-update__version" data-ver-index="${ver.authoredIndex}"></div>`).prependTo($patchVersionContainer);
+            const $entries = $('<ul class="version-update__version__entries"></ul>').appendTo($ver);
+
+            if (patchVersion !== undefined) {
+                const $patchVersionTitle = $('<div class="version-update__patch-version-title"></div>').prependTo($patchVersionContainer);
+                $patchVersionTitle.append(`<h4>Patch ${patchVersion}</h4>`);
+                $patchVersionTitle.append($versionControls);
+            }
+            else
+                $subVersionContainer.children('.version-update__sub-version-title:last').append($versionControls);
+
+            for (let ae of ver.addEntries) {
+                const world = worldData[ae.worldId];
+                const $entry = $(`
+                    <li class="js--version-update__version__entry">
+                        <span class="version-update__version__entry-view"></span>
+                        ${versionUpdateEntryEditHtml}
+                    </li>
+                `);
+                $entry.data('worldId', world.id);
+                $entry.data('entryType', versionUtils.VersionEntryType.ADD);
+                $entries.append($entry);
+            }
+
+            for (let ue of ver.updateEntries) {
+                const world = worldData[ue.worldId];
+                const $entry = $(`
+                    <li class="js--version-update__version__entry">
+                        <span class="version-update__version__entry-view"></span>
+                        ${versionUpdateEntryEditHtml}
+                    </li>
+                `);
+                $entry.data('worldId', world.id);
+                $entry.data('entryType', versionUtils.VersionEntryType.UPDATE);
+                $entry.data('entryUpdateType', ue.updateType);
+                $entries.append($entry);
+            }
+
+            for (let re of ver.removeEntries) {
+                const world = worldData[re.worldId];
+                const $entry = $(`
+                    <li class="js--version-update__version__entry">
+                        <span class="version-update__version__entry-view"></span>
+                        ${versionUpdateEntryEditHtml}
+                    </li>
+                `);
+                $entry.data('worldId', world.id);
+                $entry.data('entryType', versionUtils.VersionEntryType.REMOVE);
+                $entries.append($entry);
+            }
+
+            $ver.append(`
+                <li class="js--version-update__version__new-entry">
+                    <span class="version-update__version__entry-edit display--none">
+                        <a href="javascript:void(0);" class="js--version-update__version__entry__add-btn icon-link no-border">➕</a>
+                    </span>
+                </li>
+            `);
+        }
+    }
+
+    $('.js--version-update__version__entry').each(function () {
+        const worldId = $(this).data('worldId');
+        const entryText = worldId !== undefined && worldId != null
+            ? getVersionDetailsEntryText(worldId, $(this).data('entryType'), $(this).data('entryUpdateType'))
+            : 'Invalid Entry';
+        $(this).children('.version-update__version__entry-view').text(entryText);
+    });
+}
+
+function initVersionUpdateEvents() {
+    $(document).on('change', '.version-update__version__entry-edit__entry-type', function () {
+        $(this).parent().children('.version-update__version__entry-edit__entry-update-type')
+            .toggleClass('display--none', parseInt($(this).val()) !== versionUtils.VersionEntryType.UPDATE);
+    });
+
+    $(document).on('click', '.js--version-update__version-display-toggle', function () {
+        $(this).parent().next('.version-update__sub-version-container').toggle(250);
+    });
+
+    const worldNames = worldData.map(w => w.title);
+
+    $(document).on('click', '.js--version-update__version__edit-btn', function () {
+        const verIndex = $(this).parents('.version-update__version__controls').data('verIndex');
+
+        versionUpdateState.editVerIndex = verIndex;
+
+        const $editVer = $(`.version-update__version[data-ver-index=${verIndex}]`);
+        $editVer.find('.version-update__version__entry-view').addClass('display--none');
+        $editVer.find('.version-update__version__entry-edit').removeClass('display--none');
+
+        $('.js--version-update__version__edit-btn').addClass('display--none');
+
+        const $verControls = $(`.version-update__version__controls[data-ver-index=${verIndex}]`);
+        $verControls.find('.js--version-update__version__cancel-btn, .js--version-update__version__save-btn').removeClass('display--none');
+
+        $editVer.find('.version-update__version__entry-edit__world').each(function () {
+            const $worldLookup = $(this);
+            initVersionUpdateWorldLookup($worldLookup, worldNames);
+        });
+
+        $editVer.find('.js--version-update__version__entry').each(function () {
+            const worldId = $(this).data('worldId');
+            const entryType = $(this).data('entryType');
+            const entryUpdateType = entryType === versionUtils.VersionEntryType.UPDATE ? $(this).data('entryUpdateType') : null;
+           
+            $(this).find('.version-update__version__entry-edit__entry-type').val(entryType);
+
+            if (worldId !== undefined && worldId != null) {
+                const world = worldData[worldId];
+                $(this).find('.version-update__version__entry-edit__world').val(world.title).data('id', worldId);
+            }
+
+            $(this).find('.version-update__version__entry-edit__entry-update-type').toggleClass('display--none', entryUpdateType == null).val(entryUpdateType);
+        });
+    });
+
+    $(document).on('click', '.js--version-update__version__cancel-btn, .js--version-update__version__save-btn', function () {
+        const isSave = $(this).hasClass('js--version-update__version__save-btn');
+        const verIndex = $(this).parents('.version-update__version__controls').data('verIndex');
+        const $editVer = $(`.version-update__version[data-ver-index=${verIndex}]`);
+        const verName = authoredVersionData[verIndex - 1].name;
+        
+        const versionUpdateEntryUpdateWorldIds = isSave ? [] : null;
+        const versionUpdateEntryWorldIds = isSave ? [] : null;
+        const versionUpdateEntryUpdateFuncs = [];
+
+        $editVer.find('.js--version-update__version__entry').each(function () {
+            const $entryTypeSelect = $(this).find('.version-update__version__entry-edit__entry-type');
+            const $worldInput = $(this).find('.version-update__version__entry-edit__world');
+            const $entryUpdateTypeSelect = $(this).find('.version-update__version__entry-edit__entry-update-type');
+
+            let changesMade = false;
+
+            const isDeleted = $(this).hasClass('display--none');
+
+            const lastWorldId = $(this).data('worldId');
+            const worldId = !isSave || isDeleted ? lastWorldId : $worldInput.data('id');
+            const hasWorldId = worldId !== undefined && worldId != null;
+
+            if (hasWorldId || isDeleted || (lastWorldId !== undefined && lastWorldId != null)) {
+                if (isSave) {
+
+                    const entryType = isDeleted ? $(this).data('entryType') : parseInt($entryTypeSelect.val());
+                    const entryUpdateType = isDeleted ? $(this).data('entryUpdateType') || ''
+                        : entryType === versionUtils.VersionEntryType.UPDATE ? $entryUpdateTypeSelect.val() : '';
+
+                    if (hasWorldId) {
+                        if (!versionUpdateState.updatedWorldVerInfo.hasOwnProperty(worldId))
+                            versionUpdateState.updatedWorldVerInfo[worldId] = getWorldVersionInfo(worldId);
+
+                        const worldVerInfo = versionUpdateState.updatedWorldVerInfo[worldId];
+
+                        const updateBaseVerPattern = new RegExp(`^${verName}(?:\\-[a-z\\-\\+]{1,2})?$`);
+                        const updateVerPattern = new RegExp(`^${verName}${entryUpdateType ? '-' : ''}${entryUpdateType}$`);
+
+                        if ((isDeleted || entryType !== versionUtils.VersionEntryType.ADD) && worldVerInfo.verAdded === verName) {
+                            worldVerInfo.verAdded = null;
+                            changesMade = true;
+                        }
+
+                        if ((isDeleted || entryType !== versionUtils.VersionEntryType.UPDATE) && worldVerInfo.verUpdated) {
+                            const updateVers = worldVerInfo.verUpdated.split(',');
+                            let matchFound = false;
+                            const matchVer = updateVers.find(vu => updateBaseVerPattern.test(vu));
+                            if (matchVer) {
+                                updateVers.splice(updateVers.indexOf(matchVer), 1);
+                                matchFound = true;
+                            }
+                            if (matchFound) {
+                                worldVerInfo.verUpdated = updateVers.join(',');
+                                changesMade = true;
+                            }
+                        }
+
+                        if ((isDeleted || entryType !== versionUtils.VersionEntryType.REMOVE) && worldVerInfo.verRemoved === verName) {
+                            worldVerInfo.verRemoved = null;
+                            changesMade = true;
+                        }
+
+                        if (!isDeleted) {
+                            switch (entryType) {
+                                case versionUtils.VersionEntryType.ADD:
+                                    if (worldVerInfo.verAdded == null) {
+                                        worldVerInfo.verAdded = verName;
+                                        changesMade = true;
+                                    }
+                                    break;
+                                case versionUtils.VersionEntryType.UPDATE:
+                                    const updateVerName = `${verName}${(entryUpdateType ? '-' : '')}${entryUpdateType}`;
+                                    if (worldVerInfo.verUpdated) {
+                                        if (!worldVerInfo.verUpdated.split(',').find(vu => updateVerPattern.test(vu))) {
+
+                                            const updateVers = versionUtils.parseVersionsUpdated(worldVerInfo.verUpdated);
+                                            const updateTypes = Object.values(versionUtils.VersionEntryUpdateType);
+
+                                            const baseMatchVer = updateVers.find(vu => vu.verUpdated === verName);
+
+                                            if (baseMatchVer)
+                                                baseMatchVer.updateType = entryUpdateType;
+                                            else {
+                                                updateVers.push({
+                                                    verUpdated: verName,
+                                                    updateType: entryUpdateType
+                                                });
+                                            
+                                                updateVers.sort(function (vu1, vu2) {
+                                                    let ret = versionUtils.compareVersionNames(vu1.verUpdated, vu2.verUpdated);
+                                                    if (ret === 0)
+                                                        ret = updateTypes.indexOf(vu1.updateType) < updateTypes.indexOf(vu2.updateType) ? -1 : 1;
+                                                    return ret;
+                                                });
+                                            }
+                                            
+                                            worldVerInfo.verUpdated = updateVers.map(vu => `${vu.verUpdated}${(vu.updateType ? '-' : '')}${vu.updateType}`).join(',');
+                                            changesMade = true;
+                                        }
+                                    } else {
+                                        worldVerInfo.verUpdated = updateVerName;
+                                        changesMade = true;
+                                    }
+                                    break;
+                                case versionUtils.VersionEntryType.REMOVE:
+                                    if (worldVerInfo.verRemoved == null) {
+                                        worldVerInfo.verRemoved = verName;
+                                        changesMade = true;
+                                    }
+                                    break;
+                            }
+                        }
+                    }
+
+                    if (changesMade && versionUpdateEntryUpdateWorldIds.indexOf(worldId) === -1)
+                        versionUpdateEntryUpdateWorldIds.push(worldId);
+
+                    versionUpdateEntryWorldIds.push(hasWorldId ? worldId : null);
+                    versionUpdateEntryUpdateFuncs.push(changesMade ? getVersionUpdateEntryUpdateFunc($(this), entryType, worldId, entryUpdateType) : getVersionUpdateEntryCancelFunc($(this), lastWorldId));
+                }
+            } else
+                $(this).remove();
+        });
+
+        const finishEditCallback = function (updatedLocations) {
+            if (isSave && updatedLocations.length) {
+                if (!versionUpdateState.hasChanges) {
+                    versionUpdateState.hasChanges = true;
+                    $('.js--version-update-modal').on($.modal.AFTER_CLOSE, onCloseVersionUpdateModalWithChanges);
+                }
+            }
+
+            $editVer.find('.js--version-update__version__entry').each(function (i) {
+                if (isSave) {
+                    const worldId = versionUpdateEntryWorldIds[i];
+                    let updateFunc;
+                    if (worldId != null && updatedLocations.indexOf(worldData[worldId].title) > -1) {
+                        updateFunc = versionUpdateEntryUpdateFuncs[i];
+                        versionUpdateState.worldVerInfoCache[worldId] = versionUpdateState.updatedWorldVerInfo[worldId];
+                    } else
+                        updateFunc = getVersionUpdateEntryCancelFunc($(this), worldId);
+                    updateFunc();
+                } else
+                    $(this).removeClass('display--none');
+            });
+
+            versionUpdateState.editVerIndex = null;
+            versionUpdateState.updatedWorldVerInfo = {};
+
+            $('.js--version-update__version__cancel-btn, .js--version-update__version__save-btn').addClass('display--none');
+            $('.js--version-update__version__edit-btn').removeClass('display--none');
+
+            $editVer.find('.version-update__version__entry-edit').addClass('display--none');
+            $editVer.find('.version-update__version__entry-view').removeClass('display--none');
+
+            $editVer.find('.version-update__version__entry-edit__world').devbridgeAutocomplete('destroy');
+        };
+
+        if (isSave) {
+            if (versionUpdateEntryUpdateWorldIds.length) {
+                const user = $('.js--username-input').val();
+                const data = {
+                    adminKey: new URLSearchParams(window.location.search).get('adminKey'),
+                    user: user,
+                    version: verName,
+                    entries: versionUpdateEntryUpdateWorldIds.map(w => $.extend({ location: worldData[w].title }, versionUpdateState.updatedWorldVerInfo[w]))
+                };
+                $.post('/updateLocationVersions', data, function (data) {
+                    finishEditCallback(data.success ? data.updatedLocations : []);
+                    if (data.success && config.username !== user) {
+                        config.username = user;
+                        updateConfig(config);
+                    }
+                });
+            } else
+                finishEditCallback([]);
+        } else
+            finishEditCallback([]);
+    });
+
+    $(document).on('click', '.js--version-update__version__entry__delete-btn', function () {
+        const $entry = $(this).parents('.js--version-update__version__entry');
+        const worldId = $entry.data('worldId');
+        if (worldId !== undefined && worldId != null)
+            $entry.addClass('display--none');
+        else
+            $entry.remove();
+    });
+
+    $(document).on('click', '.js--version-update__version__entry__add-btn', function () {
+        const $editVer = $(this).parents('.version-update__version');
+        const $entryEdit = $(versionUpdateEntryEditHtml);
+        const $entry = $(`
+            <li class="js--version-update__version__entry">
+                <span class="version-update__version__entry-view display--none"></span>
+            </li>
+        `).append($entryEdit.removeClass('display--none'));
+        $editVer.find('.version-update__version__entries').append($entry);
+        initVersionUpdateWorldLookup($entry.find('.version-update__version__entry-edit__world'), worldNames);
+    });
+}
+
+function getVersionUpdateEntryUpdateFunc($entry, entryType, worldId, entryUpdateType) {
+    return function () {
+        if ($entry.hasClass('display--none'))
+            $entry.remove();
+        else {
+            $entry.data('entryType', entryType);
+            $entry.data('worldId', worldId);
+            $entry.data('entryUpdateType', entryUpdateType);
+
+            $entry.children('.version-update__version__entry-view').text(getVersionUpdateEntryText($entry));
+        }
+    };
+}
+
+function getVersionUpdateEntryCancelFunc($entry, w) {
+    const worldId = w;
+    return function () {
+        if (worldId !== undefined && worldId != null)
+            $entry.removeClass('display--none');
+        else
+            $entry.remove();
+    };
+}
+
+function initVersionUpdateWorldLookup($worldLookup, worldNames) {
+    $worldLookup.devbridgeAutocomplete({
+        lookup: worldNames,
+        onSelect: function (selectedWorld) {
+            $worldLookup.data('id', worldsByName[selectedWorld.value].id);
+        }
+    });
+}
+
+function onCloseVersionUpdateModalWithChanges() {
+    reloadData(true);
+    $(this).off($.modal.AFTER_CLOSE, onCloseVersionUpdateModalWithChanges);
+}
+
+function initAdminControls() {
+    $('.js--check-data-issues').on('click', function() {
+        if ($('.js--data-issues-modal:visible').length) {
+            $.modal.close();
+            return;
+        }
+
+        $('.js--data-issues-modal').modal({
+            fadeDuration: 100,
+            closeClass: 'noselect',
+            closeText: '✖'
+        });
+
+        const dataIssues = {
+            'missing-conns': {
+                data: getMissingConnections(),
+                emptyMessage: 'No missing connections found'
+            },
+            'invalid-conn-pairs': {
+                data: getInvalidConnectionPairs(),
+                emptyMessage: 'No invalid connection pairs found'
+            },
+            'missing-versions': {
+                data: getMissingVersions(),
+                emptyMessage: 'No missing versions found'
+            },
+            'missing-location-params': {
+                data: getMissingLocationParams(),
+                emptyMessage: 'No missing location parameters found'
+            },
+            'missing-map-ids': {
+                data: getMissingMapIds(),
+                emptyMessage: 'No locations with missing map IDs found'
+            }
+        };
+
+        Object.keys(dataIssues).forEach(di => {
+            const data = dataIssues[di].data;
+            const $dataList = $('<ul></ul>');
+            if (data.length) {
+                for (let d of data)
+                    $dataList.append(`<li>${d}</li>`);
+            } else
+                $dataList.append(`<li>${dataIssues[di].emptyMessage}</li>`);
+            $(`.js--data-issues__${di}`).html($dataList);
+        });
+    });
+
+    $('.js--version-update').on('click', function () {
+        if ($('.js--version-update-modal:visible').length) {
+            $.modal.close();
+            return;
+        }
+
+        $('.js--version-update-modal').modal({
+            fadeDuration: 100,
+            closeClass: 'noselect',
+            closeText: '✖',
+        });
+
+        initVersionUpdate();
+    });
+
+    initVersionUpdateEvents();
+
+    $('.js--update-data, .js--reset-data').on('click', function() {
+        if ($('.modal:visible').length)
+            $.modal.close();
+        const isReset = $(this).hasClass('js--reset-data');
+        reloadData(isReset ? 'reset' : true);
+    });
+
+    $(document).on('click', 'a.world-link', function () {
+        openWorldWikiPage($(this).data('worldId'), isShift);
+    });
+}
+
+/* End Admin */
+
 $(function () {
-    const loadCallback = displayLoadingAnim($("#graphContainer"));
+    const loadCallback = displayLoadingAnim($('#graphContainer'));
 
     initControls();
 
@@ -3143,6 +4657,8 @@ $(function () {
 
     loadData(false, function (data) {
         initWorldData(data.worldData);
+        initVersionData(data.versionInfoData);
+        initAuthorData(data.authorInfoData, data.versionInfoData);
         initMenuThemeData(data.menuThemeData);
         lastUpdate = new Date(data.lastUpdate);
         lastFullUpdate = new Date(data.lastFullUpdate);

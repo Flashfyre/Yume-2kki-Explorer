@@ -56,6 +56,10 @@ Quickly find a world by searching for it by name. When searching, worlds not inc
 
 By selecting an author, worlds by other authors will appear faded to emphasize the worlds created by the selected author.
 
+### Version
+
+By selecting a version, worlds unavailable in the selected version will appear faded to emphasize the worlds that are.
+
 ### Origin and Destination
 
 By selecting a world in both fields, the graph will load routes from the origin to the destination. If there are many routes, inefficient routes will be ignored. Note that connections of individual routes are color-coded from blue (shortest) to red (longest). Routes without locked connections will be prioritized.
@@ -71,6 +75,14 @@ Reload the graph while resetting your search, origin, and destination.
 Load this documentation within the app in a modal window.
 
 ## Side Menu
+
+### Authors
+
+Display a list of authors who have added worlds into the game. Hovering over an author will show you more information about the author. Clicking an author will enable a temporary filter to highlight that author's worlds on the graph. To disable this filter, simply click on an empty space on the graph or select 'All' on the author filter.
+
+### Versions
+
+Display a list of versions that have added, updated, or removed worlds. Hovering over a version will display more information about that update. Clicking the tab on the right of a version will show specific changes made in that version. Clicking a version will enable a temporary filter to highlight worlds affected by that version on the graph. To disable this filter, simply click on an empty space on the graph or select 'All' on the version filter.
 
 ### Menu Themes
 
@@ -172,7 +184,12 @@ This setting determines the number of world nodes that make up a stack within th
 マップ名で検索すると、素早く目的のマップにたどり着くことができます。検索している間、目的のマップ以外は透明になります。検索結果からマップを選択すると、そのマップがズームインされます。
 
 ### ツクラー
-ツクラーを選択すると、他のツクラーが制作したマップが薄く表示され、選択したツクラーが制作したマップが強調表示されます。
+
+ツクラーを選択すると、他のツクラーが制作したマップが薄く表示されます。
+
+### バージョン
+
+バージョンを選択すると、選択したバージョンにいないマップが薄く表示されます。
 
 ### ルート検索
 
@@ -194,9 +211,17 @@ This setting determines the number of world nodes that make up a stack within th
 
 ## 右側メニュー
 
-### メンユータイプ
+### ツクラー
 
-ポップアップでメンユータイプのリストを表示します。メンユータイプ画像にマウスオーバーするものを得られる方法を特定します。メンユータイプ画像クリックで、該当するものを得られる場所を知らせます（エクスプローラに表示）。
+マップを提供した作者を表示します。作者の名前にマウスホバーして詳細情報を取得できます。画像をクリックで、提供したマップを知らせる仮フィルターが設定されます（エクスプローラに表示）。画面の空き所、或いは作者フィルター「全員」を選択して解除できます。
+
+### バージョン
+
+マップが追加、変更、および削除されたバージョンを表示します。マウスホバーして詳細情報を取得できます。バージョンの右側にあるタブをクリックしてそのバージョンで変更の完全なリストを表示します。画像をクリックで、変更されたマップを知らせる仮フィルターが設定されます（エクスプローラに表示）。画面の空き所、或いはバージョンフィルター「全バージョン」を選択して解除できます。
+
+### メンュータイプ
+
+ポップアップでメンュータイプのリストを表示します。メンュータイプ画像にマウスホバーするものを得られる方法を特定します。メンュータイプ画像クリックで、該当するものを得られる場所を知らせます（エクスプローラに表示）。
 
 ### 言語設定
 

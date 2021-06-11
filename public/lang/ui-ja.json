@@ -12,8 +12,13 @@
         "author": {
             "name": "ツクラー",
             "values": {
-                "null": "全員",
-                "": "不明"
+                "null": "全員"
+            }
+        },
+        "version": {
+            "name": "バージョン",
+            "values": {
+                "0": "全バージョン"
             }
         },
         "origin": {
@@ -30,6 +35,12 @@
         }
     },
     "collectableControls": {
+        "authors": {
+            "name": "ツクラー"
+        },
+        "versions": {
+            "name": "バージョン"
+        },
         "menuThemes": {
             "name": "メンユー タイプ"
         }
@@ -166,7 +177,95 @@
     },
     "nodeLabel": {
         "depth": "深度：",
-        "author": "ツクラー："
+        "author": "ツクラー：",
+        "versionAdded": "追加バージョン：",
+        "versionLastUpdated": "最終更新バージョン：",
+        "versionRemoved": "削除バージョン：",
+        "versionUpdateType": {
+            "CHANGE": "",
+            "MINOR_CHANGE": "小さな更新",
+            "MAJOR_CHANGE": "大きな更新",
+            "BUG_FIX": "バグ修正",
+            "ADD_CONTENT": "内容追加",
+            "REMOVE_CONTENT": "内容解除",
+            "LAYOUT_CHANGE": "地形変更",
+            "EXPANSION": "拡張",
+            "REDUCTION": "マップサイズ減少",
+            "ADD_SUB_AREA": "副区域追加",
+            "REMOVE_SUB_AREA": "副区域解除",
+            "CONNECTION_CHANGE": "接続変更",
+            "ADD_CONNECTION": "接続追加",
+            "REMOVE_CONNECTION": "接続解除",
+            "BGM_CHANGE": "BGM変更",
+            "EFFECT_CHANGE": "エフェクトに関係変更",
+            "REWORK": "改造"
+        }
+    },
+    "authorLabel": {
+        "versionSeparator": "ー",
+        "worldCount": "マップ数："
+    },
+    "versionLabel": {
+        "authors": "ツクラー：",
+        "releaseDate": "発売日：",
+        "worldCount": "マップ追加数：",
+        "updatedWorldCount": "マップ更新数：",
+        "removedWorldCount": "マップ削除数："
+    },
+    "nodeIcon": {
+        "new": "新"
+    },
+    "versionDetails": {
+        "ADD": "{WORLD}が追加されました",
+        "UPDATE": {
+            "CHANGE": "{WORLD}が更新されました",
+            "MINOR_CHANGE": "{WORLD}が少し更新されました",
+            "MAJOR_CHANGE": "{WORLD}が大きく更新されました",
+            "BUG_FIX": "{WORLD}でバグが修正されました",
+            "ADD_CONTENT": "{WORLD}で内容が追加されました",
+            "REMOVE_CONTENT": "{WORLD}である内容がなくなりました",
+            "LAYOUT_CHANGE": "{WORLD}で地形が変わりました",
+            "EXPANSION": "{WORLD}が拡張されました",
+            "REDUCTION": "{WORLD}のマップサイズが小さくなりました",
+            "ADD_SUB_AREA": "{WORLD}で副区域が追加されました",
+            "REMOVE_SUB_AREA": "{WORLD}である副区域がなくなりました",
+            "CONNECTION_CHANGE": "{WORLD}で接続が変わりました",
+            "ADD_CONNECTION": "{WORLD}で接続が追加されました",
+            "REMOVE_CONNECTION": "{WORLD}である接続がなくなりました",
+            "BGM_CHANGE": "{WORLD}でBGMが変わりました",
+            "EFFECT_CHANGE": "{WORLD}でエフェクトに関係変更がされました",
+            "REWORK": "{WORLD}が改造されました"
+        },
+        "REMOVE": "{WORLD}がなくなりました"
+    },
+    "versionEntriesModal": {
+        "filters": "フィルター",
+        "versionDisplayToggle": {
+            "name": "{ENTRY_TYPE}を表示",
+            "entryType": {
+                "ADD": "マップ追加",
+                "UPDATE": "マップ更新",
+                "REMOVE": "マップ解除"
+            },
+            "entryUpdateType": {
+                "MINOR_CHANGE": "小さな更新",
+                "MAJOR_CHANGE": "大きな更新",
+                "BUG_FIX": "バグ修正",
+                "ADD_CONTENT": "内容追加",
+                "REMOVE_CONTENT": "内容解除",
+                "LAYOUT_CHANGE": "地形変更",
+                "EXPANSION": "拡張",
+                "REDUCTION": "マップサイズ減少",
+                "ADD_SUB_AREA": "副区域追加",
+                "REMOVE_SUB_AREA": "副区域解除",
+                "CONNECTION_CHANGE": "接続変更",
+                "ADD_CONNECTION": "接続追加",
+                "REMOVE_CONNECTION": "接続解除",
+                "BGM_CHANGE": "BGM変更",
+                "EFFECT_CHANGE": "エフェクトに関係変更",
+                "REWORK": "改造"
+            }
+        }
     },
     "menuThemesModal": {
         "previousMethods": "前の方法"
@@ -178,5 +277,6 @@
         "about": "ゆめ２っきエクスプローラver{VERSION} by FlashfyreDev",
         "lastUpdate": "データ最終更新日：{LAST_UPDATE}",
         "lastFullUpdate": "データ最終置換日：{LAST_FULL_UPDATE}"
-    }
+    },
+    "na": "不明"
 }
