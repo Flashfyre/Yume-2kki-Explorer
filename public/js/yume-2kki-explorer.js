@@ -108629,7 +108629,7 @@ function InsertStackElement(node, body) {
 	            $entry.data('worldId', worldId);
 	            $entry.data('entryUpdateType', entryUpdateType);
 
-	            $entry.children('.version-update__version__entry-view').text(getVersionUpdateEntryText($entry));
+	            $entry.children('.version-update__version__entry-view').text(getVersionDetailsEntryText(worldId, entryType, entryUpdateType));
 	        }
 	    };
 	}
