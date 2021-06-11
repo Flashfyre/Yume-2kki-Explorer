@@ -8,9 +8,13 @@ const download = require('image-downloader');
 const mysql = require('mysql');
 const ConnType = require('./src/conn-type').ConnType;
 const versionUtils = require('./src/version-utils');
-const appConfig = require('./config/app.config.js');
+const appConfig = process.env.ADMIN_KEY ?
+    {
+        ADMIN_KEY: process.env.ADMIN_KEY,
+        BOT_USERNAME: process.env.BOT_USERNAME,
+        BOT_PASSWORD: process.env.BOT_PASSWORD
+    } : require('./config/app.config.js');
 const apiUrl = 'https://yume2kki.fandom.com/api.php';
-const adminKey = process.env.ADMIN_KEY || require("./config/app.config.js").ADMIN_KEY;
 const isRemote = Boolean(process.env.DATABASE_URL);
 const defaultPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT;
 
@@ -202,7 +206,7 @@ app.get('/data', function(req, res) {
                                 const row = rows.length ? rows[0] : null;
                                 const lastUpdate = row ? row.lastUpdate : null;
                                 const lastFullUpdate = row ? row.lastFullUpdate : null;
-                                const isAdmin = req.query.hasOwnProperty('adminKey') && req.query.adminKey === adminKey;
+                                const isAdmin = req.query.hasOwnProperty('adminKey') && req.query.adminKey === appConfig.adminKey;
 
                                 if (Math.random() * 255 < 1)
                                     updateWorldDataForChance(worldData);
@@ -2174,7 +2178,7 @@ function decodeHtml(html) {
 }
 
 app.post('/updateLocationVersions', function(req, res) {
-    if (req.body.hasOwnProperty('adminKey') && req.body.adminKey === adminKey && req.body.hasOwnProperty('version') && req.body.hasOwnProperty('entries')) {
+    if (req.body.hasOwnProperty('adminKey') && req.body.adminKey === appConfig.adminKey && req.body.hasOwnProperty('version') && req.body.hasOwnProperty('entries')) {
         const entries = req.body.entries;
         const getPageContent = [];
         const updateEntries = [];
@@ -2330,8 +2334,8 @@ function sendLoginRequest(request) {
         getLoginToken(request).then(loginToken => {
             const data = {
                 action: 'login',
-                lgname: process.env.BOT_USERNAME || appConfig.BOT_USERNAME,
-                lgpassword: process.env.BOT_PASSWORD || appConfig.BOT_PASSWORD,
+                lgname: appConfig.BOT_USERNAME,
+                lgpassword: appConfig.BOT_PASSWORD,
                 lgtoken: loginToken,
                 format: 'json'
             };
