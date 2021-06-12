@@ -1,4 +1,4 @@
-// Version 3.0.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.0.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -107299,7 +107299,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.0.0");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.0.1");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
@@ -108454,7 +108454,7 @@ function InsertStackElement(node, body) {
 	                        const worldVerInfo = versionUpdateState.updatedWorldVerInfo[worldId];
 
 	                        const updateBaseVerPattern = new RegExp(`^${verName}(?:\\-[a-z\\-\\+]{1,2})?$`);
-	                        const updateVerPattern = new RegExp(`^${verName}${entryUpdateType ? '-' : ''}${entryUpdateType}$`);
+	                        const updateVerPattern = new RegExp(`^${verName}${entryUpdateType ? '\\-' : ''}${entryUpdateType.replace(/([\+\-])/g, '\\$1')}$`);
 
 	                        if ((isDeleted || entryType !== versionUtils_1.ADD) && worldVerInfo.verAdded === verName) {
 	                            worldVerInfo.verAdded = null;

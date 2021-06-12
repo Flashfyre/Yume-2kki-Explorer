@@ -3206,7 +3206,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.0.0");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.0.1");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
@@ -4363,7 +4363,7 @@ function initVersionUpdateEvents() {
                         const worldVerInfo = versionUpdateState.updatedWorldVerInfo[worldId];
 
                         const updateBaseVerPattern = new RegExp(`^${verName}(?:\\-[a-z\\-\\+]{1,2})?$`);
-                        const updateVerPattern = new RegExp(`^${verName}${entryUpdateType ? '-' : ''}${entryUpdateType}$`);
+                        const updateVerPattern = new RegExp(`^${verName}${entryUpdateType ? '\\-' : ''}${entryUpdateType.replace(/([\+\-])/g, '\\$1')}$`);
 
                         if ((isDeleted || entryType !== versionUtils.VersionEntryType.ADD) && worldVerInfo.verAdded === verName) {
                             worldVerInfo.verAdded = null;
