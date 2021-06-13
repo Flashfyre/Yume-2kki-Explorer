@@ -3206,7 +3206,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.0.2");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.0.3");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
@@ -4291,7 +4291,8 @@ function initVersionUpdateEvents() {
         $(this).parent().next('.version-update__sub-version-container').toggle(250);
     });
 
-    const worldNames = worldData.map(w => w.title);
+    const worldNames = worldData.map(w => w.titleJP ? `${w.title} (${w.titleJP})` : w.title);
+    const worldsByName = _.keyBy(worldData, w => w.titleJP ? `${w.title} (${w.titleJP})` : w.title);
 
     $(document).on('click', '.js--version-update__version__edit-btn', function () {
         const verIndex = $(this).parents('.version-update__version__controls').data('verIndex');
@@ -4309,7 +4310,7 @@ function initVersionUpdateEvents() {
 
         $editVer.find('.version-update__version__entry-edit__world').each(function () {
             const $worldLookup = $(this);
-            initVersionUpdateWorldLookup($worldLookup, worldNames);
+            initVersionUpdateWorldLookup($worldLookup, worldNames, worldsByName);
         });
 
         $editVer.find('.js--version-update__version__entry').each(function () {
@@ -4321,7 +4322,7 @@ function initVersionUpdateEvents() {
 
             if (worldId !== undefined && worldId != null) {
                 const world = worldData[worldId];
-                $(this).find('.version-update__version__entry-edit__world').val(world.title).data('id', worldId);
+                $(this).find('.version-update__version__entry-edit__world').val(world.titleJP ? `${world.title} (${world.titleJP})` : world.title).data('id', worldId);
             }
 
             $(this).find('.version-update__version__entry-edit__entry-update-type').toggleClass('display--none', entryUpdateType == null).val(entryUpdateType);
@@ -4527,7 +4528,7 @@ function initVersionUpdateEvents() {
             </li>
         `).append($entryEdit.removeClass('display--none'));
         $editVer.find('.version-update__version__entries').append($entry);
-        initVersionUpdateWorldLookup($entry.find('.version-update__version__entry-edit__world'), worldNames);
+        initVersionUpdateWorldLookup($entry.find('.version-update__version__entry-edit__world'), worldNames, worldsByName);
     });
 }
 
@@ -4555,7 +4556,7 @@ function getVersionUpdateEntryCancelFunc($entry, w) {
     };
 }
 
-function initVersionUpdateWorldLookup($worldLookup, worldNames) {
+function initVersionUpdateWorldLookup($worldLookup, worldNames, worldsByName) {
     $worldLookup.devbridgeAutocomplete({
         lookup: worldNames,
         onSelect: function (selectedWorld) {

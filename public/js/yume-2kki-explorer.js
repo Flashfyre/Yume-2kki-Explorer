@@ -1,4 +1,4 @@
-// Version 3.0.2 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.0.3 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -107299,7 +107299,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.0.2");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.0.3");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
@@ -108382,7 +108382,8 @@ function InsertStackElement(node, body) {
 	        jquery(this).parent().next('.version-update__sub-version-container').toggle(250);
 	    });
 
-	    const worldNames = exports.worldData.map(w => w.title);
+	    const worldNames = exports.worldData.map(w => w.titleJP ? `${w.title} (${w.titleJP})` : w.title);
+	    const worldsByName = lodash.keyBy(exports.worldData, w => w.titleJP ? `${w.title} (${w.titleJP})` : w.title);
 
 	    jquery(document).on('click', '.js--version-update__version__edit-btn', function () {
 	        const verIndex = jquery(this).parents('.version-update__version__controls').data('verIndex');
@@ -108400,7 +108401,7 @@ function InsertStackElement(node, body) {
 
 	        $editVer.find('.version-update__version__entry-edit__world').each(function () {
 	            const $worldLookup = jquery(this);
-	            initVersionUpdateWorldLookup($worldLookup, worldNames);
+	            initVersionUpdateWorldLookup($worldLookup, worldNames, worldsByName);
 	        });
 
 	        $editVer.find('.js--version-update__version__entry').each(function () {
@@ -108412,7 +108413,7 @@ function InsertStackElement(node, body) {
 
 	            if (worldId !== undefined && worldId != null) {
 	                const world = exports.worldData[worldId];
-	                jquery(this).find('.version-update__version__entry-edit__world').val(world.title).data('id', worldId);
+	                jquery(this).find('.version-update__version__entry-edit__world').val(world.titleJP ? `${world.title} (${world.titleJP})` : world.title).data('id', worldId);
 	            }
 
 	            jquery(this).find('.version-update__version__entry-edit__entry-update-type').toggleClass('display--none', entryUpdateType == null).val(entryUpdateType);
@@ -108618,7 +108619,7 @@ function InsertStackElement(node, body) {
             </li>
         `).append($entryEdit.removeClass('display--none'));
 	        $editVer.find('.version-update__version__entries').append($entry);
-	        initVersionUpdateWorldLookup($entry.find('.version-update__version__entry-edit__world'), worldNames);
+	        initVersionUpdateWorldLookup($entry.find('.version-update__version__entry-edit__world'), worldNames, worldsByName);
 	    });
 	}
 
@@ -108646,11 +108647,11 @@ function InsertStackElement(node, body) {
 	    };
 	}
 
-	function initVersionUpdateWorldLookup($worldLookup, worldNames) {
+	function initVersionUpdateWorldLookup($worldLookup, worldNames, worldsByName) {
 	    $worldLookup.devbridgeAutocomplete({
 	        lookup: worldNames,
 	        onSelect: function (selectedWorld) {
-	            $worldLookup.data('id', exports.worldsByName[selectedWorld.value].id);
+	            $worldLookup.data('id', worldsByName[selectedWorld.value].id);
 	        }
 	    });
 	}
