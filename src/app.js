@@ -3206,7 +3206,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.0.1");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.0.2");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
@@ -4196,13 +4196,15 @@ function initVersionUpdate() {
                 </span>
             `);
 
-            if (match[2] !== versionNum) {
+            const newVersion = match[2] !== versionNum;
+
+            if (newVersion) {
                 versionNum = match[2];
                 $versionContainer.append(`<h2><a href="javascript:void(0);" class="js--version-update__version-display-toggle no-border">${match[1] || ''}${match[2]}</a></h2>`);
                 $subVersionContainer = $(`<div class="version-update__sub-version-container"${(v > 0 ? ' style="display: none;"' : '')}></div>`).appendTo($versionContainer);
             }
             
-            if ((match[3] || null) !== subVersion) {
+            if (newVersion || (match[3] || null) !== subVersion) {
                 subVersion = match[3] || null;
                 const $subVersionTitle = $('<div class="version-update__sub-version-title"></div>').appendTo($subVersionContainer);
                 $subVersionTitle.append(`<h3>${match[1] || ''}${match[2]}${subVersion || ''}</h3>`);

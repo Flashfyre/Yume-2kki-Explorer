@@ -1,4 +1,4 @@
-// Version 3.0.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.0.2 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -107299,7 +107299,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.0.1");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.0.2");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
@@ -108287,13 +108287,15 @@ function InsertStackElement(node, body) {
                 </span>
             `);
 
-	            if (match[2] !== versionNum) {
+	            const newVersion = match[2] !== versionNum;
+
+	            if (newVersion) {
 	                versionNum = match[2];
 	                $versionContainer.append(`<h2><a href="javascript:void(0);" class="js--version-update__version-display-toggle no-border">${match[1] || ''}${match[2]}</a></h2>`);
 	                $subVersionContainer = jquery(`<div class="version-update__sub-version-container"${(v > 0 ? ' style="display: none;"' : '')}></div>`).appendTo($versionContainer);
 	            }
 	            
-	            if ((match[3] || null) !== subVersion) {
+	            if (newVersion || (match[3] || null) !== subVersion) {
 	                subVersion = match[3] || null;
 	                const $subVersionTitle = jquery('<div class="version-update__sub-version-title"></div>').appendTo($subVersionContainer);
 	                $subVersionTitle.append(`<h3>${match[1] || ''}${match[2]}${subVersion || ''}</h3>`);
