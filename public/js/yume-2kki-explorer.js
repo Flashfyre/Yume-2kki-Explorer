@@ -104023,7 +104023,7 @@ function InsertStackElement(node, body) {
 	        return false;
 
 	    if (limitVersion)
-	        return world.verAdded.index === versionIndex || (world.verUpdated && world.verUpdated.map(vu => vu.index).indexOf(versionIndex) > -1)
+	        return world.verAdded.index === versionIndex || (world.verUpdated && world.verUpdated.map(vu => vu.verUpdated.index).indexOf(versionIndex) > -1)
 	            || (world.verRemoved && world.verRemoved.index === versionIndex)
 	            || (world.verGaps && world.verGaps.filter(vg => vg.verRemoved.index === versionIndex || vg.verReadded.index === versionIndex).length);
 
@@ -107299,7 +107299,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.0.3");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.0.4");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {

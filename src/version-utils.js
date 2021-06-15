@@ -186,7 +186,7 @@ function isWorldInVersion(world, versionIndex, missingVersionIndex, limitVersion
         return false;
 
     if (limitVersion)
-        return world.verAdded.index === versionIndex || (world.verUpdated && world.verUpdated.map(vu => vu.index).indexOf(versionIndex) > -1)
+        return world.verAdded.index === versionIndex || (world.verUpdated && world.verUpdated.map(vu => vu.verUpdated.index).indexOf(versionIndex) > -1)
             || (world.verRemoved && world.verRemoved.index === versionIndex)
             || (world.verGaps && world.verGaps.filter(vg => vg.verRemoved.index === versionIndex || vg.verReadded.index === versionIndex).length);
 
