@@ -483,7 +483,11 @@ function checkUpdateData(pool) {
                                     .then(updatedWorldNames => populateWorldData(pool, worldData, updatedWorldNames)
                                         .then(worldData => {
                                             checkUpdateMapData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                                checkUpdateMenuThemeData(pool, worldData, rows[0].lastUpdate).then(() => resolve()).catch(err => reject(err));
+                                                checkUpdateAuthorInfoData(pool, rows[0].lastUpdate).then(() => {
+                                                    checkUpdateVersionInfoData(pool, rows[0].lastUpdate).then(() => {
+                                                        checkUpdateMenuThemeData(pool, worldData, rows[0].lastUpdate).then(() => resolve()).catch(err => reject(err));
+                                                    }).catch(err => reject(err));
+                                                }).catch(err => reject(err));
                                             }).catch(err => reject(err));
                                         }).catch(err => reject(err)))
                                     .catch(err => reject(err));
@@ -525,7 +529,7 @@ function populateRecentChanges(recentChanges, lastUpdate) {
     });
 }
 
-function checkUpdatePage(pool, pageTitle, lastUpdate) {
+function checkUpdatePage(pageTitle, lastUpdate) {
     return new Promise((resolve, reject) => {
         superagent.get(apiUrl)
             .query({ action: 'query', titles: pageTitle, prop: 'revisions', format: 'json' })
@@ -551,7 +555,7 @@ function checkUpdatePage(pool, pageTitle, lastUpdate) {
 
 function checkUpdateMapData(pool, worldData, lastUpdate) {
     return new Promise((resolve, reject) => {
-        checkUpdatePage(pool, "Map IDs", lastUpdate).then(needsUpdate => {
+        checkUpdatePage("Map IDs", lastUpdate).then(needsUpdate => {
             if (needsUpdate)
                 updateMapData(pool, worldData).then(() => resolve()).catch(err => reject(err));
             else
@@ -562,7 +566,7 @@ function checkUpdateMapData(pool, worldData, lastUpdate) {
 
 function checkUpdateAuthorInfoData(pool, lastUpdate) {
     return new Promise((resolve, reject) => {
-        checkUpdatePage(pool, "Authors", lastUpdate).then(needsUpdate => {
+        checkUpdatePage("Authors", lastUpdate).then(needsUpdate => {
             if (needsUpdate)
                 updateAuthorInfoData(pool).then(() => resolve()).catch(err => reject(err));
             else
@@ -573,7 +577,7 @@ function checkUpdateAuthorInfoData(pool, lastUpdate) {
 
 function checkUpdateVersionInfoData(pool, lastUpdate) {
     return new Promise((resolve, reject) => {
-        checkUpdatePage(pool, "Version History", lastUpdate).then(needsUpdate => {
+        checkUpdatePage("Version History", lastUpdate).then(needsUpdate => {
             if (needsUpdate)
                 updateVersionInfoData(pool).then(() => resolve()).catch(err => reject(err));
             else
@@ -584,7 +588,7 @@ function checkUpdateVersionInfoData(pool, lastUpdate) {
 
 function checkUpdateMenuThemeData(pool, worldData, lastUpdate) {
     return new Promise((resolve, reject) => {
-        checkUpdatePage(pool, "Menu Themes", lastUpdate).then(needsUpdate => {
+        checkUpdatePage("Menu Themes", lastUpdate).then(needsUpdate => {
             if (needsUpdate)
                 updateMenuThemeData(pool, worldData).then(() => resolve()).catch(err => reject(err));
             else
