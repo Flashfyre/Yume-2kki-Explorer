@@ -3206,7 +3206,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.0.5");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.0.6");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {

@@ -798,10 +798,13 @@ function updateWorldInfo(pool, world) {
         const verUpdatedValue = world.verUpdated ? `'${world.verUpdated}'` : "NULL";
         const verGapsValue = world.verGaps ? `'${world.verGaps}'` : "NULL";
         const removedValue = world.removed ? '1' : '0';
-        pool.query(`UPDATE worlds SET titleJP=${titleJPValue}, author=${authorValue}, filename='${world.filename.replace(/'/g, "''")}', verAdded=${verAddedValue}, verRemoved=${verRemovedValue}, verUpdated=${verUpdatedValue}, verGaps=${verGapsValue}, removed=${removedValue} WHERE id=${world.id}`, (err, _) => {
-            if (err) return reject(err);
-            resolve();
-        });
+        if (world.filename)
+            pool.query(`UPDATE worlds SET titleJP=${titleJPValue}, author=${authorValue}, filename='${world.filename.replace(/'/g, "''")}', verAdded=${verAddedValue}, verRemoved=${verRemovedValue}, verUpdated=${verUpdatedValue}, verGaps=${verGapsValue}, removed=${removedValue} WHERE id=${world.id}`, (err, _) => {
+                if (err) return reject(err);
+                resolve();
+            });
+        else
+            reject(`Invalid world image URL for world '${world.title}'`);
     });
 }
 
@@ -1500,7 +1503,7 @@ function getVersionInfoWikiData(url) {
     return new Promise((resolve, reject) => {
         superagent.get(url, function (err, res) {
             if (err) return reject(err);
-            const versionSectionsHtml = res.text.split('article-table').slice(0, -1);
+            const versionSectionsHtml = res.text.split('article-table');
             const versionInfo = [];
             const populateVersionInfo = function () {
                 for (let a = 0; a < versionSectionsHtml.length - 1; a++) {
@@ -1551,7 +1554,6 @@ function getVersionInfoWikiData(url) {
                     versionInfo.sort(function (v1, v2) {
                         return versionUtils.compareVersionNames(v1.name, v2.name);
                     });
-                
                 resolve(versionInfo);
             };
 
