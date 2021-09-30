@@ -86,6 +86,7 @@ $.fn.extend({
 });
 
 export let worldData;
+let missingVersionIndex;
 let versionData;
 let authoredVersionData;
 let authorData;
@@ -139,7 +140,11 @@ function initWorldData(data) {
     }
 
     if (verAddedWorlds.length < worldData.length)
+    {
         versionData.push(versionUtils.getMissingVersion(versionData.length + 1));
+        missingVersionIndex = versionData.length;
+    } else
+        missingVersionIndex = -999;
 
     const worldSizes = worldData.map(w => w.size); 
 
@@ -324,7 +329,7 @@ function initVersionData(versionInfoData) {
     const versionIndexRemovedWorldIds = {};
 
     for (let v of versionData) {
-        if (v.index === versionData.length)
+        if (v.index === missingVersionIndex)
             break;
         if (versionInfoData) {
             for (let vi of versionInfoData) {
@@ -980,7 +985,7 @@ function initGraph(renderMode, displayMode, paths) {
 
     for (let w of worldData) {
         worldScales[w.id] = 1 + (Math.round((w.size - minSize) / (maxSize - minSize) * 10 * (config.sizeDiff - 1)) / 10);
-        worldIsNew[w.id] = (w.verAdded && w.verAdded.index === versionData.length - 1);
+        worldIsNew[w.id] = (w.verAdded && w.verAdded.index === versionData.length - (missingVersionIndex >= 0 ? 1 : 0));
         worldRemoved[w.id] = w.removed;
     }
 
@@ -2458,11 +2463,11 @@ function getNodeOpacity(id) {
     const author = tempSelectedAuthor || selectedAuthor;
     const versionIndex = tempSelectedVersionIndex || selectedVersionIndex;
     const filterForAuthor = author != null && worldData[id].author !== author;
-    const filterForVersion = versionIndex && !versionUtils.isWorldInVersion(worldData[id], versionIndex, versionData.length, tempSelectedVersionIndex);
+    const filterForVersion = versionIndex && !versionUtils.isWorldInVersion(worldData[id], versionIndex, missingVersionIndex, tempSelectedVersionIndex);
     const opacity = ((selectedWorldId == null && !filterForAuthor && !filterForVersion)
         || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1)
         ? 1
-        : selectedWorldId != null && worldData[selectedWorldId].connections.find(c => c.targetId === id) || (!filterForAuthor && filterForVersion && !tempSelectedVersionIndex && versionIndex !== versionData.length && !worldData[id].verAdded)
+        : selectedWorldId != null && worldData[selectedWorldId].connections.find(c => c.targetId === id) || (!filterForAuthor && filterForVersion && !tempSelectedVersionIndex && versionIndex !== missingVersionIndex && !worldData[id].verAdded)
         ? 0.625
         : 0.1;
     return opacity;
@@ -2475,7 +2480,7 @@ function getNodeGrayscale(node) {
     const id = node.id;
     const author = tempSelectedAuthor || selectedAuthor;
     const versionIndex = tempSelectedVersionIndex || selectedVersionIndex;
-    const grayscale = id === selectedWorldId || (versionIndex && !versionUtils.isWorldInVersion(worldData[id], versionIndex, versionData.length, tempSelectedVersionIndex))
+    const grayscale = id === selectedWorldId || (versionIndex && !versionUtils.isWorldInVersion(worldData[id], versionIndex, missingVersionIndex, tempSelectedVersionIndex))
         ? 0
         : id === hoverWorldId || (author != null && worldData[id].author === author)
             || (searchWorldIds.length && searchWorldIds.indexOf(id) > -1) || (selectedWorldId != null && worldData[selectedWorldId].connections.find(c => c.targetId === id))
@@ -2688,7 +2693,7 @@ function updateLinkColors(linkData, bufferedObject, unfilteredLinkData) {
         const sourceId = link.source.id !== undefined ? link.source.id : link.source;
         const targetId = link.target.id !== undefined ? link.target.id : link.target;
         const filterForAuthor = author != null && (worldData[sourceId].author !== author || worldData[targetId].author !== author);
-        const filterForVersion = versionIndex && (!versionUtils.isWorldInVersion(worldData[sourceId], versionIndex, versionData.length, tempSelectedVersionIndex) || !versionUtils.isWorldInVersion(worldData[targetId], versionIndex, versionData.length, tempSelectedVersionIndex));
+        const filterForVersion = versionIndex && (!versionUtils.isWorldInVersion(worldData[sourceId], versionIndex, missingVersionIndex, tempSelectedVersionIndex) || !versionUtils.isWorldInVersion(worldData[targetId], versionIndex, missingVersionIndex, tempSelectedVersionIndex));
         if (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)) {
             opacity = 1.0;
             color = colorLinkSelected;
@@ -2755,11 +2760,11 @@ function getLinkOpacity(link) {
     const author = tempSelectedAuthor || selectedAuthor;
     const versionIndex = tempSelectedVersionIndex || selectedVersionIndex;
     const filterForAuthor = author != null && (worldData[sourceId].author !== author || worldData[targetId].author !== author);
-    const filterForVersion = versionIndex && (!versionUtils.isWorldInVersion(worldData[sourceId], versionIndex, versionData.length, tempSelectedVersionIndex) || !versionUtils.isWorldInVersion(worldData[targetId], versionIndex, versionData.length, tempSelectedVersionIndex));
+    const filterForVersion = versionIndex && (!versionUtils.isWorldInVersion(worldData[sourceId], versionIndex, missingVersionIndex, tempSelectedVersionIndex) || !versionUtils.isWorldInVersion(worldData[targetId], versionIndex, missingVersionIndex, tempSelectedVersionIndex));
     return ((selectedWorldId == null && !filterForAuthor && !filterForVersion) || (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)))
         && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)
         ? 1
-        : (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)) || (!filterForAuthor && filterForVersion && !tempSelectedVersionIndex && versionIndex !== versionData.length && (!worldData[sourceId].verAdded || !worldData[targetId].verAdded))
+        : (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)) || (!filterForAuthor && filterForVersion && !tempSelectedVersionIndex && versionIndex !== missingVersionIndex && (!worldData[sourceId].verAdded || !worldData[targetId].verAdded))
         ? 0.625
         : 0.1;
 }
@@ -2778,7 +2783,7 @@ function getLinkGrayscale(link) {
     return sourceId === selectedWorldId || targetId === selectedWorldId
         ? 0
         : (sourceId === hoverWorldId || targetId === hoverWorldId) || (author != null && (sourceWorld.author === author || targetWorld.author === author))
-            || (versionIndex && versionUtils.isWorldInVersion(sourceWorld, versionIndex, versionData.length, tempSelectedVersionIndex) && versionUtils.isWorldInVersion(targetWorld, versionIndex, versionData.length, tempSelectedVersionIndex))
+            || (versionIndex && versionUtils.isWorldInVersion(sourceWorld, versionIndex, missingVersionIndex, tempSelectedVersionIndex) && versionUtils.isWorldInVersion(targetWorld, versionIndex, missingVersionIndex, tempSelectedVersionIndex))
             || (searchWorldIds.length && (searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1))
         ? 0.375
         : 0.85;
@@ -3411,7 +3416,7 @@ function initVersionSelectOptions() {
     $versionSelect.find('option:not(:first-child)').remove();
     versionData.forEach(v => {
         const $opt = $('<option>');
-        if (!v.addedWorldIds.length && !v.removedWorldIds.length && v.index !== versionData.length)
+        if (!v.addedWorldIds.length && !v.removedWorldIds.length && v.index !== missingVersionIndex)
             $opt.addClass('temp-select-only');
         $opt.val(v.index);
         $opt.text(config.lang === 'en' ? v.name : v.nameJP);

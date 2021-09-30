@@ -1,4 +1,4 @@
-// Version 3.0.6 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.0.7 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -104181,6 +104181,7 @@ function InsertStackElement(node, body) {
 	        return this;
 	    }
 	});
+	let missingVersionIndex;
 	let versionData;
 	let authoredVersionData;
 	let authorData;
@@ -104234,7 +104235,11 @@ function InsertStackElement(node, body) {
 	    }
 
 	    if (verAddedWorlds.length < exports.worldData.length)
+	    {
 	        versionData.push(versionUtils_14(versionData.length + 1));
+	        missingVersionIndex = versionData.length;
+	    } else
+	        missingVersionIndex = -999;
 
 	    const worldSizes = exports.worldData.map(w => w.size); 
 
@@ -104419,7 +104424,7 @@ function InsertStackElement(node, body) {
 	    const versionIndexRemovedWorldIds = {};
 
 	    for (let v of versionData) {
-	        if (v.index === versionData.length)
+	        if (v.index === missingVersionIndex)
 	            break;
 	        if (versionInfoData) {
 	            for (let vi of versionInfoData) {
@@ -105073,7 +105078,7 @@ function InsertStackElement(node, body) {
 
 	    for (let w of exports.worldData) {
 	        worldScales[w.id] = 1 + (Math.round((w.size - minSize) / (maxSize - minSize) * 10 * (config$1.sizeDiff - 1)) / 10);
-	        worldIsNew[w.id] = (w.verAdded && w.verAdded.index === versionData.length - 1);
+	        worldIsNew[w.id] = (w.verAdded && w.verAdded.index === versionData.length - (missingVersionIndex >= 0 ? 1 : 0));
 	        worldRemoved[w.id] = w.removed;
 	    }
 
@@ -106551,11 +106556,11 @@ function InsertStackElement(node, body) {
 	    const author = tempSelectedAuthor || selectedAuthor;
 	    const versionIndex = tempSelectedVersionIndex || selectedVersionIndex;
 	    const filterForAuthor = author != null && exports.worldData[id].author !== author;
-	    const filterForVersion = versionIndex && !versionUtils_16(exports.worldData[id], versionIndex, versionData.length, tempSelectedVersionIndex);
+	    const filterForVersion = versionIndex && !versionUtils_16(exports.worldData[id], versionIndex, missingVersionIndex, tempSelectedVersionIndex);
 	    const opacity = ((selectedWorldId == null && !filterForAuthor && !filterForVersion)
 	        || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1)
 	        ? 1
-	        : selectedWorldId != null && exports.worldData[selectedWorldId].connections.find(c => c.targetId === id) || (!filterForAuthor && filterForVersion && !tempSelectedVersionIndex && versionIndex !== versionData.length && !exports.worldData[id].verAdded)
+	        : selectedWorldId != null && exports.worldData[selectedWorldId].connections.find(c => c.targetId === id) || (!filterForAuthor && filterForVersion && !tempSelectedVersionIndex && versionIndex !== missingVersionIndex && !exports.worldData[id].verAdded)
 	        ? 0.625
 	        : 0.1;
 	    return opacity;
@@ -106568,7 +106573,7 @@ function InsertStackElement(node, body) {
 	    const id = node.id;
 	    const author = tempSelectedAuthor || selectedAuthor;
 	    const versionIndex = tempSelectedVersionIndex || selectedVersionIndex;
-	    const grayscale = id === selectedWorldId || (versionIndex && !versionUtils_16(exports.worldData[id], versionIndex, versionData.length, tempSelectedVersionIndex))
+	    const grayscale = id === selectedWorldId || (versionIndex && !versionUtils_16(exports.worldData[id], versionIndex, missingVersionIndex, tempSelectedVersionIndex))
 	        ? 0
 	        : id === hoverWorldId || (author != null && exports.worldData[id].author === author)
 	            || (searchWorldIds.length && searchWorldIds.indexOf(id) > -1) || (selectedWorldId != null && exports.worldData[selectedWorldId].connections.find(c => c.targetId === id))
@@ -106781,7 +106786,7 @@ function InsertStackElement(node, body) {
 	        const sourceId = link.source.id !== undefined ? link.source.id : link.source;
 	        const targetId = link.target.id !== undefined ? link.target.id : link.target;
 	        const filterForAuthor = author != null && (exports.worldData[sourceId].author !== author || exports.worldData[targetId].author !== author);
-	        const filterForVersion = versionIndex && (!versionUtils_16(exports.worldData[sourceId], versionIndex, versionData.length, tempSelectedVersionIndex) || !versionUtils_16(exports.worldData[targetId], versionIndex, versionData.length, tempSelectedVersionIndex));
+	        const filterForVersion = versionIndex && (!versionUtils_16(exports.worldData[sourceId], versionIndex, missingVersionIndex, tempSelectedVersionIndex) || !versionUtils_16(exports.worldData[targetId], versionIndex, missingVersionIndex, tempSelectedVersionIndex));
 	        if (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)) {
 	            opacity = 1.0;
 	            color = colorLinkSelected;
@@ -106848,11 +106853,11 @@ function InsertStackElement(node, body) {
 	    const author = tempSelectedAuthor || selectedAuthor;
 	    const versionIndex = tempSelectedVersionIndex || selectedVersionIndex;
 	    const filterForAuthor = author != null && (exports.worldData[sourceId].author !== author || exports.worldData[targetId].author !== author);
-	    const filterForVersion = versionIndex && (!versionUtils_16(exports.worldData[sourceId], versionIndex, versionData.length, tempSelectedVersionIndex) || !versionUtils_16(exports.worldData[targetId], versionIndex, versionData.length, tempSelectedVersionIndex));
+	    const filterForVersion = versionIndex && (!versionUtils_16(exports.worldData[sourceId], versionIndex, missingVersionIndex, tempSelectedVersionIndex) || !versionUtils_16(exports.worldData[targetId], versionIndex, missingVersionIndex, tempSelectedVersionIndex));
 	    return ((selectedWorldId == null && !filterForAuthor && !filterForVersion) || (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)))
 	        && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)
 	        ? 1
-	        : (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)) || (!filterForAuthor && filterForVersion && !tempSelectedVersionIndex && versionIndex !== versionData.length && (!exports.worldData[sourceId].verAdded || !exports.worldData[targetId].verAdded))
+	        : (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)) || (!filterForAuthor && filterForVersion && !tempSelectedVersionIndex && versionIndex !== missingVersionIndex && (!exports.worldData[sourceId].verAdded || !exports.worldData[targetId].verAdded))
 	        ? 0.625
 	        : 0.1;
 	}
@@ -106871,7 +106876,7 @@ function InsertStackElement(node, body) {
 	    return sourceId === selectedWorldId || targetId === selectedWorldId
 	        ? 0
 	        : (sourceId === hoverWorldId || targetId === hoverWorldId) || (author != null && (sourceWorld.author === author || targetWorld.author === author))
-	            || (versionIndex && versionUtils_16(sourceWorld, versionIndex, versionData.length, tempSelectedVersionIndex) && versionUtils_16(targetWorld, versionIndex, versionData.length, tempSelectedVersionIndex))
+	            || (versionIndex && versionUtils_16(sourceWorld, versionIndex, missingVersionIndex, tempSelectedVersionIndex) && versionUtils_16(targetWorld, versionIndex, missingVersionIndex, tempSelectedVersionIndex))
 	            || (searchWorldIds.length && (searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1))
 	        ? 0.375
 	        : 0.85;
@@ -107504,7 +107509,7 @@ function InsertStackElement(node, body) {
 	    $versionSelect.find('option:not(:first-child)').remove();
 	    versionData.forEach(v => {
 	        const $opt = jquery('<option>');
-	        if (!v.addedWorldIds.length && !v.removedWorldIds.length && v.index !== versionData.length)
+	        if (!v.addedWorldIds.length && !v.removedWorldIds.length && v.index !== missingVersionIndex)
 	            $opt.addClass('temp-select-only');
 	        $opt.val(v.index);
 	        $opt.text(config$1.lang === 'en' ? v.name : v.nameJP);
