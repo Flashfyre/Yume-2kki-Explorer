@@ -1848,7 +1848,7 @@ function addMenuThemeDataJPMethods(menuThemeData, removed) {
         superagent.get(url, function (err, res) {
             if (err) return reject(err);
             const menuThemesByMenuThemeId = _.keyBy(menuThemeData, m => m.menuThemeId);
-            const menuThemeTablesHtml = res.text.slice(res.text.indexOf('<table', res.text.indexOf('<div class="container-wrapper"')), res.text.lastIndexOf('</table>'));
+            const menuThemeTablesHtml = res.text.slice(res.text.indexOf('<table><thead>', res.text.indexOf('<div class="container-wrapper"')), res.text.lastIndexOf('</table>'));
             const menuThemeDataRows = menuThemeTablesHtml.split('<tr>').slice(2);
             let endOfTable = false;
 
