@@ -539,7 +539,6 @@ a.close-modal {
     width: 0;
     white-space: nowrap;
     color: transparent;
-    text-shadow: -1.5px -1.5px 0 black, 0 -1.5px 0 black, 1.5px -1.5px 0 black, 1.5px 0 0 black, 1.5px 1.5px 0 black, 0 1.5px 0 black, -1.5px 1.5px 0 black, -1.5px 0 0 #000;
 }
 
 .menu-theme > img {

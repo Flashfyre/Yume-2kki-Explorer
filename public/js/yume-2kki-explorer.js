@@ -103762,6 +103762,8 @@ function InsertStackElement(node, body) {
 
 	let uiThemeBgColors = {};
 
+	let uiThemeFontShadows = {};
+
 	let uiThemeFontColors = {};
 
 	function getFontColor(uiTheme, fontStyle, callback) {
@@ -103781,6 +103783,23 @@ function InsertStackElement(node, body) {
 	        canvas.remove();
 	    };
 	    img.src = `./images/ui/${uiTheme}/font${(fontStyle + 1)}.png`;
+	}
+
+	function getFontShadow(uiTheme, callback) {
+	    let pixel = uiThemeFontShadows[uiTheme];
+	    if (pixel)
+	        return callback(`rgba(${pixel[0]}, ${pixel[1]}, ${pixel[2]}, 1)`);
+	    const img = new Image();
+	    img.onload = function () {
+	        const canvas = document.createElement('canvas');
+	        const context = canvas.getContext('2d');
+	        context.drawImage(img, 0, 0);
+	        pixel = context.getImageData(0, 8, 1, 1).data;
+	        uiThemeFontShadows[uiTheme] = [ pixel[0], pixel[1], pixel[2] ];
+	        callback(`rgba(${pixel[0]}, ${pixel[1]}, ${pixel[2]}, 1)`);
+	        canvas.remove();
+	    };
+	    img.src = `./images/ui/${uiTheme}/fontshadow.png`;
 	}
 
 	function getBaseBgColor(uiTheme, callback) {
@@ -107304,7 +107323,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.0.7");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.1.0");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
@@ -107833,11 +107852,14 @@ function InsertStackElement(node, body) {
 	        getBaseBgColor(config$1.uiTheme || (config$1.uiTheme = "Default_Custom"), function (color) {
 	            const bgColorPixel = uiThemeBgColors[config$1.uiTheme];
 	            const altColor = "rgba(" + Math.min(bgColorPixel[0] + 48, 255) + ", " + Math.min(bgColorPixel[1] + 48, 255) + ", " + Math.min(bgColorPixel[2] + 48, 255) + ", 1)";
-	            themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/[a-zA-Z0-9\_]+\/(containerbg|border(?:2)?|font\d)\.png\)/g, "url(/images/ui/" + config$1.uiTheme + "/$1.png)")
-	                .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "background-color:$1" + color + "$2;$3/*base*/")
-	                .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "background-color:$1" + altColor + "$2;$3/*alt*/");
-	            jquery(".js--font-style").trigger("change");
-	            updateConfig(config$1);
+	            getFontShadow(config$1.uiTheme, function (shadow) {
+	                themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/[a-zA-Z0-9\_]+\/(containerbg|border(?:2)?|font\d)\.png\)/g, "url(/images/ui/" + config$1.uiTheme + "/$1.png)")
+	                    .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "background-color:$1" + color + "$2;$3/*base*/")
+	                    .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "background-color:$1" + altColor + "$2;$3/*alt*/")
+	                    .replace(/(?:[#a-zA-Z0-9]+|rgba\([0-9]+, [0-9]+, [0-9]+, [0-9]+\))(;? *)\/\*shadow\*\//g, shadow + "$1/*shadow*/");
+	                jquery(".js--font-style").trigger("change");
+	                updateConfig(config$1);
+	            });
 	        });
 	    });
 

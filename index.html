@@ -24,6 +24,7 @@
                 -webkit-background-clip: text;
 	            -webkit-text-fill-color: transparent;
                 background-clip: text;
+                filter: drop-shadow(1.5px 1.5px black /*shadow*/);
             }
 
             a.world-link {
@@ -86,21 +87,31 @@
 
             .footer {
                 color: rgba(216, 216, 216, 1); /*base*/
+                text-shadow: 1.5px 1.5px black; /*shadow*/
             }
 
             button, a:not(.no-border) {
                 color: rgba(216, 216, 216, 1); /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
-                background-image: url(/images/ui/Default_Custom/containerbg.png);
                 image-rendering: crisp-edges;
                 image-rendering: pixelated;
+            }
+
+            button, a.button-link {
+                background-color: rgba(45, 17, 23, 1); /*base*/
+                text-shadow: 1.5px 1.5px black; /*shadow*/
+            }
+
+            a:not(.no-border):not(.button-link) {
+                background-image: url(/images/ui/Default_Custom/containerbg.png);
             }
 
             input[type='text'], select, .slider {
                 color: rgba(216, 216, 216, 1); /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
-                image-rendering: crisp-edges;
                 background-color: rgba(45, 17, 23, 1); /*base*/
+                text-shadow: 1.5px 1.5px black; /*shadow*/
+                image-rendering: crisp-edges;
                 image-rendering: pixelated;
             }
 
@@ -134,6 +145,7 @@
                 color: rgba(216, 216, 216, 1); /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
                 background-color: rgba(45, 17, 23, 1); /*base*/
+                text-shadow: 1.5px 1.5px black; /*shadow*/
                 image-rendering: crisp-edges;
                 image-rendering: pixelated;
             }
@@ -147,16 +159,29 @@
             }
 
             .context-menu-item, .graph-tooltip, .scene-tooltip:not(:empty), .collectable-entry--content {
-                color: rgba(216, 216, 216, 1) !important; /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round !important;
                 background-color: rgba(45, 17, 23, 1) !important; /*base*/
-                background-image: url(/images/ui/Default_Custom/containerbg.png) !important;
                 image-rendering: crisp-edges;
                 image-rendering: pixelated;
             }
 
+            .context-menu-item, .graph-tooltip, .scene-tooltip:not(:empty) {
+                background-image: url(/images/ui/Default_Custom/containerbg.png) !important;
+                color: rgba(216, 216, 216, 1) !important; /*base*/
+                text-shadow: 1.5px 1.5px black; /*shadow*/
+            }
+
             .context-menu-item.context-menu-hover {
                 color: rgba(255, 255, 157, 1) !important; /*alt*/
+            }
+
+            .collectable-entry__name {
+                text-shadow: none;
+            }
+
+            .collectable-entry__name--shadow {
+                text-shadow: -1.5px -1.5px 0 black /*shadow*/, 0 -1.5px 0 black /*shadow*/, 1.5px -1.5px 0 black /*shadow*/, 1.5px 0 0 black /*shadow*/, 1.5px 1.5px 0 black /*shadow*/, 0 1.5px 0 black /*shadow*/, -1.5px 1.5px 0 black /*shadow*/, -1.5px 0 0 black; /*shadow*/
+                filter: drop-shadow(1.25px 1.25px black /*shadow*/);
             }
 
             .author-entry.collectable--border:hover .author-entry__name {
@@ -380,7 +405,7 @@
                         <div class="js--menu-themes-container__borders collectables-container__borders"></div>
                     </div>
                     <div class="js--removed-content">
-                        <span class="menu-themes__previous-methods-title">
+                        <span class="menu-themes__previous-methods-title noselect">
                             <h2 data-localize="menuThemesModal.previousMethods">Previous Methods</h2>
                             <hr />
                         </span>
@@ -395,7 +420,7 @@
         <div id="helpModal" class="js--help-modal modal">
             <div class="js--help-modal__content modal__content">
                 <div class="js--help-modal__content--localized modal__content--localized"></div>
-                <a href="https://github.com/Flashfyre/Yume-2kki-Explorer/issues/new" target="_blank" data-localize="helpModal.reportBug">Report a Bug</a>
+                <a href="https://github.com/Flashfyre/Yume-2kki-Explorer/issues/new" target="_blank" class="button-link" data-localize="helpModal.reportBug">Report a Bug</a>
             </div>
         </div>
     </body>

@@ -98,8 +98,12 @@
                 "City_of_Liars": "嘘つきの街",
                 "Misc": "雑多なメンユータイプ",
                 "Monochrome_GB_World": "グレーボーイ",
+                "Smiley_Signs_World": "黒白世界",
+                "Lovesick_World": "恋",
                 "Corrupted_Love_World": "恋楔",
-                "Saturated_Eyeball_Zone": "彩愛蝶"
+                "Saturated_Eyeball_Zone": "彩愛蝶",
+                "NES_Glitch_Tunnel": "NESトンネル",
+                "Shop_Ruins": "廃墟商店"
             }
         },
         "fontStyle": {
