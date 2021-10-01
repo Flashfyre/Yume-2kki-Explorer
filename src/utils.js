@@ -31,6 +31,8 @@ export function hueToRGBA(h, a) {
 
 export let uiThemeBgColors = {};
 
+export let uiThemeFontShadows = {};
+
 export let uiThemeFontColors = {};
 
 export function getFontColor(uiTheme, fontStyle, callback) {
@@ -50,6 +52,23 @@ export function getFontColor(uiTheme, fontStyle, callback) {
         canvas.remove();
     };
     img.src = `./images/ui/${uiTheme}/font${(fontStyle + 1)}.png`;
+}
+
+export function getFontShadow(uiTheme, callback) {
+    let pixel = uiThemeFontShadows[uiTheme];
+    if (pixel)
+        return callback(`rgba(${pixel[0]}, ${pixel[1]}, ${pixel[2]}, 1)`);
+    const img = new Image();
+    img.onload = function () {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        context.drawImage(img, 0, 0);
+        pixel = context.getImageData(0, 8, 1, 1).data;
+        uiThemeFontShadows[uiTheme] = [ pixel[0], pixel[1], pixel[2] ];
+        callback(`rgba(${pixel[0]}, ${pixel[1]}, ${pixel[2]}, 1)`);
+        canvas.remove();
+    };
+    img.src = `./images/ui/${uiTheme}/fontshadow.png`;
 }
 
 export function getBaseBgColor(uiTheme, callback) {

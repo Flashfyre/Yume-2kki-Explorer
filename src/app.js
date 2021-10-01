@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import SpriteText from 'three-spritetext';
 import ForceGraph3D from '3d-force-graph';
 import TWEEN from '@tweenjs/tween.js';
-import { checkIsMobile, formatDate, hueToRGBA, uiThemeFontColors, uiThemeBgColors, getFontColor, getBaseBgColor } from './utils';
+import { checkIsMobile, formatDate, hueToRGBA, uiThemeFontColors, uiThemeBgColors, getFontColor, getBaseBgColor, getFontShadow } from './utils';
 import { updateConfig } from './config.js';
 import { ConnType } from './conn-type.js';
 import * as versionUtils from './version-utils.js';
@@ -3211,7 +3211,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.0.7");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.1.0");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
@@ -3742,11 +3742,14 @@ function initControls() {
         getBaseBgColor(config.uiTheme || (config.uiTheme = "Default_Custom"), function (color) {
             const bgColorPixel = uiThemeBgColors[config.uiTheme];
             const altColor = "rgba(" + Math.min(bgColorPixel[0] + 48, 255) + ", " + Math.min(bgColorPixel[1] + 48, 255) + ", " + Math.min(bgColorPixel[2] + 48, 255) + ", 1)";
-            themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/[a-zA-Z0-9\_]+\/(containerbg|border(?:2)?|font\d)\.png\)/g, "url(/images/ui/" + config.uiTheme + "/$1.png)")
-                .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "background-color:$1" + color + "$2;$3/*base*/")
-                .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "background-color:$1" + altColor + "$2;$3/*alt*/");
-            $(".js--font-style").trigger("change");
-            updateConfig(config);
+            getFontShadow(config.uiTheme, function (shadow) {
+                themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/[a-zA-Z0-9\_]+\/(containerbg|border(?:2)?|font\d)\.png\)/g, "url(/images/ui/" + config.uiTheme + "/$1.png)")
+                    .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "background-color:$1" + color + "$2;$3/*base*/")
+                    .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "background-color:$1" + altColor + "$2;$3/*alt*/")
+                    .replace(/(?:[#a-zA-Z0-9]+|rgba\([0-9]+, [0-9]+, [0-9]+, [0-9]+\))(;? *)\/\*shadow\*\//g, shadow + "$1/*shadow*/");
+                $(".js--font-style").trigger("change");
+                updateConfig(config);
+            });
         });
     });
 

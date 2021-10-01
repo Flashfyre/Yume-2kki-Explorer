@@ -98,8 +98,12 @@
                 "City_of_Liars": "City of Liars",
                 "Misc": "Misc. Theme",
                 "Monochrome_GB_World": "Monochrome GB World",
+                "Smiley_Signs_World": "Smiley Signs World",
+                "Lovesick_World": "Lovesick World",
                 "Corrupted_Love_World": "Corrupted Love World",
-                "Saturated_Eyeball_Zone": "Saturated Eyeball Zone"
+                "Saturated_Eyeball_Zone": "Saturated Eyeball Zone",
+                "NES_Glitch_Tunnel": "NES Glitch Tunnel",
+                "Shop_Ruins": "Shop Ruins"
             }
         },
         "fontStyle": {
