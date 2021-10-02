@@ -82,7 +82,7 @@ function initDb(pool) {
                 filename VARCHAR(255) NOT NULL,
                 mapUrl VARCHAR(1000) NULL,
                 mapLabel VARCHAR(1000) NULL,
-                bgmUrl VARCHAR(1000) NULL,
+                bgmUrl VARCHAR(2000) NULL,
                 bgmLabel VARCHAR(1000) NULL,
                 verAdded VARCHAR(20) NULL,
                 verRemoved VARCHAR(20) NULL,
