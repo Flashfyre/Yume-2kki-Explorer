@@ -3211,7 +3211,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.1.0");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.2.0");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
@@ -3220,7 +3220,8 @@ function initLocalization(isInitial) {
                 convertJPControlLabels(data.settings);
             }
             localizedConns = data.conn;
-            initContextMenu(data.contextMenu);
+            if (worldData)
+                initContextMenu(data.contextMenu);
             localizedNodeLabel = getLocalizedNodeLabel(data.nodeLabel);
             localizedPathNodeLabel = getLocalizedNodeLabel(data.nodeLabel, true)
             localizedNodeLabelVersionLastUpdated = getLocalizedNodeLabelVersionLastUpdated(data.nodeLabel);
@@ -3434,31 +3435,79 @@ function initVersionSelectOptions() {
 
 function initContextMenu(localizedContextMenu) {
     $.contextMenu('destroy');
+
+    const subItems = {};
+    const menuItems = {
+        wiki: {
+            name: () => localizedContextMenu.items.wiki,
+            callback: () => openWorldWikiPage(contextWorldId)
+        },
+        start: {
+            name: () => localizedContextMenu.items.start,
+            callback: function () {
+                const world = worldData[contextWorldId];
+                const worldName = config.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
+                $('.js--start-world').val(worldName).trigger('change').devbridgeAutocomplete().select(0);
+            }
+        },
+        end: {
+            name: () => localizedContextMenu.items.end,
+            callback: function () {
+                const world = worldData[contextWorldId];
+                const worldName = config.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
+                $('.js--end-world').val(worldName).trigger('change').devbridgeAutocomplete().select(0);
+            }
+        },
+        map: {
+            name: () => localizedContextMenu.items.map,
+            callback: function () {
+                const world = worldData[contextWorldId];
+                if (world.mapUrl.indexOf('|') === -1) {
+                    const handle = window.open(world.mapUrl, '_blank', 'noreferrer');
+                    if (handle)
+                        handle.focus();
+                }
+            },
+            visible: function () {
+                const world = worldData[contextWorldId];
+                return world.mapUrl && world.mapUrl.indexOf('|') === -1;
+            }
+        },
+        maps: {
+            name: () => localizedContextMenu.items.map,
+            visible: function () {
+                const world = worldData[contextWorldId];
+                return world.mapUrl && world.mapUrl.indexOf('|') >-1;
+            },
+            items: subItems
+        }
+    };
+
+    for (let world of worldData) {
+        if (!world.mapUrl || world.mapUrl.indexOf('|') === -1)
+            continue;
+        const worldId = world.id;
+        const mapUrls = world.mapUrl.split('|');
+        const mapLabels = world.mapLabel.split('|');
+        const visibleFunc = () => contextWorldId === worldId;
+        for (let m = 0; m < mapUrls.length; m++) {
+            const mapIndex = m;
+            subItems[`map${worldId}_${mapIndex + 1}`] = {
+                name: mapLabels[mapIndex],
+                callback: function () {
+                    const handle = window.open(mapUrls[mapIndex], '_blank', 'noreferrer');
+                    if (handle)
+                        handle.focus();
+                },
+                visible: visibleFunc
+            };
+        }
+    }
+
     $.contextMenu({
         selector: '.graph canvas', 
         trigger: 'none',
-        items: {
-            "wiki": {
-                name: () => localizedContextMenu.items.wiki,
-                callback: () => openWorldWikiPage(contextWorldId)
-            },
-            "start": {
-                name: () => localizedContextMenu.items.start,
-                callback: function () {
-                    const world = worldData[contextWorldId];
-                    const worldName = config.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
-                    $(".js--start-world").val(worldName).trigger("change").devbridgeAutocomplete().select(0);
-                }
-            },
-            "end": {
-                name: () => localizedContextMenu.items.end,
-                callback: function () {
-                    const world = worldData[contextWorldId];
-                    const worldName = config.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
-                    $(".js--end-world").val(worldName).trigger("change").devbridgeAutocomplete().select(0);
-                }
-            }
-        }
+        items: menuItems
     });
 }
 

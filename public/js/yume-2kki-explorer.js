@@ -1,4 +1,4 @@
-// Version 3.0.7 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.2.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -89120,6 +89120,8 @@
 	function _possibleConstructorReturn(self, call) {
 	  if (call && (typeof call === "object" || typeof call === "function")) {
 	    return call;
+	  } else if (call !== void 0) {
+	    throw new TypeError("Derived constructors may only return object or undefined");
 	  }
 
 	  return _assertThisInitialized(self);
@@ -89165,7 +89167,7 @@
 	}
 
 	function _iterableToArrayLimit(arr, i) {
-	  var _i = arr && (typeof Symbol !== "undefined" && arr[Symbol.iterator] || arr["@@iterator"]);
+	  var _i = arr == null ? null : typeof Symbol !== "undefined" && arr[Symbol.iterator] || arr["@@iterator"];
 
 	  if (_i == null) return;
 	  var _arr = [];
@@ -93896,7 +93898,7 @@ function InsertStackElement(node, body) {
 	  var physicsSimulator = createSimulator(physicsSettings);
 	  if (Array.isArray(physicsSettings)) throw new Error('Physics settings is expected to be an object');
 
-	  var nodeMass = defaultNodeMass;
+	  var nodeMass = graph.version > 19 ? defaultSetNodeMass : defaultArrayNodeMass;
 	  if (physicsSettings && typeof physicsSettings.nodeMass === 'function') {
 	    nodeMass = physicsSettings.nodeMass;
 	  }
@@ -94258,10 +94260,17 @@ function InsertStackElement(node, body) {
 	   * @param {String|Number} nodeId identifier of a node, for which body mass needs to be calculated
 	   * @returns {Number} recommended mass of the body;
 	   */
-	  function defaultNodeMass(nodeId) {
+	  function defaultArrayNodeMass(nodeId) {
+	    // This function is for older versions of ngraph.graph.
 	    var links = graph.getLinks(nodeId);
 	    if (!links) return 1;
 	    return 1 + links.length / 3.0;
+	  }
+
+	  function defaultSetNodeMass(nodeId) {
+	    var links = graph.getLinks(nodeId);
+	    if (!links) return 1;
+	    return 1 + links.size / 3.0;
 	  }
 	}
 
@@ -94583,7 +94592,7 @@ function InsertStackElement(node, body) {
 	function intern_delete({_intern, _key}, value) {
 	  const key = _key(value);
 	  if (_intern.has(key)) {
-	    value = _intern.get(value);
+	    value = _intern.get(key);
 	    _intern.delete(key);
 	  }
 	  return value;
@@ -107323,7 +107332,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.1.0");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.2.0");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
@@ -107332,7 +107341,8 @@ function InsertStackElement(node, body) {
 	                convertJPControlLabels(data.settings);
 	            }
 	            localizedConns = data.conn;
-	            initContextMenu(data.contextMenu);
+	            if (exports.worldData)
+	                initContextMenu(data.contextMenu);
 	            localizedNodeLabel = getLocalizedNodeLabel(data.nodeLabel);
 	            localizedPathNodeLabel = getLocalizedNodeLabel(data.nodeLabel, true);
 	            localizedNodeLabelVersionLastUpdated = getLocalizedNodeLabelVersionLastUpdated(data.nodeLabel);
@@ -107546,31 +107556,79 @@ function InsertStackElement(node, body) {
 
 	function initContextMenu(localizedContextMenu) {
 	    jquery.contextMenu('destroy');
+
+	    const subItems = {};
+	    const menuItems = {
+	        wiki: {
+	            name: () => localizedContextMenu.items.wiki,
+	            callback: () => openWorldWikiPage(contextWorldId)
+	        },
+	        start: {
+	            name: () => localizedContextMenu.items.start,
+	            callback: function () {
+	                const world = exports.worldData[contextWorldId];
+	                const worldName = config$1.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
+	                jquery('.js--start-world').val(worldName).trigger('change').devbridgeAutocomplete().select(0);
+	            }
+	        },
+	        end: {
+	            name: () => localizedContextMenu.items.end,
+	            callback: function () {
+	                const world = exports.worldData[contextWorldId];
+	                const worldName = config$1.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
+	                jquery('.js--end-world').val(worldName).trigger('change').devbridgeAutocomplete().select(0);
+	            }
+	        },
+	        map: {
+	            name: () => localizedContextMenu.items.map,
+	            callback: function () {
+	                const world = exports.worldData[contextWorldId];
+	                if (world.mapUrl.indexOf('|') === -1) {
+	                    const handle = window.open(world.mapUrl, '_blank', 'noreferrer');
+	                    if (handle)
+	                        handle.focus();
+	                }
+	            },
+	            visible: function () {
+	                const world = exports.worldData[contextWorldId];
+	                return world.mapUrl && world.mapUrl.indexOf('|') === -1;
+	            }
+	        },
+	        maps: {
+	            name: () => localizedContextMenu.items.map,
+	            visible: function () {
+	                const world = exports.worldData[contextWorldId];
+	                return world.mapUrl && world.mapUrl.indexOf('|') >-1;
+	            },
+	            items: subItems
+	        }
+	    };
+
+	    for (let world of exports.worldData) {
+	        if (!world.mapUrl || world.mapUrl.indexOf('|') === -1)
+	            continue;
+	        const worldId = world.id;
+	        const mapUrls = world.mapUrl.split('|');
+	        const mapLabels = world.mapLabel.split('|');
+	        const visibleFunc = () => contextWorldId === worldId;
+	        for (let m = 0; m < mapUrls.length; m++) {
+	            const mapIndex = m;
+	            subItems[`map${worldId}_${mapIndex + 1}`] = {
+	                name: mapLabels[mapIndex],
+	                callback: function () {
+	                    const handle = window.open(mapUrls[mapIndex], '_blank', 'noreferrer');
+	                    if (handle)
+	                        handle.focus();
+	                },
+	                visible: visibleFunc
+	            };
+	        }
+	    }
+
 	    jquery.contextMenu({
 	        selector: '.graph canvas', 
 	        trigger: 'none',
-	        items: {
-	            "wiki": {
-	                name: () => localizedContextMenu.items.wiki,
-	                callback: () => openWorldWikiPage(contextWorldId)
-	            },
-	            "start": {
-	                name: () => localizedContextMenu.items.start,
-	                callback: function () {
-	                    const world = exports.worldData[contextWorldId];
-	                    const worldName = config$1.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
-	                    jquery(".js--start-world").val(worldName).trigger("change").devbridgeAutocomplete().select(0);
-	                }
-	            },
-	            "end": {
-	                name: () => localizedContextMenu.items.end,
-	                callback: function () {
-	                    const world = exports.worldData[contextWorldId];
-	                    const worldName = config$1.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
-	                    jquery(".js--end-world").val(worldName).trigger("change").devbridgeAutocomplete().select(0);
-	                }
-	            }
-	        }
+	        items: menuItems
 	    });
 	}
 

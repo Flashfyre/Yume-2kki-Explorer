@@ -177,7 +177,8 @@
         "items": {
             "wiki": "View Wiki Page",
             "start": "Set as Origin",
-            "end": "Set as Destination"
+            "end": "Set as Destination",
+            "map": "View Map"
         }
     },
     "nodeLabel": {
