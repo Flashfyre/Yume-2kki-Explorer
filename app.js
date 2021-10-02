@@ -80,6 +80,8 @@ function initDb(pool) {
                 author VARCHAR(100) NULL,
                 depth INT NOT NULL,
                 filename VARCHAR(255) NOT NULL,
+                mapUrl VARCHAR(1000) NULL,
+                mapLabel VARCHAR(1000) NULL,
                 verAdded VARCHAR(20) NULL,
                 verRemoved VARCHAR(20) NULL,
                 verUpdated VARCHAR(1000) NULL,
@@ -278,7 +280,7 @@ app.get('/data', function(req, res) {
 function getWorldData(pool, preserveIds, excludeRemovedContent) {
     return new Promise((resolve, reject) => {
         const worldDataById = {};
-        pool.query('SELECT id, title, titleJP, author, depth, filename, verAdded, verRemoved, verUpdated, verGaps, removed FROM worlds' + (excludeRemovedContent ? ' where removed = 0' : ''), (err, rows) => {
+        pool.query('SELECT id, title, titleJP, author, depth, filename, mapUrl, mapLabel, verAdded, verRemoved, verUpdated, verGaps, removed FROM worlds' + (excludeRemovedContent ? ' where removed = 0' : ''), (err, rows) => {
             if (err) return reject(err);
             for (let row of rows) {
                 worldDataById[row.id] = {
@@ -288,6 +290,8 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
                     author: row.author,
                     depth: row.depth,
                     filename: row.filename,
+                    mapUrl: row.mapUrl,
+                    mapLabel: row.mapLabel,
                     verAdded: row.verAdded,
                     verRemoved: row.verRemoved,
                     verUpdated: row.verUpdated,
@@ -683,10 +687,12 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                     existingWorld.author = world.author;
                     existingWorld.connections = world.connections;
                     existingWorld.filename = world.filename;
+                    existingWorld.mapUrl = world.mapUrl;
+                    existingWorld.mapLabel = world.mapLabel;
                     existingWorld.removed = world.removed;
                 }
             }
-            pool.query('SELECT id, title, titleJP, author, filename, verAdded, verRemoved, verUpdated, verGaps, removed FROM worlds', (err, rows) => {
+            pool.query('SELECT id, title, titleJP, author, filename, mapUrl, mapLabel, verAdded, verRemoved, verUpdated, verGaps, removed FROM worlds', (err, rows) => {
                 if (err) return reject(err);
                 for (let row of rows) {
                     const worldName = row.title;
@@ -694,6 +700,7 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                         const world = newWorldsByName[worldName];
                         world.id = row.id;
                         if (row.titleJP !== world.titleJP || row.author !== world.author || row.filename !== world.filename ||
+                            row.mapUrl !== world.mapUrl || row.mapLabel !== world.mapLabel ||
                             row.verAdded !== world.verAdded || row.verRemoved !== world.verRemoved ||
                             row.verUpdated !== world.verUpdated || row.verGaps !== world.verGaps || row.removed !== world.removed)
                             updatedWorlds.push(world);
@@ -712,7 +719,7 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                 const newWorldNames = Object.keys(newWorldsByName);
                 if (newWorldNames.length) {
                     let i = 0;
-                    let worldsQuery = 'INSERT INTO worlds (title, titleJP, author, depth, filename, verAdded, verRemoved, verUpdated, verGaps, removed) VALUES ';
+                    let worldsQuery = 'INSERT INTO worlds (title, titleJP, author, depth, filename, mapUrl, mapLabel, verAdded, verRemoved, verUpdated, verGaps, removed) VALUES ';
                     for (const w in newWorldsByName) {
                         const newWorld = newWorldsByName[w];
                         if (i++)
@@ -720,12 +727,14 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                         const title = newWorld.title.replace(/'/g, "''");
                         const titleJPValue = newWorld.titleJP ? `'${newWorld.titleJP}'` : 'NULL';
                         const authorValue = newWorld.author ? `'${newWorld.author}'` : 'NULL';
+                        const mapUrlValue = newWorld.mapUrl ? `'${newWorld.mapUrl}'` : 'NULL';
+                        const mapLabelValue = newWorld.mapLabel ? `'${newWorld.mapLabel.replace(/'/g, "''")}'` : 'NULL';
                         const verAddedValue = newWorld.verAdded ? `'${newWorld.verAdded}'` : 'NULL';
                         const verRemovedValue = newWorld.verRemoved ? `'${newWorld.verRemoved}'` : 'NULL';
                         const verUpdatedValue = newWorld.verUpdated ? `'${newWorld.verUpdated}'` : 'NULL';
                         const verGapsValue = newWorld.verGaps ? `'${newWorld.verGaps}'` : 'NULL';
                         const removedValue = newWorld.removed ? '1' : '0';
-                        worldsQuery += `('${title}', ${titleJPValue}, ${authorValue}, 0, '${newWorld.filename.replace(/'/g, "''")}', ${verAddedValue}, ${verRemovedValue}, ${verUpdatedValue}, ${verGapsValue}, ${removedValue})`;
+                        worldsQuery += `('${title}', ${titleJPValue}, ${authorValue}, 0, '${newWorld.filename.replace(/'/g, "''")}', ${mapUrlValue}, ${mapLabelValue}, ${verAddedValue}, ${verRemovedValue}, ${verUpdatedValue}, ${verGapsValue}, ${removedValue})`;
                     }
                     pool.query(worldsQuery, (err, _) => {
                         if (err) return reject(err);
@@ -791,15 +800,17 @@ function getWorldBaseWorldData(worlds, pageId) {
 
 function updateWorldInfo(pool, world) {
     return new Promise((resolve, reject) => {
-        const titleJPValue = world.titleJP ? `'${world.titleJP}'` : "NULL";
-        const authorValue = world.author ? `'${world.author}'` : "NULL";
-        const verAddedValue = world.verAdded ? `'${world.verAdded}'` : "NULL";
-        const verRemovedValue = world.verRemoved ? `'${world.verRemoved}'` : "NULL";
-        const verUpdatedValue = world.verUpdated ? `'${world.verUpdated}'` : "NULL";
-        const verGapsValue = world.verGaps ? `'${world.verGaps}'` : "NULL";
+        const titleJPValue = world.titleJP ? `'${world.titleJP}'` : 'NULL';
+        const authorValue = world.author ? `'${world.author}'` : 'NULL';
+        const mapUrlValue = world.mapUrl ? `'${world.mapUrl}'` : 'NULL';
+        const mapLabelValue = world.mapLabel ? `'${world.mapLabel.replace(/'/g, "''")}'` : 'NULL';
+        const verAddedValue = world.verAdded ? `'${world.verAdded}'` : 'NULL';
+        const verRemovedValue = world.verRemoved ? `'${world.verRemoved}'` : 'NULL';
+        const verUpdatedValue = world.verUpdated ? `'${world.verUpdated}'` : 'NULL';
+        const verGapsValue = world.verGaps ? `'${world.verGaps}'` : 'NULL';
         const removedValue = world.removed ? '1' : '0';
         if (world.filename)
-            pool.query(`UPDATE worlds SET titleJP=${titleJPValue}, author=${authorValue}, filename='${world.filename.replace(/'/g, "''")}', verAdded=${verAddedValue}, verRemoved=${verRemovedValue}, verUpdated=${verUpdatedValue}, verGaps=${verGapsValue}, removed=${removedValue} WHERE id=${world.id}`, (err, _) => {
+            pool.query(`UPDATE worlds SET titleJP=${titleJPValue}, author=${authorValue}, filename='${world.filename.replace(/'/g, "''")}', mapUrl=${mapUrlValue}, mapLabel=${mapLabelValue}, verAdded=${verAddedValue}, verRemoved=${verRemovedValue}, verUpdated=${verUpdatedValue}, verGaps=${verGapsValue}, removed=${removedValue} WHERE id=${world.id}`, (err, _) => {
                 if (err) return reject(err);
                 resolve();
             });
@@ -2020,11 +2031,14 @@ function getWorldInfo(worldName) {
                     console.error(err)
                 }
             }
+            const mapUrlAndLabel = getMapUrlAndLabel(res.text);
             resolve({
                 titleJP: getTitleJP(res.text),
                 connections: getConnections(res.text),
                 author: getAuthor(res.text),
                 filename: filename,
+                mapUrl: mapUrlAndLabel && mapUrlAndLabel.mapUrl,
+                mapLabel: mapUrlAndLabel && mapUrlAndLabel.mapLabel,
                 verAdded: getVerAdded(res.text),
                 verRemoved: getVerRemoved(res.text),
                 verUpdated: getVerUpdated(res.text),
@@ -2065,6 +2079,38 @@ function getAuthor(html) {
     if (ret === 'Author Unknown')
         return null;
     return ret;
+}
+
+function getMapUrlAndLabel(html) {
+    const mapUrls = [];
+    const mapLabels = [];
+    const revisionText = "/revision/latest";
+    let figureIndex = html.indexOf("<figure");
+    
+    while (figureIndex > -1)
+    {
+        const figureHtml = html.slice(figureIndex, html.indexOf("</figure", figureIndex));
+        const figCaptionIndex = figureHtml.indexOf("<figcaption");
+        if (figCaptionIndex > -1) {
+            const captionIndex = figureHtml.indexOf("<p ", figCaptionIndex);
+            const labelIndex = figureHtml.indexOf(">", captionIndex) + 1;
+            const label = figureHtml.slice(labelIndex, figureHtml.indexOf("</p>", labelIndex));
+            if (/map/gi.test(label)) {
+                const urlIndex = figureHtml.indexOf("https://static.wikia.nocookie.net/");
+                if (urlIndex > -1) {
+                    const revisionIndex = figureHtml.indexOf(revisionText, urlIndex);
+                    if (revisionIndex > -1)
+                    {
+                        mapUrls.push(figureHtml.slice(urlIndex, revisionIndex + revisionText.length));
+                        mapLabels.push(label);
+                    }
+                }
+            }
+        }
+        figureIndex = html.indexOf("<figure", figureIndex + 1);
+    }
+
+    return mapUrls.length ? { mapUrl: mapUrls.join("|"), mapLabel: mapLabels.join("|") } : null;
 }
 
 function getConnections(html) {
