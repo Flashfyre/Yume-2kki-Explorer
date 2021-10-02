@@ -1,4 +1,4 @@
-// Version 3.2.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.3.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -107332,7 +107332,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.2.0");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.3.0");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
@@ -107557,7 +107557,8 @@ function InsertStackElement(node, body) {
 	function initContextMenu(localizedContextMenu) {
 	    jquery.contextMenu('destroy');
 
-	    const subItems = {};
+	    const mapSubItems = {};
+	    const bgmSubItems = {};
 	    const menuItems = {
 	        wiki: {
 	            name: () => localizedContextMenu.items.wiki,
@@ -107598,30 +107599,74 @@ function InsertStackElement(node, body) {
 	            name: () => localizedContextMenu.items.map,
 	            visible: function () {
 	                const world = exports.worldData[contextWorldId];
-	                return world.mapUrl && world.mapUrl.indexOf('|') >-1;
+	                return world.mapUrl && world.mapUrl.indexOf('|') > -1;
 	            },
-	            items: subItems
+	            items: mapSubItems
+	        },
+	        bgm: {
+	            name: () => localizedContextMenu.items.bgm.name,
+	            callback: function () {
+	                const world = exports.worldData[contextWorldId];
+	                if (world.bgmUrl.indexOf('|') === -1) {
+	                    const handle = window.open(world.bgmUrl, '_blank', 'noreferrer');
+	                    if (handle)
+	                        handle.focus();
+	                }
+	            },
+	            visible: function () {
+	                const world = exports.worldData[contextWorldId];
+	                return world.bgmUrl && world.bgmUrl.indexOf('|') === -1;
+	            },
+	            disabled: () => !exports.worldData[contextWorldId].bgmUrl
+	        },
+	        bgms: {
+	            name: () => localizedContextMenu.items.bgm.name,
+	            visible: function () {
+	                const world = exports.worldData[contextWorldId];
+	                return world.bgmUrl && world.bgmUrl.indexOf('|') > -1;
+	            },
+	            items: bgmSubItems
 	        }
 	    };
 
 	    for (let world of exports.worldData) {
-	        if (!world.mapUrl || world.mapUrl.indexOf('|') === -1)
-	            continue;
 	        const worldId = world.id;
-	        const mapUrls = world.mapUrl.split('|');
-	        const mapLabels = world.mapLabel.split('|');
 	        const visibleFunc = () => contextWorldId === worldId;
-	        for (let m = 0; m < mapUrls.length; m++) {
-	            const mapIndex = m;
-	            subItems[`map${worldId}_${mapIndex + 1}`] = {
-	                name: mapLabels[mapIndex],
-	                callback: function () {
-	                    const handle = window.open(mapUrls[mapIndex], '_blank', 'noreferrer');
-	                    if (handle)
-	                        handle.focus();
-	                },
-	                visible: visibleFunc
-	            };
+
+	        if (world.mapUrl && world.mapUrl.indexOf('|') > -1) {
+	            const mapUrls = world.mapUrl.split('|');
+	            const mapLabels = world.mapLabel.split('|');
+
+	            for (let m = 0; m < mapUrls.length; m++) {
+	                const mapIndex = m;
+	                mapSubItems[`map${worldId}_${mapIndex + 1}`] = {
+	                    name: mapLabels[mapIndex],
+	                    callback: function () {
+	                        const handle = window.open(mapUrls[mapIndex], '_blank', 'noreferrer');
+	                        if (handle)
+	                            handle.focus();
+	                    },
+	                    visible: visibleFunc
+	                };
+	            }
+	        }
+	        
+	        if (world.bgmUrl && world.bgmUrl.indexOf('|') > -1) {
+	            const bgmUrls = world.bgmUrl.split('|');
+	            const bgmLabels = getBgmLabels(world.bgmLabel.split('|'), localizedContextMenu.items.bgm);
+	            for (let b = 0; b < bgmUrls.length; b++) {
+	                const bgmIndex = b;
+	                bgmSubItems[`bgm${worldId}_${bgmIndex + 1}`] = {
+	                    name: bgmLabels[bgmIndex],
+	                    callback: function () {
+	                        const handle = window.open(bgmUrls[bgmIndex], '_blank', 'noreferrer');
+	                        if (handle)
+	                            handle.focus();
+	                    },
+	                    visible: visibleFunc,
+	                    disabled: () => !bgmUrls[bgmIndex]
+	                };
+	            }
 	        }
 	    }
 
@@ -107638,6 +107683,40 @@ function InsertStackElement(node, body) {
 	        ? 'https://yume2kki.fandom.com/wiki/' + world.title
 	        : ('https://wikiwiki.jp/yume2kki-t/' + (world.titleJP.indexOf("：") > -1 ? world.titleJP.slice(0, world.titleJP.indexOf("：")) : world.titleJP)),
 	        "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
+	}
+
+	function getBgmLabels(bgmLabels, localizedBgm) {
+	    let ret;
+	    if (bgmLabels.length === 1)
+	        ret = bgmLabels;
+	    else {
+	        const namedTracksCount = bgmLabels.filter(l => !l.endsWith('^')).length;
+	        if (config$1.lang !== 'en' || !namedTracksCount)
+	            ret = bgmLabels.map(l => l.slice(0, l.indexOf('^')));
+	        else if (namedTracksCount === bgmLabels.length)
+	            ret = bgmLabels.map(l => l.slice(l.indexOf('^') + 1));
+	        else {
+	            ret = [];
+	            if (namedTracksCount === bgmLabels.length - 1) {
+	                for (let b in bgmLabels) {
+	                    const bgmLabel = bgmLabels[b];
+	                    const isNamedTrack = !bgmLabel.endsWith('^');
+	                    ret.push(isNamedTrack ? bgmLabel.slice(bgmLabel.indexOf('^') + 1) : (b > 0 ? bgmLabel.slice(0, -1) : localizedBgm.main));
+	                }
+	            } else {
+	                for (let b in bgmLabels) {
+	                    const bgmLabel = bgmLabels[b];
+	                    const isNamedTrack = !bgmLabel.endsWith('^');
+	                    let label = bgmLabel.slice(0, bgmLabel.indexOf('^'));
+	                    if (isNamedTrack)
+	                        label += ` (${bgmLabel.slice(bgmLabel.indexOf('^') + 1)})`;
+	                    ret.push(label);
+	                }
+	            }
+	        }
+	    }
+
+	    return ret;
 	}
 
 	function trySelectNode(node, forceFocus, ignoreSearch) {
@@ -108156,10 +108235,10 @@ function InsertStackElement(node, body) {
 	    const ret = [];
 	    const connData = {};
 	    
-	    exports.worldData.forEach(w => {
+	    for (let w of exports.worldData) {
 	        connData[w.id] = [];
 	        exports.worldData[w.id].connections.map(c => exports.worldData[c.targetId]).forEach(c => connData[w.id].push(c.id));
-	    });
+	    }
 
 	    Object.keys(connData).forEach(id => {
 	        let connIds = connData[id].slice(0);
@@ -108196,8 +108275,8 @@ function InsertStackElement(node, body) {
 	    addConnTypePair(connType_1.DEAD_END, connType_1.ISOLATED);
 	    addConnTypePair(connType_1.SHORTCUT, connType_1.EXIT_POINT);
 	    
-	    exports.worldData.forEach(w =>
-	        exports.worldData[w.id].connections.forEach(c => {
+	    for (let w of exports.worldData) {
+	        for (let c of exports.worldData[w.id].connections) {
 	            const connId = `${w.id}_${c.targetId}`;
 	            if (checkedReverseConnIds.indexOf(connId) === -1) {
 	                const conns = exports.worldData[c.targetId].connections;
@@ -108217,8 +108296,8 @@ function InsertStackElement(node, body) {
 	                    }
 	                }
 	            }
-	        })
-	    );
+	        }
+	    }
 
 	    return ret;
 	}
@@ -108226,12 +108305,12 @@ function InsertStackElement(node, body) {
 	function getMissingVersions() {
 	    const ret = [];
 
-	    exports.worldData.forEach(w => {
+	    for (let w of exports.worldData) {
 	        if (!w.verAdded)
 	            ret.push(`${getWorldLinkForAdmin(w)} is missing version added`);
 	        if (w.removed && !w.verRemoved)
 	            ret.push(`${getWorldLinkForAdmin(w)} is missing version removed`);
-	    });
+	    }
 
 	    return ret;
 	}
@@ -108239,11 +108318,11 @@ function InsertStackElement(node, body) {
 	function getMissingLocationParams() {
 	    const ret = [];
 
-	    exports.worldData.forEach(w => {
+	    for (let w of exports.worldData) {
 	        if (!w.titleJP || w.titleJP === "None")
 	            ret.push(`${getWorldLinkForAdmin(w)} is missing its Japanese name parameter`);
 	            
-	        w.connections.forEach(conn => {
+	        for (let conn of w.connections) {
 	            const connWorld = exports.worldData[conn.targetId];
 	            if (conn.type & connType_1.EFFECT) {
 	                if (!conn.typeParams || !conn.typeParams[connType_1.EFFECT] || !conn.typeParams[connType_1.EFFECT].params)
@@ -108261,14 +108340,31 @@ function InsertStackElement(node, body) {
 	                if (!conn.typeParamsJP || !conn.typeParams[connType_1.LOCKED_CONDITION] || !conn.typeParams[connType_1.LOCKED_CONDITION].paramsJP)
 	                    ret.push(`${getWorldLinkForAdmin(w)} is missing the Japanese lock condition parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
 	            }
-	        });
-	    });
+	        }
+	    }
 
 	    return ret;
 	}
 
 	function getMissingMapIds() {
 	    return exports.worldData.filter(w => w.noMaps).map(w => `${getWorldLinkForAdmin(w)} has no associated Map IDs`);
+	}
+
+	function getMissingBgmUrls() {
+	    const ret = [];
+
+	    for (let w of exports.worldData) {
+	        if (w.bgmUrl) {
+	            const bgmUrls = w.bgmUrl.split('|');
+	            const bgmLabels = w.bgmLabel.split('|').map(l => l.endsWith('^') ? l.slice(0, -1) : l.replace(/\^(.*)/, ' ($1)'));
+	            for (let b in bgmUrls) {
+	                if (!bgmUrls[b])
+	                    ret.push(`${getWorldLinkForAdmin(w)} is missing the BGM URL for ${bgmLabels[b]}`);
+	            }
+	        }
+	    }
+
+	    return ret;
 	}
 
 	function getWorldLinkForAdmin(world) {
@@ -108779,6 +108875,10 @@ function InsertStackElement(node, body) {
 	            'missing-map-ids': {
 	                data: getMissingMapIds(),
 	                emptyMessage: 'No locations with missing map IDs found'
+	            },
+	            'missing-bgm-urls': {
+	                data: getMissingBgmUrls(),
+	                emptyMessage: 'No missing BGM URLs found'
 	            }
 	        };
 

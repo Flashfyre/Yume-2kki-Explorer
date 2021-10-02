@@ -178,7 +178,11 @@
             "wiki": "View Wiki Page",
             "start": "Set as Origin",
             "end": "Set as Destination",
-            "map": "View Map"
+            "map": "View Map",
+            "bgm": {
+                "name": "Play BGM",
+                "main": "Main"
+            }
         }
     },
     "nodeLabel": {

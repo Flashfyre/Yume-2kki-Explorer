@@ -82,6 +82,8 @@ function initDb(pool) {
                 filename VARCHAR(255) NOT NULL,
                 mapUrl VARCHAR(1000) NULL,
                 mapLabel VARCHAR(1000) NULL,
+                bgmUrl VARCHAR(1000) NULL,
+                bgmLabel VARCHAR(1000) NULL,
                 verAdded VARCHAR(20) NULL,
                 verRemoved VARCHAR(20) NULL,
                 verUpdated VARCHAR(1000) NULL,
@@ -280,7 +282,7 @@ app.get('/data', function(req, res) {
 function getWorldData(pool, preserveIds, excludeRemovedContent) {
     return new Promise((resolve, reject) => {
         const worldDataById = {};
-        pool.query('SELECT id, title, titleJP, author, depth, filename, mapUrl, mapLabel, verAdded, verRemoved, verUpdated, verGaps, removed FROM worlds' + (excludeRemovedContent ? ' where removed = 0' : ''), (err, rows) => {
+        pool.query('SELECT id, title, titleJP, author, depth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, removed FROM worlds' + (excludeRemovedContent ? ' where removed = 0' : ''), (err, rows) => {
             if (err) return reject(err);
             for (let row of rows) {
                 worldDataById[row.id] = {
@@ -292,6 +294,8 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
                     filename: row.filename,
                     mapUrl: row.mapUrl,
                     mapLabel: row.mapLabel,
+                    bgmUrl: row.bgmUrl,
+                    bgmLabel: row.bgmLabel,
                     verAdded: row.verAdded,
                     verRemoved: row.verRemoved,
                     verUpdated: row.verUpdated,
@@ -689,10 +693,12 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                     existingWorld.filename = world.filename;
                     existingWorld.mapUrl = world.mapUrl;
                     existingWorld.mapLabel = world.mapLabel;
+                    existingWorld.bgmUrl = world.bgmUrl;
+                    existingWorld.bgmLabel = world.bgmLabel;
                     existingWorld.removed = world.removed;
                 }
             }
-            pool.query('SELECT id, title, titleJP, author, filename, mapUrl, mapLabel, verAdded, verRemoved, verUpdated, verGaps, removed FROM worlds', (err, rows) => {
+            pool.query('SELECT id, title, titleJP, author, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, removed FROM worlds', (err, rows) => {
                 if (err) return reject(err);
                 for (let row of rows) {
                     const worldName = row.title;
@@ -701,6 +707,7 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                         world.id = row.id;
                         if (row.titleJP !== world.titleJP || row.author !== world.author || row.filename !== world.filename ||
                             row.mapUrl !== world.mapUrl || row.mapLabel !== world.mapLabel ||
+                            row.bgmUrl !== world.bgmUrl || row.bgmLabel !== world.bgmLabel ||
                             row.verAdded !== world.verAdded || row.verRemoved !== world.verRemoved ||
                             row.verUpdated !== world.verUpdated || row.verGaps !== world.verGaps || row.removed !== world.removed)
                             updatedWorlds.push(world);
@@ -719,7 +726,7 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                 const newWorldNames = Object.keys(newWorldsByName);
                 if (newWorldNames.length) {
                     let i = 0;
-                    let worldsQuery = 'INSERT INTO worlds (title, titleJP, author, depth, filename, mapUrl, mapLabel, verAdded, verRemoved, verUpdated, verGaps, removed) VALUES ';
+                    let worldsQuery = 'INSERT INTO worlds (title, titleJP, author, depth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, removed) VALUES ';
                     for (const w in newWorldsByName) {
                         const newWorld = newWorldsByName[w];
                         if (i++)
@@ -729,12 +736,14 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                         const authorValue = newWorld.author ? `'${newWorld.author}'` : 'NULL';
                         const mapUrlValue = newWorld.mapUrl ? `'${newWorld.mapUrl}'` : 'NULL';
                         const mapLabelValue = newWorld.mapLabel ? `'${newWorld.mapLabel.replace(/'/g, "''")}'` : 'NULL';
+                        const bgmUrlValue = newWorld.bgmUrl ? `'${newWorld.bgmUrl}'` : 'NULL';
+                        const bgmLabelValue = newWorld.bgmLabel ? `'${newWorld.bgmLabel.replace(/'/g, "''")}'` : 'NULL';
                         const verAddedValue = newWorld.verAdded ? `'${newWorld.verAdded}'` : 'NULL';
                         const verRemovedValue = newWorld.verRemoved ? `'${newWorld.verRemoved}'` : 'NULL';
                         const verUpdatedValue = newWorld.verUpdated ? `'${newWorld.verUpdated}'` : 'NULL';
                         const verGapsValue = newWorld.verGaps ? `'${newWorld.verGaps}'` : 'NULL';
                         const removedValue = newWorld.removed ? '1' : '0';
-                        worldsQuery += `('${title}', ${titleJPValue}, ${authorValue}, 0, '${newWorld.filename.replace(/'/g, "''")}', ${mapUrlValue}, ${mapLabelValue}, ${verAddedValue}, ${verRemovedValue}, ${verUpdatedValue}, ${verGapsValue}, ${removedValue})`;
+                        worldsQuery += `('${title}', ${titleJPValue}, ${authorValue}, 0, '${newWorld.filename.replace(/'/g, "''")}', ${mapUrlValue}, ${mapLabelValue}, ${bgmUrlValue}, ${bgmLabelValue}, ${verAddedValue}, ${verRemovedValue}, ${verUpdatedValue}, ${verGapsValue}, ${removedValue})`;
                     }
                     pool.query(worldsQuery, (err, _) => {
                         if (err) return reject(err);
@@ -804,13 +813,16 @@ function updateWorldInfo(pool, world) {
         const authorValue = world.author ? `'${world.author}'` : 'NULL';
         const mapUrlValue = world.mapUrl ? `'${world.mapUrl}'` : 'NULL';
         const mapLabelValue = world.mapLabel ? `'${world.mapLabel.replace(/'/g, "''")}'` : 'NULL';
+        const bgmUrlValue = world.bgmUrl ? `'${world.bgmUrl}'` : 'NULL';
+        const bgmLabelValue = world.bgmLabel ? `'${world.bgmLabel.replace(/'/g, "''")}'` : 'NULL';
         const verAddedValue = world.verAdded ? `'${world.verAdded}'` : 'NULL';
         const verRemovedValue = world.verRemoved ? `'${world.verRemoved}'` : 'NULL';
         const verUpdatedValue = world.verUpdated ? `'${world.verUpdated}'` : 'NULL';
         const verGapsValue = world.verGaps ? `'${world.verGaps}'` : 'NULL';
         const removedValue = world.removed ? '1' : '0';
         if (world.filename)
-            pool.query(`UPDATE worlds SET titleJP=${titleJPValue}, author=${authorValue}, filename='${world.filename.replace(/'/g, "''")}', mapUrl=${mapUrlValue}, mapLabel=${mapLabelValue}, verAdded=${verAddedValue}, verRemoved=${verRemovedValue}, verUpdated=${verUpdatedValue}, verGaps=${verGapsValue}, removed=${removedValue} WHERE id=${world.id}`, (err, _) => {
+            pool.query(`UPDATE worlds SET titleJP=${titleJPValue}, author=${authorValue}, filename='${world.filename.replace(/'/g, "''")}', mapUrl=${mapUrlValue}, mapLabel=${mapLabelValue}, bgmUrl=${bgmUrlValue}, bgmLabel=${bgmLabelValue}, verAdded=${verAddedValue}, verRemoved=${verRemovedValue}, verUpdated=${verUpdatedValue}, verGaps=${verGapsValue}, removed=${removedValue} WHERE id=${world.id}`,
+            (err, _) => {
                 if (err) return reject(err);
                 resolve();
             });
@@ -2032,6 +2044,7 @@ function getWorldInfo(worldName) {
                 }
             }
             const mapUrlAndLabel = getMapUrlAndLabel(res.text);
+            const bgmUrlAndLabel = getBgmUrlAndLabel(res.text)
             resolve({
                 titleJP: getTitleJP(res.text),
                 connections: getConnections(res.text),
@@ -2039,6 +2052,8 @@ function getWorldInfo(worldName) {
                 filename: filename,
                 mapUrl: mapUrlAndLabel && mapUrlAndLabel.mapUrl,
                 mapLabel: mapUrlAndLabel && mapUrlAndLabel.mapLabel,
+                bgmUrl: bgmUrlAndLabel.bgmUrl,
+                bgmLabel: bgmUrlAndLabel.bgmLabel,
                 verAdded: getVerAdded(res.text),
                 verRemoved: getVerRemoved(res.text),
                 verUpdated: getVerUpdated(res.text),
@@ -2087,8 +2102,7 @@ function getMapUrlAndLabel(html) {
     const revisionText = "/revision/latest";
     let figureIndex = html.indexOf("<figure");
     
-    while (figureIndex > -1)
-    {
+    while (figureIndex > -1) {
         const figureHtml = html.slice(figureIndex, html.indexOf("</figure", figureIndex));
         const figCaptionIndex = figureHtml.indexOf("<figcaption");
         if (figCaptionIndex > -1) {
@@ -2099,8 +2113,7 @@ function getMapUrlAndLabel(html) {
                 const urlIndex = figureHtml.indexOf("https://static.wikia.nocookie.net/");
                 if (urlIndex > -1) {
                     const revisionIndex = figureHtml.indexOf(revisionText, urlIndex);
-                    if (revisionIndex > -1)
-                    {
+                    if (revisionIndex > -1) {
                         mapUrls.push(figureHtml.slice(urlIndex, revisionIndex + revisionText.length));
                         mapLabels.push(label);
                     }
@@ -2111,6 +2124,44 @@ function getMapUrlAndLabel(html) {
     }
 
     return mapUrls.length ? { mapUrl: mapUrls.join("|"), mapLabel: mapLabels.join("|") } : null;
+}
+
+function getBgmUrlAndLabel(html) {
+    const bgmUrls = [];
+    const bgmLabels = [];
+    const revisionText = "/revision/latest";
+    const bgmIndex = html.indexOf("<b>BGM</b>");
+
+    if (bgmIndex > -1) {
+        const bgmSection = html.slice(html.indexOf("<p>", bgmIndex) + 3, html.indexOf("</p>", bgmIndex));
+        const bgmEntries = bgmSection.split(/<br *\/?>/g);
+        
+        for (let entry of bgmEntries) {
+            let url = null;
+            let track = "";
+            let area = "";
+            const urlMatch = /https:\/\/(?:static\.wikia\.nocookie\.net|vignette[0-9]?\.wikia\.nocookie\.net|images\.wikia\.com)\//.exec(entry);
+            const urlIndex = urlMatch ? urlMatch.index : -1;
+            let areaIndex;
+            if (urlIndex > -1) {
+                const revisionIndex = entry.indexOf(revisionText, urlIndex);
+                const trackStartIndex = entry.indexOf(">", urlIndex) + 1;
+                const trackEndIndex = entry.indexOf("</a>", trackStartIndex);
+                url = revisionIndex > -1 ? entry.slice(urlIndex, revisionIndex + revisionText.length) : entry.slice(urlIndex, entry.indexOf('"', urlIndex));
+                areaIndex = entry.indexOf("(", trackEndIndex + 1) + 1;
+                track = entry.slice(trackStartIndex, trackEndIndex).trim();
+            } else {
+                areaIndex = entry.indexOf("(") + 1;
+                track = (areaIndex ? entry.slice(0, areaIndex - 1) : entry).trim();
+            }
+            if (areaIndex)
+                area = entry.slice(areaIndex, entry.indexOf(")", areaIndex)).trim();
+            bgmUrls.push(url);
+            bgmLabels.push(`${track}^${area}`);
+        }
+    }
+
+    return bgmUrls.length ? { bgmUrl: bgmUrls.join("|"), bgmLabel: bgmLabels.join("|") } : null;
 }
 
 function getConnections(html) {

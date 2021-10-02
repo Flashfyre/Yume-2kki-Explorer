@@ -137,7 +137,7 @@ Select the size ratio between world nodes. The ratios are roughly based on the m
 This setting determines the number of world nodes that make up a stack within the same depth level. A lower value will produce a taller graph and a higher value will produce a wider graph. This setting is only available in the 'Vertical' and 'Horizontal' display modes.
 
 ---
-# ゆめ２っきエクスプローラ
+# ゆめ２っきエクスプローラー
 
 ## マップツリー
 
