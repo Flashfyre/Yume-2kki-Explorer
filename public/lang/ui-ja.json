@@ -41,6 +41,9 @@
         "versions": {
             "name": "バージョン"
         },
+        "effects": {
+            "name": "エフェクト"
+        },
         "menuThemes": {
             "name": "メンユー タイプ"
         }
@@ -221,6 +224,9 @@
         "worldCount": "マップ追加数：",
         "updatedWorldCount": "マップ更新数：",
         "removedWorldCount": "マップ削除数："
+    },
+    "effectLabel": {
+        "location": "場所："
     },
     "nodeIcon": {
         "new": "新"

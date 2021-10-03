@@ -41,6 +41,9 @@
         "versions": {
             "name": "Versions"
         },
+        "effects": {
+            "name": "Effects"
+        },
         "menuThemes": {
             "name": "Menu Themes"
         }
@@ -221,6 +224,9 @@
         "worldCount": "Worlds Added: ",
         "updatedWorldCount": "Worlds Updated: ",
         "removedWorldCount": "Worlds Removed: "
+    },
+    "effectLabel": {
+        "location": "Location: "
     },
     "nodeIcon": {
         "new": "NEW"

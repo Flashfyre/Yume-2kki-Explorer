@@ -129,6 +129,19 @@ function initDb(pool) {
                     REFERENCES maps (id)
                     ON DELETE CASCADE
             )`)).then(() => queryAsPromise(pool,
+            `CREATE TABLE IF NOT EXISTS effects (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                nameJP VARCHAR(255) NULL,
+                worldId INT NULL,
+                ordinal SMALLINT NOT NULL,
+                filename VARCHAR(255) NOT NULL,
+                method VARCHAR(1000) NULL,
+                methodJP VARCHAR(1000) NULL,
+                FOREIGN KEY (worldId)
+                    REFERENCES worlds (id)
+                    ON DELETE CASCADE
+            )`)).then(() => queryAsPromise(pool,
             `CREATE TABLE IF NOT EXISTS menu_themes (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 menuThemeId INT NOT NULL,
@@ -201,31 +214,35 @@ const batchSize = 20;
 app.get('/data', function(req, res) {
     getConnPool().then(pool => {
         const callback = function () {
-            getWorldData(pool, false, !req.query.hasOwnProperty('includeRemovedContent') || !req.query.includeRemovedContent).then(worldData => {
+            const excludeRemovedContent = !req.query.hasOwnProperty('includeRemovedContent') || !req.query.includeRemovedContent;
+            getWorldData(pool, false, excludeRemovedContent).then(worldData => {
                 getAuthorInfoData(pool).then(authorInfoData => {
                     getVersionInfoData(pool, worldData).then(versionInfoData => {
-                        getMenuThemeData(pool, worldData, !req.query.hasOwnProperty('includeRemovedContent') || !req.query.includeRemovedContent).then(menuThemeData => {
-                            pool.query('SELECT lastUpdate, lastFullUpdate FROM updates', (err, rows) => {
-                                if (err) console.error(err);
-                                const row = rows.length ? rows[0] : null;
-                                const lastUpdate = row ? row.lastUpdate : null;
-                                const lastFullUpdate = row ? row.lastFullUpdate : null;
-                                const isAdmin = req.query.hasOwnProperty('adminKey') && req.query.adminKey === appConfig.ADMIN_KEY;
+                        getEffectData(pool, worldData, excludeRemovedContent).then(effectData => {
+                            getMenuThemeData(pool, worldData, excludeRemovedContent).then(menuThemeData => {
+                                pool.query('SELECT lastUpdate, lastFullUpdate FROM updates', (err, rows) => {
+                                    if (err) console.error(err);
+                                    const row = rows.length ? rows[0] : null;
+                                    const lastUpdate = row ? row.lastUpdate : null;
+                                    const lastFullUpdate = row ? row.lastFullUpdate : null;
+                                    const isAdmin = req.query.hasOwnProperty('adminKey') && req.query.adminKey === appConfig.ADMIN_KEY;
 
-                                if (Math.random() * 255 < 1)
-                                    updateWorldDataForChance(worldData);
-                
-                                res.json({
-                                    worldData: worldData,
-                                    authorInfoData: authorInfoData,
-                                    versionInfoData: versionInfoData,
-                                    menuThemeData: menuThemeData,
-                                    lastUpdate: lastUpdate,
-                                    lastFullUpdate: lastFullUpdate,
-                                    isAdmin: isAdmin
+                                    if (Math.random() * 255 < 1)
+                                        updateWorldDataForChance(worldData);
+                    
+                                    res.json({
+                                        worldData: worldData,
+                                        authorInfoData: authorInfoData,
+                                        versionInfoData: versionInfoData,
+                                        effectData: effectData,
+                                        menuThemeData: menuThemeData,
+                                        lastUpdate: lastUpdate,
+                                        lastFullUpdate: lastFullUpdate,
+                                        isAdmin: isAdmin
+                                    });
+                                    pool.end();
                                 });
-                                pool.end();
-                            });
+                            }).catch(err => console.error(err));
                         }).catch(err => console.error(err));
                     }).catch(err => console.error(err));
                 }).catch(err => console.error(err));
@@ -237,11 +254,13 @@ app.get('/data', function(req, res) {
                     updateMapData(pool, worldData).then(() => {
                         updateAuthorInfoData(pool).then(() => {
                             updateVersionInfoData(pool).then(() => {
-                                updateMenuThemeData(pool, worldData).then(() => {
-                                    pool.query('UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()', (err) => {
-                                        if (err) console.error(err);
-                                        callback();
-                                    });
+                                updateEffectData(pool, worldData).then(() => {
+                                    updateMenuThemeData(pool, worldData).then(() => {
+                                        pool.query('UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()', (err) => {
+                                            if (err) console.error(err);
+                                            callback();
+                                        });
+                                    }).catch(err => console.error(err));
                                 }).catch(err => console.error(err));
                             }).catch(err => console.error(err));
                         }).catch(err => console.error(err));
@@ -258,11 +277,13 @@ app.get('/data', function(req, res) {
                                         checkUpdateMapData(pool, worldData, rows[0].lastUpdate).then(() => {
                                             checkUpdateAuthorInfoData(pool, rows[0].lastUpdate).then(() => {
                                                 checkUpdateVersionInfoData(pool, rows[0].lastUpdate).then(() => {
-                                                    checkUpdateMenuThemeData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                                        pool.query('UPDATE updates SET lastUpdate=NOW()', err => {
-                                                            if (err) console.error(err);
-                                                            callback();
-                                                        });
+                                                    checkUpdateEffectData(pool, worldData, rows[0].lastUpdate).then(() => {
+                                                        checkUpdateMenuThemeData(pool, worldData, rows[0].lastUpdate).then(() => {
+                                                            pool.query('UPDATE updates SET lastUpdate=NOW()', err => {
+                                                                if (err) console.error(err);
+                                                                callback();
+                                                            });
+                                                        }).catch(err => console.error(err));
                                                     }).catch(err => console.error(err));
                                                 }).catch(err => console.error(err));
                                             }).catch(err => console.error(err));
@@ -424,6 +445,31 @@ function getVersionInfoData(pool, worldData) {
     });
 }
 
+function getEffectData(pool, worldData, excludeRemovedContent) {
+    return new Promise((resolve, reject) => {
+        const effectDataById = {};
+        pool.query('SELECT e.id, e.name, e.nameJP, w.title, e.ordinal, e.filename, e.method, e.methodJP FROM effects e LEFT JOIN worlds w ON w.id = e.worldId' + (excludeRemovedContent ? ' WHERE e.removed = 0' : '') + ' ORDER BY e.ordinal', (err, rows) => {
+            if (err) return reject(err);
+            const worldDataByName = _.keyBy(worldData, w => w.title);
+            for (let row of rows) {
+                const world = row.title ? worldDataByName[row.title] : null;
+                effectDataById[row.id] = {
+                    id: row.id,
+                    name: row.name,
+                    nameJP: row.nameJP,
+                    worldId: world ? world.id : null,
+                    ordinal: row.ordinal,
+                    filename: row.filename,
+                    method: row.method,
+                    methodJP: row.methodJP
+                };
+            }
+
+            resolve(_.sortBy(Object.values(effectDataById), e => e.ordinal));
+        });
+    });
+}
+
 function getMenuThemeData(pool, worldData, excludeRemovedContent) {
     return new Promise((resolve, reject) => {
         const menuThemeDataById = {};
@@ -438,7 +484,7 @@ function getMenuThemeData(pool, worldData, excludeRemovedContent) {
                 };
             }
             
-            pool.query('SELECT l.menuThemeId, w.title, l.method, l.methodJP, l.filename, l.removed FROM menu_theme_locations l LEFT JOIN worlds w ON w.id = l.worldId' + (excludeRemovedContent ? ' where l.removed = 0' : ''), (err, rows) => {
+            pool.query('SELECT l.menuThemeId, w.title, l.method, l.methodJP, l.filename, l.removed FROM menu_theme_locations l LEFT JOIN worlds w ON w.id = l.worldId' + (excludeRemovedContent ? ' WHERE l.removed = 0' : ''), (err, rows) => {
                 if (err) return reject(err);
 
                 const worldDataByName = _.keyBy(worldData, w => w.title);
@@ -493,7 +539,9 @@ function checkUpdateData(pool) {
                                             checkUpdateMapData(pool, worldData, rows[0].lastUpdate).then(() => {
                                                 checkUpdateAuthorInfoData(pool, rows[0].lastUpdate).then(() => {
                                                     checkUpdateVersionInfoData(pool, rows[0].lastUpdate).then(() => {
-                                                        checkUpdateMenuThemeData(pool, worldData, rows[0].lastUpdate).then(() => resolve()).catch(err => reject(err));
+                                                        checkUpdateEffectData(pool, worldData, rows[0].lastUpdate).then(() => {
+                                                            checkUpdateMenuThemeData(pool, worldData, rows[0].lastUpdate).then(() => resolve()).catch(err => reject(err));
+                                                        }).catch(err => reject(err));
                                                     }).catch(err => reject(err));
                                                 }).catch(err => reject(err));
                                             }).catch(err => reject(err));
@@ -588,6 +636,17 @@ function checkUpdateVersionInfoData(pool, lastUpdate) {
         checkUpdatePage("Version History", lastUpdate).then(needsUpdate => {
             if (needsUpdate)
                 updateVersionInfoData(pool).then(() => resolve()).catch(err => reject(err));
+            else
+                resolve();
+        }).catch(err => reject(err));
+    });
+}
+
+function checkUpdateEffectData(pool, worldData, lastUpdate) {
+    return new Promise((resolve, reject) => {
+        checkUpdatePage("Effects", lastUpdate).then(needsUpdate => {
+            if (needsUpdate)
+                updateEffectData(pool, worldData).then(() => resolve()).catch(err => reject(err));
             else
                 resolve();
         }).catch(err => reject(err));
@@ -1257,7 +1316,7 @@ function getMapData(worldData) {
                         const worldNameStartIndex = w.indexOf('<a href="/wiki/') + 15;
                         if (worldNameStartIndex > -1) {
                             const worldNameEndIndex = w.indexOf('"', worldNameStartIndex);
-                            const worldName = w.slice(worldNameStartIndex, worldNameEndIndex).replace(/%26/g, "&").replace(/%27/g, "'").replace(/\_/g, " ").replace(/#.*/, "");
+                            const worldName = sanitizeWorldName(w.slice(worldNameStartIndex, worldNameEndIndex));
                             if (worldDataByName[worldName])
                                 worldDataByName[worldName].mapIds.push(map.mapId);
                         }
@@ -1695,6 +1754,190 @@ function deleteRemovedVersionInfo(pool, removedVersionInfoIds) {
     });
 }
 
+function updateEffectData(pool, worldData) {
+    return new Promise((resolve, reject) => {
+        getEffectWikiData(worldData).then(effectData => {
+            pool.query('SELECT id, name, nameJP, worldId, ordinal, filename, method, methodJP FROM effects', (err, rows) => {
+                if (err) return reject(err);
+                const effectDataByName = _.keyBy(effectData, e => e.name);
+                const newEffectsByName = _.keyBy(effectData, e => e.name);
+                const updatedEffects = [];
+                const removedEffectIds  = [];
+                for (let row of rows) {
+                    const effectName = row.name;
+                    if (effectDataByName.hasOwnProperty(effectName)) {
+                        const effect = effectDataByName[effectName];
+                        effect.id = row.id;
+                        if (row.nameJP !== effect.nameJP || row.worldId !== effect.worldId || row.ordinal !== effect.ordinal ||
+                            row.filename !== effect.filename || row.method !== effect.method || row.methodJP !== effect.methodJP)
+                            updatedEffects.push(effect);
+                    } else
+                        removedEffectIds.push(row.id);
+                    delete newEffectsByName[effectName];
+                }
+    
+                const insertCallback = function () {
+                    if (updatedEffects.length) {
+                        const updateEffects = [];
+                        for (let effect of updatedEffects)
+                            updateEffects.push(updateEffect(pool, effect).catch(err => console.error(err)));
+                        Promise.allSettled(updateEffects).finally(() => resolve());
+                    } else
+                        resolve();
+                };
+    
+                const callback = function () {
+                    const newEffectNames = Object.keys(newEffectsByName);
+                    if (newEffectNames.length) {
+                        let i = 0;
+                        let effectsQuery = 'INSERT INTO effects (name, nameJP, worldId, ordinal, filename, method, methodJP) VALUES ';
+                        for (let e in newEffectsByName) {
+                            const newEffect = newEffectsByName[e];
+                            if (i++)
+                                effectsQuery += ", ";
+                            const name = newEffect.name.replace(/'/g, "''");
+                            const nameJP = newEffect.nameJP ? `'${newEffect.nameJP}'` : 'NULL';
+                            const worldId = newEffect.worldId ? `${newEffect.worldId}` : 'NULL';
+                            const ordinal = newEffect.ordinal;
+                            const filename = newEffect.filename.replace(/'/g, "''");
+                            const method = newEffect.method ? `'${newEffect.method.replace(/'/g, "''")}'` : 'NULL';
+                            const methodJP = newEffect.methodJP ? `'${newEffect.methodJP.replace(/'/g, "''")}'` : 'NULL';
+                            effectsQuery += `('${name}', ${nameJP}, ${worldId}, ${ordinal}, '${filename}', ${method}, ${methodJP})`;
+                        }
+                        pool.query(effectsQuery, (err, res) => {
+                            if (err) return reject(err);
+                            const insertedRows = res.affectedRows;
+                            const effectRowIdsQuery = `SELECT r.id FROM (SELECT id FROM effects ORDER BY id DESC LIMIT ${insertedRows}) r ORDER BY 1`;
+                            pool.query(effectRowIdsQuery, (err, rows) => {
+                                if (err) return reject(err);
+                                for (let r in rows)
+                                    newEffectsByName[newEffectNames[r]].id = rows[r].id;
+                                insertCallback();
+                            });
+                        });
+                    } else
+                        insertCallback();
+                };
+    
+                if (removedEffectIds.length)
+                    deleteRemovedEffects(pool, removedEffectIds).then(() => callback()).catch(err => reject(err));
+                else
+                    callback();
+            });
+        }).catch(err => reject(err));
+    });
+}
+
+function getEffectWikiData(worldData) {
+    return new Promise((resolve, reject) => {
+        superagent.get('https://yume2kki.fandom.com/wiki/Effects', function (err, res) {
+            if (err) return reject(err);
+            const effectSectionsHtml = res.text.split('<h3>');
+            const effectData = [];
+
+            let i = 0;
+
+            for (let e = 1; e < effectSectionsHtml.length - 1; e++) {
+                const section = effectSectionsHtml[e];
+                const nameMatch = /<b>([^<]+)</.exec(section);
+                if (!nameMatch)
+                    continue;
+                const effectName = nameMatch[1];
+                if (effectName === 'Instructions')
+                    break;
+                const filenameMatch = /(https:\/\/static.wikia.nocookie.net\/yume2kki\/images\/.*?revision\/latest)/.exec(section);
+                if (!filenameMatch)
+                    continue;
+                const filename = filenameMatch[1];
+                const nameJPMatch = /（([^）]+)）/.exec(section);
+                const effectNameJP = nameJPMatch ? nameJPMatch[1] : null;
+                const methodMatch = /<b>Location:<\/b>(.*)/.exec(section);
+                const method = methodMatch ? methodMatch[1].replace(/&#160;/, ' ').trim() : null;
+                const worldNameMatch = method ? /<a .*?href="\/wiki\/([^"]+)"/.exec(method) : null;
+                const worldName = worldNameMatch ? sanitizeWorldName(worldNameMatch[1]).trim() : null;
+                const worldMatches = worldName ? worldData.filter(w => w.title === worldName) : [];
+                const worldId = worldMatches.length ? worldMatches[0].id : null;
+
+                effectData.push({
+                    name: effectName,
+                    nameJP: effectNameJP,
+                    worldId: worldId,
+                    ordinal: i++,
+                    filename: filename,
+                    method: method,
+                    methodJP: null
+                });
+            }
+
+            const addEffectDataJPMethods = effectData.filter(e => e.nameJP).map(e => addEffectDataJPMethod(e).catch(err => console.error(err)));
+            Promise.allSettled(addEffectDataJPMethods).finally(() => resolve(effectData));
+        });
+    });
+}
+
+function addEffectDataJPMethod(effect) {
+    return new Promise((resolve, reject) => {
+        let url = `https://wikiwiki.jp/yume2kki-t/${encodeURI(effect.nameJP)}`;
+        superagent.get(url, function (err, res) {
+            if (err) return reject(err);
+            const methodMatch = /<th>備考<\/th><td>(.*)<\/td><\/tr>/.exec(res.text);
+            let method = null;
+            if (methodMatch) {
+                method = methodMatch[1].replace(/<a .*?>\?<\/a>/g, '').replace(/<[^>]+>/g, '');
+
+                const routeWorlds = [];
+                const routeSectionMatch = /<th>ルート例<\/th>.*<\/tr>/.exec(res.text);
+                if (routeSectionMatch) {
+                    const routeSection = routeSectionMatch[0];
+                    const routeWorldRegex = /(?:<a [^>]+>)([^<]+)</g;
+                   
+                    let routeWorldMatch;
+                    while ((routeWorldMatch = routeWorldRegex.exec(routeSection)))
+                        routeWorlds.push(routeWorldMatch[1]);
+                    for (let routeWorld of routeWorlds)
+                        method = method.replace(routeWorld, `<a href="#">${routeWorld}</a>`);
+                }
+                
+                effect.methodJP = method;
+            }
+
+            resolve();
+        });
+    });
+}
+
+function updateEffect(pool, effect) {
+    return new Promise((resolve, reject) => {
+        const nameJP = effect.nameJP ? `'${effect.nameJP}'` : 'NULL';
+        const worldId = effect.worldId ? `${effect.worldId}` : 'NULL';
+        const ordinal = effect.ordinal;
+        const filename = effect.filename.replace(/'/g, "''");
+        const method = effect.method ? `'${effect.method.replace(/'/g, "''")}'` : 'NULL';
+        const methodJP = effect.methodJP ? `'${effect.methodJP.replace(/'/g, "''")}'` : 'NULL';
+        pool.query(`UPDATE effects SET nameJP=${nameJP}, worldId=${worldId}, ordinal=${ordinal}, filename='${filename}', method=${method}, methodJP=${methodJP} WHERE id=${effect.id}`, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+}
+
+function deleteRemovedEffects(pool, removedEffectIds) {
+    return new Promise((resolve, reject) => {
+        let i = 0;
+        let deleteEffectsQuery = 'DELETE FROM effects WHERE id IN (';
+        for (let effectId of removedEffectIds) {
+            if (i++)
+                deleteEffectsQuery += ', ';
+            deleteEffectsQuery += effectId;
+        }
+        deleteEffectsQuery += ')';
+        pool.query(deleteEffectsQuery, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+}
+
 function updateMenuThemeData(pool, worldData) {
     return new Promise((resolve, reject) => {
         getMenuThemeWikiData(worldData).then(menuThemeData => {
@@ -1749,7 +1992,7 @@ function updateMenuThemeData(pool, worldData) {
                                 const location = newMenuThemeLocationsByKey[m];
                                 if (i++)
                                     menuThemeLocationsQuery += ", ";
-                                const worldId = location.worldId != null ? `'${location.worldId}'` : 'NULL';
+                                const worldId = location.worldId != null ? `${location.worldId}` : 'NULL';
                                 const method = location.method != null ? `'${location.method.replace(/'/g, "''")}'` : 'NULL';
                                 const methodJP = location.methodJP != null ? `'${location.methodJP.replace(/'/g, "''")}'` : 'NULL';
                                 const filename = location.filename != null ? `'${location.filename.replace(/'/g, "''")}'` : 'NULL';
@@ -1808,12 +2051,12 @@ function getMenuThemeWikiData(worldData) {
                     method: data[2],
                     methodJP: null,
                     filename: null,
-                    removed: m > removedIndex
+                    removed: m >= removedIndex
                 };
                 const worldNameStartIndex = data[1].indexOf('<a href="/wiki/') + 15;
                 if (worldNameStartIndex > -1) {
                     const worldNameEndIndex = data[1].indexOf('"', worldNameStartIndex);
-                    const worldName = data[1].slice(worldNameStartIndex, worldNameEndIndex).replace(/%26/g, "&").replace(/%27/g, "'").replace(/\_/g, " ").replace(/#.*/, "");
+                    const worldName = sanitizeWorldName(data[1].slice(worldNameStartIndex, worldNameEndIndex));
                     if (worldDataByName[worldName])
                         location.worldId = worldDataByName[worldName].id;
                 }
@@ -2467,6 +2710,10 @@ function getLoginToken(request) {
                 resolve(data.query.tokens.logintoken);
             });
     });
+}
+
+function sanitizeWorldName(worldName) {
+    return worldName.replace(/%26/g, "&").replace(/%27/g, "'").replace(/\_/g, " ").replace(/#.*/, "");
 }
 
 function updateWorldDataForChance(worldData) {

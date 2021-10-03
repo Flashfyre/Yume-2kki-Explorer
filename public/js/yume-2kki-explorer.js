@@ -1,4 +1,4 @@
-// Version 3.3.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.4.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -104213,6 +104213,7 @@ function InsertStackElement(node, body) {
 	let versionData;
 	let authoredVersionData;
 	let authorData;
+	let effectData;
 	let menuThemeData;
 
 	function initWorldData(data) {
@@ -104743,6 +104744,58 @@ function InsertStackElement(node, body) {
 	    return ret;
 	}
 
+	function initEffectData(data) {
+	    effectData = data;
+
+	    const $effectsContainerItems = jquery('.js--effects-container__items');
+	    const $effectsContainerBorders = jquery('.js--effects-container__borders');
+	    const effectsById = {};
+
+	    $effectsContainerItems.empty();
+	    $effectsContainerBorders.empty();
+
+	    for (let e of effectData) {
+	        const worldIdAttribute = e.worldId ? ` data-id="${e.worldId}"` : '';
+	        const effectImageHtml = `<div href="javascript:void(0);" class="effect collectable noselect"><img src="${e.filename}" referrerpolicy="no-referrer" /></div>`;
+	        const effectLinkHtml = `<a href="javascript:void(0);" class="js--effect effect collectable--border noselect" data-effect-id="${e.id}"${worldIdAttribute}></a>`;
+	        e.method = e.method.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
+	        e.methodJP = e.methodJP ? e.methodJP.replace(/<span .*?>(.*?)<\/ *span>/ig, '$1').replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>') : '';
+	        jquery(effectImageHtml).appendTo($effectsContainerItems);
+	        jquery(effectLinkHtml).appendTo($effectsContainerBorders);
+	        effectsById[e.id] = e;
+	    }
+
+	    const $tooltip = jquery('<div class="effect-tooltip scene-tooltip display--none"></div>').prependTo('.content');
+
+	    jquery('.js--effect[data-id]').on('click', function () {
+	        if (trySelectNode(jquery(this).data('id'), true, true)) {
+	            $tooltip.addClass('display--none');
+	            jquery.modal.close();
+	        }
+	    });
+	    
+	    jquery('.js--effect').on('mousemove', function (e) {
+	        $tooltip.css({
+	            top: e.pageY + 10 + 'px',
+	            left: (e.pageX - ($tooltip.innerWidth() / 2)) + 'px'
+	        });
+	    }).on('mouseenter', function () {
+	        const effect = effectsById[jquery(this).data('effectId')];
+	        const effectName = config$1.lang === 'en' || !effect.nameJP ? effect.name : effect.nameJP;
+	        const world = effect.worldId ? exports.worldData[effect.worldId] : null;
+	        const worldName = world ?
+	            config$1.lang === 'en' || !world.titleJP ? world.title : world.titleJP
+	            : localizedNA;
+	        const method = config$1.lang === 'en' ? effect.method : effect.methodJP;
+	        $tooltip.html(localizedEffectLabel
+	            .replace('{EFFECT}', effectName)
+	            .replace('{LOCATION}', worldName)
+	            .replace('{METHOD}', method)).removeClass('display--none');
+	    }).on('mouseleave', function () {
+	        $tooltip.addClass('display--none');
+	    });
+	}
+
 	function initMenuThemeData(data) {
 	    menuThemeData = data;
 
@@ -105001,6 +105054,7 @@ function InsertStackElement(node, body) {
 	        initWorldData(data.worldData);
 	        initVersionData(data.versionInfoData);
 	        initAuthorData(data.authorInfoData, data.versionInfoData);
+	        initEffectData(data.effectData);
 	        initMenuThemeData(data.menuThemeData);
 	        lastUpdate = new Date(data.lastUpdate);
 	        lastFullUpdate = new Date(data.lastFullUpdate);
@@ -105053,6 +105107,7 @@ function InsertStackElement(node, body) {
 	let localizedNodeLabelVersionUpdateTypes;
 	let localizedAuthorLabel;
 	let localizedVersionLabel;
+	let localizedEffectLabel;
 	let localizedNodeIconNew;
 	let localizedVersionDetails;
 	let localizedVersionDisplayToggle;
@@ -106436,18 +106491,17 @@ function InsertStackElement(node, body) {
 
 	function getLocalizedNodeLabel(localizedNodeLabel, forPath) {
 	    return `<span class='node-label__world node-label__value'>{WORLD}</span><br>
-        ${localizedNodeLabel.depth}<span class='node-label__value' style='color:{DEPTH_COLOR}'>{DEPTH}</span>
-        ${forPath ? " <span class='node-label__value' style='color:{MIN_DEPTH_COLOR}'>({MIN_DEPTH})</span>" : ""}<br>
-        ${localizedNodeLabel.author}<span class='node-label__value'>{AUTHOR}</span><br>
-        ${localizedNodeLabel.versionAdded}<span class='node-label__value'>{VERSION_ADDED}</span>`;
+            ${localizedNodeLabel.depth}<span class='node-label__value' style='color:{DEPTH_COLOR}'>{DEPTH}</span>
+            ${forPath ? " <span class='node-label__value' style='color:{MIN_DEPTH_COLOR}'>({MIN_DEPTH})</span>" : ""}<br>
+            ${localizedNodeLabel.author}<span class='node-label__value'>{AUTHOR}</span><br>
+            ${localizedNodeLabel.versionAdded}<span class='node-label__value'>{VERSION_ADDED}</span>`;
 	}
 
 	function getLocalizedNodeLabelVersionLastUpdated(localizedNodeLabel, includeUpdateType) {
-	    return `
-        <br><span class='node-label__last-updated'>
-            <span>${localizedNodeLabel.versionLastUpdated}<span class='node-label__value'>{VERSION_LAST_UPDATED}</span></span>
-            <span class='node-label__value node-label__last-updated__update-type'>${(includeUpdateType ? '{VERSION_LAST_UPDATED_TYPE}' : '')}</span>
-        </span>`;
+	    return `<br><span class='node-label__last-updated'>
+                <span>${localizedNodeLabel.versionLastUpdated}<span class='node-label__value'>{VERSION_LAST_UPDATED}</span></span>
+                <span class='node-label__value node-label__last-updated__update-type'>${(includeUpdateType ? '{VERSION_LAST_UPDATED_TYPE}' : '')}</span>
+            </span>`;
 	}
 
 	function getLocalizedNodeLabelVersionRemoved(localizedNodeLabel) {
@@ -106469,17 +106523,17 @@ function InsertStackElement(node, body) {
 
 	function getLocalizedAuthorLabel(localizedAuthorLabel) {
 	    return `<span class='author-entry-tooltip__author tooltip__value'>{AUTHOR}</span><br>
-        <span class='js--author-entry-tooltip__first-version tooltip__value'>{FIRST_VERSION}</span><span class='js--author-entry-tooltip__last-version'>${localizedAuthorLabel.versionSeparator}<span class='tooltip__value'>{LAST_VERSION}</span></span><br>
-        ${localizedAuthorLabel.worldCount}<span class='tooltip__value'>{WORLD_COUNT}</span></span>`;
+            <span class='js--author-entry-tooltip__first-version tooltip__value'>{FIRST_VERSION}</span><span class='js--author-entry-tooltip__last-version'>${localizedAuthorLabel.versionSeparator}<span class='tooltip__value'>{LAST_VERSION}</span></span><br>
+            ${localizedAuthorLabel.worldCount}<span class='tooltip__value'>{WORLD_COUNT}</span></span>`;
 	}
 
 	function getLocalizedVersionLabel(localizedVersionLabel) {
 	    return `<span class='version-entry-tooltip__version tooltip__value'>{VERSION}</span><br>
-        ${localizedVersionLabel.authors}{AUTHORS}
-        <br>${localizedVersionLabel.releaseDate}{RELEASE_DATE}
-        <span class='js--version-entry-tooltip__world-count'><br>${localizedVersionLabel.worldCount}<span class='tooltip__value'>{WORLD_COUNT}</span></span>
-        <span class='js--version-entry-tooltip__updated-world-count'><br>${localizedVersionLabel.updatedWorldCount}<span class='tooltip__value'>{UPDATED_WORLD_COUNT}</span></span>
-        <span class='js--version-entry-tooltip__removed-world-count'><br>${localizedVersionLabel.removedWorldCount}<span class='tooltip__value'>{REMOVED_WORLD_COUNT}</span></span>`;
+            ${localizedVersionLabel.authors}{AUTHORS}
+            <br>${localizedVersionLabel.releaseDate}{RELEASE_DATE}
+            <span class='js--version-entry-tooltip__world-count'><br>${localizedVersionLabel.worldCount}<span class='tooltip__value'>{WORLD_COUNT}</span></span>
+            <span class='js--version-entry-tooltip__updated-world-count'><br>${localizedVersionLabel.updatedWorldCount}<span class='tooltip__value'>{UPDATED_WORLD_COUNT}</span></span>
+            <span class='js--version-entry-tooltip__removed-world-count'><br>${localizedVersionLabel.removedWorldCount}<span class='tooltip__value'>{REMOVED_WORLD_COUNT}</span></span>`;
 	}
 
 	function getLocalizedVersionDetails(localizedVersionDetails) {
@@ -106510,6 +106564,11 @@ function InsertStackElement(node, body) {
 	    }
 
 	    return ret;
+	}
+
+	function getLocalizedEffectLabel(localizedEffectLabel) {
+	    return `<span class="effect-tooltip__effect tooltip__value">{EFFECT}</span><br>
+        <span class="effect-tooltip__location">${localizedEffectLabel.location}<span class="tooltip__value">{LOCATION}</span><br></span>{METHOD}`;
 	}
 
 	/**
@@ -107332,7 +107391,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.3.1");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.4.0");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
@@ -107351,6 +107410,7 @@ function InsertStackElement(node, body) {
 	            localizedNodeLabelVersionUpdateTypes = getLocalizedNodeLabelVersionUpdateTypes(data.nodeLabel);
 	            localizedAuthorLabel = getLocalizedAuthorLabel(data.authorLabel);
 	            localizedVersionLabel = getLocalizedVersionLabel(data.versionLabel);
+	            localizedEffectLabel = getLocalizedEffectLabel(data.effectLabel);
 	            localizedNodeIconNew = data.nodeIcon.new;
 	            localizedVersionDetails = getLocalizedVersionDetails(data.versionDetails);
 	            localizedVersionDisplayToggle = data.versionEntriesModal.versionDisplayToggle;
@@ -108130,6 +108190,19 @@ function InsertStackElement(node, body) {
 	                jquery.modal.close();
 	            else
 	                jquery(".js--version-entries-modal").modal({
+	                    fadeDuration: 100,
+	                    closeClass: 'noselect',
+	                    closeText: '✖'
+	                });
+	        }
+	    });
+
+	    jquery(".js--effects").on("click", function() {
+	        if (effectData && effectData.length) {
+	            if (jquery(".js--effects-modal:visible").length)
+	                jquery.modal.close();
+	            else
+	                jquery(".js--effects-modal").modal({
 	                    fadeDuration: 100,
 	                    closeClass: 'noselect',
 	                    closeText: '✖'
@@ -108938,6 +109011,7 @@ function InsertStackElement(node, body) {
 	        initWorldData(data.worldData);
 	        initVersionData(data.versionInfoData);
 	        initAuthorData(data.authorInfoData, data.versionInfoData);
+	        initEffectData(data.effectData);
 	        initMenuThemeData(data.menuThemeData);
 	        lastUpdate = new Date(data.lastUpdate);
 	        lastFullUpdate = new Date(data.lastFullUpdate);

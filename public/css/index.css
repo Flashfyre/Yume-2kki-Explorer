@@ -541,11 +541,34 @@ a.close-modal {
     color: transparent;
 }
 
+.collectables-container__items > .effect {
+    margin: 20px;
+    margin-bottom: 20px !important;
+}
+
+.effect > img, .menu-theme > img {
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+}
+
+.effect > img {
+    clip-path: inset(6px);
+    width: 192px;
+    height: 192px;
+}
+
+.effect.collectable--border {
+    margin: 32px;
+    padding: 10px;
+    border-width: 24px !important;
+    min-width: 124px;
+    width: 124px;
+    height: 124px;
+}
+
 .menu-theme > img {
     width: 200px;
     height: 200px;
-    image-rendering: crisp-edges;
-    image-rendering: pixelated;
 }
 
 .menu-theme.collectable--border {
@@ -598,10 +621,10 @@ a.close-modal {
     font-weight: bold;
 }
 
-.node-label__world, .menu-theme-tooltip__world, .author-entry-tooltip__author, .version-entry-tooltip__version {
+.node-label__world, .effect-tooltip__effect, .effect-tooltip__location, .menu-theme-tooltip__world, .author-entry-tooltip__author, .version-entry-tooltip__version {
     display: inline-block;
     width: 100%;
-    padding-bottom: 0.5em
+    padding-bottom: 0.5em;
 }
 
 .node-label__world, .author-entry-tooltip__author, .author-entry-tooltip__version {
@@ -618,7 +641,7 @@ a.close-modal {
     text-align: right;
 }
 
-.menu-theme-tooltip, .author-entry-tooltip, .version-entry-tooltip {
+.effect-tooltip, .menu-theme-tooltip, .author-entry-tooltip, .version-entry-tooltip {
     position: absolute;
     max-width: 480px;
     z-index: 2;

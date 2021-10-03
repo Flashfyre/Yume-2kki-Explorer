@@ -106,6 +106,10 @@
                 background-image: url(/images/ui/Default_Custom/containerbg.png);
             }
 
+            .collectables-container__borders > .effect {
+                border-image: url(/images/ui/Default_Custom/border.png) 12 round;
+            }
+
             input[type='text'], select, .slider {
                 color: rgba(216, 216, 216, 1); /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
@@ -246,6 +250,7 @@
                     <div class="control">
                         <button data-localize="collectableControls.authors.name" class="js--author-entries noselect">Authors</button>
                         <button data-localize="collectableControls.versions.name" class="js--version-entries noselect">Versions</button>
+                        <button data-localize="collectableControls.effects.name" class="js--effects noselect">Effects</button>
                         <button data-localize="collectableControls.menuThemes.name" class="js--menu-themes noselect">Menu Themes</button>
                     </div>
                 </div>
@@ -397,6 +402,16 @@
                     <div class="js--version-entries-container collectables-container">
                         <div class="js--version-entries-container__items collectables-container__items"></div>
                         <div class="js--version-entries-container__borders collectables-container__borders"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="effectsModal" class="js--effects-modal modal">
+            <div class="modal__content--container">
+                <div class="js--effects-modal__content modal__content">
+                    <div class="js--effects-container collectables-container">
+                        <div class="js--effects-container__items collectables-container__items"></div>
+                        <div class="js--effects-container__borders collectables-container__borders"></div>
                     </div>
                 </div>
             </div>
