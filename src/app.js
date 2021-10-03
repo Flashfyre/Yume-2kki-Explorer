@@ -3211,7 +3211,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.3.0");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.3.1");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
@@ -4235,10 +4235,10 @@ function getMissingBgmUrls() {
     const ret = [];
 
     for (let w of worldData) {
-        if (w.bgmUrl) {
-            const bgmUrls = w.bgmUrl.split('|');
+        if (w.bgmLabel) {
+            const bgmUrls = w.bgmUrl ? w.bgmUrl.split('|') : [ '' ];
             const bgmLabels = w.bgmLabel.split('|').map(l => l.endsWith('^') ? l.slice(0, -1) : l.replace(/\^(.*)/, ' ($1)'));
-            for (let b in bgmUrls) {
+            for (let b in bgmLabels) {
                 if (!bgmUrls[b])
                     ret.push(`${getWorldLinkForAdmin(w)} is missing the BGM URL for ${bgmLabels[b]}`);
             }

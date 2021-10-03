@@ -2028,8 +2028,8 @@ function getWorldInfo(worldName) {
         superagent.get('https://yume2kki.fandom.com/wiki/' + worldName, function (err, res) {
             if (err) return reject(err);
             worldName = worldName.replace(/\_/g, ' ');
-            let imageUrl = res.text.split('<a href="https://static.wikia.nocookie.net')[1];
-            imageUrl = "https://static.wikia.nocookie.net" + imageUrl.slice(0, imageUrl.indexOf('"'));
+            const imageUrlIndex = res.text.indexOf('<a href="https://static.wikia.nocookie.net') + 9;
+            const imageUrl = res.text.slice(imageUrlIndex, res.text.indexOf('"', imageUrlIndex));
             const ext = imageUrl.slice(imageUrl.lastIndexOf("."), imageUrl.indexOf("/", imageUrl.lastIndexOf(".")));
             let filename;
             if (isRemote)

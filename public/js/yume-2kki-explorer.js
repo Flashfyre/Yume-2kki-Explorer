@@ -1,4 +1,4 @@
-// Version 3.3.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.3.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -107332,7 +107332,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.3.0");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.3.1");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
@@ -108354,10 +108354,10 @@ function InsertStackElement(node, body) {
 	    const ret = [];
 
 	    for (let w of exports.worldData) {
-	        if (w.bgmUrl) {
-	            const bgmUrls = w.bgmUrl.split('|');
+	        if (w.bgmLabel) {
+	            const bgmUrls = w.bgmUrl ? w.bgmUrl.split('|') : [ '' ];
 	            const bgmLabels = w.bgmLabel.split('|').map(l => l.endsWith('^') ? l.slice(0, -1) : l.replace(/\^(.*)/, ' ($1)'));
-	            for (let b in bgmUrls) {
+	            for (let b in bgmLabels) {
 	                if (!bgmUrls[b])
 	                    ret.push(`${getWorldLinkForAdmin(w)} is missing the BGM URL for ${bgmLabels[b]}`);
 	            }
