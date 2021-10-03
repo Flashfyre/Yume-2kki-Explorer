@@ -84,6 +84,10 @@ Display a list of authors who have added worlds into the game. Hovering over an 
 
 Display a list of versions that have added, updated, or removed worlds. Hovering over a version will display more information about that update. Clicking the tab on the right of a version will show specific changes made in that version. Clicking a version will enable a temporary filter to highlight worlds affected by that version on the graph. To disable this filter, simply click on an empty space on the graph or select 'All' on the version filter.
 
+### Effects
+
+Display a list of available effects in a modal window. Hovering over an effect will show information from the Wiki on how to locate it. Clicking an effect will navigate to the world it's located in.
+
 ### Menu Themes
 
 Display a list of available menu themes in a modal window. Hovering over a menu theme will show information from the Wiki on how to locate it. Clicking a menu theme will navigate to the world it's located in if applicable.
@@ -218,6 +222,10 @@ This setting determines the number of world nodes that make up a stack within th
 ### バージョン
 
 マップが追加、変更、および削除されたバージョンを表示します。マウスホバーして詳細情報を取得できます。バージョンの右側にあるタブをクリックしてそのバージョンで変更の完全なリストを表示します。画像をクリックで、変更されたマップを知らせる仮フィルターが設定されます（エクスプローラに表示）。画面の空き所、或いはバージョンフィルター「全バージョン」を選択して解除できます。
+
+### エフェクト
+
+ポップアップでエフェクトのリストを表示します。エフェクト画像にマウスホバーするものを得られる方法を特定します。エフェクト画像クリックで、該当するものを得られる場所を知らせます（エクスプローラに表示）。
 
 ### メンュータイプ
 
