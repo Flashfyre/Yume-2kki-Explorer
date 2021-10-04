@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import SpriteText from 'three-spritetext';
 import ForceGraph3D from '3d-force-graph';
 import TWEEN from '@tweenjs/tween.js';
+import GreenAudioPlayer from 'green-audio-player/dist/js/green-audio-player';
 import { checkIsMobile, formatDate, hueToRGBA, uiThemeFontColors, uiThemeBgColors, getFontColor, getBaseBgColor, getFontShadow } from './utils';
 import { updateConfig } from './config.js';
 import { ConnType } from './conn-type.js';
@@ -869,7 +870,7 @@ function updateControlsContainer(updateTabMargin) {
     });
     if (updateTabMargin) {
         if ($(".controls-bottom").hasClass("visible"))
-            $(".controls-bottom--container--tab, .footer").css("margin-top", `-${(settingsHeight + 8)}px`);
+            $(".controls-bottom--container--tab, .footer, .audio-player-container").css("margin-top", `-${(settingsHeight + 8)}px`);
         if ($(".controls-side").hasClass("visible"))
             $(".controls-side--container--tab").css("margin-left", `-${(collectableControlsWidth + 8)}px`);
         $(".modal").css("transition", "");
@@ -990,6 +991,7 @@ let localizedEffectLabel;
 let localizedNodeIconNew;
 let localizedVersionDetails;
 let localizedVersionDisplayToggle;
+let localizedSeparator;
 let localizedNA;
 
 let iconLabel;
@@ -1018,6 +1020,8 @@ let config = {
 };
 
 let lastUpdate, lastFullUpdate;
+
+let audioPlayer;
 
 let worldImageData = [];
 
@@ -2402,7 +2406,7 @@ function getLocalizedNodeLabelVersionUpdateTypes(localizedNodeLabel) {
 
 function getLocalizedAuthorLabel(localizedAuthorLabel) {
     return `<span class='author-entry-tooltip__author tooltip__value'>{AUTHOR}</span><br>
-            <span class='js--author-entry-tooltip__first-version tooltip__value'>{FIRST_VERSION}</span><span class='js--author-entry-tooltip__last-version'>${localizedAuthorLabel.versionSeparator}<span class='tooltip__value'>{LAST_VERSION}</span></span><br>
+            <span class='js--author-entry-tooltip__first-version tooltip__value'>{FIRST_VERSION}</span><span class='js--author-entry-tooltip__last-version'>${localizedSeparator}<span class='tooltip__value'>{LAST_VERSION}</span></span><br>
             ${localizedAuthorLabel.worldCount}<span class='tooltip__value'>{WORLD_COUNT}</span></span>`;
 }
 
@@ -3270,7 +3274,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.4.1");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.5.0");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
@@ -3278,6 +3282,8 @@ function initLocalization(isInitial) {
                 convertJPControlLabels(data.collectableControls);
                 convertJPControlLabels(data.settings);
             }
+            localizedSeparator = data.separator;
+            localizedNA = data.na;
             localizedConns = data.conn;
             if (worldData)
                 initContextMenu(data.contextMenu);
@@ -3293,7 +3299,6 @@ function initLocalization(isInitial) {
             localizedNodeIconNew = data.nodeIcon.new;
             localizedVersionDetails = getLocalizedVersionDetails(data.versionDetails);
             localizedVersionDisplayToggle = data.versionEntriesModal.versionDisplayToggle;
-            localizedNA = data.na;
 
             if (isInitial) {
                 Object.keys(data.settings.uiTheme.values).forEach(t => {
@@ -3547,9 +3552,14 @@ function initContextMenu(localizedContextMenu) {
             callback: function () {
                 const world = worldData[contextWorldId];
                 if (world.bgmUrl.indexOf('|') === -1) {
-                    const handle = window.open(world.bgmUrl, '_blank', 'noreferrer');
-                    if (handle)
-                        handle.focus();
+                    if (!isCtrl) {
+                        const worldName = config.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
+                        playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel));
+                    } else {
+                        const handle = window.open(world.bgmUrl, '_blank', 'noreferrer');
+                        if (handle)
+                            handle.focus();
+                    }
                 }
             },
             visible: function () {
@@ -3591,6 +3601,7 @@ function initContextMenu(localizedContextMenu) {
         }
         
         if (world.bgmUrl && world.bgmUrl.indexOf('|') > -1) {
+            const worldName = config.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
             const bgmUrls = world.bgmUrl.split('|');
             const bgmLabels = getBgmLabels(world.bgmLabel.split('|'), localizedContextMenu.items.bgm);
             for (let b = 0; b < bgmUrls.length; b++) {
@@ -3598,9 +3609,14 @@ function initContextMenu(localizedContextMenu) {
                 bgmSubItems[`bgm${worldId}_${bgmIndex + 1}`] = {
                     name: bgmLabels[bgmIndex],
                     callback: function () {
-                        const handle = window.open(bgmUrls[bgmIndex], '_blank', 'noreferrer');
-                        if (handle)
-                            handle.focus();
+                        const bgmUrl = bgmUrls[bgmIndex];
+                        if (!isCtrl) {
+                            playBgm(bgmUrl, getBgmLabel(worldName, world.bgmLabel.split('|')[bgmIndex]));
+                        } else {
+                            const handle = window.open(bgmUrl, '_blank', 'noreferrer');
+                            if (handle)
+                                handle.focus();
+                        }
                     },
                     visible: visibleFunc,
                     disabled: () => !bgmUrls[bgmIndex]
@@ -3656,6 +3672,51 @@ function getBgmLabels(bgmLabels, localizedBgm) {
     }
 
     return ret;
+}
+
+function getBgmLabel(worldName, bgmLabel) {
+    const separatorIndex = bgmLabel.indexOf('^');
+    if (config.lang !== 'en' || separatorIndex === bgmLabel.length - 1)
+        return `${worldName}${localizedSeparator}${bgmLabel.slice(0, separatorIndex)}`;
+    return `${worldName}${localizedSeparator}${bgmLabel.slice(separatorIndex + 1)} (${bgmLabel.slice(0, separatorIndex)})`;
+}
+
+function playBgm(url, label) {
+    $('#audioPlayerContainer').empty().append(`
+        <a href="javascript:void(0);" class="close-audio-player noselect">✖</a>
+        <marquee class="audio-player-marquee" scrollamount="5">
+            <label class="audio-player-label noselect">${label}</label>
+        </marquee>
+    `).append(`
+        <div class="audio-player" autoplay>
+            <audio class="audio-source" crossorigin preload="none" autoplay loop></audio>
+        </div>
+    `);
+
+    audioPlayer = new GreenAudioPlayer('.audio-player');
+    audioPlayer.showLoadingIndicator();
+
+    const requestObj = new Request(url, {
+        method: 'GET',
+        referrerPolicy: 'no-referrer'
+    });
+
+    fetch(requestObj).then(function (response) {
+        if (!response.ok)
+            $('.audio-player-label').text('ERROR');
+        return response;
+    }).then(async function (res) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const audioSource = document.getElementsByClassName('audio-source')[0];
+        audioSource.src = url;
+        audioPlayer.hideLoadingIndicator();
+        $('.close-audio-player').on('click', function () {
+            audioPlayer = null;
+            $('#audioPlayerContainer').empty();
+        });
+        GreenAudioPlayer.playPlayer(audioSource);
+    }).catch((err) => console.error(err));
 }
 
 function trySelectNode(node, forceFocus, ignoreSearch) {
@@ -3850,12 +3911,12 @@ function initControls() {
                 if (!$(this).hasClass("visible"))
                     $(this).css("opacity", 0);
             });
-            $(".controls-bottom--container--tab, .footer").css("margin-top", "0px").animateCss("slideInDown", 300);
+            $(".controls-bottom--container--tab, .footer, .audio-player-container").css("margin-top", "0px").animateCss("slideInDown", 300);
             $(".modal").css("transition", "height 0.3s ease-out, margin-top 0.3s ease-out");
         } else {
             const settingsHeight = $(".controls-bottom").outerHeight() + 8;
             $(".controls-bottom").addClass("visible").css("opacity", 1).animateCss("slideInUp", 250);
-            $(".controls-bottom--container--tab, .footer").css("margin-top", "-" + settingsHeight + "px").animateCss("slideInUp", 250);
+            $(".controls-bottom--container--tab, .footer, .audio-player-container").css("margin-top", "-" + settingsHeight + "px").animateCss("slideInUp", 250);
             $(".modal").css("transition", "height 0.25s ease-out, margin-top 0.25s ease-out");
         }
         updateControlsContainer();
@@ -3932,8 +3993,8 @@ function initControls() {
             const altColor = "rgba(" + Math.min(bgColorPixel[0] + 48, 255) + ", " + Math.min(bgColorPixel[1] + 48, 255) + ", " + Math.min(bgColorPixel[2] + 48, 255) + ", 1)";
             getFontShadow(config.uiTheme, function (shadow) {
                 themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/[a-zA-Z0-9\_]+\/(containerbg|border(?:2)?|font\d)\.png\)/g, "url(/images/ui/" + config.uiTheme + "/$1.png)")
-                    .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "background-color:$1" + color + "$2;$3/*base*/")
-                    .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "background-color:$1" + altColor + "$2;$3/*alt*/")
+                    .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*basebg\*\//g, "background-color:$1" + color + "$2;$3/*basebg*/")
+                    .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*altbg\*\//g, "background-color:$1" + altColor + "$2;$3/*altbg*/")
                     .replace(/(?:[#a-zA-Z0-9]+|rgba\([0-9]+, [0-9]+, [0-9]+, [0-9]+\))(;? *)\/\*shadow\*\//g, shadow + "$1/*shadow*/");
                 $(".js--font-style").trigger("change");
                 updateConfig(config);
@@ -3950,8 +4011,8 @@ function initControls() {
                 themeStyles.textContent = themeStyles.textContent = themeStyles.textContent = themeStyles.textContent
                     .replace(/url\(\/images\/ui\/([a-zA-Z0-9\_]+)\/font\d\.png\)( *!important)?;( *)\/\*base\*\//g, "url(/images/ui/$1/font" + (config.fontStyle + 1) + ".png)$2;$3/*base*/")
                     .replace(/url\(\/images\/ui\/([a-zA-Z0-9\_]+)\/font\d\.png\)( *!important)?;( *)\/\*alt\*\//g, "url(/images/ui/$1/font" + (altFontStyle + 1) + ".png)$2;$3/*alt*/")
-                    .replace(/([^\-])color:( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "$1color:$2" + baseColor + "$3;$4/*base*/")
-                    .replace(/([^\-])color:( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "$1color:$2" + altColor + "$3;$4/*alt*/");
+                    .replace(/([^\-])((?:(?:background|border)\-)?color|fill):( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "$1$2:$3" + baseColor + "$4;$5/*base*/")
+                    .replace(/([^\-])((?:(?:background|border)\-)?color|fill):( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "$1$2:$3" + altColor + "$4;$5/*alt*/");
                 updateConfig(config);
             });
         });
@@ -4135,13 +4196,28 @@ function initControls() {
     });
 }
 
+function getLoadingGifName() {
+    const rand = Math.floor(Math.random() * 255);
+    if (rand > 64)
+        return "urowalk";
+    if (rand > 24)
+        return "urospin";
+    if (rand > 8)
+        return "urosleep";
+    if (rand > 2)
+        return "urodance";
+    if (rand > 0)
+        return "urobanana";
+    return "urodance2";
+}
+
 function displayLoadingAnim($container) {
     const $existingLoadingContainer = $container.find(".loading-container");
     const $loadingContainer = $(`
         <div class="loading-container">
             <span class="loading-container__text loading-container__text--loading"><span data-localize="loading.label" class="loading-container__text__main">Loading</span><span data-localize="loading.space" class="loading-container__text__append">   </span></span>
             <span class="loading-container__text loading-container__text--error" data-localize="loading.error" style="display: none;"></span>
-            <img src="images/urowalk.gif" />
+            <img src="images/${getLoadingGifName()}.gif" />
         </div>`);
     if ($existingLoadingContainer.length)
         $existingLoadingContainer.remove();

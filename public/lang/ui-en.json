@@ -215,7 +215,6 @@
         }
     },
     "authorLabel": {
-        "versionSeparator": " - ",
         "worldCount": "Worlds: "
     },
     "versionLabel": {
@@ -294,5 +293,6 @@
         "lastUpdate": "Data updated on {LAST_UPDATE}",
         "lastFullUpdate": "Data reset on {LAST_FULL_UPDATE}"
     },
+    "separator": " - ",
     "na": "N/A"
 }

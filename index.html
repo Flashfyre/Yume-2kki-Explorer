@@ -6,12 +6,12 @@
         <link rel="stylesheet" href="/css/index.css" />
         <style class="js--theme-styles">
             body {
-                background-color: #000000; /*base*/
+                background-color: #000000; /*basebg*/
             }
 
-            .controls, .modal {
+            .y2e-controls, .modal, .audio-player-container {
                 background: url(/images/ui/Default_Custom/containerbg.png) !important;
-                border-image: url(/images/ui/Default_Custom/border.png) 12 repeat;
+                border-image: url(/images/ui/Default_Custom/border.png) 12 repeat !important;
                 image-rendering: pixelated;
             }
 
@@ -19,7 +19,7 @@
                 color: rgba(216, 216, 216, 1); /*base*/
             }
 
-            label, h1, h2, h3, h4, p, li:not(.context-menu-item), .close-modal, .loading-container .loading-container__text {
+            label, h1, h2, h3, h4, p, li:not(.context-menu-item), .close-modal, .close-audio-player, .loading-container .loading-container__text {
                 background-image: url(/images/ui/Default_Custom/font1.png) !important; /*base*/
                 -webkit-background-clip: text;
 	            -webkit-text-fill-color: transparent;
@@ -74,7 +74,7 @@
 
             .modal__content::-webkit-scrollbar-track, .modal__controls--expand + .modal__controls::-webkit-scrollbar-track, .collectable-entry--content__list::-webkit-scrollbar-track {
                 border-image: url(/images/ui/Default_Custom/border.png) 12 repeat !important;
-                background-color: rgba(45, 17, 23, 1); /*base*/
+                background-color: rgba(45, 17, 23, 1); /*basebg*/
                 image-rendering: crisp-edges;
                 image-rendering: pixelated;
             }
@@ -85,7 +85,7 @@
                 image-rendering: pixelated;
             }
 
-            .footer {
+            .controls, .footer {
                 color: rgba(216, 216, 216, 1); /*base*/
                 text-shadow: 1.5px 1.5px black; /*shadow*/
             }
@@ -98,7 +98,7 @@
             }
 
             button, a.button-link {
-                background-color: rgba(45, 17, 23, 1); /*base*/
+                background-color: rgba(45, 17, 23, 1); /*basebg*/
                 text-shadow: 1.5px 1.5px black; /*shadow*/
             }
 
@@ -113,7 +113,7 @@
             input[type='text'], select, .slider {
                 color: rgba(216, 216, 216, 1); /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
-                background-color: rgba(45, 17, 23, 1); /*base*/
+                background-color: rgba(45, 17, 23, 1) !important; /*basebg*/
                 text-shadow: 1.5px 1.5px black; /*shadow*/
                 image-rendering: crisp-edges;
                 image-rendering: pixelated;
@@ -133,14 +133,14 @@
 
             .slider::-webkit-slider-thumb {
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
-                background-color: rgba(45, 17, 23, 1); /*base*/
+                background-color: rgba(45, 17, 23, 1); /*basebg*/
                 image-rendering: crisp-edges;
                 image-rendering: pixelated;
             }
 
             .slider::-moz-range-thumb {
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
-                background-color: rgba(45, 17, 23, 1); /*base*/
+                background-color: rgba(45, 17, 23, 1); /*basebg*/
                 image-rendering: crisp-edges;
                 image-rendering: pixelated;
             }
@@ -148,14 +148,14 @@
             .autocomplete-suggestions {
                 color: rgba(216, 216, 216, 1); /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
-                background-color: rgba(45, 17, 23, 1); /*base*/
+                background-color: rgba(45, 17, 23, 1); /*basebg*/
                 text-shadow: 1.5px 1.5px black; /*shadow*/
                 image-rendering: crisp-edges;
                 image-rendering: pixelated;
             }
 
             .autocomplete-selected {
-                background-color: rgba(93, 65, 71, 1); /*alt*/
+                background-color: rgba(93, 65, 71, 1); /*altbg*/
             }
             
             .autocomplete-suggestions strong {
@@ -164,7 +164,7 @@
 
             .context-menu-item, .graph-tooltip, .scene-tooltip:not(:empty), .collectable-entry--content {
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round !important;
-                background-color: rgba(45, 17, 23, 1) !important; /*base*/
+                background-color: rgba(45, 17, 23, 1) !important; /*basebg*/
                 image-rendering: crisp-edges;
                 image-rendering: pixelated;
             }
@@ -191,15 +191,38 @@
             .author-entry.collectable--border:hover .author-entry__name {
                 background-image: url(/images/ui/Default_Custom/font4.png) !important; /*alt*/
             }
+
+            .audio-player .loading__spinner {
+                border-color: rgba(216, 216, 216, 1) !important; /*base*/
+                border-right-color: transparent !important;
+            }
+
+            .audio-player > .controls > span {
+                font-family: 'MS Gothic' !important;
+                color: rgba(255, 255, 157, 1) !important; /*base*/
+            }
+
+            .audio-player .play-pause-btn__icon, .audio-player .volume__button .volume__speaker {
+                fill: rgba(216, 216, 216, 1); /*base*/
+            }
+
+            .audio-player .volume__button.open path.volume__speaker {
+                fill: rgba(255, 255, 157, 1) !important; /*alt*/
+            }
+
+            .audio-player .gap-progress, .audio-player .pin {
+                background-color: rgba(216, 216, 216, 1) !important; /*base*/
+            }
         </style>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.9.0/jquery.contextMenu.min.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.css" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/greghub/green-audio-player/dist/css/green-audio-player.min.css">
         <script src="/js/yume-2kki-explorer.js"></script>
     </head>
     <body>
         <div class="content">
-            <div class="controls controls-top">
+            <div class="y2e-controls controls-top">
                 <div class="controls__container">
                     <div class="control">
                         <label data-localize="controls.search.name" class="noselect">Search:</label>
@@ -246,7 +269,7 @@
                 <button class="controls--container--tab__button controls-side--container--tab__button noselect">◀</button>
             </div>
             <div class="controls--container controls-side--container">
-                <div class="controls controls-side" style="opacity: 0;">
+                <div class="y2e-controls controls-side" style="opacity: 0;">
                     <div class="control">
                         <button data-localize="collectableControls.authors.name" class="js--author-entries noselect">Authors</button>
                         <button data-localize="collectableControls.versions.name" class="js--version-entries noselect">Versions</button>
@@ -259,7 +282,7 @@
                 <button class="controls--container--tab__button controls-bottom--container--tab__button noselect">▲</button>
             </div>
             <div class="controls--container controls-bottom--container">
-                <div class="controls controls-bottom" style="opacity: 0;">
+                <div class="y2e-controls controls-bottom" style="opacity: 0;">
                     <div class="control">
                         <label data-localize="settings.lang.name" class="noselect">Language:</label>
                         <select name="language" class="js--lang">
@@ -342,6 +365,7 @@
                     </div>
                 </div>
             </div>
+            <div id="audioPlayerContainer" class="audio-player-container"></div>
             <div class="footer noselect">
                 <div data-localize="footer.about"></div>
                 <div data-localize="footer.lastUpdate"></div>

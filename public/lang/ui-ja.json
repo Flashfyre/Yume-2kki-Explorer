@@ -215,7 +215,6 @@
         }
     },
     "authorLabel": {
-        "versionSeparator": "ー",
         "worldCount": "マップ数："
     },
     "versionLabel": {
@@ -294,5 +293,6 @@
         "lastUpdate": "データ最終更新日：{LAST_UPDATE}",
         "lastFullUpdate": "データ最終置換日：{LAST_FULL_UPDATE}"
     },
+    "separator": "ー",
     "na": "不明"
 }

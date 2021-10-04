@@ -54,7 +54,7 @@ h1 {
     margin-top: 14px;
 }
 
-.controls {
+.y2e-controls {
     position: absolute;
     display: flex;
     flex-wrap: wrap;
@@ -82,7 +82,7 @@ h1 {
     pointer-events: none;
 }
 
-.controls.visible {
+.y2e-controls.visible {
     pointer-events: all !important;
 }
 
@@ -345,7 +345,7 @@ select:not(.temp-select) > option.temp-select-only {
     padding-bottom: 16px;
 }
 
-a.close-modal {
+a.close-modal, a.close-audio-player {
     display: flex !important;
     align-items: center;
     justify-content: space-around;
@@ -654,6 +654,37 @@ a.close-modal {
 
 .context-menu-item {
     border: 6px solid transparent;
+}
+
+.audio-player-container {
+    position: absolute;
+    width: 400px;
+    margin-left: 10px;
+    top: calc(100% - 105px);
+    z-index: 1;
+}
+
+.audio-player-container:not(:empty) {
+    border: 10px solid transparent;
+}
+
+.audio-player-marquee {
+    margin-right: 25px !important;
+}
+
+.audio-player {
+    background: none !important;
+}
+
+.audio-player .volume__controls.top {
+    background-color: transparent !important;
+}
+
+.close-audio-player {
+    position: absolute;
+    background-size: contain;
+    width: 30px;
+    height: 30px;
 }
 
 .admin-only {
