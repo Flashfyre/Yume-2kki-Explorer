@@ -218,7 +218,7 @@ app.get('/data', function(req, res) {
             getWorldData(pool, false, excludeRemovedContent).then(worldData => {
                 getAuthorInfoData(pool).then(authorInfoData => {
                     getVersionInfoData(pool, worldData).then(versionInfoData => {
-                        getEffectData(pool, worldData, excludeRemovedContent).then(effectData => {
+                        getEffectData(pool, worldData).then(effectData => {
                             getMenuThemeData(pool, worldData, excludeRemovedContent).then(menuThemeData => {
                                 pool.query('SELECT lastUpdate, lastFullUpdate FROM updates', (err, rows) => {
                                     if (err) console.error(err);
@@ -445,10 +445,10 @@ function getVersionInfoData(pool, worldData) {
     });
 }
 
-function getEffectData(pool, worldData, excludeRemovedContent) {
+function getEffectData(pool, worldData) {
     return new Promise((resolve, reject) => {
         const effectDataById = {};
-        pool.query('SELECT e.id, e.name, e.nameJP, w.title, e.ordinal, e.filename, e.method, e.methodJP FROM effects e LEFT JOIN worlds w ON w.id = e.worldId' + (excludeRemovedContent ? ' WHERE e.removed = 0' : '') + ' ORDER BY e.ordinal', (err, rows) => {
+        pool.query('SELECT e.id, e.name, e.nameJP, w.title, e.ordinal, e.filename, e.method, e.methodJP FROM effects e LEFT JOIN worlds w ON w.id = e.worldId ORDER BY e.ordinal', (err, rows) => {
             if (err) return reject(err);
             const worldDataByName = _.keyBy(worldData, w => w.title);
             for (let row of rows) {
