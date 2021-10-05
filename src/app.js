@@ -1342,6 +1342,9 @@ function initGraph(renderMode, displayMode, paths) {
 
     const elem = document.getElementById('graph');
 
+    if (graph)
+        disposeGraph();
+
     graph = ForceGraph3D({
         rendererConfig: rendererConfig,
         controlType: 'orbit',
@@ -1709,6 +1712,11 @@ function initGraph(renderMode, displayMode, paths) {
     linksOneWayBuffered = makeOneWayLinkObjects(is2d);
     updateLinkColors(visibleTwoWayLinks, linksTwoWayBuffered);
     updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
+}
+
+function disposeGraph() {
+    graph.renderer().dispose();
+    graph.scene().dispose();
 }
 
 const clock = new THREE.Clock();
@@ -3274,7 +3282,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.5.0");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.5.1");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
@@ -3768,16 +3776,16 @@ function updateConnectionModeIcons(links) {
         iconObject.geometry.attributes.grayscale.array.set(unsortedIconGrayscales, 0);
         let opacities = iconObject.geometry.attributes.opacity.array;
         let grayscales = iconObject.geometry.attributes.grayscale.array;
-        links.forEach(link => {
+        for (let link of links) {
             const linkOpacity = getLinkOpacity(link);
             const linkGrayscale = getLinkGrayscale(link);
-            link.icons.forEach(icon => {
+            for (let icon of link.icons) {
                 opacities[icon.id] = linkOpacity;
                 grayscales[icon.id] = linkGrayscale;
                 if (config.connMode === 0 && link.hidden)
                     opacities[icon.id] = 0;
-            });
-        });
+            }
+        }
         unsortedIconOpacities = opacities.slice();
         unsortedIconGrayscales = grayscales.slice();
         iconObject.geometry.attributes.opacity.needsUpdate = true;
@@ -3787,13 +3795,13 @@ function updateConnectionModeIcons(links) {
             if (icons3D[link.key] !== undefined) {
                 const linkOpacity = getLinkOpacity(link);
                 const linkGrayscale = getLinkGrayscale(link);
-                icons3D[link.key].forEach(icon => {
+                for (let icon of icons3D[link.key]) {
                     icon.visible = true;
                     icon.material.opacity = linkOpacity;
                     icon.material.grayScale = linkGrayscale;
                     if (config.connMode === 0 && link.hidden)
                         icon.visible = false;
-                });
+                }
             }
         });
     }
