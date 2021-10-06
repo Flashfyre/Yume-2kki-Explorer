@@ -3282,7 +3282,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.5.1");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.5.2");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
@@ -3562,7 +3562,7 @@ function initContextMenu(localizedContextMenu) {
                 if (world.bgmUrl.indexOf('|') === -1) {
                     if (!isCtrl) {
                         const worldName = config.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
-                        playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel));
+                        playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel), world.filename);
                     } else {
                         const handle = window.open(world.bgmUrl, '_blank', 'noreferrer');
                         if (handle)
@@ -3619,7 +3619,7 @@ function initContextMenu(localizedContextMenu) {
                     callback: function () {
                         const bgmUrl = bgmUrls[bgmIndex];
                         if (!isCtrl) {
-                            playBgm(bgmUrl, getBgmLabel(worldName, world.bgmLabel.split('|')[bgmIndex]));
+                            playBgm(bgmUrl, getBgmLabel(worldName, world.bgmLabel.split('|')[bgmIndex]), world.filename);
                         } else {
                             const handle = window.open(bgmUrl, '_blank', 'noreferrer');
                             if (handle)
@@ -3689,8 +3689,9 @@ function getBgmLabel(worldName, bgmLabel) {
     return `${worldName}${localizedSeparator}${bgmLabel.slice(separatorIndex + 1)} (${bgmLabel.slice(0, separatorIndex)})`;
 }
 
-function playBgm(url, label) {
-    $('#audioPlayerContainer').empty().append(`
+function playBgm(url, label, imageUrl) {
+    $('.audio-player-image-container').empty().append(`<img src="${imageUrl}" class="audio-player-image" />`);
+    $('.audio-player-player-container').empty().append(`
         <a href="javascript:void(0);" class="close-audio-player noselect">✖</a>
         <marquee class="audio-player-marquee" scrollamount="5">
             <label class="audio-player-label noselect">${label}</label>
@@ -3700,6 +3701,7 @@ function playBgm(url, label) {
             <audio class="audio-source" crossorigin preload="none" autoplay loop></audio>
         </div>
     `);
+    $('.audio-player-container').addClass('open');
 
     audioPlayer = new GreenAudioPlayer('.audio-player');
     audioPlayer.showLoadingIndicator();
@@ -3721,7 +3723,8 @@ function playBgm(url, label) {
         audioPlayer.hideLoadingIndicator();
         $('.close-audio-player').on('click', function () {
             audioPlayer = null;
-            $('#audioPlayerContainer').empty();
+            $('.audio-player-container').removeClass('open');
+            $('.audio-player-image-container, .audio-player-player-container').empty();
         });
         GreenAudioPlayer.playPlayer(audioSource);
     }).catch((err) => console.error(err));
@@ -4395,9 +4398,10 @@ function getMissingBgmUrls() {
         if (w.bgmLabel) {
             const bgmUrls = w.bgmUrl ? w.bgmUrl.split('|') : [ '' ];
             const bgmLabels = w.bgmLabel.split('|').map(l => l.endsWith('^') ? l.slice(0, -1) : l.replace(/\^(.*)/, ' ($1)'));
-            for (let b in bgmLabels) {
-                if (!bgmUrls[b])
-                    ret.push(`${getWorldLinkForAdmin(w)} is missing the BGM URL for ${bgmLabels[b]}`);
+            for (let b of bgmLabels) {
+                const bgmUrl = bgmUrls[b];
+                if (!bgmUrl && b !== 'None')
+                    ret.push(`${getWorldLinkForAdmin(w)} is missing the BGM URL for ${b}`);
             }
         }
     }

@@ -658,18 +658,27 @@ a.close-modal, a.close-audio-player {
 
 .audio-player-container {
     position: absolute;
-    width: 400px;
+    display: flex;
+    width: 474px;
     margin-left: 10px;
     top: calc(100% - 105px);
     z-index: 1;
 }
 
-.audio-player-container:not(:empty) {
+.audio-player-container.open {
     border: 10px solid transparent;
 }
 
+.audio-player-image {
+    width: 72px;
+    height: 72px;
+    padding: 1px;
+    object-fit: cover;
+}
+
 .audio-player-marquee {
-    margin-right: 25px !important;
+    margin-left: 25px;
+    margin-right: 25px;
 }
 
 .audio-player {

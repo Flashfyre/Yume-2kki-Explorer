@@ -1,4 +1,4 @@
-// Version 3.5.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.5.2 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -108017,7 +108017,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.5.1");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.5.2");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
@@ -108297,7 +108297,7 @@ function InsertStackElement(node, body) {
 	                if (world.bgmUrl.indexOf('|') === -1) {
 	                    if (!isCtrl) {
 	                        const worldName = config$1.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
-	                        playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel));
+	                        playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel), world.filename);
 	                    } else {
 	                        const handle = window.open(world.bgmUrl, '_blank', 'noreferrer');
 	                        if (handle)
@@ -108354,7 +108354,7 @@ function InsertStackElement(node, body) {
 	                    callback: function () {
 	                        const bgmUrl = bgmUrls[bgmIndex];
 	                        if (!isCtrl) {
-	                            playBgm(bgmUrl, getBgmLabel(worldName, world.bgmLabel.split('|')[bgmIndex]));
+	                            playBgm(bgmUrl, getBgmLabel(worldName, world.bgmLabel.split('|')[bgmIndex]), world.filename);
 	                        } else {
 	                            const handle = window.open(bgmUrl, '_blank', 'noreferrer');
 	                            if (handle)
@@ -108424,8 +108424,9 @@ function InsertStackElement(node, body) {
 	    return `${worldName}${localizedSeparator}${bgmLabel.slice(separatorIndex + 1)} (${bgmLabel.slice(0, separatorIndex)})`;
 	}
 
-	function playBgm(url, label) {
-	    jquery('#audioPlayerContainer').empty().append(`
+	function playBgm(url, label, imageUrl) {
+	    jquery('.audio-player-image-container').empty().append(`<img src="${imageUrl}" class="audio-player-image" />`);
+	    jquery('.audio-player-player-container').empty().append(`
         <a href="javascript:void(0);" class="close-audio-player noselect">✖</a>
         <marquee class="audio-player-marquee" scrollamount="5">
             <label class="audio-player-label noselect">${label}</label>
@@ -108435,6 +108436,7 @@ function InsertStackElement(node, body) {
             <audio class="audio-source" crossorigin preload="none" autoplay loop></audio>
         </div>
     `);
+	    jquery('.audio-player-container').addClass('open');
 
 	    audioPlayer = new GreenAudioPlayer('.audio-player');
 	    audioPlayer.showLoadingIndicator();
@@ -108456,7 +108458,8 @@ function InsertStackElement(node, body) {
 	        audioPlayer.hideLoadingIndicator();
 	        jquery('.close-audio-player').on('click', function () {
 	            audioPlayer = null;
-	            jquery('#audioPlayerContainer').empty();
+	            jquery('.audio-player-container').removeClass('open');
+	            jquery('.audio-player-image-container, .audio-player-player-container').empty();
 	        });
 	        GreenAudioPlayer.playPlayer(audioSource);
 	    }).catch((err) => console.error(err));
@@ -109128,9 +109131,10 @@ function InsertStackElement(node, body) {
 	        if (w.bgmLabel) {
 	            const bgmUrls = w.bgmUrl ? w.bgmUrl.split('|') : [ '' ];
 	            const bgmLabels = w.bgmLabel.split('|').map(l => l.endsWith('^') ? l.slice(0, -1) : l.replace(/\^(.*)/, ' ($1)'));
-	            for (let b in bgmLabels) {
-	                if (!bgmUrls[b])
-	                    ret.push(`${getWorldLinkForAdmin(w)} is missing the BGM URL for ${bgmLabels[b]}`);
+	            for (let b of bgmLabels) {
+	                const bgmUrl = bgmUrls[b];
+	                if (!bgmUrl && b !== 'None')
+	                    ret.push(`${getWorldLinkForAdmin(w)} is missing the BGM URL for ${b}`);
 	            }
 	        }
 	    }
