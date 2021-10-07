@@ -1082,7 +1082,8 @@ let config = {
     pathMode: 1,
     sizeDiff: 1,
     stackSize: 20,
-    versionDisplayToggles: getDefaultVersionDisplayToggles()
+    versionDisplayToggles: getDefaultVersionDisplayToggles(),
+    audioVolume: 0.65
 };
 
 let lastUpdate, lastFullUpdate;
@@ -1720,8 +1721,7 @@ function initGraph(renderMode, displayMode, paths) {
         controls.maxPolarAngle = controls.minPolarAngle = Math.PI / 2;
         controls.maxAzimuthAngle = controls.minAzimuthAngle = 0;
         controls.mouseButtons = {
-            LEFT: THREE.MOUSE.PAN,
-            RIGHT: THREE.MOUSE.PAN
+            LEFT: THREE.MOUSE.PAN
         };
         controls.touches = {
             ONE: THREE.TOUCH.PAN
@@ -3353,7 +3353,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.6.0");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.6.1");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
@@ -3781,6 +3781,17 @@ function playBgm(url, label, imageUrl) {
     const requestObj = new Request(url, {
         method: 'GET',
         referrerPolicy: 'no-referrer'
+    });
+    
+    audioPlayer.player.volume = config.audioVolume;
+    audioPlayer.player.addEventListener('volumechange', function (e) {
+        const currentVolume = audioPlayer.player.volume;
+        window.setTimeout(function () {
+            if (audioPlayer.player.volume === currentVolume) {
+                config.audioVolume = currentVolume;
+                updateConfig(config);
+            }
+        }, 1000);
     });
 
     fetch(requestObj).then(function (response) {
