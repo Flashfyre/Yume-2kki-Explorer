@@ -1,4 +1,4 @@
-// Version 3.5.2 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.6.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -104830,6 +104830,7 @@ function InsertStackElement(node, body) {
 	let authorData;
 	let effectData;
 	let menuThemeData;
+	let wallpaperData;
 
 	function initWorldData(data) {
 	    exports.worldData = data;
@@ -105173,7 +105174,7 @@ function InsertStackElement(node, body) {
 	        const $versionEntryContent = jquery('<div class="js--version-entry--content collectable-entry--content"></div>');
 	        const $versionEntryContentList = jquery('<ul class="js--version-entry--content__list collectable-entry--content__list"></ul>');
 	        for (let vde of versionDetailsEntries)
-	            $versionEntryContentList.append(`<li>${vde}</li>`);
+	            $versionEntryContentList.append(`<li class="styled-list-item">${vde}</li>`);
 	        $versionEntryContent.append($versionEntryContentList);
 	        $versionEntryLink.append($versionEntryContent);
 	        $versionEntryLink.append('<button class="js--version-entry--expand collectable-entry--expand noselect">▶</button>');
@@ -105468,6 +105469,69 @@ function InsertStackElement(node, body) {
 	    });
 	}
 
+	function initWallpaperData(data) {
+	    wallpaperData = data;
+
+	    const $wallpapersContainerItems = jquery('.js--wallpapers-container__items');
+	    const $wallpapersContainerBorders = jquery('.js--wallpapers-container__borders');
+	    const $removedWallpapersContainerItems = jquery('.js--removed-wallpapers-container__items');
+	    const $removedWallpapersContainerBorders = jquery('.js--removed-wallpapers-container__borders');
+	    const wallpapersById = {};
+
+	    $wallpapersContainerItems.empty();
+	    $wallpapersContainerBorders.empty();
+	    $removedWallpapersContainerItems.empty();
+	    $removedWallpapersContainerBorders.empty();
+
+	    for (let wp of wallpaperData) {
+	        const removedCollectableClass = wp.removed ? ' removed-collectable' : '';
+	        const censoredClass = wp.wallpaperId === 1149 ? ' censored' : '';
+	        const worldIdAttribute = wp.worldId ? ` data-id="${wp.worldId}"` : '';
+	        const removedAttribute = wp.removed ? ' data-removed="true"' : '';
+	        const wallpaperImageHtml = `<div href="javascript:void(0);" class="wallpaper collectable${censoredClass}${removedCollectableClass} noselect"><img src="${wp.filename}" referrerpolicy="no-referrer" /></div>`;
+	        const wallpaperLinkHtml = `<a href="javascript:void(0);" class="js--wallpaper wallpaper collectable--border noselect" data-wallpaper-id="${wp.id}"${worldIdAttribute}${removedAttribute}></a>`;
+	        wp.method = wp.method.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
+	        if (wp.methodJP)
+	            wp.methodJP = wp.methodJP.replace(/<span .*?>(.*?)<\/ *span>/ig, '$1').replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
+	        jquery(wallpaperImageHtml).appendTo(wp.removed ? $removedWallpapersContainerItems : $wallpapersContainerItems);
+	        jquery(wallpaperLinkHtml).appendTo(wp.removed ? $removedWallpapersContainerBorders : $wallpapersContainerBorders);
+	        wallpapersById[wp.id] = wp;
+	    }
+
+	    const $tooltip = jquery('<div class="wallpaper-tooltip scene-tooltip display--none"></div>').prependTo('.content');
+
+	    jquery('.js--wallpaper[data-id]').on('click', function () {
+	        if (trySelectNode(jquery(this).data('id'), true, true)) {
+	            $tooltip.addClass('display--none');
+	            jquery.modal.close();
+	        }
+	    });
+	    
+	    jquery('.js--wallpaper').on('mousemove', function (e) {
+	        $tooltip.css({
+	            top: e.pageY + 10 + 'px',
+	            left: (e.pageX - ($tooltip.innerWidth() / 2)) + 'px'
+	        });
+	    }).on('mouseenter', function () {
+	        const wallpaper = wallpapersById[jquery(this).data('wallpaperId')];
+	        const title = config$1.lang === 'en' ? wallpaper.name : wallpaper.nameJP;
+	        const method = config$1.lang === 'en' ? wallpaper.method : wallpaper.methodJP;
+	        $tooltip.html(localizedWallpaperLabel
+	                .replace('{WALLPAPER_ID}', wallpaper.wallpaperId - (wallpaper.removed ? 1000 : 0))
+	                .replace('{TITLE}', title)
+	                .replace('{METHOD}', method || ''))
+	                .removeClass('display--none');
+	        if (!title)
+	            $tooltip.find('.js--wallpaper-tooltip__title').remove();
+	        $tooltip.find('.js--wallpaper-tooltip__wallpaper').toggleClass('alone', !method);
+	        jquery((wallpaper.removed ? $removedWallpapersContainerItems : $wallpapersContainerItems).children()[jquery(this).index()]).addClass('hover');
+	    }).on('mouseleave', function () {
+	        $tooltip.addClass('display--none');
+	        const $wallpapersContainer = jquery(this).data('removed') ? $removedWallpapersContainerItems : $wallpapersContainerItems;
+	        jquery(jquery($wallpapersContainer.children()[jquery(this).index()])).removeClass('hover');
+	    });
+	}
+
 	function loadOrInitConfig() {
 	    try {
 	        if (!window.localStorage.hasOwnProperty("config"))
@@ -105671,6 +105735,7 @@ function InsertStackElement(node, body) {
 	        initAuthorData(data.authorInfoData, data.versionInfoData);
 	        initEffectData(data.effectData);
 	        initMenuThemeData(data.menuThemeData);
+	        initWallpaperData(data.wallpaperData);
 	        lastUpdate = new Date(data.lastUpdate);
 	        lastFullUpdate = new Date(data.lastFullUpdate);
 
@@ -105723,6 +105788,7 @@ function InsertStackElement(node, body) {
 	let localizedAuthorLabel;
 	let localizedVersionLabel;
 	let localizedEffectLabel;
+	let localizedWallpaperLabel;
 	let localizedNodeIconNew;
 	let localizedVersionDetails;
 	let localizedVersionDisplayToggle;
@@ -107194,7 +107260,12 @@ function InsertStackElement(node, body) {
 
 	function getLocalizedEffectLabel(localizedEffectLabel) {
 	    return `<span class="effect-tooltip__effect tooltip__value">{EFFECT}</span><br>
-        <span class="effect-tooltip__location">${localizedEffectLabel.location}<span class="tooltip__value">{LOCATION}</span><br></span>{METHOD}`;
+            <span class="effect-tooltip__location">${localizedEffectLabel.location}<span class="tooltip__value">{LOCATION}</span><br></span>{METHOD}`;
+	}
+
+	function getLocalizedWallpaperLabel(localizedWallpaperLabel) {
+	    return `<span class="js--wallpaper-tooltip__wallpaper wallpaper-tooltip__wallpaper tooltip__value">${localizedWallpaperLabel.number}{WALLPAPER_ID}<span class="js--wallpaper-tooltip__title">${localizedWallpaperLabel.titleTemplate}</span></span><br>
+            {METHOD}`;
 	}
 
 	/**
@@ -108017,7 +108088,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.5.2");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.6.0");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
@@ -108039,6 +108110,7 @@ function InsertStackElement(node, body) {
 	            localizedAuthorLabel = getLocalizedAuthorLabel(data.authorLabel);
 	            localizedVersionLabel = getLocalizedVersionLabel(data.versionLabel);
 	            localizedEffectLabel = getLocalizedEffectLabel(data.effectLabel);
+	            localizedWallpaperLabel = getLocalizedWallpaperLabel(data.wallpaperLabel);
 	            localizedNodeIconNew = data.nodeIcon.new;
 	            localizedVersionDetails = getLocalizedVersionDetails(data.versionDetails);
 	            localizedVersionDisplayToggle = data.versionEntriesModal.versionDisplayToggle;
@@ -108909,6 +108981,19 @@ function InsertStackElement(node, body) {
 	        }
 	    });
 
+	    jquery(".js--wallpapers").on("click", function() {
+	        if (wallpaperData && wallpaperData.length) {
+	            if (jquery(".js--wallpapers-modal:visible").length)
+	                jquery.modal.close();
+	            else
+	                jquery(".js--wallpapers-modal").modal({
+	                    fadeDuration: 100,
+	                    closeClass: 'noselect',
+	                    closeText: '✖'
+	                });
+	        }
+	    });
+
 	    jquery(".js--reset").on("click", function() {
 	        jquery(".js--world-input").removeClass("selected").val("");
 	        jquery(".js--author").val("null");
@@ -109272,7 +109357,7 @@ function InsertStackElement(node, body) {
 	            for (let ae of ver.addEntries) {
 	                const world = exports.worldData[ae.worldId];
 	                const $entry = jquery(`
-                    <li class="js--version-update__version__entry">
+                    <li class="js--version-update__version__entry styled-list-item">
                         <span class="version-update__version__entry-view"></span>
                         ${versionUpdateEntryEditHtml}
                     </li>
@@ -109285,7 +109370,7 @@ function InsertStackElement(node, body) {
 	            for (let ue of ver.updateEntries) {
 	                const world = exports.worldData[ue.worldId];
 	                const $entry = jquery(`
-                    <li class="js--version-update__version__entry">
+                    <li class="js--version-update__version__entry styled-list-item">
                         <span class="version-update__version__entry-view"></span>
                         ${versionUpdateEntryEditHtml}
                     </li>
@@ -109299,7 +109384,7 @@ function InsertStackElement(node, body) {
 	            for (let re of ver.removeEntries) {
 	                const world = exports.worldData[re.worldId];
 	                const $entry = jquery(`
-                    <li class="js--version-update__version__entry">
+                    <li class="js--version-update__version__entry styled-list-item">
                         <span class="version-update__version__entry-view"></span>
                         ${versionUpdateEntryEditHtml}
                     </li>
@@ -109310,7 +109395,7 @@ function InsertStackElement(node, body) {
 	            }
 
 	            $ver.append(`
-                <li class="js--version-update__version__new-entry">
+                <li class="js--version-update__version__new-entry styled-list-item">
                     <span class="version-update__version__entry-edit display--none">
                         <a href="javascript:void(0);" class="js--version-update__version__entry__add-btn icon-link no-border">➕</a>
                     </span>
@@ -109570,7 +109655,7 @@ function InsertStackElement(node, body) {
 	        const $editVer = jquery(this).parents('.version-update__version');
 	        const $entryEdit = jquery(versionUpdateEntryEditHtml);
 	        const $entry = jquery(`
-            <li class="js--version-update__version__entry">
+            <li class="js--version-update__version__entry styled-list-item">
                 <span class="version-update__version__entry-view display--none"></span>
             </li>
         `).append($entryEdit.removeClass('display--none'));
@@ -109662,9 +109747,9 @@ function InsertStackElement(node, body) {
 	            const $dataList = jquery('<ul></ul>');
 	            if (data.length) {
 	                for (let d of data)
-	                    $dataList.append(`<li>${d}</li>`);
+	                    $dataList.append(`<li class="styled-list-item">${d}</li>`);
 	            } else
-	                $dataList.append(`<li>${dataIssues[di].emptyMessage}</li>`);
+	                $dataList.append(`<li class="styled-list-item">${dataIssues[di].emptyMessage}</li>`);
 	            jquery(`.js--data-issues__${di}`).html($dataList);
 	        });
 	    });
@@ -109715,6 +109800,7 @@ function InsertStackElement(node, body) {
 	        initAuthorData(data.authorInfoData, data.versionInfoData);
 	        initEffectData(data.effectData);
 	        initMenuThemeData(data.menuThemeData);
+	        initWallpaperData(data.wallpaperData);
 	        lastUpdate = new Date(data.lastUpdate);
 	        lastFullUpdate = new Date(data.lastFullUpdate);
 

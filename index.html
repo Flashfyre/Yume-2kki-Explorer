@@ -19,7 +19,7 @@
                 color: rgba(216, 216, 216, 1); /*base*/
             }
 
-            label, h1, h2, h3, h4, p, li:not(.context-menu-item), .close-modal, .close-audio-player, .loading-container .loading-container__text {
+            label, h1, h2, h3, h4, p, li.styled-list-item, .close-modal, .close-audio-player, .loading-container .loading-container__text {
                 background-image: url(/images/ui/Default_Custom/font1.png) !important; /*base*/
                 -webkit-background-clip: text;
 	            -webkit-text-fill-color: transparent;
@@ -275,6 +275,7 @@
                         <button data-localize="collectableControls.versions.name" class="js--version-entries noselect">Versions</button>
                         <button data-localize="collectableControls.effects.name" class="js--effects noselect">Effects</button>
                         <button data-localize="collectableControls.menuThemes.name" class="js--menu-themes noselect">Menu Themes</button>
+                        <button data-localize="collectableControls.wallpapers.name" class="js--wallpapers noselect">Wallpapers</button>
                     </div>
                 </div>
             </div>
@@ -458,6 +459,26 @@
                         <div class="js--removed-menu-themes-container collectables-container">
                             <div class="js--removed-menu-themes-container__items collectables-container__items"></div>
                             <div class="js--removed-menu-themes-container__borders collectables-container__borders"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="wallpapersModal" class="js--wallpapers-modal modal">
+            <div class="modal__content--container">
+                <div class="js--wallpapers-modal__content modal__content">
+                    <div class="js--wallpapers-container collectables-container">
+                        <div class="js--wallpapers-container__items collectables-container__items"></div>
+                        <div class="js--wallpapers-container__borders collectables-container__borders"></div>
+                    </div>
+                    <div class="js--removed-content">
+                        <span class="wallpapers__removed-title noselect">
+                            <h2 data-localize="wallpapersModal.removedWallpapers">Removed Wallpapers</h2>
+                            <hr />
+                        </span>
+                        <div class="js--removed-wallpapers-container collectables-container">
+                            <div class="js--removed-wallpapers-container__items collectables-container__items"></div>
+                            <div class="js--removed-wallpapers-container__borders collectables-container__borders"></div>
                         </div>
                     </div>
                 </div>

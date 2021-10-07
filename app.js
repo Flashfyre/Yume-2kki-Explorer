@@ -162,6 +162,20 @@ function initDb(pool) {
                     REFERENCES worlds (id)
                     ON DELETE CASCADE
             )`)).then(() => queryAsPromise(pool,
+            `CREATE TABLE IF NOT EXISTS wallpapers (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                wallpaperId INT NOT NULL,
+                name VARCHAR(255) NULL,
+                nameJP VARCHAR(255) NULL,
+                worldId INT NULL,
+                filename VARCHAR(255) NOT NULL,
+                method VARCHAR(2000) NULL,
+                methodJP VARCHAR(1000) NULL,
+                removed BIT NOT NULL,
+                FOREIGN KEY (worldId)
+                    REFERENCES worlds (id)
+                    ON DELETE CASCADE
+            )`)).then(() => queryAsPromise(pool,
             `CREATE TABLE IF NOT EXISTS author_info (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 name VARCHAR(100) NOT NULL,
@@ -220,28 +234,31 @@ app.get('/data', function(req, res) {
                     getVersionInfoData(pool, worldData).then(versionInfoData => {
                         getEffectData(pool, worldData).then(effectData => {
                             getMenuThemeData(pool, worldData, excludeRemovedContent).then(menuThemeData => {
-                                pool.query('SELECT lastUpdate, lastFullUpdate FROM updates', (err, rows) => {
-                                    if (err) console.error(err);
-                                    const row = rows.length ? rows[0] : null;
-                                    const lastUpdate = row ? row.lastUpdate : null;
-                                    const lastFullUpdate = row ? row.lastFullUpdate : null;
-                                    const isAdmin = req.query.hasOwnProperty('adminKey') && req.query.adminKey === appConfig.ADMIN_KEY;
+                                getWallpaperData(pool, worldData, excludeRemovedContent).then(wallpaperData => {
+                                    pool.query('SELECT lastUpdate, lastFullUpdate FROM updates', (err, rows) => {
+                                        if (err) console.error(err);
+                                        const row = rows.length ? rows[0] : null;
+                                        const lastUpdate = row ? row.lastUpdate : null;
+                                        const lastFullUpdate = row ? row.lastFullUpdate : null;
+                                        const isAdmin = req.query.hasOwnProperty('adminKey') && req.query.adminKey === appConfig.ADMIN_KEY;
 
-                                    if (Math.random() * 255 < 1)
-                                        updateWorldDataForChance(worldData);
-                    
-                                    res.json({
-                                        worldData: worldData,
-                                        authorInfoData: authorInfoData,
-                                        versionInfoData: versionInfoData,
-                                        effectData: effectData,
-                                        menuThemeData: menuThemeData,
-                                        lastUpdate: lastUpdate,
-                                        lastFullUpdate: lastFullUpdate,
-                                        isAdmin: isAdmin
+                                        if (Math.random() * 255 < 1)
+                                            updateWorldDataForChance(worldData);
+                        
+                                        res.json({
+                                            worldData: worldData,
+                                            authorInfoData: authorInfoData,
+                                            versionInfoData: versionInfoData,
+                                            effectData: effectData,
+                                            menuThemeData: menuThemeData,
+                                            wallpaperData: wallpaperData,
+                                            lastUpdate: lastUpdate,
+                                            lastFullUpdate: lastFullUpdate,
+                                            isAdmin: isAdmin
+                                        });
+                                        pool.end();
                                     });
-                                    pool.end();
-                                });
+                                }).catch(err => console.error(err));
                             }).catch(err => console.error(err));
                         }).catch(err => console.error(err));
                     }).catch(err => console.error(err));
@@ -256,10 +273,12 @@ app.get('/data', function(req, res) {
                             updateVersionInfoData(pool).then(() => {
                                 updateEffectData(pool, worldData).then(() => {
                                     updateMenuThemeData(pool, worldData).then(() => {
-                                        pool.query('UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()', (err) => {
-                                            if (err) console.error(err);
-                                            callback();
-                                        });
+                                        updateWallpaperData(pool, worldData).then(() => {
+                                            pool.query('UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()', (err) => {
+                                                if (err) console.error(err);
+                                                callback();
+                                            });
+                                        }).catch(err => console.error(err));
                                     }).catch(err => console.error(err));
                                 }).catch(err => console.error(err));
                             }).catch(err => console.error(err));
@@ -279,10 +298,12 @@ app.get('/data', function(req, res) {
                                                 checkUpdateVersionInfoData(pool, rows[0].lastUpdate).then(() => {
                                                     checkUpdateEffectData(pool, worldData, rows[0].lastUpdate).then(() => {
                                                         checkUpdateMenuThemeData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                                            pool.query('UPDATE updates SET lastUpdate=NOW()', err => {
-                                                                if (err) console.error(err);
-                                                                callback();
-                                                            });
+                                                            checkUpdateWallpaperData(pool, worldData, rows[0].lastUpdate).then(() => {
+                                                                pool.query('UPDATE updates SET lastUpdate=NOW()', err => {
+                                                                    if (err) console.error(err);
+                                                                    callback();
+                                                                });
+                                                            }).catch(err => console.error(err));
                                                         }).catch(err => console.error(err));
                                                     }).catch(err => console.error(err));
                                                 }).catch(err => console.error(err));
@@ -513,6 +534,32 @@ function getMenuThemeData(pool, worldData, excludeRemovedContent) {
     });
 }
 
+function getWallpaperData(pool, worldData, excludeRemovedContent) {
+    return new Promise((resolve, reject) => {
+        const wallpaperDataByWpId = {};
+        pool.query('SELECT wp.id, wp.wallpaperId, wp.name, wp.nameJP, w.title, wp.filename, wp.method, wp.methodJP, wp.removed FROM wallpapers wp LEFT JOIN worlds w ON w.id = wp.worldId' + (excludeRemovedContent ? ' WHERE wp.removed = 0' : '') + ' ORDER BY wp.wallpaperId', (err, rows) => {
+            if (err) return reject(err);
+            const worldDataByName = _.keyBy(worldData, w => w.title);
+            for (let row of rows) {
+                const world = row.title ? worldDataByName[row.title] : null;
+                wallpaperDataByWpId[row.id] = {
+                    id: row.id,
+                    wallpaperId: row.wallpaperId,
+                    name: row.name,
+                    nameJP: row.nameJP,
+                    worldId: world ? world.id : null,
+                    filename: row.filename,
+                    method: row.method,
+                    methodJP: row.methodJP,
+                    removed: row.removed
+                };
+            }
+
+            resolve(_.sortBy(Object.values(wallpaperDataByWpId), e => e.wallpaperId));
+        });
+    });
+}
+
 function checkUpdateData(pool) {
     return new Promise((resolve, reject) => {
         pool.query('SELECT lastFullUpdate FROM updates WHERE DATE_ADD(lastFullUpdate, INTERVAL 1 WEEK) < NOW()', (err, rows) => {
@@ -522,7 +569,11 @@ function checkUpdateData(pool) {
                     populateWorldData(pool).then(worldData => {
                         if (err) console.error(err);
                         updateMapData(pool, worldData).then(() => {
-                            updateMenuThemeData(pool, worldData).then(() => resolve()).catch(err => reject(err));
+                            updateEffectData(pool, worldData).then(() => {
+                                updateMenuThemeData(pool, worldData).then(() => {
+                                    updateWallpaperData(pool, worldData).then(() => resolve()).catch(err => reject(err));
+                                }).catch(err => reject(err));
+                            }).catch(err => reject(err));
                         }).catch(err => reject(err));
                     }).catch(err => reject(err));
                 });
@@ -540,7 +591,9 @@ function checkUpdateData(pool) {
                                                 checkUpdateAuthorInfoData(pool, rows[0].lastUpdate).then(() => {
                                                     checkUpdateVersionInfoData(pool, rows[0].lastUpdate).then(() => {
                                                         checkUpdateEffectData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                                            checkUpdateMenuThemeData(pool, worldData, rows[0].lastUpdate).then(() => resolve()).catch(err => reject(err));
+                                                            checkUpdateMenuThemeData(pool, worldData, rows[0].lastUpdate).then(() => {
+                                                                checkUpdateWallpaperData(pool, worldData, rows[0].lastUpdate).then(() => resolve()).catch(err => reject(err));
+                                                            }).catch(err => reject(err))
                                                         }).catch(err => reject(err));
                                                     }).catch(err => reject(err));
                                                 }).catch(err => reject(err));
@@ -658,6 +711,17 @@ function checkUpdateMenuThemeData(pool, worldData, lastUpdate) {
         checkUpdatePage("Menu Themes", lastUpdate).then(needsUpdate => {
             if (needsUpdate)
                 updateMenuThemeData(pool, worldData).then(() => resolve()).catch(err => reject(err));
+            else
+                resolve();
+        }).catch(err => reject(err));
+    });
+}
+
+function checkUpdateWallpaperData(pool, worldData, lastUpdate) {
+    return new Promise((resolve, reject) => {
+        checkUpdatePage("Wallpaper_Guide", lastUpdate).then(needsUpdate => {
+            if (needsUpdate)
+                updateWallpaperData(pool, worldData).then(() => resolve()).catch(err => reject(err));
             else
                 resolve();
         }).catch(err => reject(err));
@@ -1883,7 +1947,7 @@ function addEffectDataJPMethod(effect) {
             const methodMatch = /<th>備考<\/th><td>(.*)<\/td><\/tr>/.exec(res.text);
             let method = null;
             if (methodMatch) {
-                method = methodMatch[1].replace(/<a .*?>\?<\/a>/g, '').replace(/<[^>]+>/g, '');
+                method = methodMatch[1].replace(/<a .*?>\?<\/a>/g, '');
 
                 const routeWorlds = [];
                 const routeSectionMatch = /<th>ルート例<\/th>.*<\/tr>/.exec(res.text);
@@ -2260,6 +2324,222 @@ function deleteRemovedMenuThemeLocations(pool, removedMenuThemeLocationIds) {
         }
         deleteMenuThemeLocationsQuery += ')';
         pool.query(deleteMenuThemeLocationsQuery, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+}
+
+function updateWallpaperData(pool, worldData) {
+    return new Promise((resolve, reject) => {
+        getWallpaperWikiData(worldData).then(wallpaperData => {
+            pool.query('SELECT id, wallpaperId, name, nameJP, worldId, filename, method, methodJP, removed FROM wallpapers', (err, rows) => {
+                if (err) return reject(err);
+                const wallpaperDataByWpId = _.keyBy(wallpaperData, e => e.wallpaperId);
+                const newWallpapersByWpId = _.keyBy(wallpaperData, e => e.wallpaperId);
+                const updatedWallpapers = [];
+                const removedWallpaperIds  = [];
+                for (let row of rows) {
+                    const wallpaperId = row.wallpaperId;
+                    if (wallpaperDataByWpId.hasOwnProperty(wallpaperId)) {
+                        const wallpaper = wallpaperDataByWpId[wallpaperId];
+                        wallpaper.id = row.id;
+                        if (row.name !== wallpaper.name || row.nameJP !== wallpaper.nameJP || row.worldId !== wallpaper.worldId ||
+                            row.filename !== wallpaper.filename || row.method !== wallpaper.method || row.methodJP !== wallpaper.methodJP ||
+                            row.removed !== wallpaper.removed)
+                            updatedWallpapers.push(wallpaper);
+                    } else
+                        removedWallpaperIds.push(row.id);
+                    delete newWallpapersByWpId[wallpaperId];
+                }
+    
+                const insertCallback = function () {
+                    if (updatedWallpapers.length) {
+                        const updateWallpapers = [];
+                        for (let wallpaper of updatedWallpapers)
+                            updateWallpapers.push(updateWallpaper(pool, wallpaper).catch(err => console.error(err)));
+                        Promise.allSettled(updateWallpapers).finally(() => resolve());
+                    } else
+                        resolve();
+                };
+    
+                const callback = function () {
+                    const newWallpaperIds = Object.keys(newWallpapersByWpId);
+                    if (newWallpaperIds.length) {
+                        let i = 0;
+                        let wallpapersQuery = 'INSERT INTO wallpapers (wallpaperId, name, nameJP, worldId, filename, method, methodJP, removed) VALUES ';
+                        for (let wp in newWallpapersByWpId) {
+                            const newWallpaper = newWallpapersByWpId[wp];
+                            if (i++)
+                                wallpapersQuery += ", ";
+                            const wallpaperId = newWallpaper.wallpaperId;
+                            const name = newWallpaper.name ? `'${newWallpaper.name.replace(/'/g, "''")}'` : 'NULL';
+                            const nameJP = newWallpaper.nameJP ? `'${newWallpaper.nameJP}'` : 'NULL';
+                            const worldId = newWallpaper.worldId ? `${newWallpaper.worldId}` : 'NULL';
+                            const filename = newWallpaper.filename.replace(/'/g, "''");
+                            const method = newWallpaper.method ? `'${newWallpaper.method.replace(/'/g, "''")}'` : 'NULL';
+                            const methodJP = newWallpaper.methodJP ? `'${newWallpaper.methodJP.replace(/'/g, "''")}'` : 'NULL';
+                            const removed = newWallpaper.removed ? '1' : '0';
+                            wallpapersQuery += `('${wallpaperId}', ${name}, ${nameJP}, ${worldId}, '${filename}', ${method}, ${methodJP}, ${removed})`;
+                        }
+                        pool.query(wallpapersQuery, (err, res) => {
+                            if (err) return reject(err);
+                            const insertedRows = res.affectedRows;
+                            const wallpaperRowIdsQuery = `SELECT r.id FROM (SELECT id FROM wallpapers ORDER BY id DESC LIMIT ${insertedRows}) r ORDER BY 1`;
+                            pool.query(wallpaperRowIdsQuery, (err, rows) => {
+                                if (err) return reject(err);
+                                for (let r in rows)
+                                    newWallpapersByWpId[newWallpaperIds[r]].id = rows[r].id;
+                                insertCallback();
+                            });
+                        });
+                    } else
+                        insertCallback();
+                };
+    
+                if (removedWallpaperIds.length)
+                    deleteRemovedWallpapers(pool, removedWallpaperIds).then(() => callback()).catch(err => reject(err));
+                else
+                    callback();
+            });
+        }).catch(err => reject(err));
+    });
+}
+
+function getWallpaperWikiData(worldData) {
+    return new Promise((resolve, reject) => {
+        superagent.get('https://yume2kki.fandom.com/wiki/Wallpaper_Guide', function (err, res) {
+            if (err) return reject(err);
+            const specHtml = res.text.slice(res.text.indexOf('id="Specifications"'), res.text.indexOf('id="Removed_or_modified_wallpapers"'));
+            const wallpaperSectionsHtml = res.text.split('"wikia-gallery-item"');
+            const wallpaperRegex = /<img .*?src="(.*?\/revision\/latest)[^"]+".*?#(\d+)(?: \- "([^"]+)"|<\/b>).*? \- (.*?)<\/div>/;
+            const removedWallpaperRegex = /<img .*?src="(.*?\/revision\/latest)[^"]+".*<b>.*?"(.*?)".*? \- (.*?[^#]+#(\d+).*?)<\/div>/;
+            const wallpaperData = [];
+            let removedFlag = false;
+
+            for (let wp = 1; wp < wallpaperSectionsHtml.length - 1; wp++) {
+                const section = wallpaperSectionsHtml[wp];
+                let name = null;
+                let filename;
+                let method;
+                const removed = removedFlag;
+                if (!removed) {
+                    
+                    if (section.indexOf('id="Removed_or_modified_wallpapers"') > 1)
+                        removedFlag = true;
+                    
+                    const wallpaperMatch = wallpaperRegex.exec(section);
+                    if (!wallpaperMatch || isNaN(wallpaperMatch[2]))
+                        continue;
+                    
+                    wallpaperId = parseInt(wallpaperMatch[2]);
+                    name = wallpaperMatch[3] ? wallpaperMatch[3].trim() : null;
+                    filename = wallpaperMatch[1];
+                    method = wallpaperMatch[4].trim();
+                } else {
+                    const removedWallpaperMatch = removedWallpaperRegex.exec(section);
+                    if (!removedWallpaperMatch || isNaN(removedWallpaperMatch[4]))
+                        continue;
+
+                    wallpaperId = parseInt(removedWallpaperMatch[4]) + 1000;
+                    name = removedWallpaperMatch[2];
+                    filename = removedWallpaperMatch[1];
+                    method = removedWallpaperMatch[3].replace(/<a id="notetext\_.*?<\/a>/g, '').trim();
+                }
+
+                const worldLinkRegex = /"\/wiki\/([^"]+)"/g;
+                let worldLinkMatch;
+                let worldId = null;
+
+                while ((worldLinkMatch = worldLinkRegex.exec(method))) {
+                    if (worldLinkMatch) {
+                        const worldName = sanitizeWorldName(worldLinkMatch[1]);
+                        const worldMatches = worldName ? worldData.filter(w => w.title === worldName) : [];
+                        if (worldMatches.length) {
+                            worldId = worldMatches[0].id;
+                            break;
+                        }
+                    }
+                }
+
+                const methodSpecLinkRegex = /<a href="#Wallpaper\_.*?<\/a>/;
+                const hasSpec = !removed && methodSpecLinkRegex.test(method);
+                let spec = '';
+
+                if (hasSpec) {
+                    const specRegex = new RegExp(`id="Wallpaper\_#${wallpaperId}".*([\\s\\S]*?)<(?:p> *<br.*|h2)`);
+                    const specMatch = specRegex.exec(specHtml);
+                    if (specMatch)
+                        spec = '<br>' + specMatch[1].trim();
+                }
+
+                method = (method + spec).replace(/<a .*?>(.*?)<\/a>/g, '<a href="#">$1</a>');
+
+                wallpaperData.push({
+                    wallpaperId: wallpaperId,
+                    name: name,
+                    nameJP: null,
+                    worldId: worldId,
+                    filename: filename,
+                    method: method,
+                    methodJP: null,
+                    removed: removed
+                });
+            }
+
+            addWallpaperDataJPMethods(wallpaperData).then(() => resolve(wallpaperData)).catch(err => console.error(err));
+        });
+    });
+}
+
+function addWallpaperDataJPMethods(wallpaperData) {
+    return new Promise((resolve, reject) => {
+        superagent.get('https://wikiwiki.jp/yume2kki-t/%E5%8F%8E%E9%9B%86%E8%A6%81%E7%B4%A0/%E3%83%91%E3%82%BD%E3%82%B3%E3%83%B3%E3%81%AE%E5%A3%81%E7%B4%99%E3%81%AE%E8%A7%A3%E6%94%BE%E6%9D%A1%E4%BB%B6', function (err, res) {
+            if (err) return reject(err);
+            const dataHtml = res.text.slice(res.text.indexOf('No.</th>'), res.text.indexOf('</table>', res.text.lastIndexOf('No.</th>')));
+            const wallpaperRegex = /<tr>.*?>(\d+)<\/td><td [^>]+>(.*?)<\/td><\/tr>/g;
+            let wallpaperMatch;
+            while ((wallpaperMatch = wallpaperRegex.exec(dataHtml))) {
+                const wallpaperId = parseInt(wallpaperMatch[1]);
+                const methodJP = wallpaperMatch[2].replace(/<a .*?>\?<\/a>/g, '').replace(/<[^>]+>/g, '');
+                const wallpaperMatches = wallpaperData.filter(wp => wp.wallpaperId === wallpaperId);
+                if (wallpaperMatches.length)
+                    wallpaperMatches[0].methodJP = methodJP;
+            }
+
+            resolve();
+        });
+    });
+}
+
+function updateWallpaper(pool, wallpaper) {
+    return new Promise((resolve, reject) => {
+        const wallpaperId = wallpaper.wallpaperId;
+        const name = wallpaper.name ? `'${wallpaper.name.replace(/'/g, "''")}'` : 'NULL';
+        const nameJP = wallpaper.nameJP ? `'${wallpaper.nameJP}'` : 'NULL';
+        const worldId = wallpaper.worldId ? `${wallpaper.worldId}` : 'NULL';
+        const filename = wallpaper.filename.replace(/'/g, "''");
+        const method = wallpaper.method ? `'${wallpaper.method.replace(/'/g, "''")}'` : 'NULL';
+        const methodJP = wallpaper.methodJP ? `'${wallpaper.methodJP.replace(/'/g, "''")}'` : 'NULL';
+        const removed = wallpaper.removed ? '1' : '0';
+        pool.query(`UPDATE wallpapers SET wallpaperId=${wallpaperId}, name=${name}, nameJP=${nameJP}, worldId=${worldId}, filename='${filename}', method=${method}, methodJP=${methodJP}, removed=${removed} WHERE id=${wallpaper.id}`, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+}
+
+function deleteRemovedWallpapers(pool, removedWallpaperIds) {
+    return new Promise((resolve, reject) => {
+        let i = 0;
+        let deleteWallpapersQuery = 'DELETE FROM wallpapers WHERE id IN (';
+        for (let wallpaperId of removedWallpaperIds) {
+            if (i++)
+                deleteWallpapersQuery += ', ';
+            deleteWallpapersQuery += wallpaperId;
+        }
+        deleteWallpapersQuery += ')';
+        pool.query(deleteWallpapersQuery, (err, _) => {
             if (err) return reject(err);
             resolve();
         });

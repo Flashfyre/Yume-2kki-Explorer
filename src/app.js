@@ -93,6 +93,7 @@ let authoredVersionData;
 let authorData;
 let effectData;
 let menuThemeData;
+let wallpaperData;
 
 function initWorldData(data) {
     worldData = data;
@@ -436,7 +437,7 @@ function initVersionData(versionInfoData) {
         const $versionEntryContent = $('<div class="js--version-entry--content collectable-entry--content"></div>');
         const $versionEntryContentList = $('<ul class="js--version-entry--content__list collectable-entry--content__list"></ul>');
         for (let vde of versionDetailsEntries)
-            $versionEntryContentList.append(`<li>${vde}</li>`);
+            $versionEntryContentList.append(`<li class="styled-list-item">${vde}</li>`);
         $versionEntryContent.append($versionEntryContentList);
         $versionEntryLink.append($versionEntryContent);
         $versionEntryLink.append('<button class="js--version-entry--expand collectable-entry--expand noselect">▶</button>');
@@ -731,6 +732,69 @@ function initMenuThemeData(data) {
     });
 }
 
+function initWallpaperData(data) {
+    wallpaperData = data;
+
+    const $wallpapersContainerItems = $('.js--wallpapers-container__items');
+    const $wallpapersContainerBorders = $('.js--wallpapers-container__borders');
+    const $removedWallpapersContainerItems = $('.js--removed-wallpapers-container__items');
+    const $removedWallpapersContainerBorders = $('.js--removed-wallpapers-container__borders');
+    const wallpapersById = {};
+
+    $wallpapersContainerItems.empty();
+    $wallpapersContainerBorders.empty();
+    $removedWallpapersContainerItems.empty();
+    $removedWallpapersContainerBorders.empty();
+
+    for (let wp of wallpaperData) {
+        const removedCollectableClass = wp.removed ? ' removed-collectable' : '';
+        const censoredClass = wp.wallpaperId === 1149 ? ' censored' : '';
+        const worldIdAttribute = wp.worldId ? ` data-id="${wp.worldId}"` : '';
+        const removedAttribute = wp.removed ? ' data-removed="true"' : '';
+        const wallpaperImageHtml = `<div href="javascript:void(0);" class="wallpaper collectable${censoredClass}${removedCollectableClass} noselect"><img src="${wp.filename}" referrerpolicy="no-referrer" /></div>`;
+        const wallpaperLinkHtml = `<a href="javascript:void(0);" class="js--wallpaper wallpaper collectable--border noselect" data-wallpaper-id="${wp.id}"${worldIdAttribute}${removedAttribute}></a>`;
+        wp.method = wp.method.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
+        if (wp.methodJP)
+            wp.methodJP = wp.methodJP.replace(/<span .*?>(.*?)<\/ *span>/ig, '$1').replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
+        $(wallpaperImageHtml).appendTo(wp.removed ? $removedWallpapersContainerItems : $wallpapersContainerItems);
+        $(wallpaperLinkHtml).appendTo(wp.removed ? $removedWallpapersContainerBorders : $wallpapersContainerBorders);
+        wallpapersById[wp.id] = wp;
+    }
+
+    const $tooltip = $('<div class="wallpaper-tooltip scene-tooltip display--none"></div>').prependTo('.content');
+
+    $('.js--wallpaper[data-id]').on('click', function () {
+        if (trySelectNode($(this).data('id'), true, true)) {
+            $tooltip.addClass('display--none');
+            $.modal.close();
+        }
+    });
+    
+    $('.js--wallpaper').on('mousemove', function (e) {
+        $tooltip.css({
+            top: e.pageY + 10 + 'px',
+            left: (e.pageX - ($tooltip.innerWidth() / 2)) + 'px'
+        });
+    }).on('mouseenter', function () {
+        const wallpaper = wallpapersById[$(this).data('wallpaperId')];
+        const title = config.lang === 'en' ? wallpaper.name : wallpaper.nameJP;
+        const method = config.lang === 'en' ? wallpaper.method : wallpaper.methodJP;
+        $tooltip.html(localizedWallpaperLabel
+                .replace('{WALLPAPER_ID}', wallpaper.wallpaperId - (wallpaper.removed ? 1000 : 0))
+                .replace('{TITLE}', title)
+                .replace('{METHOD}', method || ''))
+                .removeClass('display--none');
+        if (!title)
+            $tooltip.find('.js--wallpaper-tooltip__title').remove();
+        $tooltip.find('.js--wallpaper-tooltip__wallpaper').toggleClass('alone', !method);
+        $((wallpaper.removed ? $removedWallpapersContainerItems : $wallpapersContainerItems).children()[$(this).index()]).addClass('hover');
+    }).on('mouseleave', function () {
+        $tooltip.addClass('display--none');
+        const $wallpapersContainer = $(this).data('removed') ? $removedWallpapersContainerItems : $wallpapersContainerItems;
+        $($($wallpapersContainer.children()[$(this).index()])).removeClass('hover');
+    });
+}
+
 function loadOrInitConfig() {
     try {
         if (!window.localStorage.hasOwnProperty("config"))
@@ -934,6 +998,7 @@ function reloadData(update) {
         initAuthorData(data.authorInfoData, data.versionInfoData);
         initEffectData(data.effectData);
         initMenuThemeData(data.menuThemeData);
+        initWallpaperData(data.wallpaperData);
         lastUpdate = new Date(data.lastUpdate);
         lastFullUpdate = new Date(data.lastFullUpdate);
 
@@ -988,6 +1053,7 @@ let localizedNodeLabelVersionUpdateTypes;
 let localizedAuthorLabel;
 let localizedVersionLabel;
 let localizedEffectLabel;
+let localizedWallpaperLabel;
 let localizedNodeIconNew;
 let localizedVersionDetails;
 let localizedVersionDisplayToggle;
@@ -2459,7 +2525,12 @@ function getLocalizedVersionDetails(localizedVersionDetails) {
 
 function getLocalizedEffectLabel(localizedEffectLabel) {
     return `<span class="effect-tooltip__effect tooltip__value">{EFFECT}</span><br>
-        <span class="effect-tooltip__location">${localizedEffectLabel.location}<span class="tooltip__value">{LOCATION}</span><br></span>{METHOD}`;
+            <span class="effect-tooltip__location">${localizedEffectLabel.location}<span class="tooltip__value">{LOCATION}</span><br></span>{METHOD}`;
+}
+
+function getLocalizedWallpaperLabel(localizedWallpaperLabel) {
+    return `<span class="js--wallpaper-tooltip__wallpaper wallpaper-tooltip__wallpaper tooltip__value">${localizedWallpaperLabel.number}{WALLPAPER_ID}<span class="js--wallpaper-tooltip__title">${localizedWallpaperLabel.titleTemplate}</span></span><br>
+            {METHOD}`;
 }
 
 /**
@@ -3282,7 +3353,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.5.2");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.6.0");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
@@ -3304,6 +3375,7 @@ function initLocalization(isInitial) {
             localizedAuthorLabel = getLocalizedAuthorLabel(data.authorLabel);
             localizedVersionLabel = getLocalizedVersionLabel(data.versionLabel);
             localizedEffectLabel = getLocalizedEffectLabel(data.effectLabel);
+            localizedWallpaperLabel = getLocalizedWallpaperLabel(data.wallpaperLabel);
             localizedNodeIconNew = data.nodeIcon.new;
             localizedVersionDetails = getLocalizedVersionDetails(data.versionDetails);
             localizedVersionDisplayToggle = data.versionEntriesModal.versionDisplayToggle;
@@ -4176,6 +4248,19 @@ function initControls() {
         }
     });
 
+    $(".js--wallpapers").on("click", function() {
+        if (wallpaperData && wallpaperData.length) {
+            if ($(".js--wallpapers-modal:visible").length)
+                $.modal.close();
+            else
+                $(".js--wallpapers-modal").modal({
+                    fadeDuration: 100,
+                    closeClass: 'noselect',
+                    closeText: '✖'
+                });
+        }
+    });
+
     $(".js--reset").on("click", function() {
         $(".js--world-input").removeClass("selected").val("");
         $(".js--author").val("null");
@@ -4539,7 +4624,7 @@ function initVersionUpdate() {
             for (let ae of ver.addEntries) {
                 const world = worldData[ae.worldId];
                 const $entry = $(`
-                    <li class="js--version-update__version__entry">
+                    <li class="js--version-update__version__entry styled-list-item">
                         <span class="version-update__version__entry-view"></span>
                         ${versionUpdateEntryEditHtml}
                     </li>
@@ -4552,7 +4637,7 @@ function initVersionUpdate() {
             for (let ue of ver.updateEntries) {
                 const world = worldData[ue.worldId];
                 const $entry = $(`
-                    <li class="js--version-update__version__entry">
+                    <li class="js--version-update__version__entry styled-list-item">
                         <span class="version-update__version__entry-view"></span>
                         ${versionUpdateEntryEditHtml}
                     </li>
@@ -4566,7 +4651,7 @@ function initVersionUpdate() {
             for (let re of ver.removeEntries) {
                 const world = worldData[re.worldId];
                 const $entry = $(`
-                    <li class="js--version-update__version__entry">
+                    <li class="js--version-update__version__entry styled-list-item">
                         <span class="version-update__version__entry-view"></span>
                         ${versionUpdateEntryEditHtml}
                     </li>
@@ -4577,7 +4662,7 @@ function initVersionUpdate() {
             }
 
             $ver.append(`
-                <li class="js--version-update__version__new-entry">
+                <li class="js--version-update__version__new-entry styled-list-item">
                     <span class="version-update__version__entry-edit display--none">
                         <a href="javascript:void(0);" class="js--version-update__version__entry__add-btn icon-link no-border">➕</a>
                     </span>
@@ -4837,7 +4922,7 @@ function initVersionUpdateEvents() {
         const $editVer = $(this).parents('.version-update__version');
         const $entryEdit = $(versionUpdateEntryEditHtml);
         const $entry = $(`
-            <li class="js--version-update__version__entry">
+            <li class="js--version-update__version__entry styled-list-item">
                 <span class="version-update__version__entry-view display--none"></span>
             </li>
         `).append($entryEdit.removeClass('display--none'));
@@ -4929,9 +5014,9 @@ function initAdminControls() {
             const $dataList = $('<ul></ul>');
             if (data.length) {
                 for (let d of data)
-                    $dataList.append(`<li>${d}</li>`);
+                    $dataList.append(`<li class="styled-list-item">${d}</li>`);
             } else
-                $dataList.append(`<li>${dataIssues[di].emptyMessage}</li>`);
+                $dataList.append(`<li class="styled-list-item">${dataIssues[di].emptyMessage}</li>`);
             $(`.js--data-issues__${di}`).html($dataList);
         });
     });
@@ -4982,6 +5067,7 @@ $(function () {
         initAuthorData(data.authorInfoData, data.versionInfoData);
         initEffectData(data.effectData);
         initMenuThemeData(data.menuThemeData);
+        initWallpaperData(data.wallpaperData);
         lastUpdate = new Date(data.lastUpdate);
         lastFullUpdate = new Date(data.lastFullUpdate);
 

@@ -46,6 +46,9 @@
         },
         "menuThemes": {
             "name": "Menu Themes"
+        },
+        "wallpapers": {
+            "name": "Wallpapers"
         }
     },
     "settings": {
@@ -227,6 +230,10 @@
     "effectLabel": {
         "location": "Location: "
     },
+    "wallpaperLabel": {
+        "number": "#",
+        "titleTemplate": " - \"{TITLE}\""
+    },
     "nodeIcon": {
         "new": "NEW"
     },
@@ -284,6 +291,9 @@
     },
     "menuThemesModal": {
         "previousMethods": "Previous Methods"
+    },
+    "wallpapersModal": {
+        "removedWallpapers": "Removed Wallpapers"
     },
     "helpModal": {
         "reportBug": "Report a Bug"

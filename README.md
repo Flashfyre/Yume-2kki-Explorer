@@ -92,6 +92,10 @@ Display a list of available effects in a modal window. Hovering over an effect w
 
 Display a list of available menu themes in a modal window. Hovering over a menu theme will show information from the Wiki on how to locate it. Clicking a menu theme will navigate to the world it's located in if applicable.
 
+### Wallpapers
+
+Display a list of available wallpapers in a modal window. Hovering over a wallpaper will show information from the Wiki on how to locate it. Clicking a wallpaper will navigate to the world it's located in if applicable.
+
 ## Settings
 
 Settings are accessible by clicking the arrow tab in the bottom center of the page.
@@ -230,6 +234,10 @@ This setting determines the number of world nodes that make up a stack within th
 ### メンュータイプ
 
 ポップアップでメンュータイプのリストを表示します。メンュータイプ画像にマウスホバーするものを得られる方法を特定します。メンュータイプ画像クリックで、該当するものを得られる場所を知らせます（エクスプローラに表示）。
+
+### 壁紙
+
+ポップアップで壁紙のリストを表示します。壁紙画像にマウスホバーするものを得られる方法を特定します。壁紙画像クリックで、該当するものを得られる場所を知らせます（エクスプローラに表示）。
 
 ### 言語設定
 

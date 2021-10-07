@@ -546,7 +546,7 @@ a.close-modal, a.close-audio-player {
     margin-bottom: 20px !important;
 }
 
-.effect > img, .menu-theme > img {
+.effect > img, .menu-theme > img, .wallpaper > img {
     image-rendering: crisp-edges;
     image-rendering: pixelated;
 }
@@ -577,9 +577,25 @@ a.close-modal, a.close-audio-player {
     height: 160px;
 }
 
-.menu-themes__previous-methods-title > h2, .menu-themes__previous-methods-title > hr {
+.menu-themes__previous-methods-title > h2, .menu-themes__previous-methods-title > hr, .wallpapers__removed-title > h2, .wallpapers__removed-title > hr {
     margin-left: 48px;
     margin-right: 48px;
+}
+
+.wallpaper > img {
+    width: 320px;
+    height: 240px;
+}
+
+.wallpaper.censored:not(.hover) > img {
+    filter: blur(20px);
+    clip-path: inset(0px);
+}
+
+.wallpaper.collectable--border {
+    min-width: 280px;
+    width: 200px;
+    height: 200px;
 }
 
 .autocomplete-suggestions {
@@ -621,10 +637,14 @@ a.close-modal, a.close-audio-player {
     font-weight: bold;
 }
 
-.node-label__world, .effect-tooltip__effect, .effect-tooltip__location, .menu-theme-tooltip__world, .author-entry-tooltip__author, .version-entry-tooltip__version {
+.node-label__world, .effect-tooltip__effect, .effect-tooltip__location, .menu-theme-tooltip__world, .wallpaper-tooltip__wallpaper, .author-entry-tooltip__author, .version-entry-tooltip__version {
     display: inline-block;
     width: 100%;
     padding-bottom: 0.5em;
+}
+
+.wallpaper-tooltip__wallpaper.alone {
+    padding-bottom: 0;
 }
 
 .node-label__world, .author-entry-tooltip__author, .author-entry-tooltip__version {
@@ -641,7 +661,7 @@ a.close-modal, a.close-audio-player {
     text-align: right;
 }
 
-.effect-tooltip, .menu-theme-tooltip, .author-entry-tooltip, .version-entry-tooltip {
+.effect-tooltip, .menu-theme-tooltip, .wallpaper-tooltip, .author-entry-tooltip, .version-entry-tooltip {
     position: absolute;
     max-width: 480px;
     z-index: 2;

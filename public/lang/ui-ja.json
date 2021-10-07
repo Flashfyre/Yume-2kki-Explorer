@@ -46,6 +46,9 @@
         },
         "menuThemes": {
             "name": "メンユー タイプ"
+        },
+        "wallpapers": {
+            "name": "壁紙"
         }
     },
     "settings": {
@@ -227,6 +230,10 @@
     "effectLabel": {
         "location": "場所："
     },
+    "wallpaperLabel": {
+        "number": "No.",
+        "titleTemplate": " 「{TITLE}」"
+    },
     "nodeIcon": {
         "new": "新"
     },
@@ -284,6 +291,9 @@
     },
     "menuThemesModal": {
         "previousMethods": "前の方法"
+    },
+    "wallpapersModal": {
+        "removedWallpapers": "前の壁紙"
     },
     "helpModal": {
         "reportBug": "バグを報告"
