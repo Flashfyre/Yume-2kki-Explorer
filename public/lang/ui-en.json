@@ -49,6 +49,9 @@
         },
         "wallpapers": {
             "name": "Wallpapers"
+        },
+        "bgmTracks": {
+            "name": "Soundtrack"
         }
     },
     "settings": {
@@ -234,6 +237,9 @@
         "number": "#",
         "titleTemplate": " - \"{TITLE}\""
     },
+    "bgmTrackLabel": {
+        "location": "Location: "
+    },
     "nodeIcon": {
         "new": "NEW"
     },
@@ -295,6 +301,10 @@
     "wallpapersModal": {
         "removedWallpapers": "Removed Wallpapers"
     },
+    "bgmTracksModal": {
+        "unnumberedBgmTracks": "Unnumbered Tracks",
+        "removedBgmTracks": "Removed Tracks"
+    },
     "helpModal": {
         "reportBug": "Report a Bug"
     },
@@ -304,5 +314,6 @@
         "lastFullUpdate": "Data reset on {LAST_FULL_UPDATE}"
     },
     "separator": " - ",
+    "braces": " ({VALUE})",
     "na": "N/A"
 }

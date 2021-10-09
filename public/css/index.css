@@ -414,6 +414,10 @@ a.close-modal, a.close-audio-player {
     margin-right: 380px;
 }
 
+.bgm-track.collectable {
+    margin-right: 54px;
+}
+
 .collectable--border {
     margin: 22px;
     padding: 10px !important;
@@ -466,7 +470,24 @@ a.close-modal, a.close-audio-player {
     border-radius: 0px 8px 8px 0px;
 }
 
-.collectable--border:not([data-id]) {
+.collectable-entry--container > .collectable-entry--controls {
+    display: flex;
+    flex-direction: column;
+    width: 64px;
+    margin: 22px 12px 24px -12px;
+    border-radius: 0px 8px 8px 0px;
+}
+
+.collectable-entry--container > .collectable-entry--controls > .collectable-entry--control {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    border-width: 12px;
+    padding-left: 4px;
+}
+
+.collectable--border:not([data-id]), .collectable--border:not([data-id]) + .collectable-entry--controls {
     filter: grayscale(1);
 }
 
@@ -546,7 +567,7 @@ a.close-modal, a.close-audio-player {
     margin-bottom: 20px !important;
 }
 
-.effect > img, .menu-theme > img, .wallpaper > img {
+.effect > img, .menu-theme > img, .wallpaper > img, .bgm-track > img {
     image-rendering: crisp-edges;
     image-rendering: pixelated;
 }
@@ -577,7 +598,7 @@ a.close-modal, a.close-audio-player {
     height: 160px;
 }
 
-.menu-themes__previous-methods-title > h2, .menu-themes__previous-methods-title > hr, .wallpapers__removed-title > h2, .wallpapers__removed-title > hr {
+.menu-themes__previous-methods-title > h2, .menu-themes__previous-methods-title > hr, .wallpapers__removed-title > h2, .wallpapers__removed-title > hr, .bgm-tracks__unnumbered-title > h2, .bgm-tracks__unnumbered-title > hr, .bgm-tracks__removed-title > h2, .bgm-tracks__removed-title > hr {
     margin-left: 48px;
     margin-right: 48px;
 }
@@ -594,8 +615,19 @@ a.close-modal, a.close-audio-player {
 
 .wallpaper.collectable--border {
     min-width: 280px;
-    width: 200px;
+    width: 280px;
     height: 200px;
+}
+
+.bgm-track > img {
+    width: 240px;
+    height: 180px;
+}
+
+.bgm-track.collectable--border {
+    min-width: 200px;
+    width: 200px;
+    height: 140px;
 }
 
 .autocomplete-suggestions {
@@ -637,13 +669,13 @@ a.close-modal, a.close-audio-player {
     font-weight: bold;
 }
 
-.node-label__world, .effect-tooltip__effect, .effect-tooltip__location, .menu-theme-tooltip__world, .wallpaper-tooltip__wallpaper, .author-entry-tooltip__author, .version-entry-tooltip__version {
+.node-label__world, .effect-tooltip__effect, .effect-tooltip__location, .menu-theme-tooltip__world, .wallpaper-tooltip__wallpaper, .bgm-track-tooltip__bgm-track-id, .bgm-track-tooltip__name, .bgm-track-tooltip__location, .author-entry-tooltip__author, .version-entry-tooltip__version {
     display: inline-block;
     width: 100%;
     padding-bottom: 0.5em;
 }
 
-.wallpaper-tooltip__wallpaper.alone {
+.wallpaper-tooltip__wallpaper.alone, .bgm-track-tooltip__name.alone, .bgm-track-tooltip__location.alone {
     padding-bottom: 0;
 }
 
@@ -661,7 +693,7 @@ a.close-modal, a.close-audio-player {
     text-align: right;
 }
 
-.effect-tooltip, .menu-theme-tooltip, .wallpaper-tooltip, .author-entry-tooltip, .version-entry-tooltip {
+.effect-tooltip, .menu-theme-tooltip, .wallpaper-tooltip, .bgm-track-tooltip, .author-entry-tooltip, .version-entry-tooltip {
     position: absolute;
     max-width: 480px;
     z-index: 2;

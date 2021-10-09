@@ -48,7 +48,10 @@
             "name": "メンユー タイプ"
         },
         "wallpapers": {
-            "name": "壁紙"
+            "name": "パソコンの 壁紙"
+        },
+        "bgmTracks": {
+            "name": "SR分室の曲"
         }
     },
     "settings": {
@@ -234,6 +237,9 @@
         "number": "No.",
         "titleTemplate": " 「{TITLE}」"
     },
+    "bgmTrackLabel": {
+        "location": "場所："
+    },
     "nodeIcon": {
         "new": "新"
     },
@@ -295,14 +301,19 @@
     "wallpapersModal": {
         "removedWallpapers": "前の壁紙"
     },
+    "bgmTracksModal": {
+        "unnumberedBgmTracks": "番号のない曲",
+        "removedBgmTracks": "前の曲"
+    },
     "helpModal": {
         "reportBug": "バグを報告"
     },
     "footer": {
-        "about": "ゆめ２っきエクスプローラver{VERSION} by FlashfyreDev",
+        "about": "ゆめ２っきエクスプローラーver{VERSION} by FlashfyreDev",
         "lastUpdate": "データ最終更新日：{LAST_UPDATE}",
         "lastFullUpdate": "データ最終置換日：{LAST_FULL_UPDATE}"
     },
-    "separator": "ー",
+    "separator": " － ",
+    "braces": "「{VALUE}」",
     "na": "不明"
 }

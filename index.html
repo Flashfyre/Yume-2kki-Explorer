@@ -202,7 +202,7 @@
                 color: rgba(255, 255, 157, 1) !important; /*base*/
             }
 
-            .audio-player .play-pause-btn__icon, .audio-player .volume__button .volume__speaker {
+            .audio-player .play-pause-btn__icon, .audio-player .volume__button .volume__speaker, .collectable-entry--controls > .collectable-entry--control .collectable-entry--control__icon {
                 fill: rgba(216, 216, 216, 1); /*base*/
             }
 
@@ -276,6 +276,7 @@
                         <button data-localize="collectableControls.effects.name" class="js--effects noselect">Effects</button>
                         <button data-localize="collectableControls.menuThemes.name" class="js--menu-themes noselect">Menu Themes</button>
                         <button data-localize="collectableControls.wallpapers.name" class="js--wallpapers noselect">Wallpapers</button>
+                        <button data-localize="collectableControls.bgmTracks.name" class="js--bgm-tracks noselect">Soundtrack</button>
                     </div>
                 </div>
             </div>
@@ -479,6 +480,36 @@
                         <div class="js--removed-wallpapers-container collectables-container">
                             <div class="js--removed-wallpapers-container__items collectables-container__items"></div>
                             <div class="js--removed-wallpapers-container__borders collectables-container__borders"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="bgmTracksModal" class="js--bgm-tracks-modal modal">
+            <div class="modal__content--container">
+                <div class="js--bgm-tracks-modal__content modal__content">
+                    <div class="js--bgm-tracks-container collectables-container">
+                        <div class="js--bgm-tracks-container__items collectables-container__items"></div>
+                        <div class="js--bgm-tracks-container__borders collectables-container__borders"></div>
+                    </div>
+                    <div class="js--unnumbered-content">
+                        <span class="bgm-tracks__unnumbered-title noselect">
+                            <h2 data-localize="bgmTracksModal.unnumberedBgmTracks">Unnumbered Tracks</h2>
+                            <hr />
+                        </span>
+                        <div class="js--unnumbered-bgm-tracks-container collectables-container">
+                            <div class="js--unnumbered-bgm-tracks-container__items collectables-container__items"></div>
+                            <div class="js--unnumbered-bgm-tracks-container__borders collectables-container__borders"></div>
+                        </div>
+                    </div>
+                    <div class="js--removed-content">
+                        <span class="bgm-tracks__removed-title noselect">
+                            <h2 data-localize="bgmTracksModal.removedBgmTracks">Removed Tracks</h2>
+                            <hr />
+                        </span>
+                        <div class="js--removed-bgm-tracks-container collectables-container">
+                            <div class="js--removed-bgm-tracks-container__items collectables-container__items"></div>
+                            <div class="js--removed-bgm-tracks-container__borders collectables-container__borders"></div>
                         </div>
                     </div>
                 </div>

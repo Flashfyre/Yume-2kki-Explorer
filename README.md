@@ -94,7 +94,11 @@ Display a list of available menu themes in a modal window. Hovering over a menu 
 
 ### Wallpapers
 
-Display a list of available wallpapers in a modal window. Hovering over a wallpaper will show information from the Wiki on how to locate it. Clicking a wallpaper will navigate to the world it's located in if applicable.
+Display a list of available wallpapers in a modal window. Hovering over a wallpaper will show information from the Wiki on how to obtain it. Clicking a wallpaper will navigate to the world it's located in if applicable.
+
+### Soundtrack
+
+Display a list of available BGM tracks in a modal window. Hovering over a track will show information from the Wiki on where it is used. Clicking a track or pressing the play button will play the track in the audio player.
 
 ## Settings
 
@@ -235,9 +239,13 @@ This setting determines the number of world nodes that make up a stack within th
 
 ポップアップでメンュータイプのリストを表示します。メンュータイプ画像にマウスホバーするものを得られる方法を特定します。メンュータイプ画像クリックで、該当するものを得られる場所を知らせます（エクスプローラに表示）。
 
-### 壁紙
+### パソコンの壁紙
 
-ポップアップで壁紙のリストを表示します。壁紙画像にマウスホバーするものを得られる方法を特定します。壁紙画像クリックで、該当するものを得られる場所を知らせます（エクスプローラに表示）。
+ポップアップでパソコンの壁紙のリストを表示します。壁紙画像にマウスホバーするものを得られる方法を特定します。壁紙画像クリックで、該当するものを得られる場所を知らせます（エクスプローラに表示）。
+
+### SR分室の曲
+
+ポップアップでSR分室の曲のリストを表示します。 曲の画像にマウスホバーするものを得られる方法を特定します。曲の画像または再生ボタンをクリックで、曲をオーディオプレーヤーで再生させます（エクスプローラに表示）。
 
 ### 言語設定
 

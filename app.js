@@ -176,6 +176,22 @@ function initDb(pool) {
                     REFERENCES worlds (id)
                     ON DELETE CASCADE
             )`)).then(() => queryAsPromise(pool,
+            `CREATE TABLE IF NOT EXISTS bgm_tracks (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                trackNo SMALLINT NOT NULL,
+                variant VARCHAR(1) NULL,
+                name VARCHAR(255) NOT NULL,
+                location VARCHAR(255) NULL,
+                locationJP VARCHAR(255) NULL,
+                worldId INT NULL,
+                url VARCHAR(510) NULL,
+                notes VARCHAR(2000) NULL,
+                notesJP VARCHAR(1000) NULL,
+                removed BIT NOT NULL,
+                FOREIGN KEY (worldId)
+                    REFERENCES worlds (id)
+                    ON DELETE CASCADE
+            )`)).then(() => queryAsPromise(pool,
             `CREATE TABLE IF NOT EXISTS author_info (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 name VARCHAR(100) NOT NULL,
@@ -235,29 +251,32 @@ app.get('/data', function(req, res) {
                         getEffectData(pool, worldData).then(effectData => {
                             getMenuThemeData(pool, worldData, excludeRemovedContent).then(menuThemeData => {
                                 getWallpaperData(pool, worldData, excludeRemovedContent).then(wallpaperData => {
-                                    pool.query('SELECT lastUpdate, lastFullUpdate FROM updates', (err, rows) => {
-                                        if (err) console.error(err);
-                                        const row = rows.length ? rows[0] : null;
-                                        const lastUpdate = row ? row.lastUpdate : null;
-                                        const lastFullUpdate = row ? row.lastFullUpdate : null;
-                                        const isAdmin = req.query.hasOwnProperty('adminKey') && req.query.adminKey === appConfig.ADMIN_KEY;
+                                    getBgmTrackData(pool, worldData, excludeRemovedContent).then(bgmTrackData => {
+                                        pool.query('SELECT lastUpdate, lastFullUpdate FROM updates', (err, rows) => {
+                                            if (err) console.error(err);
+                                            const row = rows.length ? rows[0] : null;
+                                            const lastUpdate = row ? row.lastUpdate : null;
+                                            const lastFullUpdate = row ? row.lastFullUpdate : null;
+                                            const isAdmin = req.query.hasOwnProperty('adminKey') && req.query.adminKey === appConfig.ADMIN_KEY;
 
-                                        if (Math.random() * 255 < 1)
-                                            updateWorldDataForChance(worldData);
-                        
-                                        res.json({
-                                            worldData: worldData,
-                                            authorInfoData: authorInfoData,
-                                            versionInfoData: versionInfoData,
-                                            effectData: effectData,
-                                            menuThemeData: menuThemeData,
-                                            wallpaperData: wallpaperData,
-                                            lastUpdate: lastUpdate,
-                                            lastFullUpdate: lastFullUpdate,
-                                            isAdmin: isAdmin
+                                            if (Math.random() * 255 < 1)
+                                                updateWorldDataForChance(worldData);
+                            
+                                            res.json({
+                                                worldData: worldData,
+                                                authorInfoData: authorInfoData,
+                                                versionInfoData: versionInfoData,
+                                                effectData: effectData,
+                                                menuThemeData: menuThemeData,
+                                                wallpaperData: wallpaperData,
+                                                bgmTrackData: bgmTrackData,
+                                                lastUpdate: lastUpdate,
+                                                lastFullUpdate: lastFullUpdate,
+                                                isAdmin: isAdmin
+                                            });
+                                            pool.end();
                                         });
-                                        pool.end();
-                                    });
+                                    }).catch(err => console.error(err));
                                 }).catch(err => console.error(err));
                             }).catch(err => console.error(err));
                         }).catch(err => console.error(err));
@@ -274,10 +293,12 @@ app.get('/data', function(req, res) {
                                 updateEffectData(pool, worldData).then(() => {
                                     updateMenuThemeData(pool, worldData).then(() => {
                                         updateWallpaperData(pool, worldData).then(() => {
-                                            pool.query('UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()', (err) => {
-                                                if (err) console.error(err);
-                                                callback();
-                                            });
+                                            updateBgmTrackData(pool, worldData).then(() => {
+                                                pool.query('UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()', (err) => {
+                                                    if (err) console.error(err);
+                                                    callback();
+                                                });
+                                            }).catch(err => console.error(err));
                                         }).catch(err => console.error(err));
                                     }).catch(err => console.error(err));
                                 }).catch(err => console.error(err));
@@ -299,10 +320,12 @@ app.get('/data', function(req, res) {
                                                     checkUpdateEffectData(pool, worldData, rows[0].lastUpdate).then(() => {
                                                         checkUpdateMenuThemeData(pool, worldData, rows[0].lastUpdate).then(() => {
                                                             checkUpdateWallpaperData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                                                pool.query('UPDATE updates SET lastUpdate=NOW()', err => {
-                                                                    if (err) console.error(err);
-                                                                    callback();
-                                                                });
+                                                                checkUpdateBgmTrackData(pool, worldData, rows[0].lastUpdate).then(() => {
+                                                                    pool.query('UPDATE updates SET lastUpdate=NOW()', err => {
+                                                                        if (err) console.error(err);
+                                                                        callback();
+                                                                    });
+                                                                }).catch(err => console.error(err));
                                                             }).catch(err => console.error(err));
                                                         }).catch(err => console.error(err));
                                                     }).catch(err => console.error(err));
@@ -536,13 +559,13 @@ function getMenuThemeData(pool, worldData, excludeRemovedContent) {
 
 function getWallpaperData(pool, worldData, excludeRemovedContent) {
     return new Promise((resolve, reject) => {
-        const wallpaperDataByWpId = {};
-        pool.query('SELECT wp.id, wp.wallpaperId, wp.name, wp.nameJP, w.title, wp.filename, wp.method, wp.methodJP, wp.removed FROM wallpapers wp LEFT JOIN worlds w ON w.id = wp.worldId' + (excludeRemovedContent ? ' WHERE wp.removed = 0' : '') + ' ORDER BY wp.wallpaperId', (err, rows) => {
+        const wallpaperDataById = {};
+        pool.query('SELECT wp.id, wp.wallpaperId, wp.name, wp.nameJP, w.title, wp.filename, wp.method, wp.methodJP, wp.removed FROM wallpapers wp LEFT JOIN worlds w ON w.id = wp.worldId' + (excludeRemovedContent ? ' WHERE wp.removed = 0' : ''), (err, rows) => {
             if (err) return reject(err);
             const worldDataByName = _.keyBy(worldData, w => w.title);
             for (let row of rows) {
                 const world = row.title ? worldDataByName[row.title] : null;
-                wallpaperDataByWpId[row.id] = {
+                wallpaperDataById[row.id] = {
                     id: row.id,
                     wallpaperId: row.wallpaperId,
                     name: row.name,
@@ -555,7 +578,35 @@ function getWallpaperData(pool, worldData, excludeRemovedContent) {
                 };
             }
 
-            resolve(_.sortBy(Object.values(wallpaperDataByWpId), e => e.wallpaperId));
+            resolve(_.sortBy(Object.values(wallpaperDataById), wp => wp.wallpaperId));
+        });
+    });
+}
+
+function getBgmTrackData(pool, worldData, excludeRemovedContent) {
+    return new Promise((resolve, reject) => {
+        const bgmTrackDataById = {};
+        pool.query('SELECT t.id, t.trackNo, t.variant, t.name, t.location, t.locationJP, w.title, t.url, t.notes, t.notesJP, t.removed FROM bgm_tracks t LEFT JOIN worlds w ON w.id = t.worldId' + (excludeRemovedContent ? ' WHERE t.removed = 0' : ''), (err, rows) => {
+            if (err) return reject(err);
+            const worldDataByName = _.keyBy(worldData, w => w.title);
+            for (let row of rows) {
+                const world = row.title ? worldDataByName[row.title] : null;
+                bgmTrackDataById[row.id] = {
+                    id: row.id,
+                    trackNo: row.trackNo,
+                    variant: row.variant,
+                    name: row.name,
+                    location: row.location,
+                    locationJP: row.locationJP,
+                    worldId: world ? world.id : null,
+                    url: row.url,
+                    notes: row.notes,
+                    notesJP: row.notesJP,
+                    removed: row.removed
+                };
+            }
+
+            resolve(_.sortBy(Object.values(bgmTrackDataById), [ 'trackNo', 'variant' ]));
         });
     });
 }
@@ -571,7 +622,9 @@ function checkUpdateData(pool) {
                         updateMapData(pool, worldData).then(() => {
                             updateEffectData(pool, worldData).then(() => {
                                 updateMenuThemeData(pool, worldData).then(() => {
-                                    updateWallpaperData(pool, worldData).then(() => resolve()).catch(err => reject(err));
+                                    updateWallpaperData(pool, worldData).then(() => {
+                                        updateBgmTrackData(pool, worldData).then(() => resolve()).catch(err => reject(err));
+                                    }).catch(err => reject(err));
                                 }).catch(err => reject(err));
                             }).catch(err => reject(err));
                         }).catch(err => reject(err));
@@ -592,7 +645,9 @@ function checkUpdateData(pool) {
                                                     checkUpdateVersionInfoData(pool, rows[0].lastUpdate).then(() => {
                                                         checkUpdateEffectData(pool, worldData, rows[0].lastUpdate).then(() => {
                                                             checkUpdateMenuThemeData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                                                checkUpdateWallpaperData(pool, worldData, rows[0].lastUpdate).then(() => resolve()).catch(err => reject(err));
+                                                                checkUpdateWallpaperData(pool, worldData, rows[0].lastUpdate).then(() => {
+                                                                    checkUpdateBgmTrackData(pool, worldData, rows[0].lastUpdate).then(() => resolve()).catch(err => reject(err));
+                                                                }).catch(err => reject(err));
                                                             }).catch(err => reject(err))
                                                         }).catch(err => reject(err));
                                                     }).catch(err => reject(err));
@@ -722,6 +777,17 @@ function checkUpdateWallpaperData(pool, worldData, lastUpdate) {
         checkUpdatePage("Wallpaper_Guide", lastUpdate).then(needsUpdate => {
             if (needsUpdate)
                 updateWallpaperData(pool, worldData).then(() => resolve()).catch(err => reject(err));
+            else
+                resolve();
+        }).catch(err => reject(err));
+    });
+}
+
+function checkUpdateBgmTrackData(pool, worldData, lastUpdate) {
+    return new Promise((resolve, reject) => {
+        checkUpdatePage("Soundtrack", lastUpdate).then(needsUpdate => {
+            if (needsUpdate)
+                updateBgmTrackData(pool, worldData).then(() => resolve()).catch(err => reject(err));
             else
                 resolve();
         }).catch(err => reject(err));
@@ -2335,8 +2401,8 @@ function updateWallpaperData(pool, worldData) {
         getWallpaperWikiData(worldData).then(wallpaperData => {
             pool.query('SELECT id, wallpaperId, name, nameJP, worldId, filename, method, methodJP, removed FROM wallpapers', (err, rows) => {
                 if (err) return reject(err);
-                const wallpaperDataByWpId = _.keyBy(wallpaperData, e => e.wallpaperId);
-                const newWallpapersByWpId = _.keyBy(wallpaperData, e => e.wallpaperId);
+                const wallpaperDataByWpId = _.keyBy(wallpaperData, wp => wp.wallpaperId);
+                const newWallpapersByWpId = _.keyBy(wallpaperData, wp => wp.wallpaperId);
                 const updatedWallpapers = [];
                 const removedWallpaperIds  = [];
                 for (let row of rows) {
@@ -2546,6 +2612,325 @@ function deleteRemovedWallpapers(pool, removedWallpaperIds) {
     });
 }
 
+function updateBgmTrackData(pool, worldData) {
+    return new Promise((resolve, reject) => {
+        getBgmTrackWikiData(worldData).then(bgmTrackData => {
+            pool.query('SELECT id, trackNo, variant, name, location, locationJP, worldId, url, notes, notesJP, removed FROM bgm_tracks', (err, rows) => {
+                if (err) return reject(err);
+                const bgmTrackDataByTrackId = _.keyBy(bgmTrackData, t => `${t.trackNo}${t.variant}`);
+                const newBgmTracksByTrackId = _.keyBy(bgmTrackData, t => `${t.trackNo}${t.variant}`);
+                const updatedBgmTracks = [];
+                const removedBgmTrackIds  = [];
+                for (let row of rows) {
+                    const bgmTrackId = `${row.trackNo}${row.variant}`;
+                    if (bgmTrackDataByTrackId.hasOwnProperty(bgmTrackId)) {
+                        const bgmTrack = bgmTrackDataByTrackId[bgmTrackId];
+                        bgmTrack.id = row.id;
+                        if (row.name !== bgmTrack.name || row.location !== bgmTrack.location || row.locationJP !== bgmTrack.locationJP || row.worldId !== bgmTrack.worldId
+                            || row.url !== bgmTrack.url || row.notes !== bgmTrack.notes || row.notesJP !== bgmTrack.notesJP || row.removed !== bgmTrack.removed)
+                            updatedBgmTracks.push(bgmTrack);
+                    } else
+                        removedBgmTrackIds.push(row.id);
+                    delete newBgmTracksByTrackId[bgmTrackId];
+                }
+    
+                const insertCallback = function () {
+                    if (updatedBgmTracks.length) {
+                        const updateBgmTracks = [];
+                        for (let bgmTrack of updatedBgmTracks)
+                            updateBgmTracks.push(updateBgmTrack(pool, bgmTrack).catch(err => console.error(err)));
+                        Promise.allSettled(updateBgmTracks).finally(() => resolve());
+                    } else
+                        resolve();
+                };
+    
+                const callback = function () {
+                    const newBgmTrackIds = Object.keys(newBgmTracksByTrackId);
+                    if (newBgmTrackIds.length) {
+                        let i = 0;
+                        let bgmTracksQuery = 'INSERT INTO bgm_tracks (trackNo, variant, name, location, locationJP, worldId, url, notes, notesJP, removed) VALUES ';
+                        for (let t in newBgmTracksByTrackId) {
+                            const newBgmTrack = newBgmTracksByTrackId[t];
+                            if (i++)
+                                bgmTracksQuery += ", ";
+                            const trackNo = newBgmTrack.trackNo;
+                            const variant = newBgmTrack.variant ? `'${newBgmTrack.variant}'` : 'NULL';
+                            const name = `'${newBgmTrack.name.replace(/'/g, "''")}'`;
+                            const location = newBgmTrack.location ? `'${newBgmTrack.location.replace(/'/g, "''")}'` : 'NULL';
+                            const locationJP = newBgmTrack.locationJP ? `'${newBgmTrack.locationJP}'` : 'NULL';
+                            const worldId = newBgmTrack.worldId ? `${newBgmTrack.worldId}` : 'NULL';
+                            const url = newBgmTrack.url ? `'${newBgmTrack.url}'` : 'NULL';
+                            const notes = newBgmTrack.notes ? `'${newBgmTrack.notes.replace(/'/g, "''")}'` : 'NULL';
+                            const notesJP = newBgmTrack.notesJP ? `'${newBgmTrack.notesJP}'` : 'NULL';
+                            const removed = newBgmTrack.removed ? '1' : '0';
+                            bgmTracksQuery += `(${trackNo}, ${variant}, ${name}, ${location}, ${locationJP}, ${worldId}, ${url}, ${notes}, ${notesJP}, ${removed})`;
+                        }
+                        pool.query(bgmTracksQuery, (err, res) => {
+                            if (err) return reject(err);
+                            const insertedRows = res.affectedRows;
+                            const bgmTrackRowIdsQuery = `SELECT r.id FROM (SELECT id FROM bgm_tracks ORDER BY id DESC LIMIT ${insertedRows}) r ORDER BY 1`;
+                            pool.query(bgmTrackRowIdsQuery, (err, rows) => {
+                                if (err) return reject(err);
+                                for (let r in rows)
+                                    newBgmTracksByTrackId[newBgmTrackIds[r]].id = rows[r].id;
+                                insertCallback();
+                            });
+                        });
+                    } else
+                        insertCallback();
+                };
+    
+                if (removedBgmTrackIds.length)
+                    deleteRemovedBgmTracks(pool, removedBgmTrackIds).then(() => callback()).catch(err => reject(err));
+                else
+                    callback();
+            });
+        }).catch(err => reject(err));
+    });
+}
+
+function getBgmTrackWikiData(worldData) {
+    return new Promise((resolve, reject) => {
+        superagent.get('https://yume2kki.fandom.com/wiki/Soundtrack', function (err, res) {
+            if (err) return reject(err);
+            const tableRowRegex = /<tr>[.\s\S]*?<\/tr>/g;
+            const tablesHtml = res.text.slice(res.text.indexOf('id="Track_list"'), res.text.indexOf('id="Trivia"'));
+            const unnumberedIndex = tablesHtml.indexOf('id="Unnumbered_Tracks"');
+            const unusedIndex = tablesHtml.indexOf('id="Unused_Tracks"');
+            const bgmTrackRegexTrackNoPart = '<td>(\\d{3})(?: ([A-Z]))?<\\/td>';
+            const bgmTrackRegexSkippableTextPart = '<td(?: colspan="\\d+")?(?: rowspan="(\\d+)")?(?: colspan="\\d+")?>(.*?)<\\/td>';
+            const bgmTrackRegexSkippableUrlPart = '<td(?: colspan="\\d+")?(?: rowspan="(\\d+)")?(?: colspan="\\d+")?>(?:<a href="([^"]+)"[^>]*>Listen<\\/a>)?<\\/td>';
+            const bgmTrackRegexSkippedPart = '()()';
+            const bgmTrackRegexes = [];
+            for (let f = 0; f < 32; f++) {
+                const trackNoPart = f & 16 ? bgmTrackRegexSkippedPart : bgmTrackRegexTrackNoPart;
+                const namePart = f & 1 ? bgmTrackRegexSkippedPart : bgmTrackRegexSkippableTextPart;
+                const locationPart = f & 2 ? bgmTrackRegexSkippedPart : bgmTrackRegexSkippableTextPart;
+                const urlPart = f & 4 ? bgmTrackRegexSkippedPart : bgmTrackRegexSkippableUrlPart;
+                const notesPart = f & 8 ? bgmTrackRegexSkippedPart : bgmTrackRegexSkippableTextPart;
+                bgmTrackRegexes[f] = new RegExp(`<tr>${trackNoPart}${namePart}${locationPart}${urlPart}${notesPart}<\\/tr>`);
+            }
+
+            const bgmTrackData = [];
+            let unnumberedFlag = false;
+            let unusedFlag = false;
+
+            let tableRowMatch;
+            let nameColSkip = 0;
+            let locationColSkip = 0;
+            let urlColSkip = 0;
+            let notesColSkip = 0;
+            
+            let name;
+            let location;
+            let worldId;
+            let url;
+
+            let i;
+            
+            while ((tableRowMatch = tableRowRegex.exec(tablesHtml))) {
+                if (!unnumberedFlag && tableRowMatch.index > unnumberedIndex) {
+                    unnumberedFlag = true;
+                    i = 1000;
+                } else {
+                    if (!unusedFlag && tableRowMatch.index > unusedIndex) {
+                        unusedFlag = true;
+                        i = 2000;
+                    } else
+                        i++;
+                }
+                const tableRowHtml = tableRowMatch[0].replace(/\n/g, '');
+                const regexIndex = (nameColSkip === 0 ? 0 : 1) | (locationColSkip === 0 ? 0 : 2) | (urlColSkip === 0 ? 0 : 4) | (notesColSkip === 0 ? 0 : 8) | (!unnumberedFlag ? 0 : 16);
+                const trackDataMatch = bgmTrackRegexes[regexIndex].exec(tableRowHtml);
+                if (trackDataMatch) {
+                    const trackNo = !unnumberedFlag ? parseInt(trackDataMatch[1]) : i;
+                    const variant = (!unnumberedFlag && trackDataMatch[2]) || null;
+
+                    const newNameColSkip = trackDataMatch[3] ? parseInt(trackDataMatch[3]) - 1 : 0;
+                    if (!newNameColSkip && nameColSkip > 0)
+                        nameColSkip--;
+                    else {
+                        name = trackDataMatch[4] || null;
+                        if (newNameColSkip)
+                            nameColSkip = newNameColSkip;
+                    }
+
+                    const newLocationColSkip = trackDataMatch[5] ? parseInt(trackDataMatch[5]) - 1 : 0;
+                    if (!newLocationColSkip && locationColSkip > 0)
+                        locationColSkip--;
+                    else {
+                        location = trackDataMatch[6] || null;
+                        worldId = null;
+                        if (location) {
+                            let worldLinkMatch;
+                                
+                            const worldLinkRegex = /"\/wiki\/([^"#]+)(?:#[^"]+)?"/g;
+                            while ((worldLinkMatch = worldLinkRegex.exec(location))) {
+                                const worldName = sanitizeWorldName(worldLinkMatch[1]);
+                                const worldMatches = worldName ? worldData.filter(w => w.title === worldName) : [];
+                                if (worldMatches.length) {
+                                    worldId = worldMatches[0].id;
+                                    break;
+                                }
+                            }
+                            
+                            location = location.replace(/<a .*?>(.*?)<\/a>/g, '<a href="#">$1</a>');
+                        }
+                        if (newLocationColSkip)
+                            locationColSkip = newLocationColSkip;
+                    }
+
+                    const newUrlColSkip = trackDataMatch[7] ? parseInt(trackDataMatch[7]) - 1 : 0;
+                    if (!newUrlColSkip && urlColSkip > 0)
+                        urlColSkip--;
+                    else {
+                        url = trackDataMatch[8] ? decodeURI(trackDataMatch[8]) : null;
+                        if (newUrlColSkip)
+                            urlColSkip = newUrlColSkip;
+                    }
+
+                    const newNotesColSkip = trackDataMatch[9] ? parseInt(trackDataMatch[9]) - 1 : 0;
+                    if (!newNotesColSkip && notesColSkip > 0)
+                        notesColSkip--;
+                    else {
+                        notes = trackDataMatch[10] ? trackDataMatch[10].replace(/<a .*?>(.*?)<\/a>/g, '<a href="#">$1</a>') : null;
+                        if (newNotesColSkip)
+                            notesColSkip = newNotesColSkip;
+                    }
+
+                    if (name)
+                        bgmTrackData.push({
+                            trackNo: trackNo,
+                            variant: variant,
+                            name: name,
+                            location: location,
+                            locationJP: null,
+                            worldId: worldId,
+                            url: url,
+                            notes: notes,
+                            notesJP: null,
+                            removed: unusedFlag
+                        });
+                } else {
+                    if (nameColSkip > 0)
+                        nameColSkip--;
+                    if (locationColSkip > 0)
+                        locationColSkip--;
+                    if (urlColSkip > 0)
+                        urlColSkip--;
+                    if (notesColSkip > 0)
+                        notesColSkip--;
+                }
+            }
+
+            const updateIndirectBgmTrackUrls = bgmTrackData.filter(t => t.url && t.url.startsWith('/wiki/'))
+                .map(t => getIndirectBgmTrackUrl(t).then(u => t.url = u)
+                    .catch(err => {
+                        if (err)
+                            console.error(err);
+                        t.url = null;
+                    })
+                );
+
+            Promise.allSettled(updateIndirectBgmTrackUrls).finally(() => {
+                addBgmTrackDataJPLocationsAndNotes(bgmTrackData).then(() => resolve(bgmTrackData)).catch(err => console.error(err));
+            });
+        });
+    });
+}
+
+function getIndirectBgmTrackUrl(bgmTrack) {
+    return new Promise((resolve, reject) => {
+        const indirectUrlMatch = /\/wiki\/(File:.*)/.exec(bgmTrack.url);
+        if (!indirectUrlMatch)
+            reject();
+        const query = { action: 'query', titles: indirectUrlMatch[1], prop: 'imageinfo', iiprop: 'url', format: 'json' };
+        superagent.get(apiUrl)
+            .query(query)
+            .end((err, res) => {
+                if (err) return reject(err);
+                const revisionText = "/revision/latest";
+                const data = JSON.parse(res.text);
+                const pages = data.query.pages;
+                const fullUrl = pages[Object.keys(pages)[0]].imageinfo[0].url;
+                const revisionIndex = fullUrl.indexOf(revisionText);
+                if (revisionIndex === -1)
+                    reject();
+                resolve(fullUrl.slice(0, revisionIndex + revisionText.length));
+            });
+    });
+}
+
+function addBgmTrackDataJPLocationsAndNotes(bgmTrackData) {
+    return new Promise((resolve, reject) => {
+        superagent.get('https://wikiwiki.jp/yume2kki-t/%E5%8F%8E%E9%9B%86%E8%A6%81%E7%B4%A0/SR%E5%88%86%E5%AE%A4%E3%81%AE%E6%9B%B2%E3%83%BB%E6%BC%94%E5%87%BA%E3%81%AE%E8%A7%A3%E6%94%BE%E6%9D%A1%E4%BB%B6', function (err, res) {
+            if (err) return reject(err);
+            const dataHtml = res.text.slice(res.text.indexOf('No.</th>'), res.text.indexOf('</table>', res.text.lastIndexOf('No.</th>')));
+            const bgmTrackRegex = /<tr>.*?>(\d+)?<\/td><td [^>]+>([A-Z])?<\/td><td [^>]+>([.\s\S]*?)<\/td><\/tr>/g;
+            let bgmTrackMatch;
+            let trackNo;
+
+            while ((bgmTrackMatch = bgmTrackRegex.exec(dataHtml))) {
+                if (bgmTrackMatch[1])
+                    trackNo = parseInt(bgmTrackMatch[1]);
+                const variant = bgmTrackMatch[2] || null;
+                let locationJP = bgmTrackMatch[3].replace(/\n/g, '');
+                let notesJP = null;
+                const noteTextMatch = /<a id="notetext\_.*?data\-tippy\-content="(.*?)&lt;div .*?<\/a>/g.exec(locationJP);
+                if (noteTextMatch) {
+                    notesJP = noteTextMatch[1].replace(/&lt;.*?&gt;/g, '');
+                    locationJP = locationJP.slice(0, noteTextMatch.index);
+                }
+                locationJP = locationJP.replace(/<a .*?>(.*?)<\/a>/g, '<a href="#">$1</a>').replace(/<[^>]+>/g, '');
+                const bgmTrackMatches = bgmTrackData.filter(t => t.trackNo === trackNo && t.variant === variant);
+                if (bgmTrackMatches.length) {
+                    const bgmTrack = bgmTrackMatches[0];
+                    bgmTrack.locationJP = locationJP;
+                    bgmTrack.notesJP = notesJP;
+                }
+            }
+
+            resolve();
+        });
+    });
+}
+
+function updateBgmTrack(pool, bgmTrack) {
+    return new Promise((resolve, reject) => {
+        const trackNo = bgmTrack.trackNo;
+        const variant = bgmTrack.variant ? `'${bgmTrack.variant}'` : 'NULL';
+        const name = `'${bgmTrack.name.replace(/'/g, "''")}'`;
+        const location = bgmTrack.location ? `'${bgmTrack.location.replace(/'/g, "''")}'` : 'NULL';
+        const locationJP = bgmTrack.locationJP ? `'${bgmTrack.locationJP}'` : 'NULL';
+        const worldId = bgmTrack.worldId ? `${bgmTrack.worldId}` : 'NULL';
+        const url = bgmTrack.url ? `'${bgmTrack.url}'` : 'NULL';
+        const notes = bgmTrack.notes ? `'${bgmTrack.notes.replace(/'/g, "''")}'` : 'NULL';
+        const notesJP = bgmTrack.notesJP ? `'${bgmTrack.notesJP}'` : 'NULL';
+        const removed = bgmTrack.removed ? '1' : '0';
+        pool.query(`UPDATE bgm_tracks SET trackNo=${trackNo}, variant=${variant}, name=${name}, location=${location}, locationJP=${locationJP}, worldId=${worldId}, url=${url}, notes=${notes}, notesJP=${notesJP}, removed=${removed} WHERE id=${bgmTrack.id}`, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+}
+
+function deleteRemovedBgmTracks(pool, removedBgmTrackIds) {
+    return new Promise((resolve, reject) => {
+        let i = 0;
+        let deleteBgmTracksQuery = 'DELETE FROM bgm_tracks WHERE id IN (';
+        for (let bgmTrackId of removedBgmTrackIds) {
+            if (i++)
+                deleteBgmTracksQuery += ', ';
+            deleteBgmTracksQuery += bgmTrackId;
+        }
+        deleteBgmTracksQuery += ')';
+        pool.query(deleteBgmTracksQuery, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+}
+
 function getWorldInfo(worldName) {
     return new Promise((resolve, reject) => {
         superagent.get('https://yume2kki.fandom.com/wiki/' + worldName, function (err, res) {
@@ -2593,9 +2978,7 @@ function downloadImage(imageUrl, filename) {
     };
     
     download.image(options)
-        .then(({ filename, image }) => {
-            console.log('Saved to', filename);
-        })
+        .then(({ filename, image }) => console.log('Saved to', filename))
         .catch((err) => console.error(err));
 }
 

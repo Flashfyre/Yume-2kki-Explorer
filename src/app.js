@@ -94,6 +94,7 @@ let authorData;
 let effectData;
 let menuThemeData;
 let wallpaperData;
+let bgmTrackData;
 
 function initWorldData(data) {
     worldData = data;
@@ -228,7 +229,7 @@ function initAuthorData(authorInfoData, versionInfoData) {
     $authorEntriesContainerItems.empty();
     $authorEntriesContainerBorders.empty();
 
-    const authorEntryHtmlTemplate = '<div href="javascript:void(0);" class="author-entry collectable-entry collectable noselect"></div>';
+    const authorEntryHtmlTemplate = '<div class="author-entry collectable-entry collectable noselect"></div>';
     const authorEntryImageContainerHtmlTemplate = '<div class="author-entry__image-container collectable-entry__image-container"></div>';
     const authorEntryImageHtmlTemplate = '<img src="{FILENAME}" referrerpolicy="no-referrer" />';
     const authorsByName = {};
@@ -322,7 +323,7 @@ function initVersionData(versionInfoData) {
     $versionEntriesContainerItems.empty();
     $versionEntriesContainerBorders.empty();
 
-    const versionEntryHtmlTemplate = '<div href="javascript:void(0);" class="js--version-entry version-entry collectable-entry collectable noselect"></div>';
+    const versionEntryHtmlTemplate = '<div class="js--version-entry version-entry collectable-entry collectable noselect"></div>';
     const versionEntryImageContainerHtmlTemplate = '<div class="version-entry__image-container collectable-entry__image-container"></div>';
     const versionEntryImageHtmlTemplate = '<img src="{FILENAME}" referrerpolicy="no-referrer" />';
     const versionsByIndex = {};
@@ -635,7 +636,7 @@ function initEffectData(data) {
 
     for (let e of effectData) {
         const worldIdAttribute = e.worldId ? ` data-id="${e.worldId}"` : '';
-        const effectImageHtml = `<div href="javascript:void(0);" class="effect collectable noselect"><img src="${e.filename}" referrerpolicy="no-referrer" /></div>`;
+        const effectImageHtml = `<div class="effect collectable noselect"><img src="${e.filename}" referrerpolicy="no-referrer" /></div>`;
         const effectLinkHtml = `<a href="javascript:void(0);" class="js--effect effect collectable--border noselect" data-effect-id="${e.id}"${worldIdAttribute}></a>`;
         e.method = e.method.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
         e.methodJP = e.methodJP ? e.methodJP.replace(/<span .*?>(.*?)<\/ *span>/ig, '$1').replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>') : '';
@@ -693,7 +694,7 @@ function initMenuThemeData(data) {
         for (let l of m.locations) {
             const removedCollectableClass = l.removed ? ' removed-collectable' : '';
             const worldIdAttribute = l.worldId ? ` data-id="${l.worldId}"` : '';
-            const menuThemeImageHtml = `<div href="javascript:void(0);" class="menu-theme collectable${removedCollectableClass} noselect"><img src="${m.filename}" referrerpolicy="no-referrer" /></div>`;
+            const menuThemeImageHtml = `<div class="menu-theme collectable${removedCollectableClass} noselect"><img src="${m.filename}" referrerpolicy="no-referrer" /></div>`;
             const menuThemeLinkHtml = `<a href="javascript:void(0);" class="js--menu-theme menu-theme collectable--border noselect" data-location-id="${l.id}"${worldIdAttribute}></a>`;
             l.method = l.method.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
             if (l.methodJP)
@@ -751,7 +752,7 @@ function initWallpaperData(data) {
         const censoredClass = wp.wallpaperId === 1149 ? ' censored' : '';
         const worldIdAttribute = wp.worldId ? ` data-id="${wp.worldId}"` : '';
         const removedAttribute = wp.removed ? ' data-removed="true"' : '';
-        const wallpaperImageHtml = `<div href="javascript:void(0);" class="wallpaper collectable${censoredClass}${removedCollectableClass} noselect"><img src="${wp.filename}" referrerpolicy="no-referrer" /></div>`;
+        const wallpaperImageHtml = `<div class="wallpaper collectable${censoredClass}${removedCollectableClass} noselect"><img src="${wp.filename}" referrerpolicy="no-referrer" /></div>`;
         const wallpaperLinkHtml = `<a href="javascript:void(0);" class="js--wallpaper wallpaper collectable--border noselect" data-wallpaper-id="${wp.id}"${worldIdAttribute}${removedAttribute}></a>`;
         wp.method = wp.method.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
         if (wp.methodJP)
@@ -792,6 +793,147 @@ function initWallpaperData(data) {
         $tooltip.addClass('display--none');
         const $wallpapersContainer = $(this).data('removed') ? $removedWallpapersContainerItems : $wallpapersContainerItems;
         $($($wallpapersContainer.children()[$(this).index()])).removeClass('hover');
+    });
+}
+
+function initBgmTrackData(data) {
+    bgmTrackData = data;
+
+    const $bgmTracksContainerItems = $('.js--bgm-tracks-container__items');
+    const $unnumberedBgmTracksContainerItems = $('.js--unnumbered-bgm-tracks-container__items');
+    const $removedBgmTracksContainerItems = $('.js--removed-bgm-tracks-container__items');
+    const $bgmTracksContainerBorders = $('.js--bgm-tracks-container__borders');
+    const $unnumberedBgmTracksContainerBorders = $('.js--unnumbered-bgm-tracks-container__borders');
+    const $removedBgmTracksContainerBorders = $('.js--removed-bgm-tracks-container__borders');
+    const bgmTracksById = {};
+
+    $bgmTracksContainerItems.empty();
+    $unnumberedBgmTracksContainerItems.empty();
+    $removedBgmTracksContainerItems.empty();
+    $bgmTracksContainerBorders.empty();
+    $unnumberedBgmTracksContainerBorders.empty();
+    $removedBgmTracksContainerBorders.empty();
+
+    for (let t of bgmTrackData) {
+        let trackId = '';
+        if (t.trackNo < 1000)
+            trackId = t.trackNo.toString().padStart(3, 0);
+        if (t.variant)
+            trackId += ` ${t.variant}`;
+        let trackName = '';
+        if (t.name)
+            trackName += `<br><label>${t.name}</label>`;
+        const hasIdAttribute = t.url ? ` data-id="true"` : '';
+        const removedCollectableClass = t.removed ? ' removed-collectable' : '';
+        const imageUrl = t.worldId ? worldData[t.worldId].filename : './images/title.png';
+        const unnumberedAttribute = t.trackNo >= 1000 ? ' data-unnumbered="true"' : '';
+        const removedAttribute = t.removed ? ' data-removed="true"' : '';
+        const bgmTrackImageHtml = `<div class="bgm-track collectable-entry collectable${removedCollectableClass} noselect"><img src="${imageUrl}" class="js--bgm-track__image" referrerpolicy="no-referrer" /></div>`;
+        const bgmTrackNameHtml = t.trackNo < 1000 ? `
+            <div class="collectable-entry__name--container">
+                <h1 class="bgm-track__name--shadow collectable-entry__name--shadow">${trackId}</h1>
+                <h1 class="bgm-track__name collectable-entry__name">${trackId}</h1>
+            </div>` : '';
+        const bgmTrackLinkHtml = `
+            <div class="js--bgm-track-entry--container bgm-track--collectable-entry-container collectable-entry--container">
+                <a href="javascript:void(0);" class="js--bgm-track bgm-track collectable-entry collectable--border noselect" data-bgm-track-id="${t.id}"${hasIdAttribute}${unnumberedAttribute}${removedAttribute}>${bgmTrackNameHtml}</a>
+                <div class="js--bgm-track--collectable-entry--controls collectable-entry--controls noselect">
+                    <button class="js--bgm-track__play collectable-entry--control">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="24" viewBox="0 0 18 24">
+                            <path fill="#566574" fill-rule="evenodd" d="M18 12L0 24V0" class="collectable-entry--control__icon"></path>
+                        </svg>
+                    </button>
+                    <button class="js--bgm-track__pause collectable-entry--control display--none">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="24" viewBox="0 0 18 24">
+                            <path fill="#566574" fill-rule="evenodd" d="M0 0h6v24H0zM12 0h6v24h-6z" class="collectable-entry--control__icon"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>`;
+        if (t.location)
+            t.location = t.location.replace(/<span .*?>(.*?)<\/ *span>/ig, '$1').replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
+        if (t.locationJP)
+            t.locationJP = t.locationJP.replace(/<span .*?>(.*?)<\/ *span>/ig, '$1').replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
+        if (t.notes)
+            t.notes = t.notes.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
+        if (t.notesJP)
+            t.notesJP = t.notesJP.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
+        $(bgmTrackImageHtml).appendTo(t.trackNo < 1000 ? $bgmTracksContainerItems : !t.removed ? $unnumberedBgmTracksContainerItems : $removedBgmTracksContainerItems);
+        $(bgmTrackLinkHtml).appendTo(t.trackNo < 1000 ? $bgmTracksContainerBorders : !t.removed ? $unnumberedBgmTracksContainerBorders : $removedBgmTracksContainerBorders);
+        bgmTracksById[t.id] = t;
+    }
+
+    const $tooltip = $('<div class="bgm-track-tooltip scene-tooltip display--none"></div>').prependTo('.content');
+
+    const playBgmTrackEntry = function ($bgmTrackEntry, closeModal) {
+        const bgmTrack = bgmTracksById[$bgmTrackEntry.data('bgmTrackId')];
+        if (bgmTrack.url) {
+            const $bgmTracksContainer = $bgmTrackEntry.data('removed')
+                ? $removedBgmTracksContainerItems : $bgmTrackEntry.data('unnumbered')
+                ? $unnumberedBgmTracksContainerItems : $bgmTracksContainerItems;
+            const imageUrl = $($($bgmTracksContainer.children()[$bgmTrackEntry.parent().index()])).find('.js--bgm-track__image').attr('src');
+            let trackLabel = '';
+            if (bgmTrack.trackNo < 1000) {
+                trackLabel = bgmTrack.trackNo.toString().padStart(3, 0);
+                if (bgmTrack.variant)
+                    trackLabel += ` ${bgmTrack.variant}`;
+                trackLabel += localizedSeparator;
+            }
+            const location = config.lang == 'en' ? bgmTrack.location : bgmTrack.locationJP;
+            const name = bgmTrack.name;
+            if (location) {
+                trackLabel += location;
+                if (name)
+                    trackLabel += `${localizedBraces.replace('{VALUE}', name)}`;
+            } else
+                trackLabel += name;
+            playBgm(bgmTrack.url, trackLabel, imageUrl);
+            if (closeModal) {
+                $tooltip.addClass('display--none');
+                $.modal.close();
+            }
+        }
+    };
+
+    $('.js--bgm-track[data-id]').on('click', function () { playBgmTrackEntry($(this), true); })
+        .next('.js--bgm-track--collectable-entry--controls').children().on('click', function () {
+            const isPlay = $(this).hasClass('js--bgm-track__play');
+            if (isPlay)
+                playBgmTrackEntry($(this).parent().prev('.js--bgm-track'));
+            else
+                pauseBgm();
+            if (isPlay)
+                $('.js--bgm-track--collectable-entry--controls').children('.js--bgm-track__play.display--none').parent().children('.js--bgm-track__play, .js--bgm-track__pause').toggleClass('display--none');
+            $(this).parent().children('.js--bgm-track__play, .js--bgm-track__pause').toggleClass('display--none');
+        });
+    
+    $('.js--bgm-track').on('mousemove', function (e) {
+        $tooltip.css({
+            top: e.pageY + 10 + 'px',
+            left: (e.pageX - ($tooltip.innerWidth() / 2)) + 'px'
+        });
+    }).on('mouseenter', function () {
+        const bgmTrack = bgmTracksById[$(this).data('bgmTrackId')];
+        const name = bgmTrack.name;
+        const location = config.lang === 'en' ? bgmTrack.location : bgmTrack.locationJP;
+        const notes = config.lang === 'en' ? bgmTrack.notes : bgmTrack.notesJP;
+        $tooltip.html(localizedBgmTrackLabel
+                .replace('{BGM_TRACK_ID}', bgmTrack.trackNo < 1000 ? bgmTrack.trackNo + (bgmTrack.variant ? ` ${bgmTrack.variant}` : '') : '')
+                .replace('{NAME}', name)
+                .replace('{LOCATION}', location)
+                .replace('{NOTES}', notes || ''))
+                .removeClass('display--none');
+        if (bgmTrack.trackNo >= 1000)
+            $tooltip.find('.js--bgm-track-tooltip__bgm-track-id').remove();
+        if (!location)
+            $tooltip.find('.js--bgm-track-tooltip__location').remove();
+        $tooltip.find('.js--bgm-track-tooltip__name').toggleClass('alone', !location && !notes);
+        $tooltip.find('.js--bgm-track-tooltip__location').toggleClass('alone', location && !notes);
+        $((bgmTrack.trackNo < 1000 ? $bgmTracksContainerItems : !bgmTrack.removed ? $unnumberedBgmTracksContainerItems : $removedBgmTracksContainerItems).children()[$(this).index()]).addClass('hover');
+    }).on('mouseleave', function () {
+        $tooltip.addClass('display--none');
+        const $bgmTracksContainer = $(this).data('removed') ? $removedBgmTracksContainerItems : $(this).data('unnumbered') ? $unnumberedBgmTracksContainerItems : $bgmTracksContainerItems;
+        $($($bgmTracksContainer.children()[$(this).index()])).removeClass('hover');
     });
 }
 
@@ -999,6 +1141,7 @@ function reloadData(update) {
         initEffectData(data.effectData);
         initMenuThemeData(data.menuThemeData);
         initWallpaperData(data.wallpaperData);
+        initBgmTrackData(data.bgmTrackData);
         lastUpdate = new Date(data.lastUpdate);
         lastFullUpdate = new Date(data.lastFullUpdate);
 
@@ -1054,10 +1197,12 @@ let localizedAuthorLabel;
 let localizedVersionLabel;
 let localizedEffectLabel;
 let localizedWallpaperLabel;
+let localizedBgmTrackLabel;
 let localizedNodeIconNew;
 let localizedVersionDetails;
 let localizedVersionDisplayToggle;
 let localizedSeparator;
+let localizedBraces;
 let localizedNA;
 
 let iconLabel;
@@ -2533,6 +2678,13 @@ function getLocalizedWallpaperLabel(localizedWallpaperLabel) {
             {METHOD}`;
 }
 
+function getLocalizedBgmTrackLabel(localizedBgmTrackLabel) {
+    return `<span class="js--bgm-track-tooltip__bgm-track-id bgm-track-tooltip__bgm-track-id tooltip__value">{BGM_TRACK_ID}<br></span>
+            <span class="js--bgm-track-tooltip__name bgm-track-tooltip__name tooltip__value">{NAME}</span><br>
+            <span class="js--bgm-track-tooltip__location bgm-track-tooltip__location">${localizedBgmTrackLabel.location}<span class="tooltip__value">{LOCATION}</span><br></span>
+            {NOTES}`;
+}
+
 /**
  *
  * @param {Array} texturesSources - List of Strings that represent texture sources
@@ -3353,7 +3505,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.6.1");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.7.0");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
@@ -3362,6 +3514,7 @@ function initLocalization(isInitial) {
                 convertJPControlLabels(data.settings);
             }
             localizedSeparator = data.separator;
+            localizedBraces = data.braces;
             localizedNA = data.na;
             localizedConns = data.conn;
             if (worldData)
@@ -3376,6 +3529,7 @@ function initLocalization(isInitial) {
             localizedVersionLabel = getLocalizedVersionLabel(data.versionLabel);
             localizedEffectLabel = getLocalizedEffectLabel(data.effectLabel);
             localizedWallpaperLabel = getLocalizedWallpaperLabel(data.wallpaperLabel);
+            localizedBgmTrackLabel = getLocalizedBgmTrackLabel(data.bgmTrackLabel);
             localizedNodeIconNew = data.nodeIcon.new;
             localizedVersionDetails = getLocalizedVersionDetails(data.versionDetails);
             localizedVersionDisplayToggle = data.versionEntriesModal.versionDisplayToggle;
@@ -3758,7 +3912,7 @@ function getBgmLabel(worldName, bgmLabel) {
     const separatorIndex = bgmLabel.indexOf('^');
     if (config.lang !== 'en' || separatorIndex === bgmLabel.length - 1)
         return `${worldName}${localizedSeparator}${bgmLabel.slice(0, separatorIndex)}`;
-    return `${worldName}${localizedSeparator}${bgmLabel.slice(separatorIndex + 1)} (${bgmLabel.slice(0, separatorIndex)})`;
+    return `${worldName}${localizedSeparator}${bgmLabel.slice(separatorIndex + 1)}${localizedBraces.replace('{VALUE}', bgmLabel.slice(0, separatorIndex))})`;
 }
 
 function playBgm(url, label, imageUrl) {
@@ -3811,6 +3965,12 @@ function playBgm(url, label, imageUrl) {
         });
         GreenAudioPlayer.playPlayer(audioSource);
     }).catch((err) => console.error(err));
+}
+
+function pauseBgm() {
+    const audioSources = document.getElementsByClassName('audio-source');
+    if (audioSources.length)
+        GreenAudioPlayer.pausePlayer(audioSources[0]);
 }
 
 function trySelectNode(node, forceFocus, ignoreSearch) {
@@ -4265,6 +4425,19 @@ function initControls() {
                 $.modal.close();
             else
                 $(".js--wallpapers-modal").modal({
+                    fadeDuration: 100,
+                    closeClass: 'noselect',
+                    closeText: '✖'
+                });
+        }
+    });
+
+    $(".js--bgm-tracks").on("click", function() {
+        if (bgmTrackData && bgmTrackData.length) {
+            if ($(".js--bgm-tracks-modal:visible").length)
+                $.modal.close();
+            else
+                $(".js--bgm-tracks-modal").modal({
                     fadeDuration: 100,
                     closeClass: 'noselect',
                     closeText: '✖'
@@ -5079,6 +5252,7 @@ $(function () {
         initEffectData(data.effectData);
         initMenuThemeData(data.menuThemeData);
         initWallpaperData(data.wallpaperData);
+        initBgmTrackData(data.bgmTrackData);
         lastUpdate = new Date(data.lastUpdate);
         lastFullUpdate = new Date(data.lastFullUpdate);
 
