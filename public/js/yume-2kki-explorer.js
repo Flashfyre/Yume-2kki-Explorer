@@ -105676,9 +105676,11 @@ function InsertStackElement(node, body) {
 
 	function loadOrInitConfig() {
 	    try {
-	        if (!window.localStorage.hasOwnProperty("config"))
+	        if (!window.localStorage.hasOwnProperty("config")) {
 	            window.localStorage.setItem("config", JSON.stringify(config$1));
-	        else {
+	            if (config$1.lang !== "en")
+	                jquery(".js--lang").val(config$1.lang);
+	        } else {
 	            const savedConfig = JSON.parse(window.localStorage.getItem("config"));
 	            for (let key of Object.keys(savedConfig)) {
 	                if (config$1.hasOwnProperty(key)) {

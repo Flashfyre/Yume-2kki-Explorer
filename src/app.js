@@ -939,9 +939,11 @@ function initBgmTrackData(data) {
 
 function loadOrInitConfig() {
     try {
-        if (!window.localStorage.hasOwnProperty("config"))
+        if (!window.localStorage.hasOwnProperty("config")) {
             window.localStorage.setItem("config", JSON.stringify(config));
-        else {
+            if (config.lang !== "en")
+                $(".js--lang").val(config.lang);
+        } else {
             const savedConfig = JSON.parse(window.localStorage.getItem("config"));
             for (let key of Object.keys(savedConfig)) {
                 if (config.hasOwnProperty(key)) {
