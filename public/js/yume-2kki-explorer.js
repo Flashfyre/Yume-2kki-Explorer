@@ -105951,7 +105951,7 @@ function InsertStackElement(node, body) {
 	let config$1 = {
 	    debug: false,
 	    username: null,
-	    lang: document.referrer && /\.jp/.test(document.referrer) ? "jp" : "en",
+	    lang: document.referrer && /\.jp/.test(document.referrer) ? "ja" : "en",
 	    uiTheme: "Default_Custom",
 	    fontStyle: 0,
 	    renderMode: 0,
