@@ -1927,7 +1927,7 @@ function updateEffectData(pool, worldData) {
                                 effectsQuery += ", ";
                             const name = newEffect.name.replace(/'/g, "''");
                             const nameJP = newEffect.nameJP ? `'${newEffect.nameJP}'` : 'NULL';
-                            const worldId = newEffect.worldId ? `${newEffect.worldId}` : 'NULL';
+                            const worldId = newEffect.worldId != null ? `${newEffect.worldId}` : 'NULL';
                             const ordinal = newEffect.ordinal;
                             const filename = newEffect.filename.replace(/'/g, "''");
                             const method = newEffect.method ? `'${newEffect.method.replace(/'/g, "''")}'` : 'NULL';
@@ -2039,7 +2039,7 @@ function addEffectDataJPMethod(effect) {
 function updateEffect(pool, effect) {
     return new Promise((resolve, reject) => {
         const nameJP = effect.nameJP ? `'${effect.nameJP}'` : 'NULL';
-        const worldId = effect.worldId ? `${effect.worldId}` : 'NULL';
+        const worldId = effect.worldId != null ? `${effect.worldId}` : 'NULL';
         const ordinal = effect.ordinal;
         const filename = effect.filename.replace(/'/g, "''");
         const method = effect.method ? `'${effect.method.replace(/'/g, "''")}'` : 'NULL';
@@ -2441,7 +2441,7 @@ function updateWallpaperData(pool, worldData) {
                             const wallpaperId = newWallpaper.wallpaperId;
                             const name = newWallpaper.name ? `'${newWallpaper.name.replace(/'/g, "''")}'` : 'NULL';
                             const nameJP = newWallpaper.nameJP ? `'${newWallpaper.nameJP}'` : 'NULL';
-                            const worldId = newWallpaper.worldId ? `${newWallpaper.worldId}` : 'NULL';
+                            const worldId = newWallpaper.worldId != null ? `${newWallpaper.worldId}` : 'NULL';
                             const filename = newWallpaper.filename.replace(/'/g, "''");
                             const method = newWallpaper.method ? `'${newWallpaper.method.replace(/'/g, "''")}'` : 'NULL';
                             const methodJP = newWallpaper.methodJP ? `'${newWallpaper.methodJP.replace(/'/g, "''")}'` : 'NULL';
@@ -2583,7 +2583,7 @@ function updateWallpaper(pool, wallpaper) {
         const wallpaperId = wallpaper.wallpaperId;
         const name = wallpaper.name ? `'${wallpaper.name.replace(/'/g, "''")}'` : 'NULL';
         const nameJP = wallpaper.nameJP ? `'${wallpaper.nameJP}'` : 'NULL';
-        const worldId = wallpaper.worldId ? `${wallpaper.worldId}` : 'NULL';
+        const worldId = wallpaper.worldId != null ? `${wallpaper.worldId}` : 'NULL';
         const filename = wallpaper.filename.replace(/'/g, "''");
         const method = wallpaper.method ? `'${wallpaper.method.replace(/'/g, "''")}'` : 'NULL';
         const methodJP = wallpaper.methodJP ? `'${wallpaper.methodJP.replace(/'/g, "''")}'` : 'NULL';
@@ -2658,7 +2658,7 @@ function updateBgmTrackData(pool, worldData) {
                             const name = `'${newBgmTrack.name.replace(/'/g, "''")}'`;
                             const location = newBgmTrack.location ? `'${newBgmTrack.location.replace(/'/g, "''")}'` : 'NULL';
                             const locationJP = newBgmTrack.locationJP ? `'${newBgmTrack.locationJP}'` : 'NULL';
-                            const worldId = newBgmTrack.worldId ? `${newBgmTrack.worldId}` : 'NULL';
+                            const worldId = newBgmTrack.worldId != null ? `${newBgmTrack.worldId}` : 'NULL';
                             const url = newBgmTrack.url ? `'${newBgmTrack.url}'` : 'NULL';
                             const notes = newBgmTrack.notes ? `'${newBgmTrack.notes.replace(/'/g, "''")}'` : 'NULL';
                             const notesJP = newBgmTrack.notesJP ? `'${newBgmTrack.notesJP}'` : 'NULL';
@@ -2902,7 +2902,7 @@ function updateBgmTrack(pool, bgmTrack) {
         const name = `'${bgmTrack.name.replace(/'/g, "''")}'`;
         const location = bgmTrack.location ? `'${bgmTrack.location.replace(/'/g, "''")}'` : 'NULL';
         const locationJP = bgmTrack.locationJP ? `'${bgmTrack.locationJP}'` : 'NULL';
-        const worldId = bgmTrack.worldId ? `${bgmTrack.worldId}` : 'NULL';
+        const worldId = bgmTrack.worldId != null ? `${bgmTrack.worldId}` : 'NULL';
         const url = bgmTrack.url ? `'${bgmTrack.url}'` : 'NULL';
         const notes = bgmTrack.notes ? `'${bgmTrack.notes.replace(/'/g, "''")}'` : 'NULL';
         const notesJP = bgmTrack.notesJP ? `'${bgmTrack.notesJP}'` : 'NULL';

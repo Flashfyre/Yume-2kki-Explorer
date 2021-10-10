@@ -635,7 +635,7 @@ function initEffectData(data) {
     $effectsContainerBorders.empty();
 
     for (let e of effectData) {
-        const worldIdAttribute = e.worldId ? ` data-id="${e.worldId}"` : '';
+        const worldIdAttribute = e.worldId != null ? ` data-id="${e.worldId}"` : '';
         const effectImageHtml = `<div class="effect collectable noselect"><img src="${e.filename}" referrerpolicy="no-referrer" /></div>`;
         const effectLinkHtml = `<a href="javascript:void(0);" class="js--effect effect collectable--border noselect" data-effect-id="${e.id}"${worldIdAttribute}></a>`;
         e.method = e.method.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
@@ -662,7 +662,7 @@ function initEffectData(data) {
     }).on('mouseenter', function () {
         const effect = effectsById[$(this).data('effectId')];
         const effectName = config.lang === 'en' || !effect.nameJP ? effect.name : effect.nameJP;
-        const world = effect.worldId ? worldData[effect.worldId] : null;
+        const world = effect.worldId != null ? worldData[effect.worldId] : null;
         const worldName = world ?
             config.lang === 'en' || !world.titleJP ? world.title : world.titleJP
             : localizedNA;
@@ -693,7 +693,7 @@ function initMenuThemeData(data) {
     for (let m of menuThemeData) {
         for (let l of m.locations) {
             const removedCollectableClass = l.removed ? ' removed-collectable' : '';
-            const worldIdAttribute = l.worldId ? ` data-id="${l.worldId}"` : '';
+            const worldIdAttribute = l.worldId != null ? ` data-id="${l.worldId}"` : '';
             const menuThemeImageHtml = `<div class="menu-theme collectable${removedCollectableClass} noselect"><img src="${m.filename}" referrerpolicy="no-referrer" /></div>`;
             const menuThemeLinkHtml = `<a href="javascript:void(0);" class="js--menu-theme menu-theme collectable--border noselect" data-location-id="${l.id}"${worldIdAttribute}></a>`;
             l.method = l.method.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
@@ -721,7 +721,7 @@ function initMenuThemeData(data) {
         });
     }).on('mouseenter', function () {
         const location = menuThemeLocationsById[$(this).data('locationId')];
-        const world = location.worldId ? worldData[location.worldId] : null;
+        const world = location.worldId != null ? worldData[location.worldId] : null;
         const worldName = world ?
             config.lang === 'en' || !world.titleJP ? world.title : world.titleJP
             : null;
@@ -750,7 +750,7 @@ function initWallpaperData(data) {
     for (let wp of wallpaperData) {
         const removedCollectableClass = wp.removed ? ' removed-collectable' : '';
         const censoredClass = wp.wallpaperId === 1149 ? ' censored' : '';
-        const worldIdAttribute = wp.worldId ? ` data-id="${wp.worldId}"` : '';
+        const worldIdAttribute = wp.worldId != null ? ` data-id="${wp.worldId}"` : '';
         const removedAttribute = wp.removed ? ' data-removed="true"' : '';
         const wallpaperImageHtml = `<div class="wallpaper collectable${censoredClass}${removedCollectableClass} noselect"><img src="${wp.filename}" referrerpolicy="no-referrer" /></div>`;
         const wallpaperLinkHtml = `<a href="javascript:void(0);" class="js--wallpaper wallpaper collectable--border noselect" data-wallpaper-id="${wp.id}"${worldIdAttribute}${removedAttribute}></a>`;
@@ -825,7 +825,7 @@ function initBgmTrackData(data) {
             trackName += `<br><label>${t.name}</label>`;
         const hasIdAttribute = t.url ? ` data-id="true"` : '';
         const removedCollectableClass = t.removed ? ' removed-collectable' : '';
-        const imageUrl = t.worldId ? worldData[t.worldId].filename : './images/title.png';
+        const imageUrl = t.worldId != null ? worldData[t.worldId].filename : getMissingBgmUrl(t.location);
         const unnumberedAttribute = t.trackNo >= 1000 ? ' data-unnumbered="true"' : '';
         const removedAttribute = t.removed ? ' data-removed="true"' : '';
         const bgmTrackImageHtml = `<div class="bgm-track collectable-entry collectable${removedCollectableClass} noselect"><img src="${imageUrl}" class="js--bgm-track__image" referrerpolicy="no-referrer" /></div>`;
@@ -3507,7 +3507,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.7.1");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.7.2");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
@@ -3874,6 +3874,29 @@ function openWorldWikiPage(worldId, newWindow) {
         ? 'https://yume2kki.fandom.com/wiki/' + world.title
         : ('https://wikiwiki.jp/yume2kki-t/' + (world.titleJP.indexOf("：") > -1 ? world.titleJP.slice(0, world.titleJP.indexOf("：")) : world.titleJP)),
         "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
+}
+
+function getMissingBgmUrl(location) {
+    if (location) {
+        if (/Computer/.test(location))
+            return 'https://static.wikia.nocookie.net/yume2kki/images/5/5b/Pc1.png/revision/latest';
+        if (/Console/.test(location))
+            return 'https://static.wikia.nocookie.net/yume2kki/images/e/ea/Console1.png/revision/latest';
+        if (/Kura Puzzle/i.test(location))
+            return 'https://static.wikia.nocookie.net/yume2kki/images/0/06/Minigame_Puzzle.png/revision/latest'
+        if (/↑V↑/.test(location))
+            return 'https://static.wikia.nocookie.net/yume2kki/images/d/de/Wavy1.jpg/revision/latest';
+        if (/Plated Snow Country/i.test(location))
+            return 'https://static.wikia.nocookie.net/yume2kki/images/e/e4/Minigame_snow_1.png/revision/latest';
+        if (/Minigame B/i.test(location))
+            return 'https://static.wikia.nocookie.net/yume2kki/images/b/b8/Minigame_RBY_game.png/revision/latest';
+        if (/Bleak Future/i.test(location))
+            return 'https://static.wikia.nocookie.net/yume2kki/images/a/ab/2kki-bedroom.png/revision/latest';
+        if (/Painter\-kun/i.test(location))
+            return 'https://static.wikia.nocookie.net/yume2kki/images/9/9b/Painter_painting.png/revision/latest';
+    }
+
+    return './images/title.png';
 }
 
 function getBgmLabels(bgmLabels, localizedBgm) {

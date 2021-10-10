@@ -484,7 +484,6 @@ a.close-modal, a.close-audio-player {
     width: 100%;
     height: 100%;
     border-width: 12px;
-    padding-left: 4px;
 }
 
 .collectable--border:not([data-id]), .collectable--border:not([data-id]) + .collectable-entry--controls {
