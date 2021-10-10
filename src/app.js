@@ -1216,7 +1216,7 @@ let effectsJP;
 let config = {
     debug: false,
     username: null,
-    lang: "en",
+    lang: document.referrer && /\.jp/.test(document.referrer) ? "jp" : "en",
     uiTheme: "Default_Custom",
     fontStyle: 0,
     renderMode: 0,
@@ -3505,7 +3505,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.7.0");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.7.1");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
@@ -4506,7 +4506,7 @@ function displayLoadingAnim($container) {
     $container.prepend($loadingContainer);
 
     let loadingFrameCount = 0;
-    const updateLoadingText = function () {
+    const updateLoadingText = () => {
         let loadingTextAppend = "";
         const loadingTextAppendChar = config.lang === "en" ? "." : "．";
         const loadingTextSpaceChar = config.lang === "en" ? " " : "　";

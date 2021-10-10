@@ -1,4 +1,4 @@
-// Version 3.7.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.7.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -105951,7 +105951,7 @@ function InsertStackElement(node, body) {
 	let config$1 = {
 	    debug: false,
 	    username: null,
-	    lang: "en",
+	    lang: document.referrer && /\.jp/.test(document.referrer) ? "jp" : "en",
 	    uiTheme: "Default_Custom",
 	    fontStyle: 0,
 	    renderMode: 0,
@@ -108240,7 +108240,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.7.0");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.7.1");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
@@ -109239,7 +109239,7 @@ function InsertStackElement(node, body) {
 	    $container.prepend($loadingContainer);
 
 	    let loadingFrameCount = 0;
-	    const updateLoadingText = function () {
+	    const updateLoadingText = () => {
 	        let loadingTextAppend = "";
 	        const loadingTextAppendChar = config$1.lang === "en" ? "." : "．";
 	        const loadingTextSpaceChar = config$1.lang === "en" ? " " : "　";
