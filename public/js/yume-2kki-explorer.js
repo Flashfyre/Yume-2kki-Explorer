@@ -1,4 +1,4 @@
-// Version 3.7.2 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.8.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -14434,6 +14434,3081 @@
 	    $(this).modal();
 	  });
 	}));
+	});
+
+	/**!
+	 * Sortable 1.14.0
+	 * @author	RubaXa   <trash@rubaxa.org>
+	 * @author	owenm    <owen23355@gmail.com>
+	 * @license MIT
+	 */
+	function ownKeys(object, enumerableOnly) {
+	  var keys = Object.keys(object);
+
+	  if (Object.getOwnPropertySymbols) {
+	    var symbols = Object.getOwnPropertySymbols(object);
+
+	    if (enumerableOnly) {
+	      symbols = symbols.filter(function (sym) {
+	        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+	      });
+	    }
+
+	    keys.push.apply(keys, symbols);
+	  }
+
+	  return keys;
+	}
+
+	function _objectSpread2(target) {
+	  for (var i = 1; i < arguments.length; i++) {
+	    var source = arguments[i] != null ? arguments[i] : {};
+
+	    if (i % 2) {
+	      ownKeys(Object(source), true).forEach(function (key) {
+	        _defineProperty(target, key, source[key]);
+	      });
+	    } else if (Object.getOwnPropertyDescriptors) {
+	      Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+	    } else {
+	      ownKeys(Object(source)).forEach(function (key) {
+	        Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+	      });
+	    }
+	  }
+
+	  return target;
+	}
+
+	function _typeof(obj) {
+	  "@babel/helpers - typeof";
+
+	  if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") {
+	    _typeof = function (obj) {
+	      return typeof obj;
+	    };
+	  } else {
+	    _typeof = function (obj) {
+	      return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+	    };
+	  }
+
+	  return _typeof(obj);
+	}
+
+	function _defineProperty(obj, key, value) {
+	  if (key in obj) {
+	    Object.defineProperty(obj, key, {
+	      value: value,
+	      enumerable: true,
+	      configurable: true,
+	      writable: true
+	    });
+	  } else {
+	    obj[key] = value;
+	  }
+
+	  return obj;
+	}
+
+	function _extends() {
+	  _extends = Object.assign || function (target) {
+	    for (var i = 1; i < arguments.length; i++) {
+	      var source = arguments[i];
+
+	      for (var key in source) {
+	        if (Object.prototype.hasOwnProperty.call(source, key)) {
+	          target[key] = source[key];
+	        }
+	      }
+	    }
+
+	    return target;
+	  };
+
+	  return _extends.apply(this, arguments);
+	}
+
+	function _objectWithoutPropertiesLoose(source, excluded) {
+	  if (source == null) return {};
+	  var target = {};
+	  var sourceKeys = Object.keys(source);
+	  var key, i;
+
+	  for (i = 0; i < sourceKeys.length; i++) {
+	    key = sourceKeys[i];
+	    if (excluded.indexOf(key) >= 0) continue;
+	    target[key] = source[key];
+	  }
+
+	  return target;
+	}
+
+	function _objectWithoutProperties(source, excluded) {
+	  if (source == null) return {};
+
+	  var target = _objectWithoutPropertiesLoose(source, excluded);
+
+	  var key, i;
+
+	  if (Object.getOwnPropertySymbols) {
+	    var sourceSymbolKeys = Object.getOwnPropertySymbols(source);
+
+	    for (i = 0; i < sourceSymbolKeys.length; i++) {
+	      key = sourceSymbolKeys[i];
+	      if (excluded.indexOf(key) >= 0) continue;
+	      if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue;
+	      target[key] = source[key];
+	    }
+	  }
+
+	  return target;
+	}
+
+	var version = "1.14.0";
+
+	function userAgent(pattern) {
+	  if (typeof window !== 'undefined' && window.navigator) {
+	    return !! /*@__PURE__*/navigator.userAgent.match(pattern);
+	  }
+	}
+
+	var IE11OrLess = userAgent(/(?:Trident.*rv[ :]?11\.|msie|iemobile|Windows Phone)/i);
+	var Edge = userAgent(/Edge/i);
+	var FireFox = userAgent(/firefox/i);
+	var Safari = userAgent(/safari/i) && !userAgent(/chrome/i) && !userAgent(/android/i);
+	var IOS = userAgent(/iP(ad|od|hone)/i);
+	var ChromeForAndroid = userAgent(/chrome/i) && userAgent(/android/i);
+
+	var captureMode = {
+	  capture: false,
+	  passive: false
+	};
+
+	function on(el, event, fn) {
+	  el.addEventListener(event, fn, !IE11OrLess && captureMode);
+	}
+
+	function off(el, event, fn) {
+	  el.removeEventListener(event, fn, !IE11OrLess && captureMode);
+	}
+
+	function matches(
+	/**HTMLElement*/
+	el,
+	/**String*/
+	selector) {
+	  if (!selector) return;
+	  selector[0] === '>' && (selector = selector.substring(1));
+
+	  if (el) {
+	    try {
+	      if (el.matches) {
+	        return el.matches(selector);
+	      } else if (el.msMatchesSelector) {
+	        return el.msMatchesSelector(selector);
+	      } else if (el.webkitMatchesSelector) {
+	        return el.webkitMatchesSelector(selector);
+	      }
+	    } catch (_) {
+	      return false;
+	    }
+	  }
+
+	  return false;
+	}
+
+	function getParentOrHost(el) {
+	  return el.host && el !== document && el.host.nodeType ? el.host : el.parentNode;
+	}
+
+	function closest(
+	/**HTMLElement*/
+	el,
+	/**String*/
+	selector,
+	/**HTMLElement*/
+	ctx, includeCTX) {
+	  if (el) {
+	    ctx = ctx || document;
+
+	    do {
+	      if (selector != null && (selector[0] === '>' ? el.parentNode === ctx && matches(el, selector) : matches(el, selector)) || includeCTX && el === ctx) {
+	        return el;
+	      }
+
+	      if (el === ctx) break;
+	      /* jshint boss:true */
+	    } while (el = getParentOrHost(el));
+	  }
+
+	  return null;
+	}
+
+	var R_SPACE = /\s+/g;
+
+	function toggleClass(el, name, state) {
+	  if (el && name) {
+	    if (el.classList) {
+	      el.classList[state ? 'add' : 'remove'](name);
+	    } else {
+	      var className = (' ' + el.className + ' ').replace(R_SPACE, ' ').replace(' ' + name + ' ', ' ');
+	      el.className = (className + (state ? ' ' + name : '')).replace(R_SPACE, ' ');
+	    }
+	  }
+	}
+
+	function css(el, prop, val) {
+	  var style = el && el.style;
+
+	  if (style) {
+	    if (val === void 0) {
+	      if (document.defaultView && document.defaultView.getComputedStyle) {
+	        val = document.defaultView.getComputedStyle(el, '');
+	      } else if (el.currentStyle) {
+	        val = el.currentStyle;
+	      }
+
+	      return prop === void 0 ? val : val[prop];
+	    } else {
+	      if (!(prop in style) && prop.indexOf('webkit') === -1) {
+	        prop = '-webkit-' + prop;
+	      }
+
+	      style[prop] = val + (typeof val === 'string' ? '' : 'px');
+	    }
+	  }
+	}
+
+	function matrix(el, selfOnly) {
+	  var appliedTransforms = '';
+
+	  if (typeof el === 'string') {
+	    appliedTransforms = el;
+	  } else {
+	    do {
+	      var transform = css(el, 'transform');
+
+	      if (transform && transform !== 'none') {
+	        appliedTransforms = transform + ' ' + appliedTransforms;
+	      }
+	      /* jshint boss:true */
+
+	    } while (!selfOnly && (el = el.parentNode));
+	  }
+
+	  var matrixFn = window.DOMMatrix || window.WebKitCSSMatrix || window.CSSMatrix || window.MSCSSMatrix;
+	  /*jshint -W056 */
+
+	  return matrixFn && new matrixFn(appliedTransforms);
+	}
+
+	function find(ctx, tagName, iterator) {
+	  if (ctx) {
+	    var list = ctx.getElementsByTagName(tagName),
+	        i = 0,
+	        n = list.length;
+
+	    if (iterator) {
+	      for (; i < n; i++) {
+	        iterator(list[i], i);
+	      }
+	    }
+
+	    return list;
+	  }
+
+	  return [];
+	}
+
+	function getWindowScrollingElement() {
+	  var scrollingElement = document.scrollingElement;
+
+	  if (scrollingElement) {
+	    return scrollingElement;
+	  } else {
+	    return document.documentElement;
+	  }
+	}
+	/**
+	 * Returns the "bounding client rect" of given element
+	 * @param  {HTMLElement} el                       The element whose boundingClientRect is wanted
+	 * @param  {[Boolean]} relativeToContainingBlock  Whether the rect should be relative to the containing block of (including) the container
+	 * @param  {[Boolean]} relativeToNonStaticParent  Whether the rect should be relative to the relative parent of (including) the contaienr
+	 * @param  {[Boolean]} undoScale                  Whether the container's scale() should be undone
+	 * @param  {[HTMLElement]} container              The parent the element will be placed in
+	 * @return {Object}                               The boundingClientRect of el, with specified adjustments
+	 */
+
+
+	function getRect(el, relativeToContainingBlock, relativeToNonStaticParent, undoScale, container) {
+	  if (!el.getBoundingClientRect && el !== window) return;
+	  var elRect, top, left, bottom, right, height, width;
+
+	  if (el !== window && el.parentNode && el !== getWindowScrollingElement()) {
+	    elRect = el.getBoundingClientRect();
+	    top = elRect.top;
+	    left = elRect.left;
+	    bottom = elRect.bottom;
+	    right = elRect.right;
+	    height = elRect.height;
+	    width = elRect.width;
+	  } else {
+	    top = 0;
+	    left = 0;
+	    bottom = window.innerHeight;
+	    right = window.innerWidth;
+	    height = window.innerHeight;
+	    width = window.innerWidth;
+	  }
+
+	  if ((relativeToContainingBlock || relativeToNonStaticParent) && el !== window) {
+	    // Adjust for translate()
+	    container = container || el.parentNode; // solves #1123 (see: https://stackoverflow.com/a/37953806/6088312)
+	    // Not needed on <= IE11
+
+	    if (!IE11OrLess) {
+	      do {
+	        if (container && container.getBoundingClientRect && (css(container, 'transform') !== 'none' || relativeToNonStaticParent && css(container, 'position') !== 'static')) {
+	          var containerRect = container.getBoundingClientRect(); // Set relative to edges of padding box of container
+
+	          top -= containerRect.top + parseInt(css(container, 'border-top-width'));
+	          left -= containerRect.left + parseInt(css(container, 'border-left-width'));
+	          bottom = top + elRect.height;
+	          right = left + elRect.width;
+	          break;
+	        }
+	        /* jshint boss:true */
+
+	      } while (container = container.parentNode);
+	    }
+	  }
+
+	  if (undoScale && el !== window) {
+	    // Adjust for scale()
+	    var elMatrix = matrix(container || el),
+	        scaleX = elMatrix && elMatrix.a,
+	        scaleY = elMatrix && elMatrix.d;
+
+	    if (elMatrix) {
+	      top /= scaleY;
+	      left /= scaleX;
+	      width /= scaleX;
+	      height /= scaleY;
+	      bottom = top + height;
+	      right = left + width;
+	    }
+	  }
+
+	  return {
+	    top: top,
+	    left: left,
+	    bottom: bottom,
+	    right: right,
+	    width: width,
+	    height: height
+	  };
+	}
+	/**
+	 * Checks if a side of an element is scrolled past a side of its parents
+	 * @param  {HTMLElement}  el           The element who's side being scrolled out of view is in question
+	 * @param  {String}       elSide       Side of the element in question ('top', 'left', 'right', 'bottom')
+	 * @param  {String}       parentSide   Side of the parent in question ('top', 'left', 'right', 'bottom')
+	 * @return {HTMLElement}               The parent scroll element that the el's side is scrolled past, or null if there is no such element
+	 */
+
+
+	function isScrolledPast(el, elSide, parentSide) {
+	  var parent = getParentAutoScrollElement(el, true),
+	      elSideVal = getRect(el)[elSide];
+	  /* jshint boss:true */
+
+	  while (parent) {
+	    var parentSideVal = getRect(parent)[parentSide],
+	        visible = void 0;
+
+	    if (parentSide === 'top' || parentSide === 'left') {
+	      visible = elSideVal >= parentSideVal;
+	    } else {
+	      visible = elSideVal <= parentSideVal;
+	    }
+
+	    if (!visible) return parent;
+	    if (parent === getWindowScrollingElement()) break;
+	    parent = getParentAutoScrollElement(parent, false);
+	  }
+
+	  return false;
+	}
+	/**
+	 * Gets nth child of el, ignoring hidden children, sortable's elements (does not ignore clone if it's visible)
+	 * and non-draggable elements
+	 * @param  {HTMLElement} el       The parent element
+	 * @param  {Number} childNum      The index of the child
+	 * @param  {Object} options       Parent Sortable's options
+	 * @return {HTMLElement}          The child at index childNum, or null if not found
+	 */
+
+
+	function getChild(el, childNum, options, includeDragEl) {
+	  var currentChild = 0,
+	      i = 0,
+	      children = el.children;
+
+	  while (i < children.length) {
+	    if (children[i].style.display !== 'none' && children[i] !== Sortable$1.ghost && (includeDragEl || children[i] !== Sortable$1.dragged) && closest(children[i], options.draggable, el, false)) {
+	      if (currentChild === childNum) {
+	        return children[i];
+	      }
+
+	      currentChild++;
+	    }
+
+	    i++;
+	  }
+
+	  return null;
+	}
+	/**
+	 * Gets the last child in the el, ignoring ghostEl or invisible elements (clones)
+	 * @param  {HTMLElement} el       Parent element
+	 * @param  {selector} selector    Any other elements that should be ignored
+	 * @return {HTMLElement}          The last child, ignoring ghostEl
+	 */
+
+
+	function lastChild(el, selector) {
+	  var last = el.lastElementChild;
+
+	  while (last && (last === Sortable$1.ghost || css(last, 'display') === 'none' || selector && !matches(last, selector))) {
+	    last = last.previousElementSibling;
+	  }
+
+	  return last || null;
+	}
+	/**
+	 * Returns the index of an element within its parent for a selected set of
+	 * elements
+	 * @param  {HTMLElement} el
+	 * @param  {selector} selector
+	 * @return {number}
+	 */
+
+
+	function index(el, selector) {
+	  var index = 0;
+
+	  if (!el || !el.parentNode) {
+	    return -1;
+	  }
+	  /* jshint boss:true */
+
+
+	  while (el = el.previousElementSibling) {
+	    if (el.nodeName.toUpperCase() !== 'TEMPLATE' && el !== Sortable$1.clone && (!selector || matches(el, selector))) {
+	      index++;
+	    }
+	  }
+
+	  return index;
+	}
+	/**
+	 * Returns the scroll offset of the given element, added with all the scroll offsets of parent elements.
+	 * The value is returned in real pixels.
+	 * @param  {HTMLElement} el
+	 * @return {Array}             Offsets in the format of [left, top]
+	 */
+
+
+	function getRelativeScrollOffset(el) {
+	  var offsetLeft = 0,
+	      offsetTop = 0,
+	      winScroller = getWindowScrollingElement();
+
+	  if (el) {
+	    do {
+	      var elMatrix = matrix(el),
+	          scaleX = elMatrix.a,
+	          scaleY = elMatrix.d;
+	      offsetLeft += el.scrollLeft * scaleX;
+	      offsetTop += el.scrollTop * scaleY;
+	    } while (el !== winScroller && (el = el.parentNode));
+	  }
+
+	  return [offsetLeft, offsetTop];
+	}
+	/**
+	 * Returns the index of the object within the given array
+	 * @param  {Array} arr   Array that may or may not hold the object
+	 * @param  {Object} obj  An object that has a key-value pair unique to and identical to a key-value pair in the object you want to find
+	 * @return {Number}      The index of the object in the array, or -1
+	 */
+
+
+	function indexOfObject(arr, obj) {
+	  for (var i in arr) {
+	    if (!arr.hasOwnProperty(i)) continue;
+
+	    for (var key in obj) {
+	      if (obj.hasOwnProperty(key) && obj[key] === arr[i][key]) return Number(i);
+	    }
+	  }
+
+	  return -1;
+	}
+
+	function getParentAutoScrollElement(el, includeSelf) {
+	  // skip to window
+	  if (!el || !el.getBoundingClientRect) return getWindowScrollingElement();
+	  var elem = el;
+	  var gotSelf = false;
+
+	  do {
+	    // we don't need to get elem css if it isn't even overflowing in the first place (performance)
+	    if (elem.clientWidth < elem.scrollWidth || elem.clientHeight < elem.scrollHeight) {
+	      var elemCSS = css(elem);
+
+	      if (elem.clientWidth < elem.scrollWidth && (elemCSS.overflowX == 'auto' || elemCSS.overflowX == 'scroll') || elem.clientHeight < elem.scrollHeight && (elemCSS.overflowY == 'auto' || elemCSS.overflowY == 'scroll')) {
+	        if (!elem.getBoundingClientRect || elem === document.body) return getWindowScrollingElement();
+	        if (gotSelf || includeSelf) return elem;
+	        gotSelf = true;
+	      }
+	    }
+	    /* jshint boss:true */
+
+	  } while (elem = elem.parentNode);
+
+	  return getWindowScrollingElement();
+	}
+
+	function extend(dst, src) {
+	  if (dst && src) {
+	    for (var key in src) {
+	      if (src.hasOwnProperty(key)) {
+	        dst[key] = src[key];
+	      }
+	    }
+	  }
+
+	  return dst;
+	}
+
+	function isRectEqual(rect1, rect2) {
+	  return Math.round(rect1.top) === Math.round(rect2.top) && Math.round(rect1.left) === Math.round(rect2.left) && Math.round(rect1.height) === Math.round(rect2.height) && Math.round(rect1.width) === Math.round(rect2.width);
+	}
+
+	var _throttleTimeout;
+
+	function throttle(callback, ms) {
+	  return function () {
+	    if (!_throttleTimeout) {
+	      var args = arguments,
+	          _this = this;
+
+	      if (args.length === 1) {
+	        callback.call(_this, args[0]);
+	      } else {
+	        callback.apply(_this, args);
+	      }
+
+	      _throttleTimeout = setTimeout(function () {
+	        _throttleTimeout = void 0;
+	      }, ms);
+	    }
+	  };
+	}
+
+	function cancelThrottle() {
+	  clearTimeout(_throttleTimeout);
+	  _throttleTimeout = void 0;
+	}
+
+	function scrollBy(el, x, y) {
+	  el.scrollLeft += x;
+	  el.scrollTop += y;
+	}
+
+	function clone(el) {
+	  var Polymer = window.Polymer;
+	  var $ = window.jQuery || window.Zepto;
+
+	  if (Polymer && Polymer.dom) {
+	    return Polymer.dom(el).cloneNode(true);
+	  } else if ($) {
+	    return $(el).clone(true)[0];
+	  } else {
+	    return el.cloneNode(true);
+	  }
+	}
+
+	var expando = 'Sortable' + new Date().getTime();
+
+	function AnimationStateManager() {
+	  var animationStates = [],
+	      animationCallbackId;
+	  return {
+	    captureAnimationState: function captureAnimationState() {
+	      animationStates = [];
+	      if (!this.options.animation) return;
+	      var children = [].slice.call(this.el.children);
+	      children.forEach(function (child) {
+	        if (css(child, 'display') === 'none' || child === Sortable$1.ghost) return;
+	        animationStates.push({
+	          target: child,
+	          rect: getRect(child)
+	        });
+
+	        var fromRect = _objectSpread2({}, animationStates[animationStates.length - 1].rect); // If animating: compensate for current animation
+
+
+	        if (child.thisAnimationDuration) {
+	          var childMatrix = matrix(child, true);
+
+	          if (childMatrix) {
+	            fromRect.top -= childMatrix.f;
+	            fromRect.left -= childMatrix.e;
+	          }
+	        }
+
+	        child.fromRect = fromRect;
+	      });
+	    },
+	    addAnimationState: function addAnimationState(state) {
+	      animationStates.push(state);
+	    },
+	    removeAnimationState: function removeAnimationState(target) {
+	      animationStates.splice(indexOfObject(animationStates, {
+	        target: target
+	      }), 1);
+	    },
+	    animateAll: function animateAll(callback) {
+	      var _this = this;
+
+	      if (!this.options.animation) {
+	        clearTimeout(animationCallbackId);
+	        if (typeof callback === 'function') callback();
+	        return;
+	      }
+
+	      var animating = false,
+	          animationTime = 0;
+	      animationStates.forEach(function (state) {
+	        var time = 0,
+	            target = state.target,
+	            fromRect = target.fromRect,
+	            toRect = getRect(target),
+	            prevFromRect = target.prevFromRect,
+	            prevToRect = target.prevToRect,
+	            animatingRect = state.rect,
+	            targetMatrix = matrix(target, true);
+
+	        if (targetMatrix) {
+	          // Compensate for current animation
+	          toRect.top -= targetMatrix.f;
+	          toRect.left -= targetMatrix.e;
+	        }
+
+	        target.toRect = toRect;
+
+	        if (target.thisAnimationDuration) {
+	          // Could also check if animatingRect is between fromRect and toRect
+	          if (isRectEqual(prevFromRect, toRect) && !isRectEqual(fromRect, toRect) && // Make sure animatingRect is on line between toRect & fromRect
+	          (animatingRect.top - toRect.top) / (animatingRect.left - toRect.left) === (fromRect.top - toRect.top) / (fromRect.left - toRect.left)) {
+	            // If returning to same place as started from animation and on same axis
+	            time = calculateRealTime(animatingRect, prevFromRect, prevToRect, _this.options);
+	          }
+	        } // if fromRect != toRect: animate
+
+
+	        if (!isRectEqual(toRect, fromRect)) {
+	          target.prevFromRect = fromRect;
+	          target.prevToRect = toRect;
+
+	          if (!time) {
+	            time = _this.options.animation;
+	          }
+
+	          _this.animate(target, animatingRect, toRect, time);
+	        }
+
+	        if (time) {
+	          animating = true;
+	          animationTime = Math.max(animationTime, time);
+	          clearTimeout(target.animationResetTimer);
+	          target.animationResetTimer = setTimeout(function () {
+	            target.animationTime = 0;
+	            target.prevFromRect = null;
+	            target.fromRect = null;
+	            target.prevToRect = null;
+	            target.thisAnimationDuration = null;
+	          }, time);
+	          target.thisAnimationDuration = time;
+	        }
+	      });
+	      clearTimeout(animationCallbackId);
+
+	      if (!animating) {
+	        if (typeof callback === 'function') callback();
+	      } else {
+	        animationCallbackId = setTimeout(function () {
+	          if (typeof callback === 'function') callback();
+	        }, animationTime);
+	      }
+
+	      animationStates = [];
+	    },
+	    animate: function animate(target, currentRect, toRect, duration) {
+	      if (duration) {
+	        css(target, 'transition', '');
+	        css(target, 'transform', '');
+	        var elMatrix = matrix(this.el),
+	            scaleX = elMatrix && elMatrix.a,
+	            scaleY = elMatrix && elMatrix.d,
+	            translateX = (currentRect.left - toRect.left) / (scaleX || 1),
+	            translateY = (currentRect.top - toRect.top) / (scaleY || 1);
+	        target.animatingX = !!translateX;
+	        target.animatingY = !!translateY;
+	        css(target, 'transform', 'translate3d(' + translateX + 'px,' + translateY + 'px,0)');
+	        this.forRepaintDummy = repaint(target); // repaint
+
+	        css(target, 'transition', 'transform ' + duration + 'ms' + (this.options.easing ? ' ' + this.options.easing : ''));
+	        css(target, 'transform', 'translate3d(0,0,0)');
+	        typeof target.animated === 'number' && clearTimeout(target.animated);
+	        target.animated = setTimeout(function () {
+	          css(target, 'transition', '');
+	          css(target, 'transform', '');
+	          target.animated = false;
+	          target.animatingX = false;
+	          target.animatingY = false;
+	        }, duration);
+	      }
+	    }
+	  };
+	}
+
+	function repaint(target) {
+	  return target.offsetWidth;
+	}
+
+	function calculateRealTime(animatingRect, fromRect, toRect, options) {
+	  return Math.sqrt(Math.pow(fromRect.top - animatingRect.top, 2) + Math.pow(fromRect.left - animatingRect.left, 2)) / Math.sqrt(Math.pow(fromRect.top - toRect.top, 2) + Math.pow(fromRect.left - toRect.left, 2)) * options.animation;
+	}
+
+	var plugins = [];
+	var defaults = {
+	  initializeByDefault: true
+	};
+	var PluginManager = {
+	  mount: function mount(plugin) {
+	    // Set default static properties
+	    for (var option in defaults) {
+	      if (defaults.hasOwnProperty(option) && !(option in plugin)) {
+	        plugin[option] = defaults[option];
+	      }
+	    }
+
+	    plugins.forEach(function (p) {
+	      if (p.pluginName === plugin.pluginName) {
+	        throw "Sortable: Cannot mount plugin ".concat(plugin.pluginName, " more than once");
+	      }
+	    });
+	    plugins.push(plugin);
+	  },
+	  pluginEvent: function pluginEvent(eventName, sortable, evt) {
+	    var _this = this;
+
+	    this.eventCanceled = false;
+
+	    evt.cancel = function () {
+	      _this.eventCanceled = true;
+	    };
+
+	    var eventNameGlobal = eventName + 'Global';
+	    plugins.forEach(function (plugin) {
+	      if (!sortable[plugin.pluginName]) return; // Fire global events if it exists in this sortable
+
+	      if (sortable[plugin.pluginName][eventNameGlobal]) {
+	        sortable[plugin.pluginName][eventNameGlobal](_objectSpread2({
+	          sortable: sortable
+	        }, evt));
+	      } // Only fire plugin event if plugin is enabled in this sortable,
+	      // and plugin has event defined
+
+
+	      if (sortable.options[plugin.pluginName] && sortable[plugin.pluginName][eventName]) {
+	        sortable[plugin.pluginName][eventName](_objectSpread2({
+	          sortable: sortable
+	        }, evt));
+	      }
+	    });
+	  },
+	  initializePlugins: function initializePlugins(sortable, el, defaults, options) {
+	    plugins.forEach(function (plugin) {
+	      var pluginName = plugin.pluginName;
+	      if (!sortable.options[pluginName] && !plugin.initializeByDefault) return;
+	      var initialized = new plugin(sortable, el, sortable.options);
+	      initialized.sortable = sortable;
+	      initialized.options = sortable.options;
+	      sortable[pluginName] = initialized; // Add default options from plugin
+
+	      _extends(defaults, initialized.defaults);
+	    });
+
+	    for (var option in sortable.options) {
+	      if (!sortable.options.hasOwnProperty(option)) continue;
+	      var modified = this.modifyOption(sortable, option, sortable.options[option]);
+
+	      if (typeof modified !== 'undefined') {
+	        sortable.options[option] = modified;
+	      }
+	    }
+	  },
+	  getEventProperties: function getEventProperties(name, sortable) {
+	    var eventProperties = {};
+	    plugins.forEach(function (plugin) {
+	      if (typeof plugin.eventProperties !== 'function') return;
+
+	      _extends(eventProperties, plugin.eventProperties.call(sortable[plugin.pluginName], name));
+	    });
+	    return eventProperties;
+	  },
+	  modifyOption: function modifyOption(sortable, name, value) {
+	    var modifiedValue;
+	    plugins.forEach(function (plugin) {
+	      // Plugin must exist on the Sortable
+	      if (!sortable[plugin.pluginName]) return; // If static option listener exists for this option, call in the context of the Sortable's instance of this plugin
+
+	      if (plugin.optionListeners && typeof plugin.optionListeners[name] === 'function') {
+	        modifiedValue = plugin.optionListeners[name].call(sortable[plugin.pluginName], value);
+	      }
+	    });
+	    return modifiedValue;
+	  }
+	};
+
+	function dispatchEvent(_ref) {
+	  var sortable = _ref.sortable,
+	      rootEl = _ref.rootEl,
+	      name = _ref.name,
+	      targetEl = _ref.targetEl,
+	      cloneEl = _ref.cloneEl,
+	      toEl = _ref.toEl,
+	      fromEl = _ref.fromEl,
+	      oldIndex = _ref.oldIndex,
+	      newIndex = _ref.newIndex,
+	      oldDraggableIndex = _ref.oldDraggableIndex,
+	      newDraggableIndex = _ref.newDraggableIndex,
+	      originalEvent = _ref.originalEvent,
+	      putSortable = _ref.putSortable,
+	      extraEventProperties = _ref.extraEventProperties;
+	  sortable = sortable || rootEl && rootEl[expando];
+	  if (!sortable) return;
+	  var evt,
+	      options = sortable.options,
+	      onName = 'on' + name.charAt(0).toUpperCase() + name.substr(1); // Support for new CustomEvent feature
+
+	  if (window.CustomEvent && !IE11OrLess && !Edge) {
+	    evt = new CustomEvent(name, {
+	      bubbles: true,
+	      cancelable: true
+	    });
+	  } else {
+	    evt = document.createEvent('Event');
+	    evt.initEvent(name, true, true);
+	  }
+
+	  evt.to = toEl || rootEl;
+	  evt.from = fromEl || rootEl;
+	  evt.item = targetEl || rootEl;
+	  evt.clone = cloneEl;
+	  evt.oldIndex = oldIndex;
+	  evt.newIndex = newIndex;
+	  evt.oldDraggableIndex = oldDraggableIndex;
+	  evt.newDraggableIndex = newDraggableIndex;
+	  evt.originalEvent = originalEvent;
+	  evt.pullMode = putSortable ? putSortable.lastPutMode : undefined;
+
+	  var allEventProperties = _objectSpread2(_objectSpread2({}, extraEventProperties), PluginManager.getEventProperties(name, sortable));
+
+	  for (var option in allEventProperties) {
+	    evt[option] = allEventProperties[option];
+	  }
+
+	  if (rootEl) {
+	    rootEl.dispatchEvent(evt);
+	  }
+
+	  if (options[onName]) {
+	    options[onName].call(sortable, evt);
+	  }
+	}
+
+	var _excluded = ["evt"];
+
+	var pluginEvent = function pluginEvent(eventName, sortable) {
+	  var _ref = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
+	      originalEvent = _ref.evt,
+	      data = _objectWithoutProperties(_ref, _excluded);
+
+	  PluginManager.pluginEvent.bind(Sortable$1)(eventName, sortable, _objectSpread2({
+	    dragEl: dragEl,
+	    parentEl: parentEl,
+	    ghostEl: ghostEl,
+	    rootEl: rootEl,
+	    nextEl: nextEl,
+	    lastDownEl: lastDownEl,
+	    cloneEl: cloneEl,
+	    cloneHidden: cloneHidden,
+	    dragStarted: moved,
+	    putSortable: putSortable,
+	    activeSortable: Sortable$1.active,
+	    originalEvent: originalEvent,
+	    oldIndex: oldIndex,
+	    oldDraggableIndex: oldDraggableIndex,
+	    newIndex: newIndex,
+	    newDraggableIndex: newDraggableIndex,
+	    hideGhostForTarget: _hideGhostForTarget,
+	    unhideGhostForTarget: _unhideGhostForTarget,
+	    cloneNowHidden: function cloneNowHidden() {
+	      cloneHidden = true;
+	    },
+	    cloneNowShown: function cloneNowShown() {
+	      cloneHidden = false;
+	    },
+	    dispatchSortableEvent: function dispatchSortableEvent(name) {
+	      _dispatchEvent({
+	        sortable: sortable,
+	        name: name,
+	        originalEvent: originalEvent
+	      });
+	    }
+	  }, data));
+	};
+
+	function _dispatchEvent(info) {
+	  dispatchEvent(_objectSpread2({
+	    putSortable: putSortable,
+	    cloneEl: cloneEl,
+	    targetEl: dragEl,
+	    rootEl: rootEl,
+	    oldIndex: oldIndex,
+	    oldDraggableIndex: oldDraggableIndex,
+	    newIndex: newIndex,
+	    newDraggableIndex: newDraggableIndex
+	  }, info));
+	}
+
+	var dragEl,
+	    parentEl,
+	    ghostEl,
+	    rootEl,
+	    nextEl,
+	    lastDownEl,
+	    cloneEl,
+	    cloneHidden,
+	    oldIndex,
+	    newIndex,
+	    oldDraggableIndex,
+	    newDraggableIndex,
+	    activeGroup,
+	    putSortable,
+	    awaitingDragStarted = false,
+	    ignoreNextClick = false,
+	    sortables = [],
+	    tapEvt,
+	    touchEvt,
+	    lastDx,
+	    lastDy,
+	    tapDistanceLeft,
+	    tapDistanceTop,
+	    moved,
+	    lastTarget,
+	    lastDirection,
+	    pastFirstInvertThresh = false,
+	    isCircumstantialInvert = false,
+	    targetMoveDistance,
+	    // For positioning ghost absolutely
+	ghostRelativeParent,
+	    ghostRelativeParentInitialScroll = [],
+	    // (left, top)
+	_silent = false,
+	    savedInputChecked = [];
+	/** @const */
+
+	var documentExists = typeof document !== 'undefined',
+	    PositionGhostAbsolutely = IOS,
+	    CSSFloatProperty = Edge || IE11OrLess ? 'cssFloat' : 'float',
+	    // This will not pass for IE9, because IE9 DnD only works on anchors
+	supportDraggable = documentExists && !ChromeForAndroid && !IOS && 'draggable' in document.createElement('div'),
+	    supportCssPointerEvents = function () {
+	  if (!documentExists) return; // false when <= IE11
+
+	  if (IE11OrLess) {
+	    return false;
+	  }
+
+	  var el = document.createElement('x');
+	  el.style.cssText = 'pointer-events:auto';
+	  return el.style.pointerEvents === 'auto';
+	}(),
+	    _detectDirection = function _detectDirection(el, options) {
+	  var elCSS = css(el),
+	      elWidth = parseInt(elCSS.width) - parseInt(elCSS.paddingLeft) - parseInt(elCSS.paddingRight) - parseInt(elCSS.borderLeftWidth) - parseInt(elCSS.borderRightWidth),
+	      child1 = getChild(el, 0, options),
+	      child2 = getChild(el, 1, options),
+	      firstChildCSS = child1 && css(child1),
+	      secondChildCSS = child2 && css(child2),
+	      firstChildWidth = firstChildCSS && parseInt(firstChildCSS.marginLeft) + parseInt(firstChildCSS.marginRight) + getRect(child1).width,
+	      secondChildWidth = secondChildCSS && parseInt(secondChildCSS.marginLeft) + parseInt(secondChildCSS.marginRight) + getRect(child2).width;
+
+	  if (elCSS.display === 'flex') {
+	    return elCSS.flexDirection === 'column' || elCSS.flexDirection === 'column-reverse' ? 'vertical' : 'horizontal';
+	  }
+
+	  if (elCSS.display === 'grid') {
+	    return elCSS.gridTemplateColumns.split(' ').length <= 1 ? 'vertical' : 'horizontal';
+	  }
+
+	  if (child1 && firstChildCSS["float"] && firstChildCSS["float"] !== 'none') {
+	    var touchingSideChild2 = firstChildCSS["float"] === 'left' ? 'left' : 'right';
+	    return child2 && (secondChildCSS.clear === 'both' || secondChildCSS.clear === touchingSideChild2) ? 'vertical' : 'horizontal';
+	  }
+
+	  return child1 && (firstChildCSS.display === 'block' || firstChildCSS.display === 'flex' || firstChildCSS.display === 'table' || firstChildCSS.display === 'grid' || firstChildWidth >= elWidth && elCSS[CSSFloatProperty] === 'none' || child2 && elCSS[CSSFloatProperty] === 'none' && firstChildWidth + secondChildWidth > elWidth) ? 'vertical' : 'horizontal';
+	},
+	    _dragElInRowColumn = function _dragElInRowColumn(dragRect, targetRect, vertical) {
+	  var dragElS1Opp = vertical ? dragRect.left : dragRect.top,
+	      dragElS2Opp = vertical ? dragRect.right : dragRect.bottom,
+	      dragElOppLength = vertical ? dragRect.width : dragRect.height,
+	      targetS1Opp = vertical ? targetRect.left : targetRect.top,
+	      targetS2Opp = vertical ? targetRect.right : targetRect.bottom,
+	      targetOppLength = vertical ? targetRect.width : targetRect.height;
+	  return dragElS1Opp === targetS1Opp || dragElS2Opp === targetS2Opp || dragElS1Opp + dragElOppLength / 2 === targetS1Opp + targetOppLength / 2;
+	},
+
+	/**
+	 * Detects first nearest empty sortable to X and Y position using emptyInsertThreshold.
+	 * @param  {Number} x      X position
+	 * @param  {Number} y      Y position
+	 * @return {HTMLElement}   Element of the first found nearest Sortable
+	 */
+	_detectNearestEmptySortable = function _detectNearestEmptySortable(x, y) {
+	  var ret;
+	  sortables.some(function (sortable) {
+	    var threshold = sortable[expando].options.emptyInsertThreshold;
+	    if (!threshold || lastChild(sortable)) return;
+	    var rect = getRect(sortable),
+	        insideHorizontally = x >= rect.left - threshold && x <= rect.right + threshold,
+	        insideVertically = y >= rect.top - threshold && y <= rect.bottom + threshold;
+
+	    if (insideHorizontally && insideVertically) {
+	      return ret = sortable;
+	    }
+	  });
+	  return ret;
+	},
+	    _prepareGroup = function _prepareGroup(options) {
+	  function toFn(value, pull) {
+	    return function (to, from, dragEl, evt) {
+	      var sameGroup = to.options.group.name && from.options.group.name && to.options.group.name === from.options.group.name;
+
+	      if (value == null && (pull || sameGroup)) {
+	        // Default pull value
+	        // Default pull and put value if same group
+	        return true;
+	      } else if (value == null || value === false) {
+	        return false;
+	      } else if (pull && value === 'clone') {
+	        return value;
+	      } else if (typeof value === 'function') {
+	        return toFn(value(to, from, dragEl, evt), pull)(to, from, dragEl, evt);
+	      } else {
+	        var otherGroup = (pull ? to : from).options.group.name;
+	        return value === true || typeof value === 'string' && value === otherGroup || value.join && value.indexOf(otherGroup) > -1;
+	      }
+	    };
+	  }
+
+	  var group = {};
+	  var originalGroup = options.group;
+
+	  if (!originalGroup || _typeof(originalGroup) != 'object') {
+	    originalGroup = {
+	      name: originalGroup
+	    };
+	  }
+
+	  group.name = originalGroup.name;
+	  group.checkPull = toFn(originalGroup.pull, true);
+	  group.checkPut = toFn(originalGroup.put);
+	  group.revertClone = originalGroup.revertClone;
+	  options.group = group;
+	},
+	    _hideGhostForTarget = function _hideGhostForTarget() {
+	  if (!supportCssPointerEvents && ghostEl) {
+	    css(ghostEl, 'display', 'none');
+	  }
+	},
+	    _unhideGhostForTarget = function _unhideGhostForTarget() {
+	  if (!supportCssPointerEvents && ghostEl) {
+	    css(ghostEl, 'display', '');
+	  }
+	}; // #1184 fix - Prevent click event on fallback if dragged but item not changed position
+
+
+	if (documentExists) {
+	  document.addEventListener('click', function (evt) {
+	    if (ignoreNextClick) {
+	      evt.preventDefault();
+	      evt.stopPropagation && evt.stopPropagation();
+	      evt.stopImmediatePropagation && evt.stopImmediatePropagation();
+	      ignoreNextClick = false;
+	      return false;
+	    }
+	  }, true);
+	}
+
+	var nearestEmptyInsertDetectEvent = function nearestEmptyInsertDetectEvent(evt) {
+	  if (dragEl) {
+	    evt = evt.touches ? evt.touches[0] : evt;
+
+	    var nearest = _detectNearestEmptySortable(evt.clientX, evt.clientY);
+
+	    if (nearest) {
+	      // Create imitation event
+	      var event = {};
+
+	      for (var i in evt) {
+	        if (evt.hasOwnProperty(i)) {
+	          event[i] = evt[i];
+	        }
+	      }
+
+	      event.target = event.rootEl = nearest;
+	      event.preventDefault = void 0;
+	      event.stopPropagation = void 0;
+
+	      nearest[expando]._onDragOver(event);
+	    }
+	  }
+	};
+
+	var _checkOutsideTargetEl = function _checkOutsideTargetEl(evt) {
+	  if (dragEl) {
+	    dragEl.parentNode[expando]._isOutsideThisEl(evt.target);
+	  }
+	};
+	/**
+	 * @class  Sortable
+	 * @param  {HTMLElement}  el
+	 * @param  {Object}       [options]
+	 */
+
+
+	function Sortable$1(el, options) {
+	  if (!(el && el.nodeType && el.nodeType === 1)) {
+	    throw "Sortable: `el` must be an HTMLElement, not ".concat({}.toString.call(el));
+	  }
+
+	  this.el = el; // root element
+
+	  this.options = options = _extends({}, options); // Export instance
+
+	  el[expando] = this;
+	  var defaults = {
+	    group: null,
+	    sort: true,
+	    disabled: false,
+	    store: null,
+	    handle: null,
+	    draggable: /^[uo]l$/i.test(el.nodeName) ? '>li' : '>*',
+	    swapThreshold: 1,
+	    // percentage; 0 <= x <= 1
+	    invertSwap: false,
+	    // invert always
+	    invertedSwapThreshold: null,
+	    // will be set to same as swapThreshold if default
+	    removeCloneOnHide: true,
+	    direction: function direction() {
+	      return _detectDirection(el, this.options);
+	    },
+	    ghostClass: 'sortable-ghost',
+	    chosenClass: 'sortable-chosen',
+	    dragClass: 'sortable-drag',
+	    ignore: 'a, img',
+	    filter: null,
+	    preventOnFilter: true,
+	    animation: 0,
+	    easing: null,
+	    setData: function setData(dataTransfer, dragEl) {
+	      dataTransfer.setData('Text', dragEl.textContent);
+	    },
+	    dropBubble: false,
+	    dragoverBubble: false,
+	    dataIdAttr: 'data-id',
+	    delay: 0,
+	    delayOnTouchOnly: false,
+	    touchStartThreshold: (Number.parseInt ? Number : window).parseInt(window.devicePixelRatio, 10) || 1,
+	    forceFallback: false,
+	    fallbackClass: 'sortable-fallback',
+	    fallbackOnBody: false,
+	    fallbackTolerance: 0,
+	    fallbackOffset: {
+	      x: 0,
+	      y: 0
+	    },
+	    supportPointer: Sortable$1.supportPointer !== false && 'PointerEvent' in window && !Safari,
+	    emptyInsertThreshold: 5
+	  };
+	  PluginManager.initializePlugins(this, el, defaults); // Set default options
+
+	  for (var name in defaults) {
+	    !(name in options) && (options[name] = defaults[name]);
+	  }
+
+	  _prepareGroup(options); // Bind all private methods
+
+
+	  for (var fn in this) {
+	    if (fn.charAt(0) === '_' && typeof this[fn] === 'function') {
+	      this[fn] = this[fn].bind(this);
+	    }
+	  } // Setup drag mode
+
+
+	  this.nativeDraggable = options.forceFallback ? false : supportDraggable;
+
+	  if (this.nativeDraggable) {
+	    // Touch start threshold cannot be greater than the native dragstart threshold
+	    this.options.touchStartThreshold = 1;
+	  } // Bind events
+
+
+	  if (options.supportPointer) {
+	    on(el, 'pointerdown', this._onTapStart);
+	  } else {
+	    on(el, 'mousedown', this._onTapStart);
+	    on(el, 'touchstart', this._onTapStart);
+	  }
+
+	  if (this.nativeDraggable) {
+	    on(el, 'dragover', this);
+	    on(el, 'dragenter', this);
+	  }
+
+	  sortables.push(this.el); // Restore sorting
+
+	  options.store && options.store.get && this.sort(options.store.get(this) || []); // Add animation state manager
+
+	  _extends(this, AnimationStateManager());
+	}
+
+	Sortable$1.prototype =
+	/** @lends Sortable.prototype */
+	{
+	  constructor: Sortable$1,
+	  _isOutsideThisEl: function _isOutsideThisEl(target) {
+	    if (!this.el.contains(target) && target !== this.el) {
+	      lastTarget = null;
+	    }
+	  },
+	  _getDirection: function _getDirection(evt, target) {
+	    return typeof this.options.direction === 'function' ? this.options.direction.call(this, evt, target, dragEl) : this.options.direction;
+	  },
+	  _onTapStart: function _onTapStart(
+	  /** Event|TouchEvent */
+	  evt) {
+	    if (!evt.cancelable) return;
+
+	    var _this = this,
+	        el = this.el,
+	        options = this.options,
+	        preventOnFilter = options.preventOnFilter,
+	        type = evt.type,
+	        touch = evt.touches && evt.touches[0] || evt.pointerType && evt.pointerType === 'touch' && evt,
+	        target = (touch || evt).target,
+	        originalTarget = evt.target.shadowRoot && (evt.path && evt.path[0] || evt.composedPath && evt.composedPath()[0]) || target,
+	        filter = options.filter;
+
+	    _saveInputCheckedState(el); // Don't trigger start event when an element is been dragged, otherwise the evt.oldindex always wrong when set option.group.
+
+
+	    if (dragEl) {
+	      return;
+	    }
+
+	    if (/mousedown|pointerdown/.test(type) && evt.button !== 0 || options.disabled) {
+	      return; // only left button and enabled
+	    } // cancel dnd if original target is content editable
+
+
+	    if (originalTarget.isContentEditable) {
+	      return;
+	    } // Safari ignores further event handling after mousedown
+
+
+	    if (!this.nativeDraggable && Safari && target && target.tagName.toUpperCase() === 'SELECT') {
+	      return;
+	    }
+
+	    target = closest(target, options.draggable, el, false);
+
+	    if (target && target.animated) {
+	      return;
+	    }
+
+	    if (lastDownEl === target) {
+	      // Ignoring duplicate `down`
+	      return;
+	    } // Get the index of the dragged element within its parent
+
+
+	    oldIndex = index(target);
+	    oldDraggableIndex = index(target, options.draggable); // Check filter
+
+	    if (typeof filter === 'function') {
+	      if (filter.call(this, evt, target, this)) {
+	        _dispatchEvent({
+	          sortable: _this,
+	          rootEl: originalTarget,
+	          name: 'filter',
+	          targetEl: target,
+	          toEl: el,
+	          fromEl: el
+	        });
+
+	        pluginEvent('filter', _this, {
+	          evt: evt
+	        });
+	        preventOnFilter && evt.cancelable && evt.preventDefault();
+	        return; // cancel dnd
+	      }
+	    } else if (filter) {
+	      filter = filter.split(',').some(function (criteria) {
+	        criteria = closest(originalTarget, criteria.trim(), el, false);
+
+	        if (criteria) {
+	          _dispatchEvent({
+	            sortable: _this,
+	            rootEl: criteria,
+	            name: 'filter',
+	            targetEl: target,
+	            fromEl: el,
+	            toEl: el
+	          });
+
+	          pluginEvent('filter', _this, {
+	            evt: evt
+	          });
+	          return true;
+	        }
+	      });
+
+	      if (filter) {
+	        preventOnFilter && evt.cancelable && evt.preventDefault();
+	        return; // cancel dnd
+	      }
+	    }
+
+	    if (options.handle && !closest(originalTarget, options.handle, el, false)) {
+	      return;
+	    } // Prepare `dragstart`
+
+
+	    this._prepareDragStart(evt, touch, target);
+	  },
+	  _prepareDragStart: function _prepareDragStart(
+	  /** Event */
+	  evt,
+	  /** Touch */
+	  touch,
+	  /** HTMLElement */
+	  target) {
+	    var _this = this,
+	        el = _this.el,
+	        options = _this.options,
+	        ownerDocument = el.ownerDocument,
+	        dragStartFn;
+
+	    if (target && !dragEl && target.parentNode === el) {
+	      var dragRect = getRect(target);
+	      rootEl = el;
+	      dragEl = target;
+	      parentEl = dragEl.parentNode;
+	      nextEl = dragEl.nextSibling;
+	      lastDownEl = target;
+	      activeGroup = options.group;
+	      Sortable$1.dragged = dragEl;
+	      tapEvt = {
+	        target: dragEl,
+	        clientX: (touch || evt).clientX,
+	        clientY: (touch || evt).clientY
+	      };
+	      tapDistanceLeft = tapEvt.clientX - dragRect.left;
+	      tapDistanceTop = tapEvt.clientY - dragRect.top;
+	      this._lastX = (touch || evt).clientX;
+	      this._lastY = (touch || evt).clientY;
+	      dragEl.style['will-change'] = 'all';
+
+	      dragStartFn = function dragStartFn() {
+	        pluginEvent('delayEnded', _this, {
+	          evt: evt
+	        });
+
+	        if (Sortable$1.eventCanceled) {
+	          _this._onDrop();
+
+	          return;
+	        } // Delayed drag has been triggered
+	        // we can re-enable the events: touchmove/mousemove
+
+
+	        _this._disableDelayedDragEvents();
+
+	        if (!FireFox && _this.nativeDraggable) {
+	          dragEl.draggable = true;
+	        } // Bind the events: dragstart/dragend
+
+
+	        _this._triggerDragStart(evt, touch); // Drag start event
+
+
+	        _dispatchEvent({
+	          sortable: _this,
+	          name: 'choose',
+	          originalEvent: evt
+	        }); // Chosen item
+
+
+	        toggleClass(dragEl, options.chosenClass, true);
+	      }; // Disable "draggable"
+
+
+	      options.ignore.split(',').forEach(function (criteria) {
+	        find(dragEl, criteria.trim(), _disableDraggable);
+	      });
+	      on(ownerDocument, 'dragover', nearestEmptyInsertDetectEvent);
+	      on(ownerDocument, 'mousemove', nearestEmptyInsertDetectEvent);
+	      on(ownerDocument, 'touchmove', nearestEmptyInsertDetectEvent);
+	      on(ownerDocument, 'mouseup', _this._onDrop);
+	      on(ownerDocument, 'touchend', _this._onDrop);
+	      on(ownerDocument, 'touchcancel', _this._onDrop); // Make dragEl draggable (must be before delay for FireFox)
+
+	      if (FireFox && this.nativeDraggable) {
+	        this.options.touchStartThreshold = 4;
+	        dragEl.draggable = true;
+	      }
+
+	      pluginEvent('delayStart', this, {
+	        evt: evt
+	      }); // Delay is impossible for native DnD in Edge or IE
+
+	      if (options.delay && (!options.delayOnTouchOnly || touch) && (!this.nativeDraggable || !(Edge || IE11OrLess))) {
+	        if (Sortable$1.eventCanceled) {
+	          this._onDrop();
+
+	          return;
+	        } // If the user moves the pointer or let go the click or touch
+	        // before the delay has been reached:
+	        // disable the delayed drag
+
+
+	        on(ownerDocument, 'mouseup', _this._disableDelayedDrag);
+	        on(ownerDocument, 'touchend', _this._disableDelayedDrag);
+	        on(ownerDocument, 'touchcancel', _this._disableDelayedDrag);
+	        on(ownerDocument, 'mousemove', _this._delayedDragTouchMoveHandler);
+	        on(ownerDocument, 'touchmove', _this._delayedDragTouchMoveHandler);
+	        options.supportPointer && on(ownerDocument, 'pointermove', _this._delayedDragTouchMoveHandler);
+	        _this._dragStartTimer = setTimeout(dragStartFn, options.delay);
+	      } else {
+	        dragStartFn();
+	      }
+	    }
+	  },
+	  _delayedDragTouchMoveHandler: function _delayedDragTouchMoveHandler(
+	  /** TouchEvent|PointerEvent **/
+	  e) {
+	    var touch = e.touches ? e.touches[0] : e;
+
+	    if (Math.max(Math.abs(touch.clientX - this._lastX), Math.abs(touch.clientY - this._lastY)) >= Math.floor(this.options.touchStartThreshold / (this.nativeDraggable && window.devicePixelRatio || 1))) {
+	      this._disableDelayedDrag();
+	    }
+	  },
+	  _disableDelayedDrag: function _disableDelayedDrag() {
+	    dragEl && _disableDraggable(dragEl);
+	    clearTimeout(this._dragStartTimer);
+
+	    this._disableDelayedDragEvents();
+	  },
+	  _disableDelayedDragEvents: function _disableDelayedDragEvents() {
+	    var ownerDocument = this.el.ownerDocument;
+	    off(ownerDocument, 'mouseup', this._disableDelayedDrag);
+	    off(ownerDocument, 'touchend', this._disableDelayedDrag);
+	    off(ownerDocument, 'touchcancel', this._disableDelayedDrag);
+	    off(ownerDocument, 'mousemove', this._delayedDragTouchMoveHandler);
+	    off(ownerDocument, 'touchmove', this._delayedDragTouchMoveHandler);
+	    off(ownerDocument, 'pointermove', this._delayedDragTouchMoveHandler);
+	  },
+	  _triggerDragStart: function _triggerDragStart(
+	  /** Event */
+	  evt,
+	  /** Touch */
+	  touch) {
+	    touch = touch || evt.pointerType == 'touch' && evt;
+
+	    if (!this.nativeDraggable || touch) {
+	      if (this.options.supportPointer) {
+	        on(document, 'pointermove', this._onTouchMove);
+	      } else if (touch) {
+	        on(document, 'touchmove', this._onTouchMove);
+	      } else {
+	        on(document, 'mousemove', this._onTouchMove);
+	      }
+	    } else {
+	      on(dragEl, 'dragend', this);
+	      on(rootEl, 'dragstart', this._onDragStart);
+	    }
+
+	    try {
+	      if (document.selection) {
+	        // Timeout neccessary for IE9
+	        _nextTick(function () {
+	          document.selection.empty();
+	        });
+	      } else {
+	        window.getSelection().removeAllRanges();
+	      }
+	    } catch (err) {}
+	  },
+	  _dragStarted: function _dragStarted(fallback, evt) {
+
+	    awaitingDragStarted = false;
+
+	    if (rootEl && dragEl) {
+	      pluginEvent('dragStarted', this, {
+	        evt: evt
+	      });
+
+	      if (this.nativeDraggable) {
+	        on(document, 'dragover', _checkOutsideTargetEl);
+	      }
+
+	      var options = this.options; // Apply effect
+
+	      !fallback && toggleClass(dragEl, options.dragClass, false);
+	      toggleClass(dragEl, options.ghostClass, true);
+	      Sortable$1.active = this;
+	      fallback && this._appendGhost(); // Drag start event
+
+	      _dispatchEvent({
+	        sortable: this,
+	        name: 'start',
+	        originalEvent: evt
+	      });
+	    } else {
+	      this._nulling();
+	    }
+	  },
+	  _emulateDragOver: function _emulateDragOver() {
+	    if (touchEvt) {
+	      this._lastX = touchEvt.clientX;
+	      this._lastY = touchEvt.clientY;
+
+	      _hideGhostForTarget();
+
+	      var target = document.elementFromPoint(touchEvt.clientX, touchEvt.clientY);
+	      var parent = target;
+
+	      while (target && target.shadowRoot) {
+	        target = target.shadowRoot.elementFromPoint(touchEvt.clientX, touchEvt.clientY);
+	        if (target === parent) break;
+	        parent = target;
+	      }
+
+	      dragEl.parentNode[expando]._isOutsideThisEl(target);
+
+	      if (parent) {
+	        do {
+	          if (parent[expando]) {
+	            var inserted = void 0;
+	            inserted = parent[expando]._onDragOver({
+	              clientX: touchEvt.clientX,
+	              clientY: touchEvt.clientY,
+	              target: target,
+	              rootEl: parent
+	            });
+
+	            if (inserted && !this.options.dragoverBubble) {
+	              break;
+	            }
+	          }
+
+	          target = parent; // store last element
+	        }
+	        /* jshint boss:true */
+	        while (parent = parent.parentNode);
+	      }
+
+	      _unhideGhostForTarget();
+	    }
+	  },
+	  _onTouchMove: function _onTouchMove(
+	  /**TouchEvent*/
+	  evt) {
+	    if (tapEvt) {
+	      var options = this.options,
+	          fallbackTolerance = options.fallbackTolerance,
+	          fallbackOffset = options.fallbackOffset,
+	          touch = evt.touches ? evt.touches[0] : evt,
+	          ghostMatrix = ghostEl && matrix(ghostEl, true),
+	          scaleX = ghostEl && ghostMatrix && ghostMatrix.a,
+	          scaleY = ghostEl && ghostMatrix && ghostMatrix.d,
+	          relativeScrollOffset = PositionGhostAbsolutely && ghostRelativeParent && getRelativeScrollOffset(ghostRelativeParent),
+	          dx = (touch.clientX - tapEvt.clientX + fallbackOffset.x) / (scaleX || 1) + (relativeScrollOffset ? relativeScrollOffset[0] - ghostRelativeParentInitialScroll[0] : 0) / (scaleX || 1),
+	          dy = (touch.clientY - tapEvt.clientY + fallbackOffset.y) / (scaleY || 1) + (relativeScrollOffset ? relativeScrollOffset[1] - ghostRelativeParentInitialScroll[1] : 0) / (scaleY || 1); // only set the status to dragging, when we are actually dragging
+
+	      if (!Sortable$1.active && !awaitingDragStarted) {
+	        if (fallbackTolerance && Math.max(Math.abs(touch.clientX - this._lastX), Math.abs(touch.clientY - this._lastY)) < fallbackTolerance) {
+	          return;
+	        }
+
+	        this._onDragStart(evt, true);
+	      }
+
+	      if (ghostEl) {
+	        if (ghostMatrix) {
+	          ghostMatrix.e += dx - (lastDx || 0);
+	          ghostMatrix.f += dy - (lastDy || 0);
+	        } else {
+	          ghostMatrix = {
+	            a: 1,
+	            b: 0,
+	            c: 0,
+	            d: 1,
+	            e: dx,
+	            f: dy
+	          };
+	        }
+
+	        var cssMatrix = "matrix(".concat(ghostMatrix.a, ",").concat(ghostMatrix.b, ",").concat(ghostMatrix.c, ",").concat(ghostMatrix.d, ",").concat(ghostMatrix.e, ",").concat(ghostMatrix.f, ")");
+	        css(ghostEl, 'webkitTransform', cssMatrix);
+	        css(ghostEl, 'mozTransform', cssMatrix);
+	        css(ghostEl, 'msTransform', cssMatrix);
+	        css(ghostEl, 'transform', cssMatrix);
+	        lastDx = dx;
+	        lastDy = dy;
+	        touchEvt = touch;
+	      }
+
+	      evt.cancelable && evt.preventDefault();
+	    }
+	  },
+	  _appendGhost: function _appendGhost() {
+	    // Bug if using scale(): https://stackoverflow.com/questions/2637058
+	    // Not being adjusted for
+	    if (!ghostEl) {
+	      var container = this.options.fallbackOnBody ? document.body : rootEl,
+	          rect = getRect(dragEl, true, PositionGhostAbsolutely, true, container),
+	          options = this.options; // Position absolutely
+
+	      if (PositionGhostAbsolutely) {
+	        // Get relatively positioned parent
+	        ghostRelativeParent = container;
+
+	        while (css(ghostRelativeParent, 'position') === 'static' && css(ghostRelativeParent, 'transform') === 'none' && ghostRelativeParent !== document) {
+	          ghostRelativeParent = ghostRelativeParent.parentNode;
+	        }
+
+	        if (ghostRelativeParent !== document.body && ghostRelativeParent !== document.documentElement) {
+	          if (ghostRelativeParent === document) ghostRelativeParent = getWindowScrollingElement();
+	          rect.top += ghostRelativeParent.scrollTop;
+	          rect.left += ghostRelativeParent.scrollLeft;
+	        } else {
+	          ghostRelativeParent = getWindowScrollingElement();
+	        }
+
+	        ghostRelativeParentInitialScroll = getRelativeScrollOffset(ghostRelativeParent);
+	      }
+
+	      ghostEl = dragEl.cloneNode(true);
+	      toggleClass(ghostEl, options.ghostClass, false);
+	      toggleClass(ghostEl, options.fallbackClass, true);
+	      toggleClass(ghostEl, options.dragClass, true);
+	      css(ghostEl, 'transition', '');
+	      css(ghostEl, 'transform', '');
+	      css(ghostEl, 'box-sizing', 'border-box');
+	      css(ghostEl, 'margin', 0);
+	      css(ghostEl, 'top', rect.top);
+	      css(ghostEl, 'left', rect.left);
+	      css(ghostEl, 'width', rect.width);
+	      css(ghostEl, 'height', rect.height);
+	      css(ghostEl, 'opacity', '0.8');
+	      css(ghostEl, 'position', PositionGhostAbsolutely ? 'absolute' : 'fixed');
+	      css(ghostEl, 'zIndex', '100000');
+	      css(ghostEl, 'pointerEvents', 'none');
+	      Sortable$1.ghost = ghostEl;
+	      container.appendChild(ghostEl); // Set transform-origin
+
+	      css(ghostEl, 'transform-origin', tapDistanceLeft / parseInt(ghostEl.style.width) * 100 + '% ' + tapDistanceTop / parseInt(ghostEl.style.height) * 100 + '%');
+	    }
+	  },
+	  _onDragStart: function _onDragStart(
+	  /**Event*/
+	  evt,
+	  /**boolean*/
+	  fallback) {
+	    var _this = this;
+
+	    var dataTransfer = evt.dataTransfer;
+	    var options = _this.options;
+	    pluginEvent('dragStart', this, {
+	      evt: evt
+	    });
+
+	    if (Sortable$1.eventCanceled) {
+	      this._onDrop();
+
+	      return;
+	    }
+
+	    pluginEvent('setupClone', this);
+
+	    if (!Sortable$1.eventCanceled) {
+	      cloneEl = clone(dragEl);
+	      cloneEl.draggable = false;
+	      cloneEl.style['will-change'] = '';
+
+	      this._hideClone();
+
+	      toggleClass(cloneEl, this.options.chosenClass, false);
+	      Sortable$1.clone = cloneEl;
+	    } // #1143: IFrame support workaround
+
+
+	    _this.cloneId = _nextTick(function () {
+	      pluginEvent('clone', _this);
+	      if (Sortable$1.eventCanceled) return;
+
+	      if (!_this.options.removeCloneOnHide) {
+	        rootEl.insertBefore(cloneEl, dragEl);
+	      }
+
+	      _this._hideClone();
+
+	      _dispatchEvent({
+	        sortable: _this,
+	        name: 'clone'
+	      });
+	    });
+	    !fallback && toggleClass(dragEl, options.dragClass, true); // Set proper drop events
+
+	    if (fallback) {
+	      ignoreNextClick = true;
+	      _this._loopId = setInterval(_this._emulateDragOver, 50);
+	    } else {
+	      // Undo what was set in _prepareDragStart before drag started
+	      off(document, 'mouseup', _this._onDrop);
+	      off(document, 'touchend', _this._onDrop);
+	      off(document, 'touchcancel', _this._onDrop);
+
+	      if (dataTransfer) {
+	        dataTransfer.effectAllowed = 'move';
+	        options.setData && options.setData.call(_this, dataTransfer, dragEl);
+	      }
+
+	      on(document, 'drop', _this); // #1276 fix:
+
+	      css(dragEl, 'transform', 'translateZ(0)');
+	    }
+
+	    awaitingDragStarted = true;
+	    _this._dragStartId = _nextTick(_this._dragStarted.bind(_this, fallback, evt));
+	    on(document, 'selectstart', _this);
+	    moved = true;
+
+	    if (Safari) {
+	      css(document.body, 'user-select', 'none');
+	    }
+	  },
+	  // Returns true - if no further action is needed (either inserted or another condition)
+	  _onDragOver: function _onDragOver(
+	  /**Event*/
+	  evt) {
+	    var el = this.el,
+	        target = evt.target,
+	        dragRect,
+	        targetRect,
+	        revert,
+	        options = this.options,
+	        group = options.group,
+	        activeSortable = Sortable$1.active,
+	        isOwner = activeGroup === group,
+	        canSort = options.sort,
+	        fromSortable = putSortable || activeSortable,
+	        vertical,
+	        _this = this,
+	        completedFired = false;
+
+	    if (_silent) return;
+
+	    function dragOverEvent(name, extra) {
+	      pluginEvent(name, _this, _objectSpread2({
+	        evt: evt,
+	        isOwner: isOwner,
+	        axis: vertical ? 'vertical' : 'horizontal',
+	        revert: revert,
+	        dragRect: dragRect,
+	        targetRect: targetRect,
+	        canSort: canSort,
+	        fromSortable: fromSortable,
+	        target: target,
+	        completed: completed,
+	        onMove: function onMove(target, after) {
+	          return _onMove(rootEl, el, dragEl, dragRect, target, getRect(target), evt, after);
+	        },
+	        changed: changed
+	      }, extra));
+	    } // Capture animation state
+
+
+	    function capture() {
+	      dragOverEvent('dragOverAnimationCapture');
+
+	      _this.captureAnimationState();
+
+	      if (_this !== fromSortable) {
+	        fromSortable.captureAnimationState();
+	      }
+	    } // Return invocation when dragEl is inserted (or completed)
+
+
+	    function completed(insertion) {
+	      dragOverEvent('dragOverCompleted', {
+	        insertion: insertion
+	      });
+
+	      if (insertion) {
+	        // Clones must be hidden before folding animation to capture dragRectAbsolute properly
+	        if (isOwner) {
+	          activeSortable._hideClone();
+	        } else {
+	          activeSortable._showClone(_this);
+	        }
+
+	        if (_this !== fromSortable) {
+	          // Set ghost class to new sortable's ghost class
+	          toggleClass(dragEl, putSortable ? putSortable.options.ghostClass : activeSortable.options.ghostClass, false);
+	          toggleClass(dragEl, options.ghostClass, true);
+	        }
+
+	        if (putSortable !== _this && _this !== Sortable$1.active) {
+	          putSortable = _this;
+	        } else if (_this === Sortable$1.active && putSortable) {
+	          putSortable = null;
+	        } // Animation
+
+
+	        if (fromSortable === _this) {
+	          _this._ignoreWhileAnimating = target;
+	        }
+
+	        _this.animateAll(function () {
+	          dragOverEvent('dragOverAnimationComplete');
+	          _this._ignoreWhileAnimating = null;
+	        });
+
+	        if (_this !== fromSortable) {
+	          fromSortable.animateAll();
+	          fromSortable._ignoreWhileAnimating = null;
+	        }
+	      } // Null lastTarget if it is not inside a previously swapped element
+
+
+	      if (target === dragEl && !dragEl.animated || target === el && !target.animated) {
+	        lastTarget = null;
+	      } // no bubbling and not fallback
+
+
+	      if (!options.dragoverBubble && !evt.rootEl && target !== document) {
+	        dragEl.parentNode[expando]._isOutsideThisEl(evt.target); // Do not detect for empty insert if already inserted
+
+
+	        !insertion && nearestEmptyInsertDetectEvent(evt);
+	      }
+
+	      !options.dragoverBubble && evt.stopPropagation && evt.stopPropagation();
+	      return completedFired = true;
+	    } // Call when dragEl has been inserted
+
+
+	    function changed() {
+	      newIndex = index(dragEl);
+	      newDraggableIndex = index(dragEl, options.draggable);
+
+	      _dispatchEvent({
+	        sortable: _this,
+	        name: 'change',
+	        toEl: el,
+	        newIndex: newIndex,
+	        newDraggableIndex: newDraggableIndex,
+	        originalEvent: evt
+	      });
+	    }
+
+	    if (evt.preventDefault !== void 0) {
+	      evt.cancelable && evt.preventDefault();
+	    }
+
+	    target = closest(target, options.draggable, el, true);
+	    dragOverEvent('dragOver');
+	    if (Sortable$1.eventCanceled) return completedFired;
+
+	    if (dragEl.contains(evt.target) || target.animated && target.animatingX && target.animatingY || _this._ignoreWhileAnimating === target) {
+	      return completed(false);
+	    }
+
+	    ignoreNextClick = false;
+
+	    if (activeSortable && !options.disabled && (isOwner ? canSort || (revert = parentEl !== rootEl) // Reverting item into the original list
+	    : putSortable === this || (this.lastPutMode = activeGroup.checkPull(this, activeSortable, dragEl, evt)) && group.checkPut(this, activeSortable, dragEl, evt))) {
+	      vertical = this._getDirection(evt, target) === 'vertical';
+	      dragRect = getRect(dragEl);
+	      dragOverEvent('dragOverValid');
+	      if (Sortable$1.eventCanceled) return completedFired;
+
+	      if (revert) {
+	        parentEl = rootEl; // actualization
+
+	        capture();
+
+	        this._hideClone();
+
+	        dragOverEvent('revert');
+
+	        if (!Sortable$1.eventCanceled) {
+	          if (nextEl) {
+	            rootEl.insertBefore(dragEl, nextEl);
+	          } else {
+	            rootEl.appendChild(dragEl);
+	          }
+	        }
+
+	        return completed(true);
+	      }
+
+	      var elLastChild = lastChild(el, options.draggable);
+
+	      if (!elLastChild || _ghostIsLast(evt, vertical, this) && !elLastChild.animated) {
+	        // Insert to end of list
+	        // If already at end of list: Do not insert
+	        if (elLastChild === dragEl) {
+	          return completed(false);
+	        } // if there is a last element, it is the target
+
+
+	        if (elLastChild && el === evt.target) {
+	          target = elLastChild;
+	        }
+
+	        if (target) {
+	          targetRect = getRect(target);
+	        }
+
+	        if (_onMove(rootEl, el, dragEl, dragRect, target, targetRect, evt, !!target) !== false) {
+	          capture();
+	          el.appendChild(dragEl);
+	          parentEl = el; // actualization
+
+	          changed();
+	          return completed(true);
+	        }
+	      } else if (elLastChild && _ghostIsFirst(evt, vertical, this)) {
+	        // Insert to start of list
+	        var firstChild = getChild(el, 0, options, true);
+
+	        if (firstChild === dragEl) {
+	          return completed(false);
+	        }
+
+	        target = firstChild;
+	        targetRect = getRect(target);
+
+	        if (_onMove(rootEl, el, dragEl, dragRect, target, targetRect, evt, false) !== false) {
+	          capture();
+	          el.insertBefore(dragEl, firstChild);
+	          parentEl = el; // actualization
+
+	          changed();
+	          return completed(true);
+	        }
+	      } else if (target.parentNode === el) {
+	        targetRect = getRect(target);
+	        var direction = 0,
+	            targetBeforeFirstSwap,
+	            differentLevel = dragEl.parentNode !== el,
+	            differentRowCol = !_dragElInRowColumn(dragEl.animated && dragEl.toRect || dragRect, target.animated && target.toRect || targetRect, vertical),
+	            side1 = vertical ? 'top' : 'left',
+	            scrolledPastTop = isScrolledPast(target, 'top', 'top') || isScrolledPast(dragEl, 'top', 'top'),
+	            scrollBefore = scrolledPastTop ? scrolledPastTop.scrollTop : void 0;
+
+	        if (lastTarget !== target) {
+	          targetBeforeFirstSwap = targetRect[side1];
+	          pastFirstInvertThresh = false;
+	          isCircumstantialInvert = !differentRowCol && options.invertSwap || differentLevel;
+	        }
+
+	        direction = _getSwapDirection(evt, target, targetRect, vertical, differentRowCol ? 1 : options.swapThreshold, options.invertedSwapThreshold == null ? options.swapThreshold : options.invertedSwapThreshold, isCircumstantialInvert, lastTarget === target);
+	        var sibling;
+
+	        if (direction !== 0) {
+	          // Check if target is beside dragEl in respective direction (ignoring hidden elements)
+	          var dragIndex = index(dragEl);
+
+	          do {
+	            dragIndex -= direction;
+	            sibling = parentEl.children[dragIndex];
+	          } while (sibling && (css(sibling, 'display') === 'none' || sibling === ghostEl));
+	        } // If dragEl is already beside target: Do not insert
+
+
+	        if (direction === 0 || sibling === target) {
+	          return completed(false);
+	        }
+
+	        lastTarget = target;
+	        lastDirection = direction;
+	        var nextSibling = target.nextElementSibling,
+	            after = false;
+	        after = direction === 1;
+
+	        var moveVector = _onMove(rootEl, el, dragEl, dragRect, target, targetRect, evt, after);
+
+	        if (moveVector !== false) {
+	          if (moveVector === 1 || moveVector === -1) {
+	            after = moveVector === 1;
+	          }
+
+	          _silent = true;
+	          setTimeout(_unsilent, 30);
+	          capture();
+
+	          if (after && !nextSibling) {
+	            el.appendChild(dragEl);
+	          } else {
+	            target.parentNode.insertBefore(dragEl, after ? nextSibling : target);
+	          } // Undo chrome's scroll adjustment (has no effect on other browsers)
+
+
+	          if (scrolledPastTop) {
+	            scrollBy(scrolledPastTop, 0, scrollBefore - scrolledPastTop.scrollTop);
+	          }
+
+	          parentEl = dragEl.parentNode; // actualization
+	          // must be done before animation
+
+	          if (targetBeforeFirstSwap !== undefined && !isCircumstantialInvert) {
+	            targetMoveDistance = Math.abs(targetBeforeFirstSwap - getRect(target)[side1]);
+	          }
+
+	          changed();
+	          return completed(true);
+	        }
+	      }
+
+	      if (el.contains(dragEl)) {
+	        return completed(false);
+	      }
+	    }
+
+	    return false;
+	  },
+	  _ignoreWhileAnimating: null,
+	  _offMoveEvents: function _offMoveEvents() {
+	    off(document, 'mousemove', this._onTouchMove);
+	    off(document, 'touchmove', this._onTouchMove);
+	    off(document, 'pointermove', this._onTouchMove);
+	    off(document, 'dragover', nearestEmptyInsertDetectEvent);
+	    off(document, 'mousemove', nearestEmptyInsertDetectEvent);
+	    off(document, 'touchmove', nearestEmptyInsertDetectEvent);
+	  },
+	  _offUpEvents: function _offUpEvents() {
+	    var ownerDocument = this.el.ownerDocument;
+	    off(ownerDocument, 'mouseup', this._onDrop);
+	    off(ownerDocument, 'touchend', this._onDrop);
+	    off(ownerDocument, 'pointerup', this._onDrop);
+	    off(ownerDocument, 'touchcancel', this._onDrop);
+	    off(document, 'selectstart', this);
+	  },
+	  _onDrop: function _onDrop(
+	  /**Event*/
+	  evt) {
+	    var el = this.el,
+	        options = this.options; // Get the index of the dragged element within its parent
+
+	    newIndex = index(dragEl);
+	    newDraggableIndex = index(dragEl, options.draggable);
+	    pluginEvent('drop', this, {
+	      evt: evt
+	    });
+	    parentEl = dragEl && dragEl.parentNode; // Get again after plugin event
+
+	    newIndex = index(dragEl);
+	    newDraggableIndex = index(dragEl, options.draggable);
+
+	    if (Sortable$1.eventCanceled) {
+	      this._nulling();
+
+	      return;
+	    }
+
+	    awaitingDragStarted = false;
+	    isCircumstantialInvert = false;
+	    pastFirstInvertThresh = false;
+	    clearInterval(this._loopId);
+	    clearTimeout(this._dragStartTimer);
+
+	    _cancelNextTick(this.cloneId);
+
+	    _cancelNextTick(this._dragStartId); // Unbind events
+
+
+	    if (this.nativeDraggable) {
+	      off(document, 'drop', this);
+	      off(el, 'dragstart', this._onDragStart);
+	    }
+
+	    this._offMoveEvents();
+
+	    this._offUpEvents();
+
+	    if (Safari) {
+	      css(document.body, 'user-select', '');
+	    }
+
+	    css(dragEl, 'transform', '');
+
+	    if (evt) {
+	      if (moved) {
+	        evt.cancelable && evt.preventDefault();
+	        !options.dropBubble && evt.stopPropagation();
+	      }
+
+	      ghostEl && ghostEl.parentNode && ghostEl.parentNode.removeChild(ghostEl);
+
+	      if (rootEl === parentEl || putSortable && putSortable.lastPutMode !== 'clone') {
+	        // Remove clone(s)
+	        cloneEl && cloneEl.parentNode && cloneEl.parentNode.removeChild(cloneEl);
+	      }
+
+	      if (dragEl) {
+	        if (this.nativeDraggable) {
+	          off(dragEl, 'dragend', this);
+	        }
+
+	        _disableDraggable(dragEl);
+
+	        dragEl.style['will-change'] = ''; // Remove classes
+	        // ghostClass is added in dragStarted
+
+	        if (moved && !awaitingDragStarted) {
+	          toggleClass(dragEl, putSortable ? putSortable.options.ghostClass : this.options.ghostClass, false);
+	        }
+
+	        toggleClass(dragEl, this.options.chosenClass, false); // Drag stop event
+
+	        _dispatchEvent({
+	          sortable: this,
+	          name: 'unchoose',
+	          toEl: parentEl,
+	          newIndex: null,
+	          newDraggableIndex: null,
+	          originalEvent: evt
+	        });
+
+	        if (rootEl !== parentEl) {
+	          if (newIndex >= 0) {
+	            // Add event
+	            _dispatchEvent({
+	              rootEl: parentEl,
+	              name: 'add',
+	              toEl: parentEl,
+	              fromEl: rootEl,
+	              originalEvent: evt
+	            }); // Remove event
+
+
+	            _dispatchEvent({
+	              sortable: this,
+	              name: 'remove',
+	              toEl: parentEl,
+	              originalEvent: evt
+	            }); // drag from one list and drop into another
+
+
+	            _dispatchEvent({
+	              rootEl: parentEl,
+	              name: 'sort',
+	              toEl: parentEl,
+	              fromEl: rootEl,
+	              originalEvent: evt
+	            });
+
+	            _dispatchEvent({
+	              sortable: this,
+	              name: 'sort',
+	              toEl: parentEl,
+	              originalEvent: evt
+	            });
+	          }
+
+	          putSortable && putSortable.save();
+	        } else {
+	          if (newIndex !== oldIndex) {
+	            if (newIndex >= 0) {
+	              // drag & drop within the same list
+	              _dispatchEvent({
+	                sortable: this,
+	                name: 'update',
+	                toEl: parentEl,
+	                originalEvent: evt
+	              });
+
+	              _dispatchEvent({
+	                sortable: this,
+	                name: 'sort',
+	                toEl: parentEl,
+	                originalEvent: evt
+	              });
+	            }
+	          }
+	        }
+
+	        if (Sortable$1.active) {
+	          /* jshint eqnull:true */
+	          if (newIndex == null || newIndex === -1) {
+	            newIndex = oldIndex;
+	            newDraggableIndex = oldDraggableIndex;
+	          }
+
+	          _dispatchEvent({
+	            sortable: this,
+	            name: 'end',
+	            toEl: parentEl,
+	            originalEvent: evt
+	          }); // Save sorting
+
+
+	          this.save();
+	        }
+	      }
+	    }
+
+	    this._nulling();
+	  },
+	  _nulling: function _nulling() {
+	    pluginEvent('nulling', this);
+	    rootEl = dragEl = parentEl = ghostEl = nextEl = cloneEl = lastDownEl = cloneHidden = tapEvt = touchEvt = moved = newIndex = newDraggableIndex = oldIndex = oldDraggableIndex = lastTarget = lastDirection = putSortable = activeGroup = Sortable$1.dragged = Sortable$1.ghost = Sortable$1.clone = Sortable$1.active = null;
+	    savedInputChecked.forEach(function (el) {
+	      el.checked = true;
+	    });
+	    savedInputChecked.length = lastDx = lastDy = 0;
+	  },
+	  handleEvent: function handleEvent(
+	  /**Event*/
+	  evt) {
+	    switch (evt.type) {
+	      case 'drop':
+	      case 'dragend':
+	        this._onDrop(evt);
+
+	        break;
+
+	      case 'dragenter':
+	      case 'dragover':
+	        if (dragEl) {
+	          this._onDragOver(evt);
+
+	          _globalDragOver(evt);
+	        }
+
+	        break;
+
+	      case 'selectstart':
+	        evt.preventDefault();
+	        break;
+	    }
+	  },
+
+	  /**
+	   * Serializes the item into an array of string.
+	   * @returns {String[]}
+	   */
+	  toArray: function toArray() {
+	    var order = [],
+	        el,
+	        children = this.el.children,
+	        i = 0,
+	        n = children.length,
+	        options = this.options;
+
+	    for (; i < n; i++) {
+	      el = children[i];
+
+	      if (closest(el, options.draggable, this.el, false)) {
+	        order.push(el.getAttribute(options.dataIdAttr) || _generateId(el));
+	      }
+	    }
+
+	    return order;
+	  },
+
+	  /**
+	   * Sorts the elements according to the array.
+	   * @param  {String[]}  order  order of the items
+	   */
+	  sort: function sort(order, useAnimation) {
+	    var items = {},
+	        rootEl = this.el;
+	    this.toArray().forEach(function (id, i) {
+	      var el = rootEl.children[i];
+
+	      if (closest(el, this.options.draggable, rootEl, false)) {
+	        items[id] = el;
+	      }
+	    }, this);
+	    useAnimation && this.captureAnimationState();
+	    order.forEach(function (id) {
+	      if (items[id]) {
+	        rootEl.removeChild(items[id]);
+	        rootEl.appendChild(items[id]);
+	      }
+	    });
+	    useAnimation && this.animateAll();
+	  },
+
+	  /**
+	   * Save the current sorting
+	   */
+	  save: function save() {
+	    var store = this.options.store;
+	    store && store.set && store.set(this);
+	  },
+
+	  /**
+	   * For each element in the set, get the first element that matches the selector by testing the element itself and traversing up through its ancestors in the DOM tree.
+	   * @param   {HTMLElement}  el
+	   * @param   {String}       [selector]  default: `options.draggable`
+	   * @returns {HTMLElement|null}
+	   */
+	  closest: function closest$1(el, selector) {
+	    return closest(el, selector || this.options.draggable, this.el, false);
+	  },
+
+	  /**
+	   * Set/get option
+	   * @param   {string} name
+	   * @param   {*}      [value]
+	   * @returns {*}
+	   */
+	  option: function option(name, value) {
+	    var options = this.options;
+
+	    if (value === void 0) {
+	      return options[name];
+	    } else {
+	      var modifiedValue = PluginManager.modifyOption(this, name, value);
+
+	      if (typeof modifiedValue !== 'undefined') {
+	        options[name] = modifiedValue;
+	      } else {
+	        options[name] = value;
+	      }
+
+	      if (name === 'group') {
+	        _prepareGroup(options);
+	      }
+	    }
+	  },
+
+	  /**
+	   * Destroy
+	   */
+	  destroy: function destroy() {
+	    pluginEvent('destroy', this);
+	    var el = this.el;
+	    el[expando] = null;
+	    off(el, 'mousedown', this._onTapStart);
+	    off(el, 'touchstart', this._onTapStart);
+	    off(el, 'pointerdown', this._onTapStart);
+
+	    if (this.nativeDraggable) {
+	      off(el, 'dragover', this);
+	      off(el, 'dragenter', this);
+	    } // Remove draggable attributes
+
+
+	    Array.prototype.forEach.call(el.querySelectorAll('[draggable]'), function (el) {
+	      el.removeAttribute('draggable');
+	    });
+
+	    this._onDrop();
+
+	    this._disableDelayedDragEvents();
+
+	    sortables.splice(sortables.indexOf(this.el), 1);
+	    this.el = el = null;
+	  },
+	  _hideClone: function _hideClone() {
+	    if (!cloneHidden) {
+	      pluginEvent('hideClone', this);
+	      if (Sortable$1.eventCanceled) return;
+	      css(cloneEl, 'display', 'none');
+
+	      if (this.options.removeCloneOnHide && cloneEl.parentNode) {
+	        cloneEl.parentNode.removeChild(cloneEl);
+	      }
+
+	      cloneHidden = true;
+	    }
+	  },
+	  _showClone: function _showClone(putSortable) {
+	    if (putSortable.lastPutMode !== 'clone') {
+	      this._hideClone();
+
+	      return;
+	    }
+
+	    if (cloneHidden) {
+	      pluginEvent('showClone', this);
+	      if (Sortable$1.eventCanceled) return; // show clone at dragEl or original position
+
+	      if (dragEl.parentNode == rootEl && !this.options.group.revertClone) {
+	        rootEl.insertBefore(cloneEl, dragEl);
+	      } else if (nextEl) {
+	        rootEl.insertBefore(cloneEl, nextEl);
+	      } else {
+	        rootEl.appendChild(cloneEl);
+	      }
+
+	      if (this.options.group.revertClone) {
+	        this.animate(dragEl, cloneEl);
+	      }
+
+	      css(cloneEl, 'display', '');
+	      cloneHidden = false;
+	    }
+	  }
+	};
+
+	function _globalDragOver(
+	/**Event*/
+	evt) {
+	  if (evt.dataTransfer) {
+	    evt.dataTransfer.dropEffect = 'move';
+	  }
+
+	  evt.cancelable && evt.preventDefault();
+	}
+
+	function _onMove(fromEl, toEl, dragEl, dragRect, targetEl, targetRect, originalEvent, willInsertAfter) {
+	  var evt,
+	      sortable = fromEl[expando],
+	      onMoveFn = sortable.options.onMove,
+	      retVal; // Support for new CustomEvent feature
+
+	  if (window.CustomEvent && !IE11OrLess && !Edge) {
+	    evt = new CustomEvent('move', {
+	      bubbles: true,
+	      cancelable: true
+	    });
+	  } else {
+	    evt = document.createEvent('Event');
+	    evt.initEvent('move', true, true);
+	  }
+
+	  evt.to = toEl;
+	  evt.from = fromEl;
+	  evt.dragged = dragEl;
+	  evt.draggedRect = dragRect;
+	  evt.related = targetEl || toEl;
+	  evt.relatedRect = targetRect || getRect(toEl);
+	  evt.willInsertAfter = willInsertAfter;
+	  evt.originalEvent = originalEvent;
+	  fromEl.dispatchEvent(evt);
+
+	  if (onMoveFn) {
+	    retVal = onMoveFn.call(sortable, evt, originalEvent);
+	  }
+
+	  return retVal;
+	}
+
+	function _disableDraggable(el) {
+	  el.draggable = false;
+	}
+
+	function _unsilent() {
+	  _silent = false;
+	}
+
+	function _ghostIsFirst(evt, vertical, sortable) {
+	  var rect = getRect(getChild(sortable.el, 0, sortable.options, true));
+	  var spacer = 10;
+	  return vertical ? evt.clientX < rect.left - spacer || evt.clientY < rect.top && evt.clientX < rect.right : evt.clientY < rect.top - spacer || evt.clientY < rect.bottom && evt.clientX < rect.left;
+	}
+
+	function _ghostIsLast(evt, vertical, sortable) {
+	  var rect = getRect(lastChild(sortable.el, sortable.options.draggable));
+	  var spacer = 10;
+	  return vertical ? evt.clientX > rect.right + spacer || evt.clientX <= rect.right && evt.clientY > rect.bottom && evt.clientX >= rect.left : evt.clientX > rect.right && evt.clientY > rect.top || evt.clientX <= rect.right && evt.clientY > rect.bottom + spacer;
+	}
+
+	function _getSwapDirection(evt, target, targetRect, vertical, swapThreshold, invertedSwapThreshold, invertSwap, isLastTarget) {
+	  var mouseOnAxis = vertical ? evt.clientY : evt.clientX,
+	      targetLength = vertical ? targetRect.height : targetRect.width,
+	      targetS1 = vertical ? targetRect.top : targetRect.left,
+	      targetS2 = vertical ? targetRect.bottom : targetRect.right,
+	      invert = false;
+
+	  if (!invertSwap) {
+	    // Never invert or create dragEl shadow when target movemenet causes mouse to move past the end of regular swapThreshold
+	    if (isLastTarget && targetMoveDistance < targetLength * swapThreshold) {
+	      // multiplied only by swapThreshold because mouse will already be inside target by (1 - threshold) * targetLength / 2
+	      // check if past first invert threshold on side opposite of lastDirection
+	      if (!pastFirstInvertThresh && (lastDirection === 1 ? mouseOnAxis > targetS1 + targetLength * invertedSwapThreshold / 2 : mouseOnAxis < targetS2 - targetLength * invertedSwapThreshold / 2)) {
+	        // past first invert threshold, do not restrict inverted threshold to dragEl shadow
+	        pastFirstInvertThresh = true;
+	      }
+
+	      if (!pastFirstInvertThresh) {
+	        // dragEl shadow (target move distance shadow)
+	        if (lastDirection === 1 ? mouseOnAxis < targetS1 + targetMoveDistance // over dragEl shadow
+	        : mouseOnAxis > targetS2 - targetMoveDistance) {
+	          return -lastDirection;
+	        }
+	      } else {
+	        invert = true;
+	      }
+	    } else {
+	      // Regular
+	      if (mouseOnAxis > targetS1 + targetLength * (1 - swapThreshold) / 2 && mouseOnAxis < targetS2 - targetLength * (1 - swapThreshold) / 2) {
+	        return _getInsertDirection(target);
+	      }
+	    }
+	  }
+
+	  invert = invert || invertSwap;
+
+	  if (invert) {
+	    // Invert of regular
+	    if (mouseOnAxis < targetS1 + targetLength * invertedSwapThreshold / 2 || mouseOnAxis > targetS2 - targetLength * invertedSwapThreshold / 2) {
+	      return mouseOnAxis > targetS1 + targetLength / 2 ? 1 : -1;
+	    }
+	  }
+
+	  return 0;
+	}
+	/**
+	 * Gets the direction dragEl must be swapped relative to target in order to make it
+	 * seem that dragEl has been "inserted" into that element's position
+	 * @param  {HTMLElement} target       The target whose position dragEl is being inserted at
+	 * @return {Number}                   Direction dragEl must be swapped
+	 */
+
+
+	function _getInsertDirection(target) {
+	  if (index(dragEl) < index(target)) {
+	    return 1;
+	  } else {
+	    return -1;
+	  }
+	}
+	/**
+	 * Generate id
+	 * @param   {HTMLElement} el
+	 * @returns {String}
+	 * @private
+	 */
+
+
+	function _generateId(el) {
+	  var str = el.tagName + el.className + el.src + el.href + el.textContent,
+	      i = str.length,
+	      sum = 0;
+
+	  while (i--) {
+	    sum += str.charCodeAt(i);
+	  }
+
+	  return sum.toString(36);
+	}
+
+	function _saveInputCheckedState(root) {
+	  savedInputChecked.length = 0;
+	  var inputs = root.getElementsByTagName('input');
+	  var idx = inputs.length;
+
+	  while (idx--) {
+	    var el = inputs[idx];
+	    el.checked && savedInputChecked.push(el);
+	  }
+	}
+
+	function _nextTick(fn) {
+	  return setTimeout(fn, 0);
+	}
+
+	function _cancelNextTick(id) {
+	  return clearTimeout(id);
+	} // Fixed #973:
+
+
+	if (documentExists) {
+	  on(document, 'touchmove', function (evt) {
+	    if ((Sortable$1.active || awaitingDragStarted) && evt.cancelable) {
+	      evt.preventDefault();
+	    }
+	  });
+	} // Export utils
+
+
+	Sortable$1.utils = {
+	  on: on,
+	  off: off,
+	  css: css,
+	  find: find,
+	  is: function is(el, selector) {
+	    return !!closest(el, selector, el, false);
+	  },
+	  extend: extend,
+	  throttle: throttle,
+	  closest: closest,
+	  toggleClass: toggleClass,
+	  clone: clone,
+	  index: index,
+	  nextTick: _nextTick,
+	  cancelNextTick: _cancelNextTick,
+	  detectDirection: _detectDirection,
+	  getChild: getChild
+	};
+	/**
+	 * Get the Sortable instance of an element
+	 * @param  {HTMLElement} element The element
+	 * @return {Sortable|undefined}         The instance of Sortable
+	 */
+
+	Sortable$1.get = function (element) {
+	  return element[expando];
+	};
+	/**
+	 * Mount a plugin to Sortable
+	 * @param  {...SortablePlugin|SortablePlugin[]} plugins       Plugins being mounted
+	 */
+
+
+	Sortable$1.mount = function () {
+	  for (var _len = arguments.length, plugins = new Array(_len), _key = 0; _key < _len; _key++) {
+	    plugins[_key] = arguments[_key];
+	  }
+
+	  if (plugins[0].constructor === Array) plugins = plugins[0];
+	  plugins.forEach(function (plugin) {
+	    if (!plugin.prototype || !plugin.prototype.constructor) {
+	      throw "Sortable: Mounted plugin must be a constructor function, not ".concat({}.toString.call(plugin));
+	    }
+
+	    if (plugin.utils) Sortable$1.utils = _objectSpread2(_objectSpread2({}, Sortable$1.utils), plugin.utils);
+	    PluginManager.mount(plugin);
+	  });
+	};
+	/**
+	 * Create sortable instance
+	 * @param {HTMLElement}  el
+	 * @param {Object}      [options]
+	 */
+
+
+	Sortable$1.create = function (el, options) {
+	  return new Sortable$1(el, options);
+	}; // Export
+
+
+	Sortable$1.version = version;
+
+	var autoScrolls = [],
+	    scrollEl,
+	    scrollRootEl,
+	    scrolling = false,
+	    lastAutoScrollX,
+	    lastAutoScrollY,
+	    touchEvt$1,
+	    pointerElemChangedInterval;
+
+	function AutoScrollPlugin() {
+	  function AutoScroll() {
+	    this.defaults = {
+	      scroll: true,
+	      forceAutoScrollFallback: false,
+	      scrollSensitivity: 30,
+	      scrollSpeed: 10,
+	      bubbleScroll: true
+	    }; // Bind all private methods
+
+	    for (var fn in this) {
+	      if (fn.charAt(0) === '_' && typeof this[fn] === 'function') {
+	        this[fn] = this[fn].bind(this);
+	      }
+	    }
+	  }
+
+	  AutoScroll.prototype = {
+	    dragStarted: function dragStarted(_ref) {
+	      var originalEvent = _ref.originalEvent;
+
+	      if (this.sortable.nativeDraggable) {
+	        on(document, 'dragover', this._handleAutoScroll);
+	      } else {
+	        if (this.options.supportPointer) {
+	          on(document, 'pointermove', this._handleFallbackAutoScroll);
+	        } else if (originalEvent.touches) {
+	          on(document, 'touchmove', this._handleFallbackAutoScroll);
+	        } else {
+	          on(document, 'mousemove', this._handleFallbackAutoScroll);
+	        }
+	      }
+	    },
+	    dragOverCompleted: function dragOverCompleted(_ref2) {
+	      var originalEvent = _ref2.originalEvent;
+
+	      // For when bubbling is canceled and using fallback (fallback 'touchmove' always reached)
+	      if (!this.options.dragOverBubble && !originalEvent.rootEl) {
+	        this._handleAutoScroll(originalEvent);
+	      }
+	    },
+	    drop: function drop() {
+	      if (this.sortable.nativeDraggable) {
+	        off(document, 'dragover', this._handleAutoScroll);
+	      } else {
+	        off(document, 'pointermove', this._handleFallbackAutoScroll);
+	        off(document, 'touchmove', this._handleFallbackAutoScroll);
+	        off(document, 'mousemove', this._handleFallbackAutoScroll);
+	      }
+
+	      clearPointerElemChangedInterval();
+	      clearAutoScrolls();
+	      cancelThrottle();
+	    },
+	    nulling: function nulling() {
+	      touchEvt$1 = scrollRootEl = scrollEl = scrolling = pointerElemChangedInterval = lastAutoScrollX = lastAutoScrollY = null;
+	      autoScrolls.length = 0;
+	    },
+	    _handleFallbackAutoScroll: function _handleFallbackAutoScroll(evt) {
+	      this._handleAutoScroll(evt, true);
+	    },
+	    _handleAutoScroll: function _handleAutoScroll(evt, fallback) {
+	      var _this = this;
+
+	      var x = (evt.touches ? evt.touches[0] : evt).clientX,
+	          y = (evt.touches ? evt.touches[0] : evt).clientY,
+	          elem = document.elementFromPoint(x, y);
+	      touchEvt$1 = evt; // IE does not seem to have native autoscroll,
+	      // Edge's autoscroll seems too conditional,
+	      // MACOS Safari does not have autoscroll,
+	      // Firefox and Chrome are good
+
+	      if (fallback || this.options.forceAutoScrollFallback || Edge || IE11OrLess || Safari) {
+	        autoScroll(evt, this.options, elem, fallback); // Listener for pointer element change
+
+	        var ogElemScroller = getParentAutoScrollElement(elem, true);
+
+	        if (scrolling && (!pointerElemChangedInterval || x !== lastAutoScrollX || y !== lastAutoScrollY)) {
+	          pointerElemChangedInterval && clearPointerElemChangedInterval(); // Detect for pointer elem change, emulating native DnD behaviour
+
+	          pointerElemChangedInterval = setInterval(function () {
+	            var newElem = getParentAutoScrollElement(document.elementFromPoint(x, y), true);
+
+	            if (newElem !== ogElemScroller) {
+	              ogElemScroller = newElem;
+	              clearAutoScrolls();
+	            }
+
+	            autoScroll(evt, _this.options, newElem, fallback);
+	          }, 10);
+	          lastAutoScrollX = x;
+	          lastAutoScrollY = y;
+	        }
+	      } else {
+	        // if DnD is enabled (and browser has good autoscrolling), first autoscroll will already scroll, so get parent autoscroll of first autoscroll
+	        if (!this.options.bubbleScroll || getParentAutoScrollElement(elem, true) === getWindowScrollingElement()) {
+	          clearAutoScrolls();
+	          return;
+	        }
+
+	        autoScroll(evt, this.options, getParentAutoScrollElement(elem, false), false);
+	      }
+	    }
+	  };
+	  return _extends(AutoScroll, {
+	    pluginName: 'scroll',
+	    initializeByDefault: true
+	  });
+	}
+
+	function clearAutoScrolls() {
+	  autoScrolls.forEach(function (autoScroll) {
+	    clearInterval(autoScroll.pid);
+	  });
+	  autoScrolls = [];
+	}
+
+	function clearPointerElemChangedInterval() {
+	  clearInterval(pointerElemChangedInterval);
+	}
+
+	var autoScroll = throttle(function (evt, options, rootEl, isFallback) {
+	  // Bug: https://bugzilla.mozilla.org/show_bug.cgi?id=505521
+	  if (!options.scroll) return;
+	  var x = (evt.touches ? evt.touches[0] : evt).clientX,
+	      y = (evt.touches ? evt.touches[0] : evt).clientY,
+	      sens = options.scrollSensitivity,
+	      speed = options.scrollSpeed,
+	      winScroller = getWindowScrollingElement();
+	  var scrollThisInstance = false,
+	      scrollCustomFn; // New scroll root, set scrollEl
+
+	  if (scrollRootEl !== rootEl) {
+	    scrollRootEl = rootEl;
+	    clearAutoScrolls();
+	    scrollEl = options.scroll;
+	    scrollCustomFn = options.scrollFn;
+
+	    if (scrollEl === true) {
+	      scrollEl = getParentAutoScrollElement(rootEl, true);
+	    }
+	  }
+
+	  var layersOut = 0;
+	  var currentParent = scrollEl;
+
+	  do {
+	    var el = currentParent,
+	        rect = getRect(el),
+	        top = rect.top,
+	        bottom = rect.bottom,
+	        left = rect.left,
+	        right = rect.right,
+	        width = rect.width,
+	        height = rect.height,
+	        canScrollX = void 0,
+	        canScrollY = void 0,
+	        scrollWidth = el.scrollWidth,
+	        scrollHeight = el.scrollHeight,
+	        elCSS = css(el),
+	        scrollPosX = el.scrollLeft,
+	        scrollPosY = el.scrollTop;
+
+	    if (el === winScroller) {
+	      canScrollX = width < scrollWidth && (elCSS.overflowX === 'auto' || elCSS.overflowX === 'scroll' || elCSS.overflowX === 'visible');
+	      canScrollY = height < scrollHeight && (elCSS.overflowY === 'auto' || elCSS.overflowY === 'scroll' || elCSS.overflowY === 'visible');
+	    } else {
+	      canScrollX = width < scrollWidth && (elCSS.overflowX === 'auto' || elCSS.overflowX === 'scroll');
+	      canScrollY = height < scrollHeight && (elCSS.overflowY === 'auto' || elCSS.overflowY === 'scroll');
+	    }
+
+	    var vx = canScrollX && (Math.abs(right - x) <= sens && scrollPosX + width < scrollWidth) - (Math.abs(left - x) <= sens && !!scrollPosX);
+	    var vy = canScrollY && (Math.abs(bottom - y) <= sens && scrollPosY + height < scrollHeight) - (Math.abs(top - y) <= sens && !!scrollPosY);
+
+	    if (!autoScrolls[layersOut]) {
+	      for (var i = 0; i <= layersOut; i++) {
+	        if (!autoScrolls[i]) {
+	          autoScrolls[i] = {};
+	        }
+	      }
+	    }
+
+	    if (autoScrolls[layersOut].vx != vx || autoScrolls[layersOut].vy != vy || autoScrolls[layersOut].el !== el) {
+	      autoScrolls[layersOut].el = el;
+	      autoScrolls[layersOut].vx = vx;
+	      autoScrolls[layersOut].vy = vy;
+	      clearInterval(autoScrolls[layersOut].pid);
+
+	      if (vx != 0 || vy != 0) {
+	        scrollThisInstance = true;
+	        /* jshint loopfunc:true */
+
+	        autoScrolls[layersOut].pid = setInterval(function () {
+	          // emulate drag over during autoscroll (fallback), emulating native DnD behaviour
+	          if (isFallback && this.layer === 0) {
+	            Sortable$1.active._onTouchMove(touchEvt$1); // To move ghost if it is positioned absolutely
+
+	          }
+
+	          var scrollOffsetY = autoScrolls[this.layer].vy ? autoScrolls[this.layer].vy * speed : 0;
+	          var scrollOffsetX = autoScrolls[this.layer].vx ? autoScrolls[this.layer].vx * speed : 0;
+
+	          if (typeof scrollCustomFn === 'function') {
+	            if (scrollCustomFn.call(Sortable$1.dragged.parentNode[expando], scrollOffsetX, scrollOffsetY, evt, touchEvt$1, autoScrolls[this.layer].el) !== 'continue') {
+	              return;
+	            }
+	          }
+
+	          scrollBy(autoScrolls[this.layer].el, scrollOffsetX, scrollOffsetY);
+	        }.bind({
+	          layer: layersOut
+	        }), 24);
+	      }
+	    }
+
+	    layersOut++;
+	  } while (options.bubbleScroll && currentParent !== winScroller && (currentParent = getParentAutoScrollElement(currentParent, false)));
+
+	  scrolling = scrollThisInstance; // in case another function catches scrolling as false in between when it is not
+	}, 30);
+
+	var drop = function drop(_ref) {
+	  var originalEvent = _ref.originalEvent,
+	      putSortable = _ref.putSortable,
+	      dragEl = _ref.dragEl,
+	      activeSortable = _ref.activeSortable,
+	      dispatchSortableEvent = _ref.dispatchSortableEvent,
+	      hideGhostForTarget = _ref.hideGhostForTarget,
+	      unhideGhostForTarget = _ref.unhideGhostForTarget;
+	  if (!originalEvent) return;
+	  var toSortable = putSortable || activeSortable;
+	  hideGhostForTarget();
+	  var touch = originalEvent.changedTouches && originalEvent.changedTouches.length ? originalEvent.changedTouches[0] : originalEvent;
+	  var target = document.elementFromPoint(touch.clientX, touch.clientY);
+	  unhideGhostForTarget();
+
+	  if (toSortable && !toSortable.el.contains(target)) {
+	    dispatchSortableEvent('spill');
+	    this.onSpill({
+	      dragEl: dragEl,
+	      putSortable: putSortable
+	    });
+	  }
+	};
+
+	function Revert() {}
+
+	Revert.prototype = {
+	  startIndex: null,
+	  dragStart: function dragStart(_ref2) {
+	    var oldDraggableIndex = _ref2.oldDraggableIndex;
+	    this.startIndex = oldDraggableIndex;
+	  },
+	  onSpill: function onSpill(_ref3) {
+	    var dragEl = _ref3.dragEl,
+	        putSortable = _ref3.putSortable;
+	    this.sortable.captureAnimationState();
+
+	    if (putSortable) {
+	      putSortable.captureAnimationState();
+	    }
+
+	    var nextSibling = getChild(this.sortable.el, this.startIndex, this.options);
+
+	    if (nextSibling) {
+	      this.sortable.el.insertBefore(dragEl, nextSibling);
+	    } else {
+	      this.sortable.el.appendChild(dragEl);
+	    }
+
+	    this.sortable.animateAll();
+
+	    if (putSortable) {
+	      putSortable.animateAll();
+	    }
+	  },
+	  drop: drop
+	};
+
+	_extends(Revert, {
+	  pluginName: 'revertOnSpill'
+	});
+
+	function Remove() {}
+
+	Remove.prototype = {
+	  onSpill: function onSpill(_ref4) {
+	    var dragEl = _ref4.dragEl,
+	        putSortable = _ref4.putSortable;
+	    var parentSortable = putSortable || this.sortable;
+	    parentSortable.captureAnimationState();
+	    dragEl.parentNode && dragEl.parentNode.removeChild(dragEl);
+	    parentSortable.animateAll();
+	  },
+	  drop: drop
+	};
+
+	_extends(Remove, {
+	  pluginName: 'removeOnSpill'
+	});
+
+	Sortable$1.mount(new AutoScrollPlugin());
+	Sortable$1.mount(Remove, Revert);
+
+	var jquerySortable = createCommonjsModule(function (module, exports) {
+	(function (factory) {
+		var sortable,
+			jq;
+
+		{
+			try {
+				sortable = Sortable$1;
+				jq = jquery;
+			} catch(err) { }
+		}
+
+		if (typeof jquery === 'function' || typeof $ === 'function') {
+			jq = jquery || $;
+		}
+
+		if (typeof Sortable !== 'undefined') {
+			sortable = Sortable;
+		}
+
+		function checkErrors() {
+			if (!jq) {
+				throw new Error('jQuery is required for jquery-sortablejs');
+			}
+
+			if (!sortable) {
+				throw new Error('SortableJS is required for jquery-sortablejs (https://github.com/SortableJS/Sortable)');
+			}
+		}
+		checkErrors();
+		factory(sortable, jq);
+	})(function (Sortable, $) {
+
+		$.fn.sortable = function (options) {
+			var retVal,
+				args = arguments;
+
+			this.each(function () {
+				var $el = $(this),
+					sortable = $el.data('sortable');
+
+				if (!sortable && (options instanceof Object || !options)) {
+					sortable = new Sortable(this, options);
+					$el.data('sortable', sortable);
+				} else if (sortable) {
+					if (options === 'destroy') {
+						sortable.destroy();
+						$el.removeData('sortable');
+					} else if (options === 'widget') {
+						retVal = sortable;
+					} else if (typeof sortable[options] === 'function') {
+						retVal = sortable[options].apply(sortable, [].slice.call(args, 1));
+					} else if (options in sortable.options) {
+						retVal = sortable.option.apply(sortable, args);
+					}
+				}
+			});
+
+			return (retVal === void 0) ? this : retVal;
+		};
+	});
 	});
 
 	// List of valid entities
@@ -91125,18 +94200,18 @@
 	  return (random() - 0.5) * 1e-6;
 	}
 
-	function index(d) {
+	function index$1(d) {
 	  return d.index;
 	}
 
-	function find(nodeById, nodeId) {
+	function find$1(nodeById, nodeId) {
 	  var node = nodeById.get(nodeId);
 	  if (!node) throw new Error("node not found: " + nodeId);
 	  return node;
 	}
 
 	function forceLink(links) {
-	  var id = index,
+	  var id = index$1,
 	      strength = defaultStrength,
 	      strengths,
 	      distance = constant$1(30),
@@ -91187,8 +94262,8 @@
 
 	    for (i = 0, count = new Array(n); i < m; ++i) {
 	      link = links[i], link.index = i;
-	      if (typeof link.source !== "object") link.source = find(nodeById, link.source);
-	      if (typeof link.target !== "object") link.target = find(nodeById, link.target);
+	      if (typeof link.source !== "object") link.source = find$1(nodeById, link.source);
+	      if (typeof link.target !== "object") link.target = find$1(nodeById, link.target);
 	      count[link.source.index] = (count[link.source.index] || 0) + 1;
 	      count[link.target.index] = (count[link.target.index] || 0) + 1;
 	    }
@@ -94431,7 +97506,7 @@ function InsertStackElement(node, body) {
 	  this.onChange = onChange;
 	};
 
-	function index$1 (_ref2) {
+	function index$2 (_ref2) {
 	  var _ref2$stateInit = _ref2.stateInit,
 	      stateInit = _ref2$stateInit === void 0 ? function () {
 	    return {};
@@ -94551,7 +97626,7 @@ function InsertStackElement(node, body) {
 	  };
 	}
 
-	var index$2 = (function (p) {
+	var index$3 = (function (p) {
 	  return p instanceof Function ? p // fn
 	  : typeof p === 'string' ? function (obj) {
 	    return obj[p];
@@ -94648,7 +97723,7 @@ function InsertStackElement(node, body) {
 	  return min;
 	}
 
-	function _objectWithoutPropertiesLoose(source, excluded) {
+	function _objectWithoutPropertiesLoose$1(source, excluded) {
 	  if (source == null) return {};
 	  var target = {};
 	  var sourceKeys = Object.keys(source);
@@ -94663,10 +97738,10 @@ function InsertStackElement(node, body) {
 	  return target;
 	}
 
-	function _objectWithoutProperties(source, excluded) {
+	function _objectWithoutProperties$1(source, excluded) {
 	  if (source == null) return {};
 
-	  var target = _objectWithoutPropertiesLoose(source, excluded);
+	  var target = _objectWithoutPropertiesLoose$1(source, excluded);
 
 	  var key, i;
 
@@ -94778,7 +97853,7 @@ function InsertStackElement(node, body) {
 	  return typeof key === "symbol" ? key : String(key);
 	}
 
-	var index$3 = (function () {
+	var index$4 = (function () {
 	  var list = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
 	  var keyAccessors = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
 	  var multiItem = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
@@ -94800,7 +97875,7 @@ function InsertStackElement(node, body) {
 	      if (isProp) {
 	        var _itemVal = itemVal,
 	            propVal = _itemVal[keyAccessor],
-	            rest = _objectWithoutProperties(_itemVal, [keyAccessor].map(_toPropertyKey));
+	            rest = _objectWithoutProperties$1(_itemVal, [keyAccessor].map(_toPropertyKey));
 
 	        key = propVal;
 	        itemVal = rest;
@@ -94883,7 +97958,7 @@ function InsertStackElement(node, body) {
 	  return result;
 	});
 
-	function ownKeys(object, enumerableOnly) {
+	function ownKeys$1(object, enumerableOnly) {
 	  var keys = Object.keys(object);
 
 	  if (Object.getOwnPropertySymbols) {
@@ -94901,18 +97976,18 @@ function InsertStackElement(node, body) {
 	  return keys;
 	}
 
-	function _objectSpread2(target) {
+	function _objectSpread2$1(target) {
 	  for (var i = 1; i < arguments.length; i++) {
 	    var source = arguments[i] != null ? arguments[i] : {};
 
 	    if (i % 2) {
-	      ownKeys(Object(source), true).forEach(function (key) {
-	        _defineProperty(target, key, source[key]);
+	      ownKeys$1(Object(source), true).forEach(function (key) {
+	        _defineProperty$1(target, key, source[key]);
 	      });
 	    } else if (Object.getOwnPropertyDescriptors) {
 	      Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
 	    } else {
-	      ownKeys(Object(source)).forEach(function (key) {
+	      ownKeys$1(Object(source)).forEach(function (key) {
 	        Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
 	      });
 	    }
@@ -94921,7 +97996,7 @@ function InsertStackElement(node, body) {
 	  return target;
 	}
 
-	function _defineProperty(obj, key, value) {
+	function _defineProperty$1(obj, key, value) {
 	  if (key in obj) {
 	    Object.defineProperty(obj, key, {
 	      value: value,
@@ -94936,7 +98011,7 @@ function InsertStackElement(node, body) {
 	  return obj;
 	}
 
-	function _objectWithoutPropertiesLoose$1(source, excluded) {
+	function _objectWithoutPropertiesLoose$2(source, excluded) {
 	  if (source == null) return {};
 	  var target = {};
 	  var sourceKeys = Object.keys(source);
@@ -94951,10 +98026,10 @@ function InsertStackElement(node, body) {
 	  return target;
 	}
 
-	function _objectWithoutProperties$1(source, excluded) {
+	function _objectWithoutProperties$2(source, excluded) {
 	  if (source == null) return {};
 
-	  var target = _objectWithoutPropertiesLoose$1(source, excluded);
+	  var target = _objectWithoutPropertiesLoose$2(source, excluded);
 
 	  var key, i;
 
@@ -95064,8 +98139,8 @@ function InsertStackElement(node, body) {
 	    });
 	  } else {
 	    // compare by id (duplicate keys are ignored)
-	    var prevById = index$3(prev, idAccessor, false);
-	    var nextById = index$3(next, idAccessor, false);
+	    var prevById = index$4(prev, idAccessor, false);
+	    var nextById = index$4(next, idAccessor, false);
 	    var byId = Object.assign({}, prevById, nextById);
 	    Object.entries(byId).forEach(function (_ref) {
 	      var _ref2 = _slicedToArray$3(_ref, 2),
@@ -95120,7 +98195,7 @@ function InsertStackElement(node, body) {
 	    return nextD;
 	  });
 	  diff.exit = diff.exit.concat(removeObjs.map(function (obj) {
-	    return _defineProperty({}, objBindAttr, obj);
+	    return _defineProperty$1({}, objBindAttr, obj);
 	  }));
 	  return diff;
 	}
@@ -95141,9 +98216,9 @@ function InsertStackElement(node, body) {
 	      objBindAttr = _ref7$objBindAttr === void 0 ? '__obj' : _ref7$objBindAttr,
 	      _ref7$dataBindAttr = _ref7.dataBindAttr,
 	      dataBindAttr = _ref7$dataBindAttr === void 0 ? '__data' : _ref7$dataBindAttr,
-	      dataDiffOptions = _objectWithoutProperties$1(_ref7, ["createObj", "updateObj", "exitObj", "objBindAttr", "dataBindAttr"]);
+	      dataDiffOptions = _objectWithoutProperties$2(_ref7, ["createObj", "updateObj", "exitObj", "objBindAttr", "dataBindAttr"]);
 
-	  var _dataBindDiff = dataBindDiff(data, existingObjs, _objectSpread2({
+	  var _dataBindDiff = dataBindDiff(data, existingObjs, _objectSpread2$1({
 	    objBindAttr: objBindAttr,
 	    dataBindAttr: dataBindAttr
 	  }, dataDiffOptions)),
@@ -96446,7 +99521,7 @@ function InsertStackElement(node, body) {
 	})(Math);
 	});
 
-	function ownKeys$1(object, enumerableOnly) {
+	function ownKeys$2(object, enumerableOnly) {
 	  var keys = Object.keys(object);
 
 	  if (Object.getOwnPropertySymbols) {
@@ -96464,18 +99539,18 @@ function InsertStackElement(node, body) {
 	  return keys;
 	}
 
-	function _objectSpread2$1(target) {
+	function _objectSpread2$2(target) {
 	  for (var i = 1; i < arguments.length; i++) {
 	    var source = arguments[i] != null ? arguments[i] : {};
 
 	    if (i % 2) {
-	      ownKeys$1(Object(source), true).forEach(function (key) {
-	        _defineProperty$1(target, key, source[key]);
+	      ownKeys$2(Object(source), true).forEach(function (key) {
+	        _defineProperty$2(target, key, source[key]);
 	      });
 	    } else if (Object.getOwnPropertyDescriptors) {
 	      Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
 	    } else {
-	      ownKeys$1(Object(source)).forEach(function (key) {
+	      ownKeys$2(Object(source)).forEach(function (key) {
 	        Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
 	      });
 	    }
@@ -96484,20 +99559,20 @@ function InsertStackElement(node, body) {
 	  return target;
 	}
 
-	function _typeof(obj) {
+	function _typeof$1(obj) {
 	  "@babel/helpers - typeof";
 
 	  if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") {
-	    _typeof = function (obj) {
+	    _typeof$1 = function (obj) {
 	      return typeof obj;
 	    };
 	  } else {
-	    _typeof = function (obj) {
+	    _typeof$1 = function (obj) {
 	      return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
 	    };
 	  }
 
-	  return _typeof(obj);
+	  return _typeof$1(obj);
 	}
 
 	function _classCallCheck$2(instance, Constructor) {
@@ -96506,7 +99581,7 @@ function InsertStackElement(node, body) {
 	  }
 	}
 
-	function _defineProperty$1(obj, key, value) {
+	function _defineProperty$2(obj, key, value) {
 	  if (key in obj) {
 	    Object.defineProperty(obj, key, {
 	      value: value,
@@ -96582,7 +99657,7 @@ function InsertStackElement(node, body) {
 	  return _construct.apply(null, arguments);
 	}
 
-	function _objectWithoutPropertiesLoose$2(source, excluded) {
+	function _objectWithoutPropertiesLoose$3(source, excluded) {
 	  if (source == null) return {};
 	  var target = {};
 	  var sourceKeys = Object.keys(source);
@@ -96597,10 +99672,10 @@ function InsertStackElement(node, body) {
 	  return target;
 	}
 
-	function _objectWithoutProperties$2(source, excluded) {
+	function _objectWithoutProperties$3(source, excluded) {
 	  if (source == null) return {};
 
-	  var target = _objectWithoutPropertiesLoose$2(source, excluded);
+	  var target = _objectWithoutPropertiesLoose$3(source, excluded);
 
 	  var key, i;
 
@@ -96766,7 +99841,7 @@ function InsertStackElement(node, body) {
 	  }
 	};
 
-	var _excluded = ["objFilter"];
+	var _excluded$1 = ["objFilter"];
 
 	function threeDigest(data, scene) {
 	  var _ref = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
@@ -96775,14 +99850,14 @@ function InsertStackElement(node, body) {
 	      objFilter = _ref$objFilter === void 0 ? function () {
 	    return true;
 	  } : _ref$objFilter,
-	      options = _objectWithoutProperties$2(_ref, _excluded);
+	      options = _objectWithoutProperties$3(_ref, _excluded$1);
 
 	  return viewDigest(data, scene.children.filter(objFilter), function (obj) {
 	    return scene.add(obj);
 	  }, function (obj) {
 	    scene.remove(obj);
 	    emptyObject(obj);
-	  }, _objectSpread2$1({
+	  }, _objectSpread2$2({
 	    objBindAttr: '__threeObj'
 	  }, options));
 	}
@@ -96844,7 +99919,7 @@ function InsertStackElement(node, body) {
 	    sourceNode.out.push(targetNode);
 
 	    function getNodeId(node) {
-	      return _typeof(node) === 'object' ? idAccessor(node) : node;
+	      return _typeof$1(node) === 'object' ? idAccessor(node) : node;
 	    }
 	  });
 	  var foundLoops = [];
@@ -96859,7 +99934,7 @@ function InsertStackElement(node, body) {
 	        id = _ref7[0],
 	        node = _ref7[1];
 
-	    return _defineProperty$1({}, id, node.depth);
+	    return _defineProperty$2({}, id, node.depth);
 	  }))));
 	  return nodeDepths;
 
@@ -96934,7 +100009,7 @@ function InsertStackElement(node, body) {
 
 	var setAttributeFn = new three$1.BufferGeometry().setAttribute ? 'setAttribute' : 'addAttribute';
 	var applyMatrix4Fn = new three$1.BufferGeometry().applyMatrix4 ? 'applyMatrix4' : 'applyMatrix';
-	var ForceGraph = index$1({
+	var ForceGraph = index$2({
 	  props: {
 	    jsonUrl: {
 	      onChange: function onChange(jsonUrl, state) {
@@ -97261,10 +100336,10 @@ function InsertStackElement(node, body) {
 	          obj.position.z = pos.z || 0;
 	        }); // Update links position
 
-	        var linkWidthAccessor = index$2(state.linkWidth);
-	        var linkCurvatureAccessor = index$2(state.linkCurvature);
-	        var linkCurveRotationAccessor = index$2(state.linkCurveRotation);
-	        var linkThreeObjectExtendAccessor = index$2(state.linkThreeObjectExtend);
+	        var linkWidthAccessor = index$3(state.linkWidth);
+	        var linkCurvatureAccessor = index$3(state.linkCurvature);
+	        var linkCurveRotationAccessor = index$3(state.linkCurveRotation);
+	        var linkThreeObjectExtendAccessor = index$3(state.linkThreeObjectExtend);
 	        state.graphData.links.forEach(function (link) {
 	          var lineObj = link.__lineObj;
 	          if (!lineObj) return;
@@ -97411,9 +100486,9 @@ function InsertStackElement(node, body) {
 
 	      function updateArrows() {
 	        // update link arrow position
-	        var arrowRelPosAccessor = index$2(state.linkDirectionalArrowRelPos);
-	        var arrowLengthAccessor = index$2(state.linkDirectionalArrowLength);
-	        var nodeValAccessor = index$2(state.nodeVal);
+	        var arrowRelPosAccessor = index$3(state.linkDirectionalArrowRelPos);
+	        var arrowLengthAccessor = index$3(state.linkDirectionalArrowLength);
+	        var nodeValAccessor = index$3(state.nodeVal);
 	        state.graphData.links.forEach(function (link) {
 	          var arrowObj = link.__arrowObj;
 	          if (!arrowObj) return;
@@ -97465,7 +100540,7 @@ function InsertStackElement(node, body) {
 
 	      function updatePhotons() {
 	        // update link particle positions
-	        var particleSpeedAccessor = index$2(state.linkDirectionalParticleSpeed);
+	        var particleSpeedAccessor = index$3(state.linkDirectionalParticleSpeed);
 	        state.graphData.links.forEach(function (link) {
 	          var cyclePhotons = link.__photonsObj && link.__photonsObj.children;
 	          var singleHopPhotons = link.__singleHopPhotonsObj && link.__singleHopPhotonsObj.children;
@@ -97530,12 +100605,12 @@ function InsertStackElement(node, body) {
 	          state.graphScene.add(obj);
 	        }
 
-	        var particleWidthAccessor = index$2(state.linkDirectionalParticleWidth);
+	        var particleWidthAccessor = index$3(state.linkDirectionalParticleWidth);
 	        var photonR = Math.ceil(particleWidthAccessor(link) * 10) / 10 / 2;
 	        var numSegments = state.linkDirectionalParticleResolution;
 	        var particleGeometry = new three$1.SphereBufferGeometry(photonR, numSegments, numSegments);
-	        var linkColorAccessor = index$2(state.linkColor);
-	        var particleColorAccessor = index$2(state.linkDirectionalParticleColor);
+	        var linkColorAccessor = index$3(state.linkColor);
+	        var particleColorAccessor = index$3(state.linkDirectionalParticleColor);
 	        var photonColor = particleColorAccessor(link) || linkColorAccessor(link) || '#f0f0f0';
 	        var materialColor = new three$1.Color(colorStr2Hex(photonColor));
 	        var opacity = state.linkOpacity * 3;
@@ -97575,7 +100650,7 @@ function InsertStackElement(node, body) {
 	      if (!bboxes.length) return null; // extract global x,y,z min/max
 
 	      return Object.assign.apply(Object, _toConsumableArray$3(['x', 'y', 'z'].map(function (c) {
-	        return _defineProperty$1({}, c, [min(bboxes, function (bb) {
+	        return _defineProperty$2({}, c, [min(bboxes, function (bb) {
 	          return bb.min[c];
 	        }), max(bboxes, function (bb) {
 	          return bb.max[c];
@@ -97606,21 +100681,21 @@ function InsertStackElement(node, body) {
 
 	    if (state.nodeAutoColorBy !== null && hasAnyPropChanged(['nodeAutoColorBy', 'graphData', 'nodeColor'])) {
 	      // Auto add color to uncolored nodes
-	      autoColorObjects(state.graphData.nodes, index$2(state.nodeAutoColorBy), state.nodeColor);
+	      autoColorObjects(state.graphData.nodes, index$3(state.nodeAutoColorBy), state.nodeColor);
 	    }
 
 	    if (state.linkAutoColorBy !== null && hasAnyPropChanged(['linkAutoColorBy', 'graphData', 'linkColor'])) {
 	      // Auto add color to uncolored links
-	      autoColorObjects(state.graphData.links, index$2(state.linkAutoColorBy), state.linkColor);
+	      autoColorObjects(state.graphData.links, index$3(state.linkAutoColorBy), state.linkColor);
 	    } // Digest nodes WebGL objects
 
 
 	    if (state._flushObjects || hasAnyPropChanged(['graphData', 'nodeThreeObject', 'nodeThreeObjectExtend', 'nodeVal', 'nodeColor', 'nodeVisibility', 'nodeRelSize', 'nodeResolution', 'nodeOpacity'])) {
-	      var customObjectAccessor = index$2(state.nodeThreeObject);
-	      var customObjectExtendAccessor = index$2(state.nodeThreeObjectExtend);
-	      var valAccessor = index$2(state.nodeVal);
-	      var colorAccessor = index$2(state.nodeColor);
-	      var visibilityAccessor = index$2(state.nodeVisibility);
+	      var customObjectAccessor = index$3(state.nodeThreeObject);
+	      var customObjectExtendAccessor = index$3(state.nodeThreeObjectExtend);
+	      var valAccessor = index$3(state.nodeVal);
+	      var colorAccessor = index$3(state.nodeColor);
+	      var visibilityAccessor = index$3(state.nodeVisibility);
 	      var sphereGeometries = {}; // indexed by node value
 
 	      var sphereMaterials = {}; // indexed by color
@@ -97697,17 +100772,17 @@ function InsertStackElement(node, body) {
 
 
 	    if (state._flushObjects || hasAnyPropChanged(['graphData', 'linkThreeObject', 'linkThreeObjectExtend', 'linkMaterial', 'linkColor', 'linkWidth', 'linkVisibility', 'linkResolution', 'linkOpacity', 'linkDirectionalArrowLength', 'linkDirectionalArrowColor', 'linkDirectionalArrowResolution', 'linkDirectionalParticles', 'linkDirectionalParticleWidth', 'linkDirectionalParticleColor', 'linkDirectionalParticleResolution'])) {
-	      var _customObjectAccessor = index$2(state.linkThreeObject);
+	      var _customObjectAccessor = index$3(state.linkThreeObject);
 
-	      var _customObjectExtendAccessor = index$2(state.linkThreeObjectExtend);
+	      var _customObjectExtendAccessor = index$3(state.linkThreeObjectExtend);
 
-	      var customMaterialAccessor = index$2(state.linkMaterial);
+	      var customMaterialAccessor = index$3(state.linkMaterial);
 
-	      var _visibilityAccessor = index$2(state.linkVisibility);
+	      var _visibilityAccessor = index$3(state.linkVisibility);
 
-	      var _colorAccessor = index$2(state.linkColor);
+	      var _colorAccessor = index$3(state.linkColor);
 
-	      var widthAccessor = index$2(state.linkWidth);
+	      var widthAccessor = index$3(state.linkWidth);
 	      var cylinderGeometries = {}; // indexed by link width
 
 	      var lambertLineMaterials = {}; // for cylinder objects, indexed by link color
@@ -97831,8 +100906,8 @@ function InsertStackElement(node, body) {
 	      }); // Arrows digest cycle
 
 	      if (state.linkDirectionalArrowLength || changedProps.hasOwnProperty('linkDirectionalArrowLength')) {
-	        var arrowLengthAccessor = index$2(state.linkDirectionalArrowLength);
-	        var arrowColorAccessor = index$2(state.linkDirectionalArrowColor);
+	        var arrowLengthAccessor = index$3(state.linkDirectionalArrowLength);
+	        var arrowColorAccessor = index$3(state.linkDirectionalArrowColor);
 	        threeDigest(visibleLinks.filter(arrowLengthAccessor), state.graphScene, {
 	          objBindAttr: '__arrowObj',
 	          objFilter: function objFilter(obj) {
@@ -97867,9 +100942,9 @@ function InsertStackElement(node, body) {
 
 
 	      if (state.linkDirectionalParticles || changedProps.hasOwnProperty('linkDirectionalParticles')) {
-	        var particlesAccessor = index$2(state.linkDirectionalParticles);
-	        var particleWidthAccessor = index$2(state.linkDirectionalParticleWidth);
-	        var particleColorAccessor = index$2(state.linkDirectionalParticleColor);
+	        var particlesAccessor = index$3(state.linkDirectionalParticles);
+	        var particleWidthAccessor = index$3(state.linkDirectionalParticleWidth);
+	        var particleColorAccessor = index$3(state.linkDirectionalParticleColor);
 	        var particleMaterials = {}; // indexed by link color
 
 	        var particleGeometries = {}; // indexed by particle width
@@ -97974,7 +101049,7 @@ function InsertStackElement(node, body) {
 	        } // setup dag force constraints
 
 
-	        var getVal = index$2(state.nodeVal);
+	        var getVal = index$3(state.nodeVal);
 	        var nodesPerStack = state.nodesPerStack;
 
 	        var nodeDepths = state.dagMode && _getDagDepths(state.graphData, function (node) {
@@ -98061,7 +101136,7 @@ function InsertStackElement(node, body) {
 	        state.graphData.links.forEach(function (link) {
 	          _graph.addLink(link.source, link.target);
 	        });
-	        layout = ngraph.forcelayout(_graph, _objectSpread2$1({
+	        layout = ngraph.forcelayout(_graph, _objectSpread2$2({
 	          dimensions: state.numDimensions
 	        }, state.ngraphPhysics));
 	        layout.graph = _graph; // Attach graph reference to layout
@@ -100929,8 +104004,8 @@ function InsertStackElement(node, body) {
 
 	} );
 
-	function _extends() {
-	  _extends = Object.assign || function (target) {
+	function _extends$1() {
+	  _extends$1 = Object.assign || function (target) {
 	    for (var i = 1; i < arguments.length; i++) {
 	      var source = arguments[i];
 
@@ -100944,7 +104019,7 @@ function InsertStackElement(node, body) {
 	    return target;
 	  };
 
-	  return _extends.apply(this, arguments);
+	  return _extends$1.apply(this, arguments);
 	}
 
 	function _assertThisInitialized$2(self) {
@@ -101682,7 +104757,7 @@ function InsertStackElement(node, body) {
 	  var parsedColor = parseToRgb(color);
 	  var alpha = typeof parsedColor.alpha === 'number' ? parsedColor.alpha : 1;
 
-	  var colorWithAlpha = _extends({}, parsedColor, {
+	  var colorWithAlpha = _extends$1({}, parsedColor, {
 	    alpha: guard(0, 1, (alpha * 100 + parseFloat(amount) * 100) / 100)
 	  });
 
@@ -102527,7 +105602,7 @@ function InsertStackElement(node, body) {
 	var css_248z = ".scene-nav-info {\r\n  bottom: 5px;\r\n  width: 100%;\r\n  text-align: center;\r\n  color: slategrey;\r\n  opacity: 0.7;\r\n  font-size: 10px;\r\n}\r\n\r\n.scene-tooltip {\r\n  color: lavender;\r\n  font-size: 15px;\r\n}\r\n\r\n.scene-nav-info, .scene-tooltip {\r\n  position: absolute;\r\n  font-family: sans-serif;\r\n  pointer-events: none;\r\n}\r\n\r\n.scene-container canvas:focus {\r\n  outline: none;\r\n}";
 	styleInject(css_248z);
 
-	function _defineProperty$2(obj, key, value) {
+	function _defineProperty$3(obj, key, value) {
 	  if (key in obj) {
 	    Object.defineProperty(obj, key, {
 	      value: value,
@@ -102639,7 +105714,7 @@ function InsertStackElement(node, body) {
 	  Spherical: Spherical,
 	  Clock: Clock
 	};
-	var threeRenderObjects = index$1({
+	var threeRenderObjects = index$2({
 	  props: {
 	    width: {
 	      "default": window.innerWidth,
@@ -102745,7 +105820,7 @@ function InsertStackElement(node, body) {
 
 	          if (topObject !== state.hoverObj) {
 	            state.onHover(topObject, state.hoverObj);
-	            state.toolTipElem.innerHTML = topObject ? index$2(state.tooltipContent)(topObject) || '' : '';
+	            state.toolTipElem.innerHTML = topObject ? index$3(state.tooltipContent)(topObject) || '' : '';
 	            state.hoverObj = topObject;
 	          }
 	        }
@@ -102866,7 +105941,7 @@ function InsertStackElement(node, body) {
 	      }); // extract global x,y,z min/max
 
 	      return Object.assign.apply(Object, _toConsumableArray$4(['x', 'y', 'z'].map(function (c) {
-	        return _defineProperty$2({}, c, [box.min[c], box.max[c]]);
+	        return _defineProperty$3({}, c, [box.min[c], box.max[c]]);
 	      })));
 	    },
 	    getScreenCoords: function getScreenCoords(state, x, y, z) {
@@ -103188,7 +106263,7 @@ function InsertStackElement(node, body) {
 	var css_248z$1 = ".graph-info-msg {\r\n  top: 50%;\r\n  width: 100%;\r\n  text-align: center;\r\n  color: lavender;\r\n  opacity: 0.7;\r\n  font-size: 22px;\r\n  position: absolute;\r\n  font-family: Sans-serif;\r\n}\r\n\r\n.scene-container .clickable {\r\n  cursor: pointer;\r\n}\r\n\r\n.scene-container .grabbable {\r\n  cursor: move;\r\n  cursor: grab;\r\n  cursor: -moz-grab;\r\n  cursor: -webkit-grab;\r\n}\r\n\r\n.scene-container .grabbable:active {\r\n  cursor: grabbing;\r\n  cursor: -moz-grabbing;\r\n  cursor: -webkit-grabbing;\r\n}";
 	styleInject$1(css_248z$1);
 
-	function ownKeys$2(object, enumerableOnly) {
+	function ownKeys$3(object, enumerableOnly) {
 	  var keys = Object.keys(object);
 
 	  if (Object.getOwnPropertySymbols) {
@@ -103206,18 +106281,18 @@ function InsertStackElement(node, body) {
 	  return keys;
 	}
 
-	function _objectSpread2$2(target) {
+	function _objectSpread2$3(target) {
 	  for (var i = 1; i < arguments.length; i++) {
 	    var source = arguments[i] != null ? arguments[i] : {};
 
 	    if (i % 2) {
-	      ownKeys$2(Object(source), true).forEach(function (key) {
-	        _defineProperty$3(target, key, source[key]);
+	      ownKeys$3(Object(source), true).forEach(function (key) {
+	        _defineProperty$4(target, key, source[key]);
 	      });
 	    } else if (Object.getOwnPropertyDescriptors) {
 	      Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
 	    } else {
-	      ownKeys$2(Object(source)).forEach(function (key) {
+	      ownKeys$3(Object(source)).forEach(function (key) {
 	        Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
 	      });
 	    }
@@ -103226,7 +106301,7 @@ function InsertStackElement(node, body) {
 	  return target;
 	}
 
-	function _defineProperty$3(obj, key, value) {
+	function _defineProperty$4(obj, key, value) {
 	  if (key in obj) {
 	    Object.defineProperty(obj, key, {
 	      value: value,
@@ -103317,25 +106392,25 @@ function InsertStackElement(node, body) {
 
 	var bindFG = linkKapsule('forceGraph', threeForcegraph);
 	var linkedFGProps = Object.assign.apply(Object, _toConsumableArray$5(['jsonUrl', 'graphData', 'numDimensions', 'dagMode', 'dagLevelDistance', 'dagNodeFilter', 'onDagError', 'nodeRelSize', 'nodeId', 'nodeVal', 'nodeResolution', 'nodeColor', 'nodeAutoColorBy', 'nodeOpacity', 'nodeVisibility', 'nodesPerStack', 'nodeThreeObject', 'nodeThreeObjectExtend', 'linkSource', 'linkTarget', 'linkVisibility', 'linkColor', 'linkAutoColorBy', 'linkOpacity', 'linkWidth', 'linkResolution', 'linkCurvature', 'linkCurveRotation', 'linkMaterial', 'linkThreeObject', 'linkThreeObjectExtend', 'linkPositionUpdate', 'linkDirectionalArrowLength', 'linkDirectionalArrowColor', 'linkDirectionalArrowRelPos', 'linkDirectionalArrowResolution', 'linkDirectionalParticles', 'linkDirectionalParticleSpeed', 'linkDirectionalParticleWidth', 'linkDirectionalParticleColor', 'linkDirectionalParticleResolution', 'connMode', 'forceEngine', 'd3AlphaDecay', 'd3VelocityDecay', 'd3AlphaMin', 'ngraphPhysics', 'warmupTicks', 'cooldownTicks', 'cooldownTime', 'onEngineTick', 'onEngineStop'].map(function (p) {
-	  return _defineProperty$3({}, p, bindFG.linkProp(p));
+	  return _defineProperty$4({}, p, bindFG.linkProp(p));
 	})));
 	var linkedFGMethods = Object.assign.apply(Object, _toConsumableArray$5(['refresh', 'getGraphBbox', 'd3Force', 'd3ReheatSimulation', 'emitParticle', 'getDagDepths'].map(function (p) {
-	  return _defineProperty$3({}, p, bindFG.linkMethod(p));
+	  return _defineProperty$4({}, p, bindFG.linkMethod(p));
 	}))); // Expose config from renderObjs
 
 	var bindRenderObjs = linkKapsule('renderObjs', threeRenderObjects);
 	var linkedRenderObjsProps = Object.assign.apply(Object, _toConsumableArray$5(['width', 'height', 'backgroundColor', 'showNavInfo', 'enablePointerInteraction'].map(function (p) {
-	  return _defineProperty$3({}, p, bindRenderObjs.linkProp(p));
+	  return _defineProperty$4({}, p, bindRenderObjs.linkProp(p));
 	})));
 	var linkedRenderObjsMethods = Object.assign.apply(Object, _toConsumableArray$5(['cameraPosition', 'postProcessingComposer'].map(function (p) {
-	  return _defineProperty$3({}, p, bindRenderObjs.linkMethod(p));
+	  return _defineProperty$4({}, p, bindRenderObjs.linkMethod(p));
 	})).concat([{
 	  graph2ScreenCoords: bindRenderObjs.linkMethod('getScreenCoords'),
 	  screen2GraphCoords: bindRenderObjs.linkMethod('getSceneCoords')
 	}])); //
 
-	var _3dForceGraph = index$1({
-	  props: _objectSpread2$2(_objectSpread2$2({
+	var _3dForceGraph = index$2({
+	  props: _objectSpread2$3(_objectSpread2$3({
 	    nodeLabel: {
 	      "default": 'name',
 	      triggerUpdate: false
@@ -103412,7 +106487,7 @@ function InsertStackElement(node, body) {
 	      triggerUpdate: false
 	    }
 	  }, linkedFGProps), linkedRenderObjsProps),
-	  methods: _objectSpread2$2(_objectSpread2$2({
+	  methods: _objectSpread2$3(_objectSpread2$3({
 	    zoomToFit: function zoomToFit(state, transitionDuration, padding) {
 	      var _state$forceGraph;
 
@@ -103679,7 +106754,7 @@ function InsertStackElement(node, body) {
 	      return isNode(bObj) - isNode(aObj);
 	    }).tooltipContent(function (obj) {
 	      var graphObj = getGraphObj(obj);
-	      return graphObj ? index$2(state["".concat(graphObj.__graphObjType, "Label")])(graphObj.__data) || '' : '';
+	      return graphObj ? index$3(state["".concat(graphObj.__graphObjType, "Label")])(graphObj.__data) || '' : '';
 	    }).hoverDuringDrag(false).onHover(function (obj) {
 	      // Update tooltip and trigger onHover events
 	      var hoverObj = getGraphObj(obj);
@@ -104832,6 +107907,7 @@ function InsertStackElement(node, body) {
 	let menuThemeData;
 	let wallpaperData;
 	let bgmTrackData;
+	let bgmTrackIndexesById;
 
 	function initWorldData(data) {
 	    exports.worldData = data;
@@ -105535,6 +108611,7 @@ function InsertStackElement(node, body) {
 
 	function initBgmTrackData(data) {
 	    bgmTrackData = data;
+	    bgmTrackIndexesById = {};
 
 	    const $bgmTracksContainerItems = jquery('.js--bgm-tracks-container__items');
 	    const $unnumberedBgmTracksContainerItems = jquery('.js--unnumbered-bgm-tracks-container__items');
@@ -105551,18 +108628,18 @@ function InsertStackElement(node, body) {
 	    $unnumberedBgmTracksContainerBorders.empty();
 	    $removedBgmTracksContainerBorders.empty();
 
+	    let i = 0;
+
 	    for (let t of bgmTrackData) {
 	        let trackId = '';
 	        if (t.trackNo < 1000)
 	            trackId = t.trackNo.toString().padStart(3, 0);
 	        if (t.variant)
 	            trackId += ` ${t.variant}`;
-	        let trackName = '';
-	        if (t.name)
-	            trackName += `<br><label>${t.name}</label>`;
 	        const hasIdAttribute = t.url ? ` data-id="true"` : '';
 	        const removedCollectableClass = t.removed ? ' removed-collectable' : '';
-	        const imageUrl = t.worldId != null ? exports.worldData[t.worldId].filename : getMissingBgmUrl(t.location);
+	        const worldIdAttribute = t.worldId != null ? ` data-world-id="${t.worldId}"` : '';
+	        const imageUrl = t.worldId != null ? exports.worldData[t.worldId].filename : getMissingBgmTrackUrl(t.location);
 	        const unnumberedAttribute = t.trackNo >= 1000 ? ' data-unnumbered="true"' : '';
 	        const removedAttribute = t.removed ? ' data-removed="true"' : '';
 	        const bgmTrackImageHtml = `<div class="bgm-track collectable-entry collectable${removedCollectableClass} noselect"><img src="${imageUrl}" class="js--bgm-track__image" referrerpolicy="no-referrer" /></div>`;
@@ -105573,16 +108650,21 @@ function InsertStackElement(node, body) {
             </div>` : '';
 	        const bgmTrackLinkHtml = `
             <div class="js--bgm-track-entry--container bgm-track--collectable-entry-container collectable-entry--container">
-                <a href="javascript:void(0);" class="js--bgm-track bgm-track collectable-entry collectable--border noselect" data-bgm-track-id="${t.id}"${hasIdAttribute}${unnumberedAttribute}${removedAttribute}>${bgmTrackNameHtml}</a>
+                <a href="javascript:void(0);" class="js--bgm-track bgm-track collectable-entry collectable--border noselect" data-bgm-track-id="${t.id}"${hasIdAttribute}${worldIdAttribute}${unnumberedAttribute}${removedAttribute}>${bgmTrackNameHtml}</a>
                 <div class="js--bgm-track--collectable-entry--controls collectable-entry--controls noselect">
                     <button class="js--bgm-track__play collectable-entry--control">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="24" viewBox="0 0 18 24">
-                            <path fill="#566574" fill-rule="evenodd" d="M18 12L0 24V0" class="collectable-entry--control__icon"></path>
+                        <svg width="18" height="24" viewBox="0 0 18 24" xmlns="http://www.w3.org/2000/svg">
+                            <path class="collectable-entry--control__icon" d="M18 12L0 24V0" fill-rule="evenodd" />
                         </svg>
                     </button>
                     <button class="js--bgm-track__pause collectable-entry--control display--none">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="24" viewBox="0 0 18 24">
-                            <path fill="#566574" fill-rule="evenodd" d="M0 0h6v24H0zM12 0h6v24h-6z" class="collectable-entry--control__icon"></path>
+                        <svg width="18" height="24" viewBox="0 0 18 24" xmlns="http://www.w3.org/2000/svg">
+                            <path class="collectable-entry--control__icon" d="M0 0h6v24H0zM12 0h6v24h-6z" fill-rule="evenodd" />
+                        </svg>
+                    </button>
+                    <button class="js--bgm-track__playlist-add collectable-entry--control">
+                        <svg width="18" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                            <path class="collectable-entry--control__icon" d="m18 2h-18v-2h18zm0 5h-18v-2h18zm-11 5h-7v-2h7zm0 5h-7v-2h7zm8 1h-3v-3h-3v-3h3v-3h3v3h3v3h-3z" fill-rule="evenodd" />
                         </svg>
                     </button>
                 </div>
@@ -105598,50 +108680,46 @@ function InsertStackElement(node, body) {
 	        jquery(bgmTrackImageHtml).appendTo(t.trackNo < 1000 ? $bgmTracksContainerItems : !t.removed ? $unnumberedBgmTracksContainerItems : $removedBgmTracksContainerItems);
 	        jquery(bgmTrackLinkHtml).appendTo(t.trackNo < 1000 ? $bgmTracksContainerBorders : !t.removed ? $unnumberedBgmTracksContainerBorders : $removedBgmTracksContainerBorders);
 	        bgmTracksById[t.id] = t;
+	        bgmTrackIndexesById[t.id] = i++;
 	    }
 
 	    const $tooltip = jquery('<div class="bgm-track-tooltip scene-tooltip display--none"></div>').prependTo('.content');
 
-	    const playBgmTrackEntry = function ($bgmTrackEntry, closeModal) {
+	    const playBgmTrackEntry = function ($bgmTrackEntry, openWorld) {
 	        const bgmTrack = bgmTracksById[$bgmTrackEntry.data('bgmTrackId')];
 	        if (bgmTrack.url) {
 	            const $bgmTracksContainer = $bgmTrackEntry.data('removed')
 	                ? $removedBgmTracksContainerItems : $bgmTrackEntry.data('unnumbered')
 	                ? $unnumberedBgmTracksContainerItems : $bgmTracksContainerItems;
 	            const imageUrl = jquery(jquery($bgmTracksContainer.children()[$bgmTrackEntry.parent().index()])).find('.js--bgm-track__image').attr('src');
-	            let trackLabel = '';
-	            if (bgmTrack.trackNo < 1000) {
-	                trackLabel = bgmTrack.trackNo.toString().padStart(3, 0);
-	                if (bgmTrack.variant)
-	                    trackLabel += ` ${bgmTrack.variant}`;
-	                trackLabel += localizedSeparator;
-	            }
-	            const location = config$1.lang == 'en' ? bgmTrack.location : bgmTrack.locationJP;
-	            const name = bgmTrack.name;
-	            if (location) {
-	                trackLabel += location;
-	                if (name)
-	                    trackLabel += `${localizedBraces.replace('{VALUE}', name)}`;
-	            } else
-	                trackLabel += name;
-	            playBgm(bgmTrack.url, trackLabel, imageUrl);
-	            if (closeModal) {
+	            const bgmTrackLabel = getBgmTrackLabel(bgmTrack);
+	            playBgm(bgmTrack.url, bgmTrackLabel, imageUrl);
+	            if (openWorld) {
+	                const worldId = $bgmTrackEntry.data('worldId');
+	                if (worldId !== undefined)
+	                    trySelectNode(worldId, true, true);
 	                $tooltip.addClass('display--none');
 	                jquery.modal.close();
-	            }
+	            } else
+	                updateControlsContainer();
 	        }
 	    };
 
 	    jquery('.js--bgm-track[data-id]').on('click', function () { playBgmTrackEntry(jquery(this), true); })
 	        .next('.js--bgm-track--collectable-entry--controls').children().on('click', function () {
 	            const isPlay = jquery(this).hasClass('js--bgm-track__play');
+	            const isPause = !isPlay && jquery(this).hasClass('js--bgm-track__pause');
 	            if (isPlay)
 	                playBgmTrackEntry(jquery(this).parent().prev('.js--bgm-track'));
-	            else
+	            else if (isPause)
 	                pauseBgm();
-	            if (isPlay)
-	                jquery('.js--bgm-track--collectable-entry--controls').children('.js--bgm-track__play.display--none').parent().children('.js--bgm-track__play, .js--bgm-track__pause').toggleClass('display--none');
-	            jquery(this).parent().children('.js--bgm-track__play, .js--bgm-track__pause').toggleClass('display--none');
+	            else
+	                addPlaylistBgmTrack(jquery(this).parent().prev('.js--bgm-track').data('bgmTrackId'));
+	            if (isPlay || isPause) {
+	                if (isPlay)
+	                    jquery('.js--bgm-track--collectable-entry--controls').children('.js--bgm-track__play.display--none').parent().children('.js--bgm-track__play, .js--bgm-track__pause').toggleClass('display--none');
+	                jquery(this).parent().children('.js--bgm-track__play, .js--bgm-track__pause').toggleClass('display--none');
+	            }
 	        });
 	    
 	    jquery('.js--bgm-track').on('mousemove', function (e) {
@@ -105731,6 +108809,15 @@ function InsertStackElement(node, body) {
 	                        case "versionDisplayToggles":
 	                            value = getUpdatedVersionDisplayToggles(value);
 	                            break;
+	                        case "playlistBgmTrackIds":
+	                            config$1.playlistBgmTrackIds = value;
+	                            break;
+	                        case "playlistIndex":
+	                            config$1.playlistIndex = value;
+	                            break;
+	                        case "playlistShuffle":
+	                            config$1.playlistShuffle = value;
+	                            break;
 	                    }
 	                    config$1[key] = value;
 	                }
@@ -105797,51 +108884,63 @@ function InsertStackElement(node, body) {
 	function updateControlsContainer(updateTabMargin) {
 	    const controlsHeight = jquery(".controls-top").outerHeight();
 	    const settingsHeight = jquery(".controls-bottom").outerHeight();
-	    const collectableControlsHeight = jquery(".controls-side").outerHeight();
-	    const collectableControlsWidth = jquery(".controls-side").outerWidth();
+	    const collectableControlsHeight = jquery(".controls-collectables").outerHeight();
+	    const collectableControlsWidth = jquery(".controls-collectables").outerWidth();
 	    jquery(".controls-top--container, .controls-bottom--container").css("margin-top", `-${(settingsHeight + 20)}px`);
-	    jquery(".controls-top--container, controls-bottom--container, .controls-bottom--container--tab, .footer").each(function () {
+	    jquery(".controls-top--container, controls-bottom--container, .controls-bottom--container--tab, .footer").each(function() {
 	        jquery(this).css("height", `${settingsHeight - (jquery(this).outerHeight() - parseFloat(window.getComputedStyle(this, null).getPropertyValue("height")))}px`);
 	    });
 	    jquery(".controls-bottom--container--tab").css("left", `calc(50% - ${(jquery(".controls-bottom--container--tab").outerWidth() / 2)}px`);
-	    jquery(".controls-side--container").css({
+	    jquery(".controls-collectables--container").css({
 	        "top": `${(controlsHeight + 16)}px`,
 	        "margin-left": `-${(collectableControlsWidth + 20)}px`
 	    });
-	    jquery(".controls-side--container--tab").css({
+	    jquery(".controls-collectables--container--tab").css({
 	        "width": `${collectableControlsWidth}px`,
 	        "top": `${(controlsHeight + 16)}px`,
-	        "margin-top": `${16 + (((collectableControlsHeight + 16) - jquery(".controls-side--container--tab").outerHeight()) / 2)}px`
+	        "margin-top": `${16 + (((collectableControlsHeight + 16) - jquery(".controls-collectables--container--tab").outerHeight()) / 2)}px`
 	    });
+	    jquery(".controls-playlist").css("max-width", `${window.innerWidth - 72}px`);
+	    
+	    const playlistControlsHeight = jquery(".controls-playlist").outerHeight();
+	    const playlistControlsWidth = jquery(".controls-playlist").outerWidth();
+	    jquery(".controls-playlist--container--tab").css({
+	        "width": `${playlistControlsWidth}px`,
+	        "bottom": `${104 + (((playlistControlsHeight + 16) - jquery(".controls-playlist--container--tab").outerHeight()) / 2)}px`,
+	    });
+	    jquery(".controls-playlist--container").css({
+	        "bottom": `${(playlistControlsHeight + 122)}px`,
+	        "margin-left": `${(playlistControlsWidth + 20)}px`
+	    });
+
 	    if (updateTabMargin) {
-	        if (jquery(".controls-bottom").hasClass("visible"))
-	            jquery(".controls-bottom--container--tab, .footer, .audio-player-container").css("margin-top", `-${(settingsHeight + 8)}px`);
-	        if (jquery(".controls-side").hasClass("visible"))
-	            jquery(".controls-side--container--tab").css("margin-left", `-${(collectableControlsWidth + 8)}px`);
+	        if (jquery(".controls-bottom").hasClass("visible")) {
+	            jquery(".controls-bottom--container--tab, .audio-player-container, .footer").css("margin-top", `-${(settingsHeight + 8)}px`);
+	            jquery(".controls-playlist--container--tab").css("margin-bottom", `${(settingsHeight + 8)}px`);
+	            jquery(".controls-playlist--container").css("padding-bottom", `${settingsHeight + 8}px`);
+	        }
+	        if (jquery(".controls-collectables").hasClass("visible"))
+	            jquery(".controls-collectables--container--tab").css("margin-left", `-${(collectableControlsWidth + 8)}px`);
+	        if (jquery(".controls-playlist").hasClass("visible"))
+	            jquery(".controls-playlist--container--tab").css("margin-left", `${(playlistControlsWidth + 8)}px`);
 	        jquery(".modal").css("transition", "");
 	    }
 
 	    let modalMaxWidth;
-	    let modalLeftMargin;
+	    const modalLeftMargin = 25;
 	    let modalRightMargin;
-	    if (jquery(".controls-side").hasClass("visible")) {
-	        const fullModalWidth = window.innerWidth * 0.9;
-	        const collectableControlsWidth = jquery(".controls-side").outerWidth() + parseFloat(jquery(".controls-side").css("margin-right")) + jquery(".controls-side--container--tab__button").outerWidth();
-	        modalMaxWidth = window.innerWidth - (collectableControlsWidth + 8);
-	        modalLeftMargin =  collectableControlsWidth >= window.innerWidth - fullModalWidth
-	            ? (window.innerWidth - (fullModalWidth + collectableControlsWidth + 8)) * -1
-	            : 0;
-	            modalLeftMargin = 0;
+	    if (jquery(".controls-collectables").hasClass("visible")) {
+	        const collectableControlsWidth = jquery(".controls-collectables").outerWidth() + parseFloat(jquery(".controls-collectables").css("margin-right")) + jquery(".controls-collectables--container--tab__button").outerWidth();
+	        modalMaxWidth = window.innerWidth - ((collectableControlsWidth + 8) + 25);
 	        modalRightMargin = collectableControlsWidth - 12;
 	    } else {
-	        modalMaxWidth = window.innerWidth;
-	        modalLeftMargin = 0;
+	        modalMaxWidth = window.innerWidth - 25;
 	        modalRightMargin = 0;
 	    }
 
 	    jquery(".modal").css({
 	        "margin-top": `${(controlsHeight + 16)}px`,
-	        "height": `calc(100% - ${(controlsHeight + 16 + (jquery(".controls-bottom").hasClass("visible") ? settingsHeight + 8 : 0))}px)`,
+	        "height": `calc(100% - ${(controlsHeight + 16 + (jquery(".controls-bottom").hasClass("visible") ? settingsHeight + 8 : 0)) + (jquery(".controls-playlist").hasClass("visible") ? 200 : jquery(".audio-player-container").hasClass("open") ? 82 : 0)}px)`,
 	        "max-width": `${modalMaxWidth}px`,
 	        "margin-left": `${modalLeftMargin}px`,
 	        "margin-right": `${modalRightMargin}px`
@@ -105965,12 +109064,16 @@ function InsertStackElement(node, body) {
 	    sizeDiff: 1,
 	    stackSize: 20,
 	    versionDisplayToggles: getDefaultVersionDisplayToggles(),
-	    audioVolume: 0.65
+	    audioVolume: 0.65,
+	    playlistBgmTrackIds: [],
+	    playlistIndex: -1,
+	    playlistShuffle: false
 	};
 
 	let lastUpdate, lastFullUpdate;
 
 	let audioPlayer;
+	let playlistShuffleIndexes = [];
 
 	let worldImageData = [];
 
@@ -106591,7 +109694,8 @@ function InsertStackElement(node, body) {
 	        .graphData(gData);
 
 	    document.querySelector(".controls-bottom--container--tab").style.display = '';
-	    document.querySelector(".controls-side--container--tab").style.display = '';
+	    document.querySelector(".controls-collectables--container--tab").style.display = '';
+	    document.querySelector(".controls-playlist--container--tab").style.display = '';
 
 	    document.removeEventListener('mousemove', onDocumentMouseMove, false);
 	    document.querySelector('#graph canvas').removeEventListener('wheel', clearTweens, false);
@@ -107084,6 +110188,7 @@ function InsertStackElement(node, body) {
 	function initNodeObjectMaterial() {
 	    const amount = exports.worldData.length;
 	    const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
+	    
 	    const buffer = new ArrayBuffer(dataLength * amount * 2 + (dataLength * removedCount * 2));
 	    const texture = new DataTexture2DArray(new Uint8ClampedArray(buffer), nodeImgDimensions.x, nodeImgDimensions.y, amount * 2 + (removedCount * 2));
 	    texture.format = RGBAFormat;
@@ -107233,7 +110338,7 @@ function InsertStackElement(node, body) {
 	                nodeIconObject.getMatrixAt(iconIndex, dummy.matrix);
 	                dummy.position.set(node.x + (dummy.scale.x / 2) - (1.625 + (4 / 13)) * scale, node.y + (dummy.scale.y / 2) - 1.21875 * scale, 0);
 	                dummy.scale.set(13 * scale, 9.75 * scale, is2d ? 1 : 13 * scale);
-	                var x = new Vector3();
+	                const x = new Vector3();
 	                x.setFromMatrixScale(dummy.matrix);
 	                dummy.updateMatrix();
 	                nodeIconObject.setMatrixAt(iconIndex, dummy.matrix);
@@ -108242,7 +111347,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.7.2");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.0");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
@@ -108611,7 +111716,281 @@ function InsertStackElement(node, body) {
 	        "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
 	}
 
-	function getMissingBgmUrl(location) {
+	function initBgm(url, label, imageUrl, play, playlistIndex) {
+	    const isPlaylist = playlistIndex !== undefined && playlistIndex > -1;
+	    const loopAttribute = !isPlaylist ? ' loop' : '';
+	    jquery('.audio-player-image-container').empty().append(`<img src="${imageUrl}" class="audio-player-image noselect" />`);
+	    jquery('.audio-player-player-container').empty().append(`
+        <a href="javascript:void(0);" class="close-audio-player noselect">✖</a>
+        <marquee class="audio-player-marquee" scrollamount="5">
+            <label class="audio-player-label noselect">${label}</label>
+        </marquee>
+    `).append(`
+        <div class="audio-player">
+            <audio class="audio-source" crossorigin preload="none"${loopAttribute}></audio>
+        </div>
+    `);
+	    jquery('.audio-player-container').addClass('open');
+
+	    audioPlayer = new GreenAudioPlayer('.audio-player');
+
+	    const $loadingIndicator = jquery('.audio-player .loading');
+	    const $playBtn = jquery('.audio-player .play-pause-btn');
+	    const $prevBtn = jquery(`
+        <div class="audio-player-playlist-btn prev-btn" aria-label="Previous" role="button">
+            <svg width="18" height="24" viewBox="0 0 18 24" xmlns="http://www.w3.org/2000/svg">
+                <path class="prev-btn__icon" d="m3 10v-10h-3v24h3v-10l13 10v-24" fill-rule="evenodd" />
+            </svg>
+        </div>
+    `);
+	    const $nextBtn = jquery(`
+        <div class="audio-player-playlist-btn next-btn" aria-label="Next" role="button">
+            <svg width="18" height="24" viewBox="0 0 18 24" xmlns="http://www.w3.org/2000/svg">
+                <path class="next-btn__icon" d="m15 10v-10h3v24h-3v-9l-15 9v-24" fill-rule="evenodd" />
+            </svg>
+        </div>
+    `);
+	    const $shuffleBtn = jquery(`
+        <div class="audio-player-playlist-btn shuffle-btn${config$1.playlistShuffle ? ' on' : ''}" aria-label="Shuffle" role="button">
+            <svg width="24" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                <path class="shuffle-btn__icon" d="m0 2h7l5 11h3v-2l3 3.5-3 3.5v-2h-5l-5-11h-5m0 11h7l0.9-2-2-3-0.9 2h-5m10.6-5l1.4-3h3v2l3-3.5-3-3.5v2h-5l-0.9 2" fill-rule="evenodd" />
+            </svg>
+        </div>
+    `);
+	    $prevBtn.insertBefore($loadingIndicator);
+	    $nextBtn.insertAfter($playBtn);
+	    $shuffleBtn.insertAfter($nextBtn);
+
+	    $playBtn.addClass('display--none');
+
+	    audioPlayer.showLoadingIndicator();
+
+	    audioPlayer.player.addEventListener('canplay', function() {
+	        jquery('.audio-player .loading').addClass('display--none');
+	        $playBtn.removeClass('display--none');
+	    });
+
+	    const requestObj = new Request(url, {
+	        method: 'GET',
+	        referrerPolicy: 'no-referrer'
+	    });
+	    
+	    audioPlayer.player.volume = config$1.audioVolume;
+	    audioPlayer.player.addEventListener('volumechange', function() {
+	        const currentVolume = audioPlayer.player.volume;
+	        window.setTimeout(function () {
+	            if (audioPlayer.player.volume === currentVolume) {
+	                config$1.audioVolume = currentVolume;
+	                updateConfig(config$1);
+	            }
+	        }, 1000);
+	    });
+
+	    jquery('.playlist-item.playing').removeClass('playing');
+	    
+	    if (playlistIndex !== undefined && playlistIndex > -1) {
+	        jquery(`.playlist-item:nth(${playlistIndex})`).addClass('playing');
+
+	        config$1.playlistIndex = playlistIndex;
+	        updateConfig(config$1);
+
+	        const playPrevTrack = function() {
+	            if (config$1.playlistBgmTrackIds.length > 1) {
+	                audioPlayer.player.src = '';
+	                playPrevPlaylistBgmTrack(playlistIndex);
+	            } else
+	                GreenAudioPlayer.playPlayer(audioPlayer.player);
+	        };
+	        const playNextTrack = function() {
+	            if (config$1.playlistBgmTrackIds.length > 1) {
+	                audioPlayer.player.src = '';
+	                playNextPlaylistBgmTrack(playlistIndex);
+	            } else
+	                GreenAudioPlayer.playPlayer(audioPlayer.player);
+	        };
+
+	        audioPlayer.player.addEventListener('ended', playNextTrack);
+
+	        $prevBtn.on('click', playPrevTrack);
+	        $nextBtn.on('click', playNextTrack);
+	        $shuffleBtn.on('click', function() {
+	            const shuffle = (config$1.playlistShuffle = !config$1.playlistShuffle);
+	            jquery(this).toggleClass('on', shuffle);
+	            if (shuffle)
+	                updatePlaylistShuffleIndexes();
+	            updateConfig(config$1);
+	        });
+	    } else {
+	        jquery('.audio-player-playlist-btn').addClass('inactive');
+
+	        if (config$1.playlistIndex > -1) {
+	            config$1.playlistIndex = -1;
+	            updateConfig(config$1);
+	        }
+	    }
+
+	    fetch(requestObj).then(function (response) {
+	        if (!response.ok)
+	            jquery('.audio-player-label').text('ERROR');
+	        return response;
+	    }).then(async function (res) {
+	        const blob = await res.blob();
+	        const url = window.URL.createObjectURL(blob);
+	        audioPlayer.player.src = url;
+	        jquery('.close-audio-player').on('click', function() {
+	            audioPlayer = null;
+	            jquery('.audio-player-container').removeClass('open');
+	            jquery('.audio-player-image-container, .audio-player-player-container').empty();
+	            if (!jquery('.controls-playlist').hasClass('visible'))
+	                updateControlsContainer();
+	        });
+	        if (play)
+	            GreenAudioPlayer.playPlayer(audioPlayer.player);
+	    }).catch((err) => console.error(err));
+	}
+
+	function initBgmTrack(bgmTrack, play, playlistIndex) {
+	    const imageUrl = bgmTrack.worldId != null ? exports.worldData[bgmTrack.worldId].filename : getMissingBgmTrackUrl(bgmTrack.location);
+	    initBgm(bgmTrack.url, getBgmTrackLabel(bgmTrack), imageUrl, play, playlistIndex);
+	}
+
+	function playBgm(url, label, imageUrl) {
+	    initBgm(url, label, imageUrl, true);
+	}
+
+	function playBgmTrack(bgmTrack, playlistIndex) {
+	    initBgmTrack(bgmTrack, true, playlistIndex);
+	}
+
+	function playPrevPlaylistBgmTrack(lastPlaylistIndex, attempts) {
+	    const wrapIndex = config$1.playlistShuffle ? lastPlaylistIndex === playlistShuffleIndexes[0] : lastPlaylistIndex <= 0;
+	    if (wrapIndex)
+	        updatePlaylistShuffleIndexes();
+	    const playlistIndex = config$1.playlistShuffle
+	        ? playlistShuffleIndexes[!wrapIndex ? playlistShuffleIndexes.indexOf(lastPlaylistIndex) - 1 : playlistShuffleIndexes.length - 1]
+	        : !wrapIndex ? lastPlaylistIndex - 1 : config$1.playlistBgmTrackIds.length - 1;
+	    const playlistBgmTrackId = config$1.playlistBgmTrackIds[playlistIndex];
+	    if (bgmTrackIndexesById.hasOwnProperty(playlistBgmTrackId)) {
+	        GreenAudioPlayer.stopOtherPlayers();
+	        playBgmTrack(bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]], playlistIndex);
+	    } else if (attempts < config$1.playlistBgmTrackIds.length)
+	        playPrevPlaylistBgmTrack(playlistIndex, attempts ? ++attempts : 1);
+	}
+
+	function playNextPlaylistBgmTrack(lastPlaylistIndex, attempts) {
+	    const wrapIndex = config$1.playlistShuffle ? lastPlaylistIndex === playlistShuffleIndexes[playlistShuffleIndexes.length - 1] : lastPlaylistIndex >= config$1.playlistBgmTrackIds.length - 1;
+	    if (wrapIndex)
+	        updatePlaylistShuffleIndexes();
+	    const playlistIndex = config$1.playlistShuffle
+	        ? playlistShuffleIndexes[!wrapIndex ? playlistShuffleIndexes.indexOf(lastPlaylistIndex) + 1 : 0]
+	        : !wrapIndex ? lastPlaylistIndex + 1 : 0;
+	    const playlistBgmTrackId = config$1.playlistBgmTrackIds[playlistIndex];
+	    if (bgmTrackIndexesById.hasOwnProperty(playlistBgmTrackId)) {
+	        GreenAudioPlayer.stopOtherPlayers();
+	        playBgmTrack(bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]], playlistIndex);
+	    } else if (attempts < config$1.playlistBgmTrackIds.length)
+	        playNextPlaylistBgmTrack(playlistIndex, attempts ? ++attempts : 1);
+	}
+
+	function pauseBgm() {
+	    const audioSources = document.getElementsByClassName('audio-source');
+	    if (audioSources.length)
+	        GreenAudioPlayer.pausePlayer(audioSources[0]);
+	}
+
+	function updatePlaylistShuffleIndexes(firstIndex) {
+	    if (config$1.playlistShuffle) {
+	        playlistShuffleIndexes = [];
+	        if (config$1.playlistBgmTrackIds.length) {
+	            const availableIndexes = [];
+	            if (firstIndex !== undefined)
+	                playlistShuffleIndexes.push(firstIndex);
+	            for (let i = 0; i < config$1.playlistBgmTrackIds.length; i++) {
+	                if (i !== firstIndex)
+	                    availableIndexes.push(i);
+	            }
+	            while (availableIndexes.length) {
+	                const randomIndex = Math.floor(Math.random() * availableIndexes.length);
+	                playlistShuffleIndexes.push(availableIndexes[randomIndex]);
+	                availableIndexes.splice(randomIndex, 1);
+	            }
+	        }
+	    }
+	}
+
+	function initPlaylist() {
+	    for (let bgmTrackId of config$1.playlistBgmTrackIds)
+	        addPlaylistBgmTrack(bgmTrackId, true);
+
+	    if (config$1.playlistBgmTrackIds.length) {
+	        jquery('.controls-playlist--container, .controls-playlist--container--tab').removeClass('display--none');
+	        if (config$1.playlistIndex > -1 && config$1.playlistIndex < config$1.playlistBgmTrackIds.length) {
+	            const playlistBgmTrackId = config$1.playlistBgmTrackIds[config$1.playlistIndex];
+	            if (bgmTrackIndexesById.hasOwnProperty(playlistBgmTrackId))
+	                initBgmTrack(bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]], false, config$1.playlistIndex);
+	        }
+	        updatePlaylistShuffleIndexes(config$1.playlistIndex);
+	    } else
+	        updatePlaylistShuffleIndexes();
+	}
+
+	function addPlaylistBgmTrack(bgmTrackId, isInit) {
+	    const bgmTrack = bgmTrackIndexesById.hasOwnProperty(bgmTrackId) ? bgmTrackData[bgmTrackIndexesById[bgmTrackId]] : null;
+	    const imageUrl = bgmTrack && bgmTrack.worldId != null ? exports.worldData[bgmTrack.worldId].filename : getMissingBgmTrackUrl(bgmTrack ? bgmTrack.location : null);
+	    const trackLabel = bgmTrack && bgmTrack.trackNo < 1000 ? bgmTrack.trackNo + (bgmTrack.variant ? ` ${bgmTrack.variant}` : '') : '';
+	    const trackLabelHtml = trackLabel ? `<h2 class="playlist-item__label noselect">${trackLabel}</h2>` : '';
+	    const $playlistItem = jquery(`
+        <div class="js--playlist-item playlist-item">
+            <div class="playlist-item__image-container">
+                <img class="playlist-item__image noselect" src="${imageUrl}" referrerpolicy="no-referrer" />
+            </div>
+            <a href="javascript:void(0);" class="js--remove-playlist-item playlist-item__remove-btn noselect">✖</a>
+            ${trackLabelHtml}
+        </div>
+    `);
+	    jquery('.js--playlist').append($playlistItem);
+	    if (bgmTrack)
+	        $playlistItem.on('click', function () {
+	            if (bgmTrackIndexesById.hasOwnProperty(bgmTrackId)) {
+	                playBgmTrack(bgmTrackData[bgmTrackIndexesById[bgmTrackId]], jquery(this).index());
+	                updatePlaylistShuffleIndexes(jquery(this).index());
+	            }
+	        });
+	    $playlistItem.children('.js--remove-playlist-item').on('click', function () {
+	        removePlaylistBgmTrack(jquery(this).parent('.js--playlist-item').index());
+	    });
+
+	    if (!isInit) {
+	        if (!config$1.playlistBgmTrackIds.length)
+	            jquery('.controls-playlist--container, .controls-playlist--container--tab').removeClass('display--none');
+	        if (!jquery('.controls-playlist').hasClass('visible'))
+	            jquery('.controls-playlist--container--tab__button').trigger('click');
+	        else
+	            updateControlsContainer();
+	        config$1.playlistBgmTrackIds.push(bgmTrackId);
+	        updatePlaylistShuffleIndexes();
+	        updateConfig(config$1);
+	    }
+	}
+
+	function removePlaylistBgmTrack(playlistIndex) {
+	    config$1.playlistBgmTrackIds.splice(playlistIndex, 1);
+	    if (playlistIndex < config$1.playlistIndex || playlistIndex === config$1.playlistBgmTrackIds.length)
+	        config$1.playlistIndex--;
+
+	    updatePlaylistShuffleIndexes();
+	    updateConfig(config$1);
+
+	    jquery(`.js--playlist-item:nth(${playlistIndex})`).remove();
+	    if (!config$1.playlistBgmTrackIds.length) {
+	        jquery('.controls-playlist--container, .controls-playlist--container--tab').addClass('display--none');
+	        if (jquery('.controls-playlist').hasClass('visible'))
+	            jquery('.controls-playlist--container--tab__button').trigger('click');
+	    } else
+	        updateControlsContainer();
+	}
+
+	function getMissingBgmTrackUrl(location) {
 	    if (location) {
 	        if (/Computer/.test(location))
 	            return 'https://static.wikia.nocookie.net/yume2kki/images/5/5b/Pc1.png/revision/latest';
@@ -108675,62 +112054,27 @@ function InsertStackElement(node, body) {
 	    return `${worldName}${localizedSeparator}${bgmLabel.slice(separatorIndex + 1)}${localizedBraces.replace('{VALUE}', bgmLabel.slice(0, separatorIndex))})`;
 	}
 
-	function playBgm(url, label, imageUrl) {
-	    jquery('.audio-player-image-container').empty().append(`<img src="${imageUrl}" class="audio-player-image" />`);
-	    jquery('.audio-player-player-container').empty().append(`
-        <a href="javascript:void(0);" class="close-audio-player noselect">✖</a>
-        <marquee class="audio-player-marquee" scrollamount="5">
-            <label class="audio-player-label noselect">${label}</label>
-        </marquee>
-    `).append(`
-        <div class="audio-player" autoplay>
-            <audio class="audio-source" crossorigin preload="none" autoplay loop></audio>
-        </div>
-    `);
-	    jquery('.audio-player-container').addClass('open');
+	function getBgmTrackLabel(bgmTrack) {
+	    let trackLabel = '';
 
-	    audioPlayer = new GreenAudioPlayer('.audio-player');
-	    audioPlayer.showLoadingIndicator();
+	    if (bgmTrack.trackNo < 1000) {
+	        trackLabel = bgmTrack.trackNo.toString().padStart(3, 0);
+	        if (bgmTrack.variant)
+	            trackLabel += ` ${bgmTrack.variant}`;
+	        trackLabel += localizedSeparator;
+	    }
 
-	    const requestObj = new Request(url, {
-	        method: 'GET',
-	        referrerPolicy: 'no-referrer'
-	    });
-	    
-	    audioPlayer.player.volume = config$1.audioVolume;
-	    audioPlayer.player.addEventListener('volumechange', function (e) {
-	        const currentVolume = audioPlayer.player.volume;
-	        window.setTimeout(function () {
-	            if (audioPlayer.player.volume === currentVolume) {
-	                config$1.audioVolume = currentVolume;
-	                updateConfig(config$1);
-	            }
-	        }, 1000);
-	    });
+	    const location = config$1.lang == 'en' ? bgmTrack.location : bgmTrack.locationJP;
+	    const name = bgmTrack.name;
 
-	    fetch(requestObj).then(function (response) {
-	        if (!response.ok)
-	            jquery('.audio-player-label').text('ERROR');
-	        return response;
-	    }).then(async function (res) {
-	        const blob = await res.blob();
-	        const url = window.URL.createObjectURL(blob);
-	        const audioSource = document.getElementsByClassName('audio-source')[0];
-	        audioSource.src = url;
-	        audioPlayer.hideLoadingIndicator();
-	        jquery('.close-audio-player').on('click', function () {
-	            audioPlayer = null;
-	            jquery('.audio-player-container').removeClass('open');
-	            jquery('.audio-player-image-container, .audio-player-player-container').empty();
-	        });
-	        GreenAudioPlayer.playPlayer(audioSource);
-	    }).catch((err) => console.error(err));
-	}
+	    if (location) {
+	        trackLabel += location;
+	        if (name)
+	            trackLabel += `${localizedBraces.replace('{VALUE}', name)}`;
+	    } else
+	        trackLabel += name;
 
-	function pauseBgm() {
-	    const audioSources = document.getElementsByClassName('audio-source');
-	    if (audioSources.length)
-	        GreenAudioPlayer.pausePlayer(audioSources[0]);
+	    return trackLabel;
 	}
 
 	function trySelectNode(node, forceFocus, ignoreSearch) {
@@ -108919,32 +112263,54 @@ function InsertStackElement(node, body) {
 	function initControls() {
 	    jquery(".controls-bottom--container--tab__button").on("click", function() {
 	        if (jquery(".controls-bottom").hasClass("visible")) {
+	            const settingsHeight = jquery(".controls-bottom").outerHeight() + 8;
 	            jquery(".controls-bottom").removeClass("visible").animateCss("slideOutDown", 250, function () {
 	                if (!jquery(this).hasClass("visible"))
 	                    jquery(this).css("opacity", 0);
 	            });
-	            jquery(".controls-bottom--container--tab, .footer, .audio-player-container").css("margin-top", "0px").animateCss("slideInDown", 300);
+	            jquery(".controls-bottom--container--tab, .audio-player-container, .footer").css("margin-top", "0px").animateCss("slideInDown", 300);
+	            jquery(".controls-playlist--container--tab").css("margin-bottom", "0px");
+	            jquery(".controls-playlist--container").css("margin-bottom", `-${settingsHeight}px`);
+	            jquery(".controls-playlist--container--tab, .controls-playlist--container").animateCss("slideInDown", 300);
 	            jquery(".modal").css("transition", "height 0.3s ease-out, margin-top 0.3s ease-out");
 	        } else {
 	            const settingsHeight = jquery(".controls-bottom").outerHeight() + 8;
 	            jquery(".controls-bottom").addClass("visible").css("opacity", 1).animateCss("slideInUp", 250);
-	            jquery(".controls-bottom--container--tab, .footer, .audio-player-container").css("margin-top", "-" + settingsHeight + "px").animateCss("slideInUp", 250);
+	            jquery(".controls-bottom--container--tab, .audio-player-container, .footer").css("margin-top", `-${settingsHeight}px`).animateCss("slideInUp", 250);
+	            jquery(".controls-playlist--container--tab").css("margin-bottom", `${settingsHeight}px`).animateCss("slideInUp", 250);
+	            jquery(".controls-playlist--container").css({ "margin-bottom": "0px", "padding-bottom": `${settingsHeight}px` }).animateCss("slideInUp", 250);
 	            jquery(".modal").css("transition", "height 0.25s ease-out, margin-top 0.25s ease-out");
 	        }
 	        updateControlsContainer();
 	    });
 
-	    jquery(".controls-side--container--tab__button").on("click", function() {
-	        if (jquery(".controls-side").hasClass("visible")) {
-	            jquery(".controls-side").removeClass("visible").animateCss("slideOutRight", 250, function () {
+	    jquery(".controls-collectables--container--tab__button").on("click", function() {
+	        if (jquery(".controls-collectables").hasClass("visible")) {
+	            jquery(".controls-collectables").removeClass("visible").animateCss("slideOutRight", 250, function () {
 	                if (!jquery(this).hasClass("visible"))
 	                    jquery(this).css("opacity", 0);
 	            });
-	            jquery(".controls-side--container--tab").css("margin-left", "0px").animateCss("slideInLeft", 300);
+	            jquery(".controls-collectables--container--tab").css("margin-left", "0px").animateCss("slideInLeft", 300);
 	            jquery(".modal").css("transition", "max-width 0.3s ease-out, margin-left 0.3s ease-out, margin-right 0.3s ease-out");
 	        } else {
-	            jquery(".controls-side").addClass("visible").css("opacity", 1).animateCss("slideInRight", 250);
-	            jquery(".controls-side--container--tab").css("margin-left", "-" + (jquery(".controls-side").outerWidth() + 8) + "px").animateCss("slideInRight", 250);
+	            jquery(".controls-collectables").addClass("visible").css("opacity", 1).animateCss("slideInRight", 250);
+	            jquery(".controls-collectables--container--tab").css("margin-left", "-" + (jquery(".controls-collectables").outerWidth() + 8) + "px").animateCss("slideInRight", 250);
+	            jquery(".modal").css("transition", "max-width 0.25s ease-out, margin-left 0.25s ease-out, margin-right 0.25s ease-out");
+	        }
+	        updateControlsContainer();
+	    });
+
+	    jquery(".controls-playlist--container--tab__button").on("click", function() {
+	        if (jquery(".controls-playlist").hasClass("visible")) {
+	            jquery(".controls-playlist").removeClass("visible").animateCss("slideOutLeft", 250, function () {
+	                if (!jquery(this).hasClass("visible"))
+	                    jquery(this).css("opacity", 0);
+	            });
+	            jquery(".controls-playlist--container--tab").css("margin-left", "0px").animateCss("slideInRight", 300);
+	            jquery(".modal").css("transition", "max-width 0.3s ease-out, margin-left 0.3s ease-out, margin-right 0.3s ease-out");
+	        } else {
+	            jquery(".controls-playlist").addClass("visible").css("opacity", 1).animateCss("slideInLeft", 250);
+	            jquery(".controls-playlist--container--tab").css("margin-left", (jquery(".controls-playlist").outerWidth() + 8) + "px").animateCss("slideInLeft", 250);
 	            jquery(".modal").css("transition", "max-width 0.25s ease-out, margin-left 0.25s ease-out, margin-right 0.25s ease-out");
 	        }
 	        updateControlsContainer();
@@ -108957,7 +112323,7 @@ function InsertStackElement(node, body) {
 	        isCtrl = false;
 	    });
 
-	    const onModalShown = function () {
+	    const onModalShown = function() {
 	        const $modalContent = jquery(this).find(".modal__content");
 	        $modalContent.css("padding-right", $modalContent[0].scrollHeight > $modalContent[0].clientHeight ? "24px" : null);
 	    };
@@ -108971,6 +112337,27 @@ function InsertStackElement(node, body) {
 
 	    jquery(document).on("click", ".js--modal__controls--expand > .js--modal__controls--expand__link", function() {
 	        jquery(this).parent().next(".js--modal__controls").toggleClass("expanded");
+	    });
+
+	    jquery(".js--playlist").sortable({
+	        onEnd: function (e) {
+	            const oldIndex = e.oldIndex;
+	            const newIndex = e.newIndex;
+
+	            if (oldIndex !== newIndex) {
+	                const movedBgmTrackId = config$1.playlistBgmTrackIds[oldIndex];
+
+	                config$1.playlistBgmTrackIds.splice(oldIndex, 1);
+	                config$1.playlistBgmTrackIds.splice(newIndex, 0, movedBgmTrackId);
+
+	                if (oldIndex <= config$1.playlistIndex && newIndex > config$1.playlistIndex || newIndex <= config$1.playlistIndex && oldIndex > config$1.playlistIndex)
+	                    config$1.playlistIndex--;
+	                else if (oldIndex >= config$1.playlistIndex && newIndex < config$1.playlistIndex || newIndex >= config$1.playlistIndex && oldIndex < config$1.playlistIndex)
+	                    config$1.playlistIndex++;
+
+	                updateConfig(config$1);
+	            }
+	        }
 	    });
 	    
 	    jquery(".js--lang").on("change", function() {
@@ -109333,7 +112720,7 @@ function InsertStackElement(node, body) {
 	    const checkedReverseConnIds = [];
 	    const expectedReverseConnTypes = {};
 
-	    var addConnTypePair = function(x, y) {
+	    const addConnTypePair = function(x, y) {
 	        expectedReverseConnTypes[x] = y;
 	        expectedReverseConnTypes[y] = x;
 	    };
@@ -110011,6 +113398,7 @@ function InsertStackElement(node, body) {
 	        initMenuThemeData(data.menuThemeData);
 	        initWallpaperData(data.wallpaperData);
 	        initBgmTrackData(data.bgmTrackData);
+	        initPlaylist();
 	        lastUpdate = new Date(data.lastUpdate);
 	        lastFullUpdate = new Date(data.lastFullUpdate);
 

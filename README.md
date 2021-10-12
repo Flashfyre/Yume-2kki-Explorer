@@ -98,7 +98,7 @@ Display a list of available wallpapers in a modal window. Hovering over a wallpa
 
 ### Soundtrack
 
-Display a list of available BGM tracks in a modal window. Hovering over a track will show information from the Wiki on where it is used. Clicking a track or pressing the play button will play the track in the audio player.
+Display a list of available BGM tracks in a modal window. Hovering over a track will show information from the Wiki on where it is used. Clicking a track's play button will play the track in the audio player. Clicking the button below a track's play button will add the track to the playlist. Clicking a track image will play the track and also navigate to the world it's located in if applicable.
 
 ## Settings
 
@@ -245,7 +245,7 @@ This setting determines the number of world nodes that make up a stack within th
 
 ### SR分室の曲
 
-ポップアップでSR分室の曲のリストを表示します。 曲の画像にマウスホバーするものを得られる方法を特定します。曲の画像または再生ボタンをクリックで、曲をオーディオプレーヤーで再生させます（エクスプローラに表示）。
+ポップアップでSR分室の曲のリストを表示します。 曲の画像にマウスホバーするものを得られる方法を特定します。再生ボタンをクリックで、曲をオーディオプレーヤーで再生させます（エクスプローラに表示）。再生ボタンの下のボタンをクリックで、曲をプレイリストに追加されます。曲の画像をクリックで、曲を再生させて、使用される場所を知らせます（エクスプローラに表示）。
 
 ### 言語設定
 

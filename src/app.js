@@ -3,6 +3,8 @@ import 'jquery-localize';
 import 'jquery-contextmenu';
 import 'devbridge-autocomplete';
 import 'jquery-modal';
+import 'sortablejs';
+import 'jquery-sortablejs';
 import { Remarkable } from 'remarkable';
 import _ from 'lodash';
 import { forceCollide } from 'd3-force';
@@ -95,6 +97,7 @@ let effectData;
 let menuThemeData;
 let wallpaperData;
 let bgmTrackData;
+let bgmTrackIndexesById;
 
 function initWorldData(data) {
     worldData = data;
@@ -798,6 +801,7 @@ function initWallpaperData(data) {
 
 function initBgmTrackData(data) {
     bgmTrackData = data;
+    bgmTrackIndexesById = {};
 
     const $bgmTracksContainerItems = $('.js--bgm-tracks-container__items');
     const $unnumberedBgmTracksContainerItems = $('.js--unnumbered-bgm-tracks-container__items');
@@ -814,18 +818,18 @@ function initBgmTrackData(data) {
     $unnumberedBgmTracksContainerBorders.empty();
     $removedBgmTracksContainerBorders.empty();
 
+    let i = 0;
+
     for (let t of bgmTrackData) {
         let trackId = '';
         if (t.trackNo < 1000)
             trackId = t.trackNo.toString().padStart(3, 0);
         if (t.variant)
             trackId += ` ${t.variant}`;
-        let trackName = '';
-        if (t.name)
-            trackName += `<br><label>${t.name}</label>`;
         const hasIdAttribute = t.url ? ` data-id="true"` : '';
         const removedCollectableClass = t.removed ? ' removed-collectable' : '';
-        const imageUrl = t.worldId != null ? worldData[t.worldId].filename : getMissingBgmUrl(t.location);
+        const worldIdAttribute = t.worldId != null ? ` data-world-id="${t.worldId}"` : '';
+        const imageUrl = t.worldId != null ? worldData[t.worldId].filename : getMissingBgmTrackUrl(t.location);
         const unnumberedAttribute = t.trackNo >= 1000 ? ' data-unnumbered="true"' : '';
         const removedAttribute = t.removed ? ' data-removed="true"' : '';
         const bgmTrackImageHtml = `<div class="bgm-track collectable-entry collectable${removedCollectableClass} noselect"><img src="${imageUrl}" class="js--bgm-track__image" referrerpolicy="no-referrer" /></div>`;
@@ -836,16 +840,21 @@ function initBgmTrackData(data) {
             </div>` : '';
         const bgmTrackLinkHtml = `
             <div class="js--bgm-track-entry--container bgm-track--collectable-entry-container collectable-entry--container">
-                <a href="javascript:void(0);" class="js--bgm-track bgm-track collectable-entry collectable--border noselect" data-bgm-track-id="${t.id}"${hasIdAttribute}${unnumberedAttribute}${removedAttribute}>${bgmTrackNameHtml}</a>
+                <a href="javascript:void(0);" class="js--bgm-track bgm-track collectable-entry collectable--border noselect" data-bgm-track-id="${t.id}"${hasIdAttribute}${worldIdAttribute}${unnumberedAttribute}${removedAttribute}>${bgmTrackNameHtml}</a>
                 <div class="js--bgm-track--collectable-entry--controls collectable-entry--controls noselect">
                     <button class="js--bgm-track__play collectable-entry--control">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="24" viewBox="0 0 18 24">
-                            <path fill="#566574" fill-rule="evenodd" d="M18 12L0 24V0" class="collectable-entry--control__icon"></path>
+                        <svg width="18" height="24" viewBox="0 0 18 24" xmlns="http://www.w3.org/2000/svg">
+                            <path class="collectable-entry--control__icon" d="M18 12L0 24V0" fill-rule="evenodd" />
                         </svg>
                     </button>
                     <button class="js--bgm-track__pause collectable-entry--control display--none">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="24" viewBox="0 0 18 24">
-                            <path fill="#566574" fill-rule="evenodd" d="M0 0h6v24H0zM12 0h6v24h-6z" class="collectable-entry--control__icon"></path>
+                        <svg width="18" height="24" viewBox="0 0 18 24" xmlns="http://www.w3.org/2000/svg">
+                            <path class="collectable-entry--control__icon" d="M0 0h6v24H0zM12 0h6v24h-6z" fill-rule="evenodd" />
+                        </svg>
+                    </button>
+                    <button class="js--bgm-track__playlist-add collectable-entry--control">
+                        <svg width="18" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                            <path class="collectable-entry--control__icon" d="m18 2h-18v-2h18zm0 5h-18v-2h18zm-11 5h-7v-2h7zm0 5h-7v-2h7zm8 1h-3v-3h-3v-3h3v-3h3v3h3v3h-3z" fill-rule="evenodd" />
                         </svg>
                     </button>
                 </div>
@@ -861,50 +870,46 @@ function initBgmTrackData(data) {
         $(bgmTrackImageHtml).appendTo(t.trackNo < 1000 ? $bgmTracksContainerItems : !t.removed ? $unnumberedBgmTracksContainerItems : $removedBgmTracksContainerItems);
         $(bgmTrackLinkHtml).appendTo(t.trackNo < 1000 ? $bgmTracksContainerBorders : !t.removed ? $unnumberedBgmTracksContainerBorders : $removedBgmTracksContainerBorders);
         bgmTracksById[t.id] = t;
+        bgmTrackIndexesById[t.id] = i++;
     }
 
     const $tooltip = $('<div class="bgm-track-tooltip scene-tooltip display--none"></div>').prependTo('.content');
 
-    const playBgmTrackEntry = function ($bgmTrackEntry, closeModal) {
+    const playBgmTrackEntry = function ($bgmTrackEntry, openWorld) {
         const bgmTrack = bgmTracksById[$bgmTrackEntry.data('bgmTrackId')];
         if (bgmTrack.url) {
             const $bgmTracksContainer = $bgmTrackEntry.data('removed')
                 ? $removedBgmTracksContainerItems : $bgmTrackEntry.data('unnumbered')
                 ? $unnumberedBgmTracksContainerItems : $bgmTracksContainerItems;
             const imageUrl = $($($bgmTracksContainer.children()[$bgmTrackEntry.parent().index()])).find('.js--bgm-track__image').attr('src');
-            let trackLabel = '';
-            if (bgmTrack.trackNo < 1000) {
-                trackLabel = bgmTrack.trackNo.toString().padStart(3, 0);
-                if (bgmTrack.variant)
-                    trackLabel += ` ${bgmTrack.variant}`;
-                trackLabel += localizedSeparator;
-            }
-            const location = config.lang == 'en' ? bgmTrack.location : bgmTrack.locationJP;
-            const name = bgmTrack.name;
-            if (location) {
-                trackLabel += location;
-                if (name)
-                    trackLabel += `${localizedBraces.replace('{VALUE}', name)}`;
-            } else
-                trackLabel += name;
-            playBgm(bgmTrack.url, trackLabel, imageUrl);
-            if (closeModal) {
+            const bgmTrackLabel = getBgmTrackLabel(bgmTrack);
+            playBgm(bgmTrack.url, bgmTrackLabel, imageUrl);
+            if (openWorld) {
+                const worldId = $bgmTrackEntry.data('worldId');
+                if (worldId !== undefined)
+                    trySelectNode(worldId, true, true);
                 $tooltip.addClass('display--none');
                 $.modal.close();
-            }
+            } else
+                updateControlsContainer();
         }
     };
 
     $('.js--bgm-track[data-id]').on('click', function () { playBgmTrackEntry($(this), true); })
         .next('.js--bgm-track--collectable-entry--controls').children().on('click', function () {
             const isPlay = $(this).hasClass('js--bgm-track__play');
+            const isPause = !isPlay && $(this).hasClass('js--bgm-track__pause');
             if (isPlay)
                 playBgmTrackEntry($(this).parent().prev('.js--bgm-track'));
-            else
+            else if (isPause)
                 pauseBgm();
-            if (isPlay)
-                $('.js--bgm-track--collectable-entry--controls').children('.js--bgm-track__play.display--none').parent().children('.js--bgm-track__play, .js--bgm-track__pause').toggleClass('display--none');
-            $(this).parent().children('.js--bgm-track__play, .js--bgm-track__pause').toggleClass('display--none');
+            else
+                addPlaylistBgmTrack($(this).parent().prev('.js--bgm-track').data('bgmTrackId'));
+            if (isPlay || isPause) {
+                if (isPlay)
+                    $('.js--bgm-track--collectable-entry--controls').children('.js--bgm-track__play.display--none').parent().children('.js--bgm-track__play, .js--bgm-track__pause').toggleClass('display--none');
+                $(this).parent().children('.js--bgm-track__play, .js--bgm-track__pause').toggleClass('display--none');
+            }
         });
     
     $('.js--bgm-track').on('mousemove', function (e) {
@@ -994,6 +999,15 @@ function loadOrInitConfig() {
                         case "versionDisplayToggles":
                             value = getUpdatedVersionDisplayToggles(value);
                             break;
+                        case "playlistBgmTrackIds":
+                            config.playlistBgmTrackIds = value;
+                            break;
+                        case "playlistIndex":
+                            config.playlistIndex = value;
+                            break;
+                        case "playlistShuffle":
+                            config.playlistShuffle = value;
+                            break;
                     }
                     config[key] = value;
                 }
@@ -1060,51 +1074,63 @@ function getUpdatedVersionDisplayToggles(value) {
 function updateControlsContainer(updateTabMargin) {
     const controlsHeight = $(".controls-top").outerHeight();
     const settingsHeight = $(".controls-bottom").outerHeight();
-    const collectableControlsHeight = $(".controls-side").outerHeight();
-    const collectableControlsWidth = $(".controls-side").outerWidth();
+    const collectableControlsHeight = $(".controls-collectables").outerHeight();
+    const collectableControlsWidth = $(".controls-collectables").outerWidth();
     $(".controls-top--container, .controls-bottom--container").css("margin-top", `-${(settingsHeight + 20)}px`);
-    $(".controls-top--container, controls-bottom--container, .controls-bottom--container--tab, .footer").each(function () {
+    $(".controls-top--container, controls-bottom--container, .controls-bottom--container--tab, .footer").each(function() {
         $(this).css("height", `${settingsHeight - ($(this).outerHeight() - parseFloat(window.getComputedStyle(this, null).getPropertyValue("height")))}px`);
     });
     $(".controls-bottom--container--tab").css("left", `calc(50% - ${($(".controls-bottom--container--tab").outerWidth() / 2)}px`);
-    $(".controls-side--container").css({
+    $(".controls-collectables--container").css({
         "top": `${(controlsHeight + 16)}px`,
         "margin-left": `-${(collectableControlsWidth + 20)}px`
     });
-    $(".controls-side--container--tab").css({
+    $(".controls-collectables--container--tab").css({
         "width": `${collectableControlsWidth}px`,
         "top": `${(controlsHeight + 16)}px`,
-        "margin-top": `${16 + (((collectableControlsHeight + 16) - $(".controls-side--container--tab").outerHeight()) / 2)}px`
+        "margin-top": `${16 + (((collectableControlsHeight + 16) - $(".controls-collectables--container--tab").outerHeight()) / 2)}px`
     });
+    $(".controls-playlist").css("max-width", `${window.innerWidth - 72}px`);
+    
+    const playlistControlsHeight = $(".controls-playlist").outerHeight();
+    const playlistControlsWidth = $(".controls-playlist").outerWidth();
+    $(".controls-playlist--container--tab").css({
+        "width": `${playlistControlsWidth}px`,
+        "bottom": `${104 + (((playlistControlsHeight + 16) - $(".controls-playlist--container--tab").outerHeight()) / 2)}px`,
+    });
+    $(".controls-playlist--container").css({
+        "bottom": `${(playlistControlsHeight + 122)}px`,
+        "margin-left": `${(playlistControlsWidth + 20)}px`
+    });
+
     if (updateTabMargin) {
-        if ($(".controls-bottom").hasClass("visible"))
-            $(".controls-bottom--container--tab, .footer, .audio-player-container").css("margin-top", `-${(settingsHeight + 8)}px`);
-        if ($(".controls-side").hasClass("visible"))
-            $(".controls-side--container--tab").css("margin-left", `-${(collectableControlsWidth + 8)}px`);
+        if ($(".controls-bottom").hasClass("visible")) {
+            $(".controls-bottom--container--tab, .audio-player-container, .footer").css("margin-top", `-${(settingsHeight + 8)}px`);
+            $(".controls-playlist--container--tab").css("margin-bottom", `${(settingsHeight + 8)}px`);
+            $(".controls-playlist--container").css("padding-bottom", `${settingsHeight + 8}px`);
+        }
+        if ($(".controls-collectables").hasClass("visible"))
+            $(".controls-collectables--container--tab").css("margin-left", `-${(collectableControlsWidth + 8)}px`);
+        if ($(".controls-playlist").hasClass("visible"))
+            $(".controls-playlist--container--tab").css("margin-left", `${(playlistControlsWidth + 8)}px`);
         $(".modal").css("transition", "");
     }
 
     let modalMaxWidth;
-    let modalLeftMargin;
+    const modalLeftMargin = 25;
     let modalRightMargin;
-    if ($(".controls-side").hasClass("visible")) {
-        const fullModalWidth = window.innerWidth * 0.9;
-        const collectableControlsWidth = $(".controls-side").outerWidth() + parseFloat($(".controls-side").css("margin-right")) + $(".controls-side--container--tab__button").outerWidth();
-        modalMaxWidth = window.innerWidth - (collectableControlsWidth + 8);
-        modalLeftMargin =  collectableControlsWidth >= window.innerWidth - fullModalWidth
-            ? (window.innerWidth - (fullModalWidth + collectableControlsWidth + 8)) * -1
-            : 0;
-            modalLeftMargin = 0;
+    if ($(".controls-collectables").hasClass("visible")) {
+        const collectableControlsWidth = $(".controls-collectables").outerWidth() + parseFloat($(".controls-collectables").css("margin-right")) + $(".controls-collectables--container--tab__button").outerWidth();
+        modalMaxWidth = window.innerWidth - ((collectableControlsWidth + 8) + 25);
         modalRightMargin = collectableControlsWidth - 12;
     } else {
-        modalMaxWidth = window.innerWidth;
-        modalLeftMargin = 0;
+        modalMaxWidth = window.innerWidth - 25;
         modalRightMargin = 0;
     }
 
     $(".modal").css({
         "margin-top": `${(controlsHeight + 16)}px`,
-        "height": `calc(100% - ${(controlsHeight + 16 + ($(".controls-bottom").hasClass("visible") ? settingsHeight + 8 : 0))}px)`,
+        "height": `calc(100% - ${(controlsHeight + 16 + ($(".controls-bottom").hasClass("visible") ? settingsHeight + 8 : 0)) + ($(".controls-playlist").hasClass("visible") ? 200 : $(".audio-player-container").hasClass("open") ? 82 : 0)}px)`,
         "max-width": `${modalMaxWidth}px`,
         "margin-left": `${modalLeftMargin}px`,
         "margin-right": `${modalRightMargin}px`
@@ -1230,12 +1256,16 @@ let config = {
     sizeDiff: 1,
     stackSize: 20,
     versionDisplayToggles: getDefaultVersionDisplayToggles(),
-    audioVolume: 0.65
+    audioVolume: 0.65,
+    playlistBgmTrackIds: [],
+    playlistIndex: -1,
+    playlistShuffle: false
 };
 
 let lastUpdate, lastFullUpdate;
 
 let audioPlayer;
+let playlistShuffleIndexes = [];
 
 let worldImageData = [];
 
@@ -1856,7 +1886,8 @@ function initGraph(renderMode, displayMode, paths) {
         .graphData(gData);
 
     document.querySelector(".controls-bottom--container--tab").style.display = '';
-    document.querySelector(".controls-side--container--tab").style.display = '';
+    document.querySelector(".controls-collectables--container--tab").style.display = '';
+    document.querySelector(".controls-playlist--container--tab").style.display = '';
 
     document.removeEventListener('mousemove', onDocumentMouseMove, false);
     document.querySelector('#graph canvas').removeEventListener('wheel', clearTweens, false)
@@ -2349,6 +2380,7 @@ function sortIconInstances(instanceObject, unsortedOpacities, unsortedGrayscales
 function initNodeObjectMaterial() {
     const amount = worldData.length;
     const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
+    
     const buffer = new ArrayBuffer(dataLength * amount * 2 + (dataLength * removedCount * 2));
     const texture = new THREE.DataTexture2DArray(new Uint8ClampedArray(buffer), nodeImgDimensions.x, nodeImgDimensions.y, amount * 2 + (removedCount * 2));
     texture.format = THREE.RGBAFormat;
@@ -2498,7 +2530,7 @@ function updateNodePositions(is2d) {
                 nodeIconObject.getMatrixAt(iconIndex, dummy.matrix);
                 dummy.position.set(node.x + (dummy.scale.x / 2) - (1.625 + (4 / 13)) * scale, node.y + (dummy.scale.y / 2) - 1.21875 * scale, 0);
                 dummy.scale.set(13 * scale, 9.75 * scale, is2d ? 1 : 13 * scale);
-                var x = new THREE.Vector3();
+                const x = new THREE.Vector3();
                 x.setFromMatrixScale(dummy.matrix);
                 dummy.updateMatrix();
                 nodeIconObject.setMatrixAt(iconIndex, dummy.matrix);
@@ -3507,7 +3539,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.7.2");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.0");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
@@ -3876,7 +3908,281 @@ function openWorldWikiPage(worldId, newWindow) {
         "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
 }
 
-function getMissingBgmUrl(location) {
+function initBgm(url, label, imageUrl, play, playlistIndex) {
+    const isPlaylist = playlistIndex !== undefined && playlistIndex > -1;
+    const loopAttribute = !isPlaylist ? ' loop' : '';
+    $('.audio-player-image-container').empty().append(`<img src="${imageUrl}" class="audio-player-image noselect" />`);
+    $('.audio-player-player-container').empty().append(`
+        <a href="javascript:void(0);" class="close-audio-player noselect">✖</a>
+        <marquee class="audio-player-marquee" scrollamount="5">
+            <label class="audio-player-label noselect">${label}</label>
+        </marquee>
+    `).append(`
+        <div class="audio-player">
+            <audio class="audio-source" crossorigin preload="none"${loopAttribute}></audio>
+        </div>
+    `);
+    $('.audio-player-container').addClass('open');
+
+    audioPlayer = new GreenAudioPlayer('.audio-player');
+
+    const $loadingIndicator = $('.audio-player .loading');
+    const $playBtn = $('.audio-player .play-pause-btn');
+    const $prevBtn = $(`
+        <div class="audio-player-playlist-btn prev-btn" aria-label="Previous" role="button">
+            <svg width="18" height="24" viewBox="0 0 18 24" xmlns="http://www.w3.org/2000/svg">
+                <path class="prev-btn__icon" d="m3 10v-10h-3v24h3v-10l13 10v-24" fill-rule="evenodd" />
+            </svg>
+        </div>
+    `);
+    const $nextBtn = $(`
+        <div class="audio-player-playlist-btn next-btn" aria-label="Next" role="button">
+            <svg width="18" height="24" viewBox="0 0 18 24" xmlns="http://www.w3.org/2000/svg">
+                <path class="next-btn__icon" d="m15 10v-10h3v24h-3v-9l-15 9v-24" fill-rule="evenodd" />
+            </svg>
+        </div>
+    `);
+    const $shuffleBtn = $(`
+        <div class="audio-player-playlist-btn shuffle-btn${config.playlistShuffle ? ' on' : ''}" aria-label="Shuffle" role="button">
+            <svg width="24" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                <path class="shuffle-btn__icon" d="m0 2h7l5 11h3v-2l3 3.5-3 3.5v-2h-5l-5-11h-5m0 11h7l0.9-2-2-3-0.9 2h-5m10.6-5l1.4-3h3v2l3-3.5-3-3.5v2h-5l-0.9 2" fill-rule="evenodd" />
+            </svg>
+        </div>
+    `);
+    $prevBtn.insertBefore($loadingIndicator);
+    $nextBtn.insertAfter($playBtn);
+    $shuffleBtn.insertAfter($nextBtn);
+
+    $playBtn.addClass('display--none');
+
+    audioPlayer.showLoadingIndicator();
+
+    audioPlayer.player.addEventListener('canplay', function() {
+        $('.audio-player .loading').addClass('display--none');
+        $playBtn.removeClass('display--none');
+    });
+
+    const requestObj = new Request(url, {
+        method: 'GET',
+        referrerPolicy: 'no-referrer'
+    });
+    
+    audioPlayer.player.volume = config.audioVolume;
+    audioPlayer.player.addEventListener('volumechange', function() {
+        const currentVolume = audioPlayer.player.volume;
+        window.setTimeout(function () {
+            if (audioPlayer.player.volume === currentVolume) {
+                config.audioVolume = currentVolume;
+                updateConfig(config);
+            }
+        }, 1000);
+    });
+
+    $('.playlist-item.playing').removeClass('playing');
+    
+    if (playlistIndex !== undefined && playlistIndex > -1) {
+        $(`.playlist-item:nth(${playlistIndex})`).addClass('playing');
+
+        config.playlistIndex = playlistIndex;
+        updateConfig(config);
+
+        const playPrevTrack = function() {
+            if (config.playlistBgmTrackIds.length > 1) {
+                audioPlayer.player.src = '';
+                playPrevPlaylistBgmTrack(playlistIndex);
+            } else
+                GreenAudioPlayer.playPlayer(audioPlayer.player);
+        };
+        const playNextTrack = function() {
+            if (config.playlistBgmTrackIds.length > 1) {
+                audioPlayer.player.src = '';
+                playNextPlaylistBgmTrack(playlistIndex);
+            } else
+                GreenAudioPlayer.playPlayer(audioPlayer.player);
+        };
+
+        audioPlayer.player.addEventListener('ended', playNextTrack);
+
+        $prevBtn.on('click', playPrevTrack);
+        $nextBtn.on('click', playNextTrack);
+        $shuffleBtn.on('click', function() {
+            const shuffle = (config.playlistShuffle = !config.playlistShuffle);
+            $(this).toggleClass('on', shuffle);
+            if (shuffle)
+                updatePlaylistShuffleIndexes();
+            updateConfig(config);
+        });
+    } else {
+        $('.audio-player-playlist-btn').addClass('inactive');
+
+        if (config.playlistIndex > -1) {
+            config.playlistIndex = -1;
+            updateConfig(config);
+        }
+    }
+
+    fetch(requestObj).then(function (response) {
+        if (!response.ok)
+            $('.audio-player-label').text('ERROR');
+        return response;
+    }).then(async function (res) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        audioPlayer.player.src = url;
+        $('.close-audio-player').on('click', function() {
+            audioPlayer = null;
+            $('.audio-player-container').removeClass('open');
+            $('.audio-player-image-container, .audio-player-player-container').empty();
+            if (!$('.controls-playlist').hasClass('visible'))
+                updateControlsContainer();
+        });
+        if (play)
+            GreenAudioPlayer.playPlayer(audioPlayer.player);
+    }).catch((err) => console.error(err));
+}
+
+function initBgmTrack(bgmTrack, play, playlistIndex) {
+    const imageUrl = bgmTrack.worldId != null ? worldData[bgmTrack.worldId].filename : getMissingBgmTrackUrl(bgmTrack.location);
+    initBgm(bgmTrack.url, getBgmTrackLabel(bgmTrack), imageUrl, play, playlistIndex);
+}
+
+function playBgm(url, label, imageUrl) {
+    initBgm(url, label, imageUrl, true);
+}
+
+function playBgmTrack(bgmTrack, playlistIndex) {
+    initBgmTrack(bgmTrack, true, playlistIndex);
+}
+
+function playPrevPlaylistBgmTrack(lastPlaylistIndex, attempts) {
+    const wrapIndex = config.playlistShuffle ? lastPlaylistIndex === playlistShuffleIndexes[0] : lastPlaylistIndex <= 0;
+    if (wrapIndex)
+        updatePlaylistShuffleIndexes();
+    const playlistIndex = config.playlistShuffle
+        ? playlistShuffleIndexes[!wrapIndex ? playlistShuffleIndexes.indexOf(lastPlaylistIndex) - 1 : playlistShuffleIndexes.length - 1]
+        : !wrapIndex ? lastPlaylistIndex - 1 : config.playlistBgmTrackIds.length - 1;
+    const playlistBgmTrackId = config.playlistBgmTrackIds[playlistIndex];
+    if (bgmTrackIndexesById.hasOwnProperty(playlistBgmTrackId)) {
+        GreenAudioPlayer.stopOtherPlayers();
+        playBgmTrack(bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]], playlistIndex);
+    } else if (attempts < config.playlistBgmTrackIds.length)
+        playPrevPlaylistBgmTrack(playlistIndex, attempts ? ++attempts : 1);
+}
+
+function playNextPlaylistBgmTrack(lastPlaylistIndex, attempts) {
+    const wrapIndex = config.playlistShuffle ? lastPlaylistIndex === playlistShuffleIndexes[playlistShuffleIndexes.length - 1] : lastPlaylistIndex >= config.playlistBgmTrackIds.length - 1;
+    if (wrapIndex)
+        updatePlaylistShuffleIndexes();
+    const playlistIndex = config.playlistShuffle
+        ? playlistShuffleIndexes[!wrapIndex ? playlistShuffleIndexes.indexOf(lastPlaylistIndex) + 1 : 0]
+        : !wrapIndex ? lastPlaylistIndex + 1 : 0;
+    const playlistBgmTrackId = config.playlistBgmTrackIds[playlistIndex];
+    if (bgmTrackIndexesById.hasOwnProperty(playlistBgmTrackId)) {
+        GreenAudioPlayer.stopOtherPlayers();
+        playBgmTrack(bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]], playlistIndex);
+    } else if (attempts < config.playlistBgmTrackIds.length)
+        playNextPlaylistBgmTrack(playlistIndex, attempts ? ++attempts : 1);
+}
+
+function pauseBgm() {
+    const audioSources = document.getElementsByClassName('audio-source');
+    if (audioSources.length)
+        GreenAudioPlayer.pausePlayer(audioSources[0]);
+}
+
+function updatePlaylistShuffleIndexes(firstIndex) {
+    if (config.playlistShuffle) {
+        playlistShuffleIndexes = [];
+        if (config.playlistBgmTrackIds.length) {
+            const availableIndexes = [];
+            if (firstIndex !== undefined)
+                playlistShuffleIndexes.push(firstIndex);
+            for (let i = 0; i < config.playlistBgmTrackIds.length; i++) {
+                if (i !== firstIndex)
+                    availableIndexes.push(i);
+            }
+            while (availableIndexes.length) {
+                const randomIndex = Math.floor(Math.random() * availableIndexes.length);
+                playlistShuffleIndexes.push(availableIndexes[randomIndex]);
+                availableIndexes.splice(randomIndex, 1);
+            }
+        }
+    }
+}
+
+function initPlaylist() {
+    for (let bgmTrackId of config.playlistBgmTrackIds)
+        addPlaylistBgmTrack(bgmTrackId, true);
+
+    if (config.playlistBgmTrackIds.length) {
+        $('.controls-playlist--container, .controls-playlist--container--tab').removeClass('display--none');
+        if (config.playlistIndex > -1 && config.playlistIndex < config.playlistBgmTrackIds.length) {
+            const playlistBgmTrackId = config.playlistBgmTrackIds[config.playlistIndex];
+            if (bgmTrackIndexesById.hasOwnProperty(playlistBgmTrackId))
+                initBgmTrack(bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]], false, config.playlistIndex);
+        }
+        updatePlaylistShuffleIndexes(config.playlistIndex);
+    } else
+        updatePlaylistShuffleIndexes();
+}
+
+function addPlaylistBgmTrack(bgmTrackId, isInit) {
+    const bgmTrack = bgmTrackIndexesById.hasOwnProperty(bgmTrackId) ? bgmTrackData[bgmTrackIndexesById[bgmTrackId]] : null;
+    const imageUrl = bgmTrack && bgmTrack.worldId != null ? worldData[bgmTrack.worldId].filename : getMissingBgmTrackUrl(bgmTrack ? bgmTrack.location : null);
+    const trackLabel = bgmTrack && bgmTrack.trackNo < 1000 ? bgmTrack.trackNo + (bgmTrack.variant ? ` ${bgmTrack.variant}` : '') : '';
+    const trackLabelHtml = trackLabel ? `<h2 class="playlist-item__label noselect">${trackLabel}</h2>` : '';
+    const $playlistItem = $(`
+        <div class="js--playlist-item playlist-item">
+            <div class="playlist-item__image-container">
+                <img class="playlist-item__image noselect" src="${imageUrl}" referrerpolicy="no-referrer" />
+            </div>
+            <a href="javascript:void(0);" class="js--remove-playlist-item playlist-item__remove-btn noselect">✖</a>
+            ${trackLabelHtml}
+        </div>
+    `);
+    $('.js--playlist').append($playlistItem);
+    if (bgmTrack)
+        $playlistItem.on('click', function () {
+            if (bgmTrackIndexesById.hasOwnProperty(bgmTrackId)) {
+                playBgmTrack(bgmTrackData[bgmTrackIndexesById[bgmTrackId]], $(this).index());
+                updatePlaylistShuffleIndexes($(this).index());
+            }
+        });
+    $playlistItem.children('.js--remove-playlist-item').on('click', function () {
+        removePlaylistBgmTrack($(this).parent('.js--playlist-item').index());
+    });
+
+    if (!isInit) {
+        if (!config.playlistBgmTrackIds.length)
+            $('.controls-playlist--container, .controls-playlist--container--tab').removeClass('display--none');
+        if (!$('.controls-playlist').hasClass('visible'))
+            $('.controls-playlist--container--tab__button').trigger('click');
+        else
+            updateControlsContainer();
+        config.playlistBgmTrackIds.push(bgmTrackId);
+        updatePlaylistShuffleIndexes();
+        updateConfig(config);
+    }
+}
+
+function removePlaylistBgmTrack(playlistIndex) {
+    config.playlistBgmTrackIds.splice(playlistIndex, 1);
+    if (playlistIndex < config.playlistIndex || playlistIndex === config.playlistBgmTrackIds.length)
+        config.playlistIndex--;
+
+    updatePlaylistShuffleIndexes();
+    updateConfig(config);
+
+    $(`.js--playlist-item:nth(${playlistIndex})`).remove();
+    if (!config.playlistBgmTrackIds.length) {
+        $('.controls-playlist--container, .controls-playlist--container--tab').addClass('display--none');
+        if ($('.controls-playlist').hasClass('visible'))
+            $('.controls-playlist--container--tab__button').trigger('click');
+    } else
+        updateControlsContainer();
+}
+
+function getMissingBgmTrackUrl(location) {
     if (location) {
         if (/Computer/.test(location))
             return 'https://static.wikia.nocookie.net/yume2kki/images/5/5b/Pc1.png/revision/latest';
@@ -3940,62 +4246,27 @@ function getBgmLabel(worldName, bgmLabel) {
     return `${worldName}${localizedSeparator}${bgmLabel.slice(separatorIndex + 1)}${localizedBraces.replace('{VALUE}', bgmLabel.slice(0, separatorIndex))})`;
 }
 
-function playBgm(url, label, imageUrl) {
-    $('.audio-player-image-container').empty().append(`<img src="${imageUrl}" class="audio-player-image" />`);
-    $('.audio-player-player-container').empty().append(`
-        <a href="javascript:void(0);" class="close-audio-player noselect">✖</a>
-        <marquee class="audio-player-marquee" scrollamount="5">
-            <label class="audio-player-label noselect">${label}</label>
-        </marquee>
-    `).append(`
-        <div class="audio-player" autoplay>
-            <audio class="audio-source" crossorigin preload="none" autoplay loop></audio>
-        </div>
-    `);
-    $('.audio-player-container').addClass('open');
+function getBgmTrackLabel(bgmTrack) {
+    let trackLabel = '';
 
-    audioPlayer = new GreenAudioPlayer('.audio-player');
-    audioPlayer.showLoadingIndicator();
+    if (bgmTrack.trackNo < 1000) {
+        trackLabel = bgmTrack.trackNo.toString().padStart(3, 0);
+        if (bgmTrack.variant)
+            trackLabel += ` ${bgmTrack.variant}`;
+        trackLabel += localizedSeparator;
+    }
 
-    const requestObj = new Request(url, {
-        method: 'GET',
-        referrerPolicy: 'no-referrer'
-    });
-    
-    audioPlayer.player.volume = config.audioVolume;
-    audioPlayer.player.addEventListener('volumechange', function (e) {
-        const currentVolume = audioPlayer.player.volume;
-        window.setTimeout(function () {
-            if (audioPlayer.player.volume === currentVolume) {
-                config.audioVolume = currentVolume;
-                updateConfig(config);
-            }
-        }, 1000);
-    });
+    const location = config.lang == 'en' ? bgmTrack.location : bgmTrack.locationJP;
+    const name = bgmTrack.name;
 
-    fetch(requestObj).then(function (response) {
-        if (!response.ok)
-            $('.audio-player-label').text('ERROR');
-        return response;
-    }).then(async function (res) {
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const audioSource = document.getElementsByClassName('audio-source')[0];
-        audioSource.src = url;
-        audioPlayer.hideLoadingIndicator();
-        $('.close-audio-player').on('click', function () {
-            audioPlayer = null;
-            $('.audio-player-container').removeClass('open');
-            $('.audio-player-image-container, .audio-player-player-container').empty();
-        });
-        GreenAudioPlayer.playPlayer(audioSource);
-    }).catch((err) => console.error(err));
-}
+    if (location) {
+        trackLabel += location;
+        if (name)
+            trackLabel += `${localizedBraces.replace('{VALUE}', name)}`;
+    } else
+        trackLabel += name;
 
-function pauseBgm() {
-    const audioSources = document.getElementsByClassName('audio-source');
-    if (audioSources.length)
-        GreenAudioPlayer.pausePlayer(audioSources[0]);
+    return trackLabel;
 }
 
 function trySelectNode(node, forceFocus, ignoreSearch) {
@@ -4186,32 +4457,54 @@ function openHelpModal() {
 function initControls() {
     $(".controls-bottom--container--tab__button").on("click", function() {
         if ($(".controls-bottom").hasClass("visible")) {
+            const settingsHeight = $(".controls-bottom").outerHeight() + 8;
             $(".controls-bottom").removeClass("visible").animateCss("slideOutDown", 250, function () {
                 if (!$(this).hasClass("visible"))
                     $(this).css("opacity", 0);
             });
-            $(".controls-bottom--container--tab, .footer, .audio-player-container").css("margin-top", "0px").animateCss("slideInDown", 300);
+            $(".controls-bottom--container--tab, .audio-player-container, .footer").css("margin-top", "0px").animateCss("slideInDown", 300);
+            $(".controls-playlist--container--tab").css("margin-bottom", "0px");
+            $(".controls-playlist--container").css("margin-bottom", `-${settingsHeight}px`);
+            $(".controls-playlist--container--tab, .controls-playlist--container").animateCss("slideInDown", 300);
             $(".modal").css("transition", "height 0.3s ease-out, margin-top 0.3s ease-out");
         } else {
             const settingsHeight = $(".controls-bottom").outerHeight() + 8;
             $(".controls-bottom").addClass("visible").css("opacity", 1).animateCss("slideInUp", 250);
-            $(".controls-bottom--container--tab, .footer, .audio-player-container").css("margin-top", "-" + settingsHeight + "px").animateCss("slideInUp", 250);
+            $(".controls-bottom--container--tab, .audio-player-container, .footer").css("margin-top", `-${settingsHeight}px`).animateCss("slideInUp", 250);
+            $(".controls-playlist--container--tab").css("margin-bottom", `${settingsHeight}px`).animateCss("slideInUp", 250);
+            $(".controls-playlist--container").css({ "margin-bottom": "0px", "padding-bottom": `${settingsHeight}px` }).animateCss("slideInUp", 250);
             $(".modal").css("transition", "height 0.25s ease-out, margin-top 0.25s ease-out");
         }
         updateControlsContainer();
     });
 
-    $(".controls-side--container--tab__button").on("click", function() {
-        if ($(".controls-side").hasClass("visible")) {
-            $(".controls-side").removeClass("visible").animateCss("slideOutRight", 250, function () {
+    $(".controls-collectables--container--tab__button").on("click", function() {
+        if ($(".controls-collectables").hasClass("visible")) {
+            $(".controls-collectables").removeClass("visible").animateCss("slideOutRight", 250, function () {
                 if (!$(this).hasClass("visible"))
                     $(this).css("opacity", 0);
             });
-            $(".controls-side--container--tab").css("margin-left", "0px").animateCss("slideInLeft", 300);
+            $(".controls-collectables--container--tab").css("margin-left", "0px").animateCss("slideInLeft", 300);
             $(".modal").css("transition", "max-width 0.3s ease-out, margin-left 0.3s ease-out, margin-right 0.3s ease-out");
         } else {
-            $(".controls-side").addClass("visible").css("opacity", 1).animateCss("slideInRight", 250);
-            $(".controls-side--container--tab").css("margin-left", "-" + ($(".controls-side").outerWidth() + 8) + "px").animateCss("slideInRight", 250);
+            $(".controls-collectables").addClass("visible").css("opacity", 1).animateCss("slideInRight", 250);
+            $(".controls-collectables--container--tab").css("margin-left", "-" + ($(".controls-collectables").outerWidth() + 8) + "px").animateCss("slideInRight", 250);
+            $(".modal").css("transition", "max-width 0.25s ease-out, margin-left 0.25s ease-out, margin-right 0.25s ease-out");
+        }
+        updateControlsContainer();
+    });
+
+    $(".controls-playlist--container--tab__button").on("click", function() {
+        if ($(".controls-playlist").hasClass("visible")) {
+            $(".controls-playlist").removeClass("visible").animateCss("slideOutLeft", 250, function () {
+                if (!$(this).hasClass("visible"))
+                    $(this).css("opacity", 0);
+            });
+            $(".controls-playlist--container--tab").css("margin-left", "0px").animateCss("slideInRight", 300);
+            $(".modal").css("transition", "max-width 0.3s ease-out, margin-left 0.3s ease-out, margin-right 0.3s ease-out");
+        } else {
+            $(".controls-playlist").addClass("visible").css("opacity", 1).animateCss("slideInLeft", 250);
+            $(".controls-playlist--container--tab").css("margin-left", ($(".controls-playlist").outerWidth() + 8) + "px").animateCss("slideInLeft", 250);
             $(".modal").css("transition", "max-width 0.25s ease-out, margin-left 0.25s ease-out, margin-right 0.25s ease-out");
         }
         updateControlsContainer();
@@ -4224,7 +4517,7 @@ function initControls() {
         isCtrl = false;
     });
 
-    const onModalShown = function () {
+    const onModalShown = function() {
         const $modalContent = $(this).find(".modal__content");
         $modalContent.css("padding-right", $modalContent[0].scrollHeight > $modalContent[0].clientHeight ? "24px" : null);
     };
@@ -4238,6 +4531,27 @@ function initControls() {
 
     $(document).on("click", ".js--modal__controls--expand > .js--modal__controls--expand__link", function() {
         $(this).parent().next(".js--modal__controls").toggleClass("expanded");
+    });
+
+    $(".js--playlist").sortable({
+        onEnd: function (e) {
+            const oldIndex = e.oldIndex;
+            const newIndex = e.newIndex;
+
+            if (oldIndex !== newIndex) {
+                const movedBgmTrackId = config.playlistBgmTrackIds[oldIndex];
+
+                config.playlistBgmTrackIds.splice(oldIndex, 1);
+                config.playlistBgmTrackIds.splice(newIndex, 0, movedBgmTrackId);
+
+                if (oldIndex <= config.playlistIndex && newIndex > config.playlistIndex || newIndex <= config.playlistIndex && oldIndex > config.playlistIndex)
+                    config.playlistIndex--;
+                else if (oldIndex >= config.playlistIndex && newIndex < config.playlistIndex || newIndex >= config.playlistIndex && oldIndex < config.playlistIndex)
+                    config.playlistIndex++;
+
+                updateConfig(config);
+            }
+        }
     });
     
     $(".js--lang").on("change", function() {
@@ -4600,7 +4914,7 @@ function getInvalidConnectionPairs() {
     const checkedReverseConnIds = [];
     const expectedReverseConnTypes = {};
 
-    var addConnTypePair = function(x, y) {
+    const addConnTypePair = function(x, y) {
         expectedReverseConnTypes[x] = y;
         expectedReverseConnTypes[y] = x;
     };
@@ -5278,6 +5592,7 @@ $(function () {
         initMenuThemeData(data.menuThemeData);
         initWallpaperData(data.wallpaperData);
         initBgmTrackData(data.bgmTrackData);
+        initPlaylist();
         lastUpdate = new Date(data.lastUpdate);
         lastFullUpdate = new Date(data.lastFullUpdate);
 

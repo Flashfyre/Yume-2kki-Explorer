@@ -22,7 +22,7 @@
                 color: rgba(216, 216, 216, 1); /*base*/
             }
 
-            label, h1, h2, h3, h4, p, li.styled-list-item, .close-modal, .close-audio-player, .loading-container .loading-container__text {
+            label, h1, h2, h3, h4, p, li.styled-list-item, .close-modal, .close-audio-player, .playlist-item__remove-btn, .loading-container .loading-container__text {
                 background-image: url(/images/ui/Default_Custom/font1.png) !important; /*base*/
                 -webkit-background-clip: text;
 	            -webkit-text-fill-color: transparent;
@@ -75,14 +75,14 @@
                 image-rendering: pixelated;
             }
 
-            .modal__content::-webkit-scrollbar-track, .modal__controls--expand + .modal__controls::-webkit-scrollbar-track, .collectable-entry--content__list::-webkit-scrollbar-track {
+            .modal__content::-webkit-scrollbar-track, .modal__controls--expand + .modal__controls::-webkit-scrollbar-track, .collectable-entry--content__list::-webkit-scrollbar-track, .playlist::-webkit-scrollbar-track {
                 border-image: url(/images/ui/Default_Custom/border.png) 12 repeat !important;
                 background-color: rgba(45, 17, 23, 1); /*basebg*/
                 image-rendering: crisp-edges;
                 image-rendering: pixelated;
             }
 
-            .modal__content::-webkit-scrollbar-thumb, .modal__controls--expand + .modal__controls::-webkit-scrollbar-thumb, .collectable-entry--content__list::-webkit-scrollbar-thumb {
+            .modal__content::-webkit-scrollbar-thumb, .modal__controls--expand + .modal__controls::-webkit-scrollbar-thumb, .collectable-entry--content__list::-webkit-scrollbar-thumb, .playlist::-webkit-scrollbar-thumb {
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round !important;
                 image-rendering: crisp-edges;
                 image-rendering: pixelated;
@@ -205,23 +205,27 @@
                 color: rgba(255, 255, 157, 1) !important; /*base*/
             }
 
-            .audio-player .play-pause-btn__icon, .audio-player .volume__button .volume__speaker, .collectable-entry--controls > .collectable-entry--control .collectable-entry--control__icon {
+            .audio-player .play-pause-btn__icon, .audio-player .prev-btn__icon, .audio-player .next-btn__icon, .audio-player .shuffle-btn__icon, .audio-player .volume__button .volume__speaker, .collectable-entry--controls > .collectable-entry--control .collectable-entry--control__icon {
                 fill: rgba(216, 216, 216, 1); /*base*/
             }
 
-            .audio-player .volume__button.open path.volume__speaker {
+            .audio-player .shuffle-btn.on .shuffle-btn__icon, .audio-player .volume__button.open path.volume__speaker {
                 fill: rgba(255, 255, 157, 1) !important; /*alt*/
             }
 
             .audio-player .gap-progress, .audio-player .pin {
                 background-color: rgba(216, 216, 216, 1) !important; /*base*/
             }
+
+            .playlist-item.playing {
+                border-color: rgba(255, 255, 157, 1); /*alt*/
+            }
         </style>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.9.0/jquery.contextMenu.min.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.css" />
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/greghub/green-audio-player/dist/css/green-audio-player.min.css">
-        <script src="/js/yume-2kki-explorer.js"></script>
+        <script src="/js/yume-2kki-explorer.js" referrerpolicy="no-referrer"></script>
     </head>
     <body>
         <div class="content">
@@ -268,11 +272,11 @@
             <div id="graphContainer" class="graph-container">
                 <div id="graph" class="graph"></div>
             </div>
-            <div class="controls--container--tab controls-side--container--tab" style="display: none;">
-                <button class="controls--container--tab__button controls-side--container--tab__button noselect">◀</button>
+            <div class="controls--container--tab controls-side--container--tab controls-collectables--container--tab" style="display: none;">
+                <button class="controls--container--tab__button controls-side--container--tab__button controls-collectables--container--tab__button noselect">◀</button>
             </div>
-            <div class="controls--container controls-side--container">
-                <div class="y2e-controls controls-side" style="opacity: 0;">
+            <div class="controls--container controls-side--container controls-collectables--container">
+                <div class="y2e-controls controls-side controls-collectables" style="opacity: 0;">
                     <div class="control">
                         <button data-localize="collectableControls.authors.name" class="js--author-entries noselect">Authors</button>
                         <button data-localize="collectableControls.versions.name" class="js--version-entries noselect">Versions</button>
@@ -281,6 +285,14 @@
                         <button data-localize="collectableControls.wallpapers.name" class="js--wallpapers noselect">Wallpapers</button>
                         <button data-localize="collectableControls.bgmTracks.name" class="js--bgm-tracks noselect">Soundtrack</button>
                     </div>
+                </div>
+            </div>
+            <div class="controls--container--tab controls-side--container--tab controls-playlist--container--tab display--none" style="display: none;">
+                <button class="controls--container--tab__button controls-side--container--tab__button controls-playlist--container--tab__button noselect">▶</button>
+            </div>
+            <div class="controls--container controls-side--container controls-playlist--container display--none">
+                <div class="y2e-controls controls-side controls-playlist" style="opacity: 0;">
+                    <div class="control js--playlist playlist"></div>
                 </div>
             </div>
             <div class="controls--container--tab controls-bottom--container--tab" style="display: none;">
