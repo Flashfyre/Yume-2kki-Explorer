@@ -23,7 +23,7 @@
     "remarkable": "^2.0.0",
     "sortablejs": "^1.14.0",
     "superagent": "^5.2.2",
-    "three": "^0.116.1",
+    "three": "^0.125.0",
     "three-dragcontrols": "^0.88.2",
     "three-forcegraph": "https://github.com/Flashfyre/three-forcegraph.git",
     "three-render-objects": "https://github.com/Flashfyre/three-render-objects.git",
