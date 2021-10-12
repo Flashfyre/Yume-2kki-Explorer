@@ -1,4 +1,4 @@
-// Version 3.8.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.8.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -108642,7 +108642,7 @@ function InsertStackElement(node, body) {
 	        const imageUrl = t.worldId != null ? exports.worldData[t.worldId].filename : getMissingBgmTrackUrl(t.location);
 	        const unnumberedAttribute = t.trackNo >= 1000 ? ' data-unnumbered="true"' : '';
 	        const removedAttribute = t.removed ? ' data-removed="true"' : '';
-	        const bgmTrackImageHtml = `<div class="bgm-track collectable-entry collectable${removedCollectableClass} noselect"><img src="${imageUrl}" class="js--bgm-track__image" referrerpolicy="no-referrer" /></div>`;
+	        const bgmTrackImageHtml = `<div class="js--bgm-track-image--container bgm-track collectable-entry collectable${removedCollectableClass} noselect"><img src="${imageUrl}" class="js--bgm-track-image" referrerpolicy="no-referrer" /></div>`;
 	        const bgmTrackNameHtml = t.trackNo < 1000 ? `
             <div class="collectable-entry__name--container">
                 <h1 class="bgm-track__name--shadow collectable-entry__name--shadow">${trackId}</h1>
@@ -108684,14 +108684,50 @@ function InsertStackElement(node, body) {
 	    }
 
 	    const $tooltip = jquery('<div class="bgm-track-tooltip scene-tooltip display--none"></div>').prependTo('.content');
+	    
+	    const getBgmTrackImageContainer = function ($bgmTrackEntry) {
+	        const $bgmTracksContainer = $bgmTrackEntry.data('removed') ? $removedBgmTracksContainerItems : $bgmTrackEntry.data('unnumbered') ? $unnumberedBgmTracksContainerItems : $bgmTracksContainerItems;
+	        return jquery(jquery($bgmTracksContainer.children('.js--bgm-track-image--container')[$bgmTrackEntry.parent().index()]));
+	    };
+	    
+	    const $bgmTrackSearch = jquery('<input type="text" class="js--bgm-track-search" />').on('input', function() {
+	        const changeValue = jquery(this).val().trim();
+
+	        window.setTimeout(function() {
+	            if ($bgmTrackSearch.val().trim() === changeValue) {
+	                if (changeValue) {
+	                    const bgmTrackIdMatch = /^(\d+) ?([A-Z])?$/i.exec(changeValue);
+	                    const trackNo = bgmTrackIdMatch ? parseInt(bgmTrackIdMatch[1]) : null;
+	                    const variant = bgmTrackIdMatch && bgmTrackIdMatch[2] || null;
+	                    const changeValueLower = changeValue.toLowerCase();
+
+	                    jquery('.js--bgm-track[data-bgm-track-id]').each(function() {
+	                        const bgmTrack = bgmTracksById[jquery(this).data('bgmTrackId')];
+	                        const name = bgmTrack.name;
+	                        const location = config$1.lang === 'en' ? bgmTrack.location : bgmTrack.locationJP;
+	                        const notes = config$1.lang === 'en' ? bgmTrack.notes : bgmTrack.notesJP;
+	                        let visible = (name && name.toLowerCase().indexOf(changeValueLower) > -1) ||
+	                                        (location && location.toLowerCase().indexOf(changeValueLower) > -1) ||
+	                                        (notes && notes.toLowerCase().indexOf(changeValueLower) > -1);
+
+	                        if (!visible && bgmTrackIdMatch)
+	                            visible = bgmTrack.trackNo === trackNo && (variant === null || bgmTrack.variant === variant);
+
+	                        jquery(this).parent().toggleClass('display--none', !visible);
+	                        getBgmTrackImageContainer(jquery(this)).toggleClass('display--none', !visible);
+	                    });
+	                } else
+	                     jquery('.js--bgm-track-entry--container, .js--bgm-track-image--container').removeClass('display--none');
+	            }
+	        }, 500);
+	    });
+	    
+	    jquery('.js--bgm-track-search--container').empty().append($bgmTrackSearch);
 
 	    const playBgmTrackEntry = function ($bgmTrackEntry, openWorld) {
 	        const bgmTrack = bgmTracksById[$bgmTrackEntry.data('bgmTrackId')];
 	        if (bgmTrack.url) {
-	            const $bgmTracksContainer = $bgmTrackEntry.data('removed')
-	                ? $removedBgmTracksContainerItems : $bgmTrackEntry.data('unnumbered')
-	                ? $unnumberedBgmTracksContainerItems : $bgmTracksContainerItems;
-	            const imageUrl = jquery(jquery($bgmTracksContainer.children()[$bgmTrackEntry.parent().index()])).find('.js--bgm-track__image').attr('src');
+	            const imageUrl = getBgmTrackImageContainer($bgmTrackEntry).find('.js--bgm-track-image').attr('src');
 	            const bgmTrackLabel = getBgmTrackLabel(bgmTrack);
 	            playBgm(bgmTrack.url, bgmTrackLabel, imageUrl);
 	            if (openWorld) {
@@ -108744,11 +108780,10 @@ function InsertStackElement(node, body) {
 	            $tooltip.find('.js--bgm-track-tooltip__location').remove();
 	        $tooltip.find('.js--bgm-track-tooltip__name').toggleClass('alone', !location && !notes);
 	        $tooltip.find('.js--bgm-track-tooltip__location').toggleClass('alone', location && !notes);
-	        jquery((bgmTrack.trackNo < 1000 ? $bgmTracksContainerItems : !bgmTrack.removed ? $unnumberedBgmTracksContainerItems : $removedBgmTracksContainerItems).children()[jquery(this).index()]).addClass('hover');
+	        getBgmTrackImageContainer(jquery(this)).addClass('hover');
 	    }).on('mouseleave', function () {
 	        $tooltip.addClass('display--none');
-	        const $bgmTracksContainer = jquery(this).data('removed') ? $removedBgmTracksContainerItems : jquery(this).data('unnumbered') ? $unnumberedBgmTracksContainerItems : $bgmTracksContainerItems;
-	        jquery(jquery($bgmTracksContainer.children()[jquery(this).index()])).removeClass('hover');
+	        getBgmTrackImageContainer(jquery(this)).removeClass('hover');
 	    });
 	}
 
@@ -111347,7 +111382,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.0");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.1");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
@@ -111797,16 +111832,20 @@ function InsertStackElement(node, body) {
 	        const playPrevTrack = function() {
 	            if (config$1.playlistBgmTrackIds.length > 1) {
 	                audioPlayer.player.src = '';
-	                playPrevPlaylistBgmTrack(playlistIndex);
-	            } else
-	                GreenAudioPlayer.playPlayer(audioPlayer.player);
+	                if (playPrevPlaylistBgmTrack(playlistIndex))
+	                    return;
+	                audioPlayer.player.src = url;
+	            }
+	            GreenAudioPlayer.playPlayer(audioPlayer.player);
 	        };
 	        const playNextTrack = function() {
 	            if (config$1.playlistBgmTrackIds.length > 1) {
 	                audioPlayer.player.src = '';
-	                playNextPlaylistBgmTrack(playlistIndex);
-	            } else
-	                GreenAudioPlayer.playPlayer(audioPlayer.player);
+	                if (playNextPlaylistBgmTrack(playlistIndex))
+	                    return;
+	                audioPlayer.player.src = url;
+	            }
+	            GreenAudioPlayer.playPlayer(audioPlayer.player);
 	        };
 
 	        audioPlayer.player.addEventListener('ended', playNextTrack);
@@ -111875,6 +111914,9 @@ function InsertStackElement(node, body) {
 	        playBgmTrack(bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]], playlistIndex);
 	    } else if (attempts < config$1.playlistBgmTrackIds.length)
 	        playPrevPlaylistBgmTrack(playlistIndex, attempts ? ++attempts : 1);
+	    else
+	        return false;
+	    return true;
 	}
 
 	function playNextPlaylistBgmTrack(lastPlaylistIndex, attempts) {
@@ -111890,6 +111932,9 @@ function InsertStackElement(node, body) {
 	        playBgmTrack(bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]], playlistIndex);
 	    } else if (attempts < config$1.playlistBgmTrackIds.length)
 	        playNextPlaylistBgmTrack(playlistIndex, attempts ? ++attempts : 1);
+	    else
+	        return false;
+	    return true;
 	}
 
 	function pauseBgm() {
