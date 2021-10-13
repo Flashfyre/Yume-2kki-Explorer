@@ -1350,7 +1350,7 @@ function getWorldImageUrls(worldTitle) {
                     const index = i;
                     ret.push(null);
                     getAndSetWorldImageUrls.push(getWorldImageInfo(images[i].title).then(imageInfo => {
-                        if (imageInfo.width <= 800) {
+                        if (imageInfo.width <= 1200) {
                             const aspectRatio = imageInfo.width / imageInfo.height;
                             if (aspectRatio >= 1.25 && aspectRatio <= 1.4)
                                 ret[index] = imageInfo.url;
