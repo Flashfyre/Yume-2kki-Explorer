@@ -17,6 +17,7 @@ const appConfig = process.env.ADMIN_KEY ?
 const apiUrl = 'https://yume2kki.fandom.com/api.php';
 const isRemote = Boolean(process.env.DATABASE_URL);
 const defaultPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT;
+const worldImageWidthThreshold = 960;
 
 let dbInitialized = false;
 
@@ -1357,11 +1358,9 @@ function getWorldImageUrls(worldTitle) {
                     const index = i;
                     ret.push(null);
                     getAndSetWorldImageUrls.push(getWorldImageInfo(images[i].title).then(imageInfo => {
-                        if (imageInfo.width <= 1200) {
-                            const aspectRatio = imageInfo.width / imageInfo.height;
-                            if (aspectRatio >= 1.25 && aspectRatio <= 1.4)
-                                ret[index] = imageInfo.url;
-                        }
+                        const aspectRatio = imageInfo.width / imageInfo.height;
+                        if (aspectRatio >= 1.25 && aspectRatio <= 1.4)
+                            ret[index] = imageInfo.url;
                     }).catch(err => console.error(err)));
                 }
                 Promise.allSettled(getAndSetWorldImageUrls).finally(() => resolve(ret.filter(url => url)));
@@ -1384,10 +1383,12 @@ function getWorldImageInfo(imageTitle) {
                 const revisionIndex = fullUrl.indexOf(revisionText);
                 if (revisionIndex === -1)
                     reject();
+                const exceedsWidthThreshold = imageInfo.width > worldImageWidthThreshold;
+                const widthLimitString = exceedsWidthThreshold ? `/scale-to-width-down/${worldImageWidthThreshold}` : '';
                 resolve({
                     width: imageInfo.width,
                     height: imageInfo.height,
-                    url: fullUrl.slice(0, revisionIndex)
+                    url: `${fullUrl.slice(0, revisionIndex + (exceedsWidthThreshold ? revisionIndex : 0))}${widthLimitString}`
                 });
             });
         });
