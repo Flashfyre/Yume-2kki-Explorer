@@ -1621,7 +1621,7 @@ function getMapData(worldData) {
             if (err) return reject(err);
             worldData.forEach(w => w.mapIds = []);
             const worldDataByName = _.keyBy(worldData, w => w.title);
-            const mapIdTablesHtml = res.text.slice(res.text.indexOf('<table '), res.text.lastIndexOf('</table>'));
+            const mapIdTablesHtml = sliceHtml(res.text, res.text.indexOf('<table '), res.text.lastIndexOf('</table>'));
             const rawMapData = mapIdTablesHtml.split('<td>#').slice(1).map(t => {
                 const ret = t.replace(/\n/g, '').split('</td><td>').slice(0, 6);
                 ret[5] = ret[5].slice(0, ret[5].indexOf('</td>'));
@@ -2349,7 +2349,7 @@ function getMenuThemeWikiData(worldData) {
         superagent.get('https://yume2kki.fandom.com/wiki/Menu_Themes', function (err, res) {
             if (err) return reject(err);
             const worldDataByName = _.keyBy(worldData, w => w.title);
-            const menuThemeTablesHtml = res.text.slice(res.text.indexOf('<table '), res.text.lastIndexOf('</table>'));
+            const menuThemeTablesHtml = sliceHtml(res.text, res.text.indexOf('<table '), res.text.lastIndexOf('</table>'));
             const menuThemeDataRows = menuThemeTablesHtml.split('<tr>').slice(2);
             const rawMenuThemeData = [];
             let removedIndex = 999;
@@ -2434,7 +2434,7 @@ function addMenuThemeDataJPMethods(menuThemeData, removed) {
         superagent.get(url, function (err, res) {
             if (err) return reject(err);
             const menuThemesByMenuThemeId = _.keyBy(menuThemeData, m => m.menuThemeId);
-            const menuThemeTablesHtml = res.text.slice(res.text.indexOf('<table><thead>', res.text.indexOf('<div class="container-wrapper"')), res.text.lastIndexOf('</table>'));
+            const menuThemeTablesHtml = sliceHtml(res.text, res.text.indexOf('<table><thead>', res.text.indexOf('<div class="container-wrapper"')), res.text.lastIndexOf('</table>'));
             const menuThemeDataRows = menuThemeTablesHtml.split('<tr>').slice(2);
             let endOfTable = false;
 
@@ -2666,7 +2666,7 @@ function getWallpaperWikiData(worldData) {
     return new Promise((resolve, reject) => {
         superagent.get('https://yume2kki.fandom.com/wiki/Wallpaper_Guide', function (err, res) {
             if (err) return reject(err);
-            const specHtml = res.text.slice(res.text.indexOf('id="Specifications"'), res.text.indexOf('id="Removed_or_modified_wallpapers"'));
+            const specHtml = sliceHtml(res.text, res.text.indexOf('id="Specifications"'), res.text.indexOf('id="Removed_or_modified_wallpapers"'));
             const wallpaperSectionsHtml = res.text.split('"wikia-gallery-item"');
             const wallpaperRegex = /<img .*?src="(.*?\/revision\/latest)[^"]+".*?#(\d+)(?: \- "([^"]+)"|<\/b>).*? \- (.*?)<\/div>/;
             const removedWallpaperRegex = /<img .*?src="(.*?\/revision\/latest)[^"]+".*<b>.*?"(.*?)".*? \- (.*?[^#]+#(\d+).*?)<\/div>/;
@@ -2752,7 +2752,7 @@ function addWallpaperDataJPMethods(wallpaperData) {
     return new Promise((resolve, reject) => {
         superagent.get('https://wikiwiki.jp/yume2kki-t/%E5%8F%8E%E9%9B%86%E8%A6%81%E7%B4%A0/%E3%83%91%E3%82%BD%E3%82%B3%E3%83%B3%E3%81%AE%E5%A3%81%E7%B4%99%E3%81%AE%E8%A7%A3%E6%94%BE%E6%9D%A1%E4%BB%B6', function (err, res) {
             if (err) return reject(err);
-            const dataHtml = res.text.slice(res.text.indexOf('No.</th>'), res.text.indexOf('</table>', res.text.lastIndexOf('No.</th>')));
+            const dataHtml = sliceHtml(res.text, res.text.indexOf('No.</th>'), res.text.indexOf('</table>', res.text.lastIndexOf('No.</th>')));
             const wallpaperRegex = /<tr>.*?>(\d+)<\/td><td [^>]+>(.*?)<\/td><\/tr>/g;
             let wallpaperMatch;
             while ((wallpaperMatch = wallpaperRegex.exec(dataHtml))) {
@@ -2883,7 +2883,7 @@ function getBgmTrackWikiData(worldData) {
         superagent.get('https://yume2kki.fandom.com/wiki/Soundtrack', function (err, res) {
             if (err) return reject(err);
             const tableRowRegex = /<tr>[.\s\S]*?<\/tr>/g;
-            const tablesHtml = res.text.slice(res.text.indexOf('id="Track_list"'), res.text.indexOf('id="Trivia"'));
+            const tablesHtml = sliceHtml(res.text, res.text.indexOf('id="Track_list"'), res.text.indexOf('id="Trivia"'));
             const unnumberedIndex = tablesHtml.indexOf('id="Unnumbered_Tracks"');
             const unusedIndex = tablesHtml.indexOf('id="Unused_Tracks"');
             const bgmTrackRegexTrackNoPart = '<td>(\\d{3})(?: ([A-Z]))?<\\/td>';
@@ -3123,8 +3123,9 @@ function getWorldInfo(worldName) {
         superagent.get('https://yume2kki.fandom.com/wiki/' + worldName, function (err, res) {
             if (err) return reject(err);
             worldName = worldName.replace(/\_/g, ' ');
-            const imageUrlIndex = res.text.indexOf('<a href="https://static.wikia.nocookie.net') + 9;
-            const imageUrl = res.text.slice(imageUrlIndex, res.text.indexOf('"', imageUrlIndex));
+            const html = res.text;
+            const imageUrlIndex = html.indexOf('<a href="https://static.wikia.nocookie.net') + 9;
+            const imageUrl = sliceHtml(html, imageUrlIndex, html.indexOf('"', imageUrlIndex));
             const ext = imageUrl.slice(imageUrl.lastIndexOf("."), imageUrl.indexOf("/", imageUrl.lastIndexOf(".")));
             let filename = imageUrl.slice(0, imageUrl.indexOf("/", imageUrl.lastIndexOf(".")));
             if (!isRemote) {
@@ -3137,21 +3138,21 @@ function getWorldInfo(worldName) {
                 }
                 filename = `${localFilename}|${filename}`;
             }
-            const mapUrlAndLabel = getMapUrlAndLabel(res.text);
-            const bgmUrlAndLabel = getBgmUrlAndLabel(res.text)
+            const mapUrlAndLabel = getMapUrlAndLabel(html);
+            const bgmUrlAndLabel = getBgmUrlAndLabel(html);
             resolve({
-                titleJP: getTitleJP(res.text),
-                connections: getConnections(res.text),
-                author: getAuthor(res.text),
+                titleJP: getTitleJP(html),
+                connections: getConnections(html),
+                author: getAuthor(html),
                 filename: filename,
                 mapUrl: mapUrlAndLabel && mapUrlAndLabel.mapUrl,
                 mapLabel: mapUrlAndLabel && mapUrlAndLabel.mapLabel,
                 bgmUrl: bgmUrlAndLabel.bgmUrl,
                 bgmLabel: bgmUrlAndLabel.bgmLabel,
-                verAdded: getVerAdded(res.text),
-                verRemoved: getVerRemoved(res.text),
-                verUpdated: getVerUpdated(res.text),
-                verGaps: getVerGaps(res.text)
+                verAdded: getVerAdded(html),
+                verRemoved: getVerRemoved(html),
+                verUpdated: getVerUpdated(html),
+                verGaps: getVerGaps(html)
             });
         });
     });
@@ -3172,7 +3173,7 @@ function getTitleJP(html) {
     const jpNameIndex = html.indexOf("data-jp-name=\"");
     if (jpNameIndex === -1)
         return null;
-    return html.slice(jpNameIndex + 14, html.indexOf("\"", jpNameIndex + 14));
+    return sliceHtml(html, jpNameIndex + 14, html.indexOf("\"", jpNameIndex + 14));
 }
 
 function getAuthor(html) {
@@ -3182,7 +3183,7 @@ function getAuthor(html) {
     if (authorLabelIndex === -1)
         return null;
     const authorIndex = html.indexOf(">", html.indexOf("<a ", authorLabelIndex)) + 1;
-    const ret = html.slice(authorIndex, html.indexOf("</a>", authorIndex));
+    const ret = sliceHtml(html, authorIndex, html.indexOf("</a>", authorIndex));
     if (ret === 'Author Unknown')
         return null;
     return ret;
@@ -3195,7 +3196,7 @@ function getMapUrlAndLabel(html) {
     let figureIndex = html.indexOf("<figure");
     
     while (figureIndex > -1) {
-        const figureHtml = html.slice(figureIndex, html.indexOf("</figure", figureIndex));
+        const figureHtml = sliceHtml(html, figureIndex, html.indexOf("</figure", figureIndex));
         const figCaptionIndex = figureHtml.indexOf("<figcaption");
         if (figCaptionIndex > -1) {
             const captionIndex = figureHtml.indexOf("<p ", figCaptionIndex);
@@ -3225,7 +3226,7 @@ function getBgmUrlAndLabel(html) {
     const bgmIndex = html.indexOf("<b>BGM</b>");
 
     if (bgmIndex > -1) {
-        const bgmSection = html.slice(html.indexOf("<p>", bgmIndex) + 3, html.indexOf("</p>", bgmIndex));
+        const bgmSection = sliceHtml(html, html.indexOf("<p>", bgmIndex) + 3, html.indexOf("</p>", bgmIndex));
         const bgmEntries = bgmSection.split(/<br *\/?>/g);
         
         for (let entry of bgmEntries) {
@@ -3258,7 +3259,7 @@ function getBgmUrlAndLabel(html) {
 
 function getConnections(html) {
     const ret = [];
-    html = html.slice(html.indexOf("<b>Connecting Areas</b>"), html.indexOf("<b>BGM</b>"));
+    html = sliceHtml(html, html.indexOf("<b>Connecting Areas</b>"), html.indexOf("<b>BGM</b>"));
     const areas = html.split(/(?:<p>|<br \/>)<a href="/);
     let removed = false;
 
@@ -3343,7 +3344,7 @@ function getVerAdded(html) {
     const verAddedIndex = html.indexOf("data-ver-added=\"");
     if (verAddedIndex === -1)
         return null;
-    const ret = html.slice(verAddedIndex + 16, html.indexOf("\"", verAddedIndex + 16));
+    const ret = sliceHtml(html, verAddedIndex + 16, html.indexOf("\"", verAddedIndex + 16));
     return ret !== "x.x" ? ret : null;
 }
 
@@ -3351,21 +3352,21 @@ function getVerRemoved(html) {
     const verRemovedIndex = html.indexOf("data-ver-removed=\"");
     if (verRemovedIndex === -1)
         return null;
-    return html.slice(verRemovedIndex + 18, html.indexOf("\"", verRemovedIndex + 18));
+    return sliceHtml(html, verRemovedIndex + 18, html.indexOf("\"", verRemovedIndex + 18));
 }
 
 function getVerUpdated(html) {
     const verUpdatedIndex = html.indexOf("data-ver-updated=\"");
     if (verUpdatedIndex === -1)
         return null;
-    return versionUtils.validateVersionsUpdated(html.slice(verUpdatedIndex + 18, html.indexOf("\"", verUpdatedIndex + 18)).replace(/, +/g, ","));
+    return versionUtils.validateVersionsUpdated(sliceHtml(html, verUpdatedIndex + 18, html.indexOf("\"", verUpdatedIndex + 18)).replace(/, +/g, ","));
 }
 
 function getVerGaps(html) {
     const verGapsIndex = html.indexOf("data-ver-gaps=\"");
     if (verGapsIndex === -1)
         return null;
-    return versionUtils.validateVersionGaps(html.slice(verGapsIndex + 15, html.indexOf("\"", verGapsIndex + 15)).replace(/, +/g, ","));
+    return versionUtils.validateVersionGaps(sliceHtml(html, verGapsIndex + 15, html.indexOf("\"", verGapsIndex + 15)).replace(/, +/g, ","));
 }
 
 function decodeHtml(html) {
@@ -3493,7 +3494,7 @@ function getVersionUpdatedLocationContent(entry, content) {
         }
     } while (braceDepth);
 
-    let locationBoxSection = content.slice(locationBoxSectionStartIndex, locationBoxSectionEndIndex);
+    let locationBoxSection = sliceHtml(content, locationBoxSectionStartIndex, locationBoxSectionEndIndex);
 
     if (locationBoxSection.indexOf('|VersionAdded') > -1)
         locationBoxSection = locationBoxSection.replace(getVersionMetadataPattern('VersionAdded', !entry.verAdded), entry.verAdded ? `|VersionAdded = ${entry.verAdded}` : '');
@@ -3515,7 +3516,7 @@ function getVersionUpdatedLocationContent(entry, content) {
     else if (entry.verGaps)
         locationBoxSection += `|VersionGaps = ${entry.verGaps}\n`;*/
 
-    return `${content.slice(0, locationBoxSectionStartIndex)}${locationBoxSection}${content.slice(locationBoxSectionEndIndex)}`;
+    return `${sliceHtml(content, locationBoxSectionStartIndex)}${locationBoxSection}${sliceHtml(content, locationBoxSectionEndIndex)}`;
 }
 
 function getCsrfToken(request) {
@@ -3583,6 +3584,11 @@ function updateWorldDataForChance(worldData) {
     const matchWorld = worldData.find(w => enc(w.title) === '00070001140010100110000990010400032000830011600114001010010100116');
     if (matchWorld)
         matchWorld.title = dec('65314652936531465313653246532400032653166532165325653176532665331653216532765326');
+}
+
+// Slice large HTML strings without keeping the original in scope
+function sliceHtml(html, start, end) {
+    return (' ' + html.slice(start, end)).substr(1);
 }
 
 function enc(str) {
