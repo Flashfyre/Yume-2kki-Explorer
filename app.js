@@ -829,8 +829,7 @@ function populateWorldData(pool, worldData, updatedWorldNames, continueKey, worl
 
             if (data.continue)
                 populateWorldData(pool, worldData, updatedWorldNames, data.continue.cmcontinue, worlds).then(wd => resolve(wd)).catch(err => reject(err));
-            else
-            {
+            else {
                 const newWorldNames = [];
                 const batches = [];
                 for (let b = 0; b * batchSize < worlds.length; b++)
@@ -1351,9 +1350,11 @@ function getWorldImageUrls(worldTitle) {
                     const index = i;
                     ret.push(null);
                     getAndSetWorldImageUrls.push(getWorldImageInfo(images[i].title).then(imageInfo => {
-                        const aspectRatio = imageInfo.width / imageInfo.height;
-                        if (aspectRatio >= 1.25 && aspectRatio <= 1.4)
-                            ret[index] = imageInfo.url;
+                        if (imageInfo.width <= 800) {
+                            const aspectRatio = imageInfo.width / imageInfo.height;
+                            if (aspectRatio >= 1.25 && aspectRatio <= 1.4)
+                                ret[index] = imageInfo.url;
+                        }
                     }).catch(err => console.error(err)));
                 }
                 Promise.allSettled(getAndSetWorldImageUrls).finally(() => resolve(ret.filter(url => url)));

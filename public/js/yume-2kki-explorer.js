@@ -1,4 +1,4 @@
-// Version 3.8.2 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.8.3 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -108823,8 +108823,10 @@ function InsertStackElement(node, body) {
 	        const ordinal = jquery(this).data('id');
 	        jquery.post('/updateBgmTrackWorldImageOrdinal', { bgmTrackId: bgmTrackId, ordinal: ordinal }, function (data) {
 	            if (data.success) {
+	                const filename = world.images[ordinal];
 	                bgmTrack.worldImageOrdinal = ordinal;
-	                getBgmTrackImageContainer($bgmTrackEntry).find('.js--bgm-track-image').attr('src', world.images[ordinal]);
+	                getBgmTrackImageContainer($bgmTrackEntry).find('.js--bgm-track-image').attr('src', filename);
+	                jquery(`.js--playlist-item[data-bgm-track-id='${bgmTrackId}'] .playlist-item__image`).attr('src', filename);
 	                jquery.modal.close();
 	            }
 	        });
@@ -109040,27 +109042,28 @@ function InsertStackElement(node, body) {
 	    }
 	}
 
-	function loadData(update, success, fail) {
-	    let queryString = update ? "?update=" + update : "";
+	function loadData(update, onSuccess, onFail) {
+	    let queryString = update ? `?update=${update}` : "";
 	    if (config$1.removedContentMode === 1)
-	        queryString += (queryString.length ? "&" : "?") + "includeRemovedContent=true";
+	        queryString += `${queryString.length ? "&" : "?"}includeRemovedContent=true`;
 	    const urlSearchParams = new URLSearchParams(window.location.search);
 	    if (urlSearchParams.has("adminKey"))
-	        queryString += (queryString.length ? "&" : "?") + "adminKey=" + urlSearchParams.get("adminKey");
-	    jquery.get("/data" + queryString, function (data) {
-	        if (document.fonts.check("12px MS Gothic")) {
-	            fontsLoaded = true;
-	            success(data);
-	        } else {
-	            document.fonts.onloadingdone = _ => fontsLoaded = true;
-	            const fontsLoadedCheck = window.setInterval(function () {
-	                if (fontsLoaded) {
-	                    window.clearInterval(fontsLoadedCheck);
-	                    success(data);
-	                }
-	            }, 100);
-	        }
-	    }).fail(fail);
+	        queryString += `${queryString.length ? "&" : "?"}adminKey=${urlSearchParams.get("adminKey")}`;
+	    jquery.get("/data" + queryString)
+	        .done(function (data) {
+	            if (document.fonts.check("12px MS Gothic")) {
+	                fontsLoaded = true;
+	                onSuccess(data);
+	            } else {
+	                document.fonts.onloadingdone = _ => fontsLoaded = true;
+	                const fontsLoadedCheck = window.setInterval(function () {
+	                    if (fontsLoaded) {
+	                        window.clearInterval(fontsLoadedCheck);
+	                        onSuccess(data);
+	                    }
+	                }, 100);
+	            }
+	        }).fail(onFail);
 	}
 
 	function reloadData(update) {
@@ -111440,7 +111443,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.2");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.3");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
@@ -111947,7 +111950,7 @@ function InsertStackElement(node, body) {
 	}
 
 	function initBgmTrack(bgmTrack, play, playlistIndex) {
-	    const imageUrl = bgmTrack.worldId != null ? exports.worldData[bgmTrack.worldId].filename : getMissingBgmTrackUrl(bgmTrack.location);
+	    const imageUrl = bgmTrack.worldId != null ? exports.worldData[bgmTrack.worldId].images[bgmTrack.worldImageOrdinal] : getMissingBgmTrackUrl(bgmTrack.location);
 	    initBgm(bgmTrack.url, getBgmTrackLabel(bgmTrack), imageUrl, play, playlistIndex);
 	}
 
@@ -112043,9 +112046,9 @@ function InsertStackElement(node, body) {
 	    const trackLabel = bgmTrack && bgmTrack.trackNo < 1000 ? bgmTrack.trackNo.toString().padStart(3, 0) + (bgmTrack.variant ? ` ${bgmTrack.variant}` : '') : '';
 	    const trackLabelHtml = trackLabel ? `<h2 class="playlist-item__label noselect">${trackLabel}</h2>` : '';
 	    const $playlistItem = jquery(`
-        <div class="js--playlist-item playlist-item">
+        <div class="js--playlist-item playlist-item" data-bgm-track-id="${bgmTrackId}">
             <div class="playlist-item__image-container">
-                <img class="playlist-item__image noselect" src="${imageUrl}" referrerpolicy="no-referrer" />
+                <img class="js--playlist-item__image playlist-item__image noselect" src="${imageUrl}" referrerpolicy="no-referrer" />
             </div>
             <a href="javascript:void(0);" class="js--remove-playlist-item playlist-item__remove-btn noselect">✖</a>
             ${trackLabelHtml}
@@ -112764,17 +112767,17 @@ function InsertStackElement(node, body) {
 	    updateLoadingText();
 	    const loadingTimer = window.setInterval(updateLoadingText, 300);
 
-	    return function (error) {
+	    return function (request, status, error) {
 	        if (error) {
 	            window.clearInterval(loadingTimer);
-	            $loadingContainer.find(".loading-container .loading-container__text--loading").hide();
-	            $loadingContainer.find(".loading-container .loading-container__text--error").show();
-	            $loadingContainer.find(".loading-container img").attr("src", "images/urofaint.gif");
+	            $loadingContainer.find(".loading-container__text--loading").hide();
+	            $loadingContainer.find(".loading-container__text--error").show();
+	            $loadingContainer.find("img").attr("src", "images/urofaint.gif");
 	        } else {
 	            const marginTop = $content.css("marginTop");
 	            const offsetMarginTop = (($loadingContainer[0].offsetHeight * -1) + (marginTop ? parseInt(marginTop) : 0)) + "px";
 	            $loadingContainer.animateCss("fadeOut", 250);
-	            $content.css("marginTop", offsetMarginTop).removeClass("display--none").animateCss("fadeIn", 250, function () {
+	            $content.css("marginTop", offsetMarginTop).removeClass("display--none").animateCss("fadeIn", 250, function() {
 	                window.clearInterval(loadingTimer);
 	                $content.css("marginTop", marginTop);
 	                $loadingContainer.remove();
