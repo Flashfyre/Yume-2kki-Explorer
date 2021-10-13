@@ -1233,27 +1233,50 @@ function closeModals() {
 }
 
 export function loadData(update, onSuccess, onFail) {
-    let queryString = update ? `?update=${update}` : "";
+    let queryString = '';
     if (config.removedContentMode === 1)
-        queryString += `${queryString.length ? "&" : "?"}includeRemovedContent=true`;
+        queryString = '?includeRemovedContent=true';
     const urlSearchParams = new URLSearchParams(window.location.search);
     if (urlSearchParams.has("adminKey"))
         queryString += `${queryString.length ? "&" : "?"}adminKey=${urlSearchParams.get("adminKey")}`;
-    $.get("/data" + queryString)
-        .done(function (data) {
-            if (document.fonts.check("12px MS Gothic")) {
-                fontsLoaded = true;
-                onSuccess(data);
-            } else {
-                document.fonts.onloadingdone = _ => fontsLoaded = true;
-                const fontsLoadedCheck = window.setInterval(function () {
-                    if (fontsLoaded) {
-                        window.clearInterval(fontsLoadedCheck);
-                        onSuccess(data);
-                    }
-                }, 100);
-            }
-        }).fail(onFail);
+    const loadData = () => $.get(`/data${queryString}`).done(data => onSuccess(data)).fail(onFail);
+    const loadOrUpdateData = update => {
+        if (update) {
+            const req = { reset: update === 'reset' };
+            $.post('/updateWorldData', req)
+                .done(uwdResponse => {
+                    if (uwdResponse.success) {
+                        $.post('/updateMiscData', req)
+                            .done(umdResponse => {
+                                if (umdResponse.success)
+                                    loadData();
+                                else
+                                    onFail(null, null, true);
+                            }).fail(onFail);
+                    } else
+                        onFail(null, null, true);
+                }).fail(onFail);
+        } else
+            loadData();
+    };
+    if (update)
+        loadOrUpdateData(update);
+    else
+        $.post('/checkUpdateData')
+            .done(function (data) {
+                if (document.fonts.check("12px MS Gothic")) {
+                    fontsLoaded = true;
+                    loadOrUpdateData(data.update);
+                } else {
+                    document.fonts.onloadingdone = _ => fontsLoaded = true;
+                    const fontsLoadedCheck = window.setInterval(function () {
+                        if (fontsLoaded) {
+                            window.clearInterval(fontsLoadedCheck);
+                            loadOrUpdateData(data.update);
+                        }
+                    }, 100);
+                }
+            }).fail(onFail);
 }
 
 function reloadData(update) {
@@ -3635,7 +3658,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.4");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.5");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {

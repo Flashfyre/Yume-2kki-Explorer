@@ -1,4 +1,4 @@
-// Version 3.8.4 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.8.5 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -109043,27 +109043,50 @@ function InsertStackElement(node, body) {
 	}
 
 	function loadData(update, onSuccess, onFail) {
-	    let queryString = update ? `?update=${update}` : "";
+	    let queryString = '';
 	    if (config$1.removedContentMode === 1)
-	        queryString += `${queryString.length ? "&" : "?"}includeRemovedContent=true`;
+	        queryString = '?includeRemovedContent=true';
 	    const urlSearchParams = new URLSearchParams(window.location.search);
 	    if (urlSearchParams.has("adminKey"))
 	        queryString += `${queryString.length ? "&" : "?"}adminKey=${urlSearchParams.get("adminKey")}`;
-	    jquery.get("/data" + queryString)
-	        .done(function (data) {
-	            if (document.fonts.check("12px MS Gothic")) {
-	                fontsLoaded = true;
-	                onSuccess(data);
-	            } else {
-	                document.fonts.onloadingdone = _ => fontsLoaded = true;
-	                const fontsLoadedCheck = window.setInterval(function () {
-	                    if (fontsLoaded) {
-	                        window.clearInterval(fontsLoadedCheck);
-	                        onSuccess(data);
-	                    }
-	                }, 100);
-	            }
-	        }).fail(onFail);
+	    const loadData = () => jquery.get(`/data${queryString}`).done(data => onSuccess(data)).fail(onFail);
+	    const loadOrUpdateData = update => {
+	        if (update) {
+	            const req = { reset: update === 'reset' };
+	            jquery.post('/updateWorldData', req)
+	                .done(uwdResponse => {
+	                    if (uwdResponse.success) {
+	                        jquery.post('/updateMiscData', req)
+	                            .done(umdResponse => {
+	                                if (umdResponse.success)
+	                                    loadData();
+	                                else
+	                                    onFail(null, null, true);
+	                            }).fail(onFail);
+	                    } else
+	                        onFail(null, null, true);
+	                }).fail(onFail);
+	        } else
+	            loadData();
+	    };
+	    if (update)
+	        loadOrUpdateData(update);
+	    else
+	        jquery.post('/checkUpdateData')
+	            .done(function (data) {
+	                if (document.fonts.check("12px MS Gothic")) {
+	                    fontsLoaded = true;
+	                    loadOrUpdateData(data.update);
+	                } else {
+	                    document.fonts.onloadingdone = _ => fontsLoaded = true;
+	                    const fontsLoadedCheck = window.setInterval(function () {
+	                        if (fontsLoaded) {
+	                            window.clearInterval(fontsLoadedCheck);
+	                            loadOrUpdateData(data.update);
+	                        }
+	                    }, 100);
+	                }
+	            }).fail(onFail);
 	}
 
 	function reloadData(update) {
@@ -111443,7 +111466,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.4");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.5");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {

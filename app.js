@@ -8,7 +8,6 @@ const download = require('image-downloader');
 const mysql = require('mysql');
 const ConnType = require('./src/conn-type').ConnType;
 const versionUtils = require('./src/version-utils');
-const { image } = require('image-downloader');
 const appConfig = process.env.ADMIN_KEY ?
     {
         ADMIN_KEY: process.env.ADMIN_KEY,
@@ -251,39 +250,89 @@ const batchSize = 20;
 
 app.get('/data', function(req, res) {
     getConnPool().then(pool => {
-        const callback = function () {
-            const excludeRemovedContent = !req.query.hasOwnProperty('includeRemovedContent') || !req.query.includeRemovedContent;
-            getWorldData(pool, false, excludeRemovedContent).then(worldData => {
-                getAuthorInfoData(pool).then(authorInfoData => {
-                    getVersionInfoData(pool, worldData).then(versionInfoData => {
-                        getEffectData(pool, worldData).then(effectData => {
-                            getMenuThemeData(pool, worldData, excludeRemovedContent).then(menuThemeData => {
-                                getWallpaperData(pool, worldData, excludeRemovedContent).then(wallpaperData => {
-                                    getBgmTrackData(pool, worldData, excludeRemovedContent).then(bgmTrackData => {
-                                        pool.query('SELECT lastUpdate, lastFullUpdate FROM updates', (err, rows) => {
-                                            if (err) console.error(err);
-                                            const row = rows.length ? rows[0] : null;
-                                            const lastUpdate = row ? row.lastUpdate : null;
-                                            const lastFullUpdate = row ? row.lastFullUpdate : null;
-                                            const isAdmin = req.query.hasOwnProperty('adminKey') && req.query.adminKey === appConfig.ADMIN_KEY;
+        getData(req, pool)
+            .then(data => res.json(data))
+            .catch(err => console.error(err))
+            .finally(() => pool.end());
+    }).catch(err => console.error(err));
+});
 
-                                            if (Math.random() * 255 < 1)
-                                                updateWorldDataForChance(worldData);
-                            
-                                            res.json({
-                                                worldData: worldData,
-                                                authorInfoData: authorInfoData,
-                                                versionInfoData: versionInfoData,
-                                                effectData: effectData,
-                                                menuThemeData: menuThemeData,
-                                                wallpaperData: wallpaperData,
-                                                bgmTrackData: bgmTrackData,
-                                                lastUpdate: lastUpdate,
-                                                lastFullUpdate: lastFullUpdate,
-                                                isAdmin: isAdmin
+app.post('/checkUpdateData', function(req, res) {
+    getConnPool().then(pool => {
+        const callback = function (update) {
+            res.json({
+                update: update
+            });
+            pool.end();
+        };
+        pool.query('SELECT lastFullUpdate FROM updates WHERE DATE_ADD(lastFullUpdate, INTERVAL 1 WEEK) < NOW()', (err, rows) => {
+            if (err) return reject(err);
+            if (rows.length)
+                callback('reset');
+            else {
+                pool.query('SELECT lastUpdate FROM updates WHERE DATE_ADD(lastUpdate, INTERVAL 1 HOUR) < NOW()', (err, rows) => {
+                    if (err) return reject(err);
+                    if (rows.length)
+                        callback(true);
+                    else
+                        callback(false);
+                });
+            }
+        });
+    }).catch(err => console.error(err));
+});
+
+app.post('/updateWorldData', function(req, res) {
+    getConnPool().then(pool => {
+        const callback = function (success) {
+            res.json({
+                success: success
+            });
+            pool.end();
+        };
+
+        if (req.body.reset)
+            populateWorldData(pool).then(() => callback(true)).catch(err => console.error(err));
+        else {
+            pool.query('SELECT lastUpdate FROM updates', (err, rows) => {
+                if (err) console.error(err);
+                if (rows.length) {
+                    getWorldData(pool, true).then(worldData => {
+                        getUpdatedWorldNames(worldData.map(w => w.title), rows[0].lastUpdate)
+                            .then(updatedWorldNames => populateWorldData(pool, worldData, updatedWorldNames)
+                                .then(() => callback(true))
+                            ).catch(err => console.error(err)).catch(err => console.error(err));
+                        }).catch(err => console.error(err));
+                } else
+                    callback(false);
+            });
+        }
+    }).catch(err => console.error(err));
+});
+
+app.post('/updateMiscData', function(req, res) {
+    getConnPool().then(pool => {
+        const callback = function (success) {
+            res.json({
+                success: success
+            });
+            pool.end();
+        };
+
+        if (req.body.reset) {
+            getWorldData(pool, true).then(worldData => {
+                updateMapData(pool, worldData).then(() => {
+                    updateAuthorInfoData(pool).then(() => {
+                        updateVersionInfoData(pool).then(() => {
+                            updateEffectData(pool, worldData).then(() => {
+                                updateMenuThemeData(pool, worldData).then(() => {
+                                    updateWallpaperData(pool, worldData).then(() => {
+                                        updateBgmTrackData(pool, worldData).then(() => {
+                                            pool.query('UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()', (err) => {
+                                                if (err) console.error(err);
+                                                callback(true);
                                             });
-                                            pool.end();
-                                        });
+                                        }).catch(err => console.error(err));
                                     }).catch(err => console.error(err));
                                 }).catch(err => console.error(err));
                             }).catch(err => console.error(err));
@@ -291,21 +340,23 @@ app.get('/data', function(req, res) {
                     }).catch(err => console.error(err));
                 }).catch(err => console.error(err));
             }).catch(err => console.error(err));
-        };
-        if (req.query.hasOwnProperty('update') && req.query.update) {
-            if (req.query.update === 'reset') {
-                populateWorldData(pool).then(() => getWorldData(pool, true).then(worldData => {
-                    updateMapData(pool, worldData).then(() => {
-                        updateAuthorInfoData(pool).then(() => {
-                            updateVersionInfoData(pool).then(() => {
-                                updateEffectData(pool, worldData).then(() => {
-                                    updateMenuThemeData(pool, worldData).then(() => {
-                                        updateWallpaperData(pool, worldData).then(() => {
-                                            updateBgmTrackData(pool, worldData).then(() => {
-                                                pool.query('UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()', (err) => {
-                                                    if (err) console.error(err);
-                                                    callback();
-                                                });
+        } else {
+            pool.query('SELECT lastUpdate FROM updates', (err, rows) => {
+                if (err) console.error(err);
+                if (rows.length) {
+                    getWorldData(pool, true).then(worldData => {
+                        checkUpdateMapData(pool, worldData, rows[0].lastUpdate).then(() => {
+                            checkUpdateAuthorInfoData(pool, rows[0].lastUpdate).then(() => {
+                                checkUpdateVersionInfoData(pool, rows[0].lastUpdate).then(() => {
+                                    checkUpdateEffectData(pool, worldData, rows[0].lastUpdate).then(() => {
+                                        checkUpdateMenuThemeData(pool, worldData, rows[0].lastUpdate).then(() => {
+                                            checkUpdateWallpaperData(pool, worldData, rows[0].lastUpdate).then(() => {
+                                                checkUpdateBgmTrackData(pool, worldData, rows[0].lastUpdate).then(() => {
+                                                    pool.query('UPDATE updates SET lastUpdate=NOW()', err => {
+                                                        if (err) console.error(err);
+                                                        callback(true);
+                                                    });
+                                                }).catch(err => console.error(err));
                                             }).catch(err => console.error(err));
                                         }).catch(err => console.error(err));
                                     }).catch(err => console.error(err));
@@ -313,44 +364,55 @@ app.get('/data', function(req, res) {
                             }).catch(err => console.error(err));
                         }).catch(err => console.error(err));
                     }).catch(err => console.error(err));
-                }).catch(err => console.error(err))).catch(err => console.error(err));
-            } else {
-                pool.query('SELECT lastUpdate FROM updates', (err, rows) => {
-                    if (err) console.error(err);
-                    if (rows.length) {
-                        getWorldData(pool, true).then(worldData => {
-                            getUpdatedWorldNames(worldData.map(w => w.title), rows[0].lastUpdate)
-                                .then(updatedWorldNames => populateWorldData(pool, worldData, updatedWorldNames)
-                                    .then(worldData => {
-                                        checkUpdateMapData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                            checkUpdateAuthorInfoData(pool, rows[0].lastUpdate).then(() => {
-                                                checkUpdateVersionInfoData(pool, rows[0].lastUpdate).then(() => {
-                                                    checkUpdateEffectData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                                        checkUpdateMenuThemeData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                                            checkUpdateWallpaperData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                                                checkUpdateBgmTrackData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                                                    pool.query('UPDATE updates SET lastUpdate=NOW()', err => {
-                                                                        if (err) console.error(err);
-                                                                        callback();
-                                                                    });
-                                                                }).catch(err => console.error(err));
-                                                            }).catch(err => console.error(err));
-                                                        }).catch(err => console.error(err));
-                                                    }).catch(err => console.error(err));
-                                                }).catch(err => console.error(err));
-                                            }).catch(err => console.error(err));
-                                        }).catch(err => console.error(err));
-                                    }).catch(err => console.error(err)))
-                                .catch(err => console.error(err));
-                        }).catch(err => console.error(err));
-                    } else
-                        callback();
-                });
-            }
-        } else
-            checkUpdateData(pool).then(() => callback()).catch(err => console.error(err));
-    }).catch(err => console.error(err));
+                } else
+                    callback(false);
+            });
+        }
+    });
 });
+
+function getData(req, pool) {
+    const excludeRemovedContent = !req.query.hasOwnProperty('includeRemovedContent') || !req.query.includeRemovedContent;
+    return new Promise((resolve, reject) => {
+        getWorldData(pool, false, excludeRemovedContent).then(worldData => {
+            getAuthorInfoData(pool).then(authorInfoData => {
+                getVersionInfoData(pool, worldData).then(versionInfoData => {
+                    getEffectData(pool, worldData).then(effectData => {
+                        getMenuThemeData(pool, worldData, excludeRemovedContent).then(menuThemeData => {
+                            getWallpaperData(pool, worldData, excludeRemovedContent).then(wallpaperData => {
+                                getBgmTrackData(pool, worldData, excludeRemovedContent).then(bgmTrackData => {
+                                    pool.query('SELECT lastUpdate, lastFullUpdate FROM updates', (err, rows) => {
+                                        if (err) reject(err);
+                                        const row = rows.length ? rows[0] : null;
+                                        const lastUpdate = row ? row.lastUpdate : null;
+                                        const lastFullUpdate = row ? row.lastFullUpdate : null;
+                                        const isAdmin = req.query.hasOwnProperty('adminKey') && req.query.adminKey === appConfig.ADMIN_KEY;
+
+                                        if (Math.random() * 255 < 1)
+                                            updateWorldDataForChance(worldData);
+                        
+                                        resolve({
+                                            worldData: worldData,
+                                            authorInfoData: authorInfoData,
+                                            versionInfoData: versionInfoData,
+                                            effectData: effectData,
+                                            menuThemeData: menuThemeData,
+                                            wallpaperData: wallpaperData,
+                                            bgmTrackData: bgmTrackData,
+                                            lastUpdate: lastUpdate,
+                                            lastFullUpdate: lastFullUpdate,
+                                            isAdmin: isAdmin
+                                        });
+                                    });
+                                }).catch(err => reject(err));
+                            }).catch(err => reject(err));
+                        }).catch(err => reject(err));
+                    }).catch(err => reject(err));
+                }).catch(err => reject(err));
+            }).catch(err => reject(err));
+        }).catch(err => reject(err));
+    });
+}
 
 function getWorldData(pool, preserveIds, excludeRemovedContent) {
     return new Promise((resolve, reject) => {
@@ -628,60 +690,6 @@ function getBgmTrackData(pool, worldData, excludeRemovedContent) {
     });
 }
 
-function checkUpdateData(pool) {
-    return new Promise((resolve, reject) => {
-        pool.query('SELECT lastFullUpdate FROM updates WHERE DATE_ADD(lastFullUpdate, INTERVAL 1 WEEK) < NOW()', (err, rows) => {
-            if (err) return reject(err);
-            if (rows.length) {
-                pool.query('UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()', (err) => {
-                    populateWorldData(pool).then(worldData => {
-                        if (err) console.error(err);
-                        updateMapData(pool, worldData).then(() => {
-                            updateEffectData(pool, worldData).then(() => {
-                                updateMenuThemeData(pool, worldData).then(() => {
-                                    updateWallpaperData(pool, worldData).then(() => {
-                                        updateBgmTrackData(pool, worldData).then(() => resolve()).catch(err => reject(err));
-                                    }).catch(err => reject(err));
-                                }).catch(err => reject(err));
-                            }).catch(err => reject(err));
-                        }).catch(err => reject(err));
-                    }).catch(err => reject(err));
-                });
-            } else {
-                pool.query('SELECT lastUpdate FROM updates WHERE DATE_ADD(lastUpdate, INTERVAL 1 HOUR) < NOW()', (err, rows) => {
-                    if (err) return reject(err);
-                    if (rows.length) {
-                        pool.query('UPDATE updates SET lastUpdate=NOW()', err => {
-                            if (err) return reject(err);
-                            getWorldData(pool, true).then(worldData => {
-                                getUpdatedWorldNames(worldData.map(w => w.title), rows[0].lastUpdate)
-                                    .then(updatedWorldNames => populateWorldData(pool, worldData, updatedWorldNames)
-                                        .then(worldData => {
-                                            checkUpdateMapData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                                checkUpdateAuthorInfoData(pool, rows[0].lastUpdate).then(() => {
-                                                    checkUpdateVersionInfoData(pool, rows[0].lastUpdate).then(() => {
-                                                        checkUpdateEffectData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                                            checkUpdateMenuThemeData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                                                checkUpdateWallpaperData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                                                    checkUpdateBgmTrackData(pool, worldData, rows[0].lastUpdate).then(() => resolve()).catch(err => reject(err));
-                                                                }).catch(err => reject(err));
-                                                            }).catch(err => reject(err))
-                                                        }).catch(err => reject(err));
-                                                    }).catch(err => reject(err));
-                                                }).catch(err => reject(err));
-                                            }).catch(err => reject(err));
-                                        }).catch(err => reject(err)))
-                                    .catch(err => reject(err));
-                            }).catch(err => reject(err));
-                        });
-                    } else
-                        resolve();
-                });
-            }
-        });
-    });
-}
-
 function getUpdatedWorldNames(worldNames, lastUpdate) {
     return new Promise((resolve, reject) => {
         let recentChanges = [];
@@ -841,8 +849,7 @@ function populateWorldData(pool, worldData, updatedWorldNames, continueKey, worl
                             updateConnTypeParams(pool, worldData).then(() => {
                                 updateWorldImages(pool, worldData).then(() => {
                                     updateWorldDepths(pool, _.sortBy(worldData, [ 'id' ])).then(() => {
-                                        deleteRemovedWorlds(pool);
-                                        resolve(worldData);
+                                        deleteRemovedWorlds(pool).then(() => resolve(worldData)).catch(err => reject(err));
                                     }).catch(err => reject(err));
                                 }).catch(err => reject(err));
                             }).catch(err => reject(err));
@@ -1542,8 +1549,11 @@ function updateWorldsOfDepth(pool, depth, worlds) {
 }
 
 function deleteRemovedWorlds(pool) {
-    pool.query('DELETE w FROM worlds w WHERE NOT EXISTS(SELECT c.id FROM conns c WHERE w.id IN (c.sourceId, c.targetId))', (err, _) => {
-        if (err) return console.error(err);
+    return new Promise((resolve, reject) => {
+        pool.query('DELETE w FROM worlds w WHERE NOT EXISTS(SELECT c.id FROM conns c WHERE w.id IN (c.sourceId, c.targetId))', (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
     });
 }
 
