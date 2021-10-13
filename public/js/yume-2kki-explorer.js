@@ -1,4 +1,4 @@
-// Version 3.8.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.8.2 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -107921,6 +107921,7 @@ function InsertStackElement(node, body) {
 	    for (let w in exports.worldData) {
 	        const world = exports.worldData[w];
 	        world.id = parseInt(w);
+	        world.images.unshift(world.filename);
 	        if (world.verAdded) {
 	            world.verAdded = versionData[versionNames.indexOf(world.verAdded)];
 	            world.verAdded.addedWorldIds.push(world.id);
@@ -108639,7 +108640,7 @@ function InsertStackElement(node, body) {
 	        const hasIdAttribute = t.url ? ` data-id="true"` : '';
 	        const removedCollectableClass = t.removed ? ' removed-collectable' : '';
 	        const worldIdAttribute = t.worldId != null ? ` data-world-id="${t.worldId}"` : '';
-	        const imageUrl = t.worldId != null ? exports.worldData[t.worldId].filename : getMissingBgmTrackUrl(t.location);
+	        const imageUrl = t.worldId != null ? exports.worldData[t.worldId].images[t.worldImageOrdinal] : getMissingBgmTrackUrl(t.location);
 	        const unnumberedAttribute = t.trackNo >= 1000 ? ' data-unnumbered="true"' : '';
 	        const removedAttribute = t.removed ? ' data-removed="true"' : '';
 	        const bgmTrackImageHtml = `<div class="js--bgm-track-image--container bgm-track collectable-entry collectable${removedCollectableClass} noselect"><img src="${imageUrl}" class="js--bgm-track-image" referrerpolicy="no-referrer" /></div>`;
@@ -108648,6 +108649,13 @@ function InsertStackElement(node, body) {
                 <h1 class="bgm-track__name--shadow collectable-entry__name--shadow">${trackId}</h1>
                 <h1 class="bgm-track__name collectable-entry__name">${trackId}</h1>
             </div>` : '';
+	        const bgmTrackImageButtonHtml = t.worldId && exports.worldData[t.worldId].images.length > 1 ? `
+             <button class="js--bgm-track__set-image bgm-track__set-image collectable-entry--control">
+                <svg width="24" height="18" viewBox="0 0 24 18" xmlns="http://www.w3.org/2000/svg">
+                    <path class="collectable-entry--control__icon" d="m0 0h24v16h-2v-14h-22zm24 16v2h-24v-16h2v14zm-20-2v-2l3-4 3 2 5-5 5 5v4zm0-9a1 1 0 0 0 4 0 1 1 0 0 0 -4 0z" fill-rule="evenodd"/>
+                </svg>
+            </button>
+        ` : '';
 	        const bgmTrackLinkHtml = `
             <div class="js--bgm-track-entry--container bgm-track--collectable-entry-container collectable-entry--container">
                 <a href="javascript:void(0);" class="js--bgm-track bgm-track collectable-entry collectable--border noselect" data-bgm-track-id="${t.id}"${hasIdAttribute}${worldIdAttribute}${unnumberedAttribute}${removedAttribute}>${bgmTrackNameHtml}</a>
@@ -108667,6 +108675,7 @@ function InsertStackElement(node, body) {
                             <path class="collectable-entry--control__icon" d="m18 2h-18v-2h18zm0 5h-18v-2h18zm-11 5h-7v-2h7zm0 5h-7v-2h7zm8 1h-3v-3h-3v-3h3v-3h3v3h3v3h-3z" fill-rule="evenodd" />
                         </svg>
                     </button>
+                    ${bgmTrackImageButtonHtml}
                 </div>
             </div>`;
 	        if (t.location)
@@ -108749,7 +108758,7 @@ function InsertStackElement(node, body) {
 	                playBgmTrackEntry(jquery(this).parent().prev('.js--bgm-track'));
 	            else if (isPause)
 	                pauseBgm();
-	            else
+	            else if (jquery(this).hasClass('js--bgm-track__playlist-add'))
 	                addPlaylistBgmTrack(jquery(this).parent().prev('.js--bgm-track').data('bgmTrackId'));
 	            if (isPlay || isPause) {
 	                if (isPlay)
@@ -108784,6 +108793,48 @@ function InsertStackElement(node, body) {
 	    }).on('mouseleave', function () {
 	        $tooltip.addClass('display--none');
 	        getBgmTrackImageContainer(jquery(this)).removeClass('hover');
+	    }).next('.js--bgm-track--collectable-entry--controls').children('.js--bgm-track__set-image').on('click', function () {
+	        const $bgmTrackEntry = jquery(this).parent().prev();
+	        initBgmTrackImagesModal($bgmTrackEntry, getBgmTrackImageContainer);
+	    });
+	}
+
+	function initBgmTrackImagesModal($bgmTrackEntry, getBgmTrackImageContainer) {
+	    const bgmTrackId = $bgmTrackEntry.data('bgmTrackId');
+	    const bgmTrack = bgmTrackData[bgmTrackIndexesById[bgmTrackId]];
+	    const world = exports.worldData[bgmTrack.worldId];
+
+	    const $bgmTrackImagesContainerItems = jquery('.js--bgm-track-images-container__items');
+	    const $bgmTrackImagesContainerBorders = jquery('.js--bgm-track-images-container__borders');
+
+	    $bgmTrackImagesContainerItems.empty();
+	    $bgmTrackImagesContainerBorders.empty();
+
+	    let i = 0;
+
+	    for (let bti of world.images) {
+	        const bgmTrackImageImageHtml = `<div class="bgm-track-image collectable noselect"><img src="${bti}" referrerpolicy="no-referrer" /></div>`;
+	        const bgmTrackImageLinkHtml = `<a href="javascript:void(0);" class="js--bgm-track-image bgm-track-image collectable--border noselect" data-id="${i++}"></a>`;
+	        jquery(bgmTrackImageImageHtml).appendTo($bgmTrackImagesContainerItems);
+	        jquery(bgmTrackImageLinkHtml).appendTo($bgmTrackImagesContainerBorders);
+	    }
+
+	    jquery('.js--bgm-track-image').on('click', function () {
+	        const ordinal = jquery(this).data('id');
+	        jquery.post('/updateBgmTrackWorldImageOrdinal', { bgmTrackId: bgmTrackId, ordinal: ordinal }, function (data) {
+	            if (data.success) {
+	                bgmTrack.worldImageOrdinal = ordinal;
+	                getBgmTrackImageContainer($bgmTrackEntry).find('.js--bgm-track-image').attr('src', world.images[ordinal]);
+	                jquery.modal.close();
+	            }
+	        });
+	     });
+	    
+	    jquery(".js--bgm-track-images-modal").modal({
+	        closeExisting: false,
+	        fadeDuration: 100,
+	        closeClass: 'noselect',
+	        closeText: '✖'
 	    });
 	}
 
@@ -108980,6 +109031,13 @@ function InsertStackElement(node, body) {
 	        "margin-left": `${modalLeftMargin}px`,
 	        "margin-right": `${modalRightMargin}px`
 	    });
+	}
+
+	function closeModals() {
+	    for (let i = 0; i < 2; i++) {
+	        if (jquery(".modal:visible").length)
+	            jquery.modal.close();
+	    }
 	}
 
 	function loadData(update, success, fail) {
@@ -111382,7 +111440,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.1");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.2");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
@@ -111981,8 +112039,8 @@ function InsertStackElement(node, body) {
 
 	function addPlaylistBgmTrack(bgmTrackId, isInit) {
 	    const bgmTrack = bgmTrackIndexesById.hasOwnProperty(bgmTrackId) ? bgmTrackData[bgmTrackIndexesById[bgmTrackId]] : null;
-	    const imageUrl = bgmTrack && bgmTrack.worldId != null ? exports.worldData[bgmTrack.worldId].filename : getMissingBgmTrackUrl(bgmTrack ? bgmTrack.location : null);
-	    const trackLabel = bgmTrack && bgmTrack.trackNo < 1000 ? bgmTrack.trackNo + (bgmTrack.variant ? ` ${bgmTrack.variant}` : '') : '';
+	    const imageUrl = bgmTrack && bgmTrack.worldId != null ? exports.worldData[bgmTrack.worldId].images[bgmTrack.worldImageOrdinal] : getMissingBgmTrackUrl(bgmTrack ? bgmTrack.location : null);
+	    const trackLabel = bgmTrack && bgmTrack.trackNo < 1000 ? bgmTrack.trackNo.toString().padStart(3, 0) + (bgmTrack.variant ? ` ${bgmTrack.variant}` : '') : '';
 	    const trackLabelHtml = trackLabel ? `<h2 class="playlist-item__label noselect">${trackLabel}</h2>` : '';
 	    const $playlistItem = jquery(`
         <div class="js--playlist-item playlist-item">
@@ -112417,8 +112475,7 @@ function InsertStackElement(node, body) {
 	            }
 	        };
 
-	        if (jquery(".modal:visible").length)
-	            jquery.modal.close();
+	        closeModals();
 
 	        initLocalization();
 	        initVersionData();
@@ -112506,8 +112563,7 @@ function InsertStackElement(node, body) {
 	        jquery(".js--removed-content").toggleClass("display--none", !config$1.removedContentMode);
 	        updateConfig(config$1);
 	        if (exports.worldData) {
-	            if (jquery(".modal:visible").length)
-	                jquery.modal.close();
+	            closeModals();
 	            reloadData(false);
 	        }
 	    });
@@ -113413,8 +113469,7 @@ function InsertStackElement(node, body) {
 	    initVersionUpdateEvents();
 
 	    jquery('.js--update-data, .js--reset-data').on('click', function() {
-	        if (jquery('.modal:visible').length)
-	            jquery.modal.close();
+	        closeModals();
 	        const isReset = jquery(this).hasClass('js--reset-data');
 	        reloadData(isReset ? 'reset' : true);
 	    });

@@ -205,6 +205,10 @@
                 color: rgba(255, 255, 157, 1) !important; /*base*/
             }
 
+            .audio-player .play-pause-btn, .audio-player .prev-btn, .audio-player .next-btn, .audio-player .shuffle-btn, .audio-player .volume__button, .collectable-entry--controls > .collectable-entry--control {
+                filter: drop-shadow(1.5px 1.5px black /*shadow*/);
+            }
+
             .audio-player .play-pause-btn__icon, .audio-player .prev-btn__icon, .audio-player .next-btn__icon, .audio-player .shuffle-btn__icon, .audio-player .volume__button .volume__speaker, .collectable-entry--controls > .collectable-entry--control .collectable-entry--control__icon {
                 fill: rgba(216, 216, 216, 1); /*base*/
             }
@@ -215,6 +219,7 @@
 
             .audio-player .gap-progress, .audio-player .pin {
                 background-color: rgba(216, 216, 216, 1) !important; /*base*/
+                filter: drop-shadow(1px 1px black /*shadow*/);
             }
 
             .playlist-item.playing {
@@ -530,6 +535,16 @@
                             <div class="js--removed-bgm-tracks-container__items collectables-container__items"></div>
                             <div class="js--removed-bgm-tracks-container__borders collectables-container__borders"></div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="bgmTrackImagesModal" class="js--bgm-track-images-modal modal">
+            <div class="modal__content--container">
+                <div class="js--bgm-track-images-modal__content modal__content">
+                    <div class="js--bgm-track-images-container collectables-container">
+                        <div class="js--bgm-track-images-container__items collectables-container__items"></div>
+                        <div class="js--bgm-track-images-container__borders collectables-container__borders"></div>
                     </div>
                 </div>
             </div>

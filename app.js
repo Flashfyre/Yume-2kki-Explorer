@@ -8,6 +8,7 @@ const download = require('image-downloader');
 const mysql = require('mysql');
 const ConnType = require('./src/conn-type').ConnType;
 const versionUtils = require('./src/version-utils');
+const { image } = require('image-downloader');
 const appConfig = process.env.ADMIN_KEY ?
     {
         ADMIN_KEY: process.env.ADMIN_KEY,
@@ -129,6 +130,12 @@ function initDb(pool) {
                     REFERENCES maps (id)
                     ON DELETE CASCADE
             )`)).then(() => queryAsPromise(pool,
+            `CREATE TABLE IF NOT EXISTS world_images (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                worldId INT NOT NULL,
+                filename VARCHAR(255) NOT NULL,
+                ordinal SMALLINT NOT NULL
+            )`)).then(() => queryAsPromise(pool,
             `CREATE TABLE IF NOT EXISTS effects (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
@@ -184,6 +191,7 @@ function initDb(pool) {
                 location VARCHAR(255) NULL,
                 locationJP VARCHAR(255) NULL,
                 worldId INT NULL,
+                worldImageOrdinal SMALLINT NOT NULL,
                 url VARCHAR(510) NULL,
                 notes VARCHAR(2000) NULL,
                 notesJP VARCHAR(1000) NULL,
@@ -366,7 +374,8 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
                     verUpdated: row.verUpdated,
                     verGaps: row.verGaps,
                     removed: !!row.removed,
-                    connections: []
+                    connections: [],
+                    images: []
                 };
             }
 
@@ -382,7 +391,7 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
                     if (world.verGaps)
                         world.verGaps = versionUtils.parseVersionGaps(world.verGaps);
                     if (!isRemote)
-                        world.filename = `./images/worlds/${world.filename}`;
+                        world.filename = `./images/worlds/${world.filename.slice(0, world.filename.indexOf('|'))}`;
                 }
             }
             
@@ -420,25 +429,32 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
                             paramsJP: row.paramsJP
                         };
                     }
-                    pool.query('SELECT w.id, ROUND(SUM((m.width * m.height) / mwm.worldCount)) AS size FROM world_maps wm JOIN worlds w ON w.id = wm.worldId' + (excludeRemovedContent ? ' AND w.removed = 0' : '')
-                        + ' JOIN maps m ON m.id = wm.mapId JOIN (SELECT mw.mapId, COUNT(DISTINCT mw.worldId) worldCount FROM world_maps mw JOIN worlds mww ON mww.id = mw.worldId' + (excludeRemovedContent ? ' WHERE mww.removed = 0' : '')
-                        + ' GROUP BY mw.mapId) mwm ON mwm.mapId = m.id GROUP BY w.id', (err, rows) => {
+
+                    pool.query('SELECT wi.id, wi.worldId, wi.filename FROM world_images wi ' + (excludeRemovedContent ? ' JOIN worlds w ON w.id = wi.worldId AND w.removed = 0 ' : '') + 'ORDER BY wi.worldId, wi.ordinal', (err, rows) => {
                         if (err) return reject(err);
                         for (let row of rows)
-                            worldDataById[row.id].size = row.size;
-                        const missingMapWorlds = worldData.filter(w => !w.size);
-                        if (missingMapWorlds.length) {
-                            pool.query('SELECT ROUND(AVG(width)) * ROUND(AVG(height)) size FROM maps', (err, rows) => {
-                                if (err) return reject(err);
-                                const avgSize = rows[0].size;
-                                missingMapWorlds.forEach(w => {
-                                    w.size = avgSize;
-                                    w.noMaps = true;
+                            worldDataById[row.worldId].images.push(row.filename);
+
+                        pool.query('SELECT w.id, ROUND(SUM((m.width * m.height) / mwm.worldCount)) AS size FROM world_maps wm JOIN worlds w ON w.id = wm.worldId' + (excludeRemovedContent ? ' AND w.removed = 0' : '')
+                            + ' JOIN maps m ON m.id = wm.mapId JOIN (SELECT mw.mapId, COUNT(DISTINCT mw.worldId) worldCount FROM world_maps mw JOIN worlds mww ON mww.id = mw.worldId' + (excludeRemovedContent ? ' WHERE mww.removed = 0' : '')
+                            + ' GROUP BY mw.mapId) mwm ON mwm.mapId = m.id GROUP BY w.id', (err, rows) => {
+                            if (err) return reject(err);
+                            for (let row of rows)
+                                worldDataById[row.id].size = row.size;
+                            const missingMapWorlds = worldData.filter(w => !w.size);
+                            if (missingMapWorlds.length) {
+                                pool.query('SELECT ROUND(AVG(width)) * ROUND(AVG(height)) size FROM maps', (err, rows) => {
+                                    if (err) return reject(err);
+                                    const avgSize = rows[0].size;
+                                    missingMapWorlds.forEach(w => {
+                                        w.size = avgSize;
+                                        w.noMaps = true;
+                                    });
+                                    resolve(worldData);
                                 });
+                            } else
                                 resolve(worldData);
-                            });
-                        } else
-                            resolve(worldData);
+                        });
                     });
                 });
             });
@@ -586,7 +602,7 @@ function getWallpaperData(pool, worldData, excludeRemovedContent) {
 function getBgmTrackData(pool, worldData, excludeRemovedContent) {
     return new Promise((resolve, reject) => {
         const bgmTrackDataById = {};
-        pool.query('SELECT t.id, t.trackNo, t.variant, t.name, t.location, t.locationJP, w.title, t.url, t.notes, t.notesJP, t.removed FROM bgm_tracks t LEFT JOIN worlds w ON w.id = t.worldId' + (excludeRemovedContent ? ' WHERE t.removed = 0' : ''), (err, rows) => {
+        pool.query('SELECT t.id, t.trackNo, t.variant, t.name, t.location, t.locationJP, w.title, t.worldImageOrdinal, t.url, t.notes, t.notesJP, t.removed FROM bgm_tracks t LEFT JOIN worlds w ON w.id = t.worldId' + (excludeRemovedContent ? ' WHERE t.removed = 0' : ''), (err, rows) => {
             if (err) return reject(err);
             const worldDataByName = _.keyBy(worldData, w => w.title);
             for (let row of rows) {
@@ -599,6 +615,7 @@ function getBgmTrackData(pool, worldData, excludeRemovedContent) {
                     location: row.location,
                     locationJP: row.locationJP,
                     worldId: world ? world.id : null,
+                    worldImageOrdinal: row.worldImageOrdinal,
                     url: row.url,
                     notes: row.notes,
                     notesJP: row.notesJP,
@@ -823,9 +840,11 @@ function populateWorldData(pool, worldData, updatedWorldNames, continueKey, worl
                     const callback = function (updatedWorldData) {
                         updateConns(pool, _.keyBy(worldData, w => w.title)).then(() => {
                             updateConnTypeParams(pool, worldData).then(() => {
-                                updateWorldDepths(pool, _.sortBy(worldData, [ 'id' ])).then(() => {
-                                    deleteRemovedWorlds(pool);
-                                    resolve(worldData);
+                                updateWorldImages(pool, worldData).then(() => {
+                                    updateWorldDepths(pool, _.sortBy(worldData, [ 'id' ])).then(() => {
+                                        deleteRemovedWorlds(pool);
+                                        resolve(worldData);
+                                    }).catch(err => reject(err));
                                 }).catch(err => reject(err));
                             }).catch(err => reject(err));
                         }).catch(err => reject(err));
@@ -1219,6 +1238,176 @@ function deleteRemovedConnTypeParams(pool, removedConnTypeParamIds) {
         }
         deleteConnTypeParamsQuery += ')';
         pool.query(deleteConnTypeParamsQuery, (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+}
+
+function updateWorldImages(pool, worldData) {
+    return new Promise((resolve, reject) => {
+        getAllWorldImageData(worldData).then(worldImageData => {
+            pool.query('SELECT id, worldId, filename, ordinal FROM world_images', (err, rows) => {
+                if (err) return reject(err);
+                const worldImageDataByWorldImageId = _.keyBy(worldImageData, wi => `${wi.worldId}_${wi.filename}`);
+                const newWorldImagesByWorldImageId = _.keyBy(worldImageData, wi => `${wi.worldId}_${wi.filename}`);
+                const updatedWorldImages = [];
+                const removedWorldImageIds  = [];
+                for (let row of rows) {
+                    const worldImageId = `${row.worldId}_${row.filename}`;
+                    if (worldImageDataByWorldImageId.hasOwnProperty(worldImageId)) {
+                        const worldImage = worldImageDataByWorldImageId[worldImageId];
+                        worldImage.id = row.id;
+                        if (row.ordinal !== worldImage.ordinal) {
+                            worldImage.oldOrdinal = row.ordinal;
+                            updatedWorldImages.push(worldImage);
+                        }
+                    } else
+                        removedWorldImageIds.push(row.id);
+                    delete newWorldImagesByWorldImageId[worldImageId];
+                }
+    
+                const insertCallback = function () {
+                    if (updatedWorldImages.length) {
+                        const updateWorldImages = [];
+                        for (let worldImage of updatedWorldImages)
+                            updateWorldImages.push(updateWorldImage(pool, worldImage).catch(err => console.error(err)));
+                        Promise.allSettled(updateWorldImages).finally(() => resolve());
+                    } else
+                        resolve();
+                };
+    
+                const callback = function () {
+                    const newWorldImageIds = Object.keys(newWorldImagesByWorldImageId);
+                    if (newWorldImageIds.length) {
+                        let i = 0;
+                        let worldImagesQuery = 'INSERT INTO world_images (worldId, filename, ordinal) VALUES ';
+                        for (let wi in newWorldImagesByWorldImageId) {
+                            const newWorldImage = newWorldImagesByWorldImageId[wi];
+                            if (i++)
+                                worldImagesQuery += ", ";
+                            const worldId = newWorldImage.worldId;
+                            const filename = newWorldImage.filename;
+                            const ordinal = newWorldImage.ordinal;
+                            worldImagesQuery += `(${worldId}, '${filename}', ${ordinal})`;
+                        }
+                        pool.query(worldImagesQuery, (err, res) => {
+                            if (err) return reject(err);
+                            const insertedRows = res.affectedRows;
+                            const worldImageRowIdsQuery = `SELECT r.id FROM (SELECT id FROM world_images ORDER BY id DESC LIMIT ${insertedRows}) r ORDER BY 1`;
+                            pool.query(worldImageRowIdsQuery, (err, rows) => {
+                                if (err) return reject(err);
+                                for (let r in rows)
+                                    newWorldImagesByWorldImageId[newWorldImageIds[r]].id = rows[r].id;
+                                insertCallback();
+                            });
+                        });
+                    } else
+                        insertCallback();
+                };
+    
+                if (removedWorldImageIds.length)
+                    deleteRemovedWorldImages(pool, removedWorldImageIds).then(() => callback()).catch(err => reject(err));
+                else
+                    callback();
+            });
+        }).catch(err => reject(err));
+    });
+}
+
+function getAllWorldImageData(worldData) {
+    return new Promise((resolve) => {
+        const worldImageData = [];
+
+        const getAndPushWorldImageData = worldData.map(w => getWorldImageUrls(w.title).then(urls => {
+            let i = 0;
+            for (let url of urls) {
+                if (url !== (w.filename.indexOf('|') === -1 ? w.filename : w.filename.slice(w.filename.indexOf('|') + 1)))
+                    worldImageData.push({
+                        worldId: w.id,
+                        ordinal: ++i,
+                        filename: url
+                    });
+            }
+        }).catch(err => console.error(err)));
+
+        Promise.allSettled(getAndPushWorldImageData).finally(() => resolve(worldImageData));
+    });
+}
+
+function getWorldImageUrls(worldTitle) {
+    return new Promise((resolve, reject) => {
+        const query = { action: 'query', titles: worldTitle, prop: 'images', imlimit: 50, format: 'json' };
+        superagent.get(apiUrl)
+            .query(query)
+            .end((err, res) => {
+                if (err) return reject(err);
+                const ret = [];
+                const data = JSON.parse(res.text);
+                const pages = data.query.pages;
+                const images = pages[Object.keys(pages)[0]].images;
+                const getAndSetWorldImageUrls = [];
+                for (let i in images) {
+                    const index = i;
+                    ret.push(null);
+                    getAndSetWorldImageUrls.push(getWorldImageInfo(images[i].title).then(imageInfo => {
+                        const aspectRatio = imageInfo.width / imageInfo.height;
+                        if (aspectRatio >= 1.25 && aspectRatio <= 1.4)
+                            ret[index] = imageInfo.url;
+                    }).catch(err => console.error(err)));
+                }
+                Promise.allSettled(getAndSetWorldImageUrls).finally(() => resolve(ret.filter(url => url)));
+            });
+        });
+}
+
+function getWorldImageInfo(imageTitle) {
+    return new Promise((resolve, reject) => {
+        const query = { action: 'query', titles: imageTitle, prop: 'imageinfo', iiprop: 'url|size', format: 'json' };
+        superagent.get(apiUrl)
+            .query(query)
+            .end((err, res) => {
+                if (err) return reject(err);
+                const revisionText = "/revision/latest";
+                const data = JSON.parse(res.text);
+                const pages = data.query.pages;
+                const imageInfo = pages[Object.keys(pages)[0]].imageinfo[0];
+                const fullUrl = imageInfo.url;
+                const revisionIndex = fullUrl.indexOf(revisionText);
+                if (revisionIndex === -1)
+                    reject();
+                resolve({
+                    width: imageInfo.width,
+                    height: imageInfo.height,
+                    url: fullUrl.slice(0, revisionIndex)
+                });
+            });
+        });
+}
+
+function updateWorldImage(pool, worldImage) {
+    return new Promise((resolve, reject) => {
+        pool.query(`UPDATE bgm_tracks SET worldImageOrdinal=${worldImage.ordinal} WHERE worldId=${worldImage.worldId} AND worldImageOrdinal=${worldImage.oldOrdinal}`, (err, _) => {
+            if (err) return reject(err);
+            pool.query(`UPDATE world_images SET ordinal=${worldImage.ordinal} WHERE id=${worldImage.id}`, (err, _) => {
+                if (err) return reject(err);
+                resolve();
+            });
+        });
+    });
+}
+
+function deleteRemovedWorldImages(pool, removedWorldImageIds) {
+    return new Promise((resolve, reject) => {
+        let i = 0;
+        let deleteWorldImagesQuery = 'DELETE FROM world_images WHERE id IN (';
+        for (let worldImageId of removedWorldImageIds) {
+            if (i++)
+                deleteWorldImagesQuery += ', ';
+            deleteWorldImagesQuery += worldImageId;
+        }
+        deleteWorldImagesQuery += ')';
+        pool.query(deleteWorldImagesQuery, (err, _) => {
             if (err) return reject(err);
             resolve();
         });
@@ -2580,7 +2769,6 @@ function addWallpaperDataJPMethods(wallpaperData) {
 
 function updateWallpaper(pool, wallpaper) {
     return new Promise((resolve, reject) => {
-        const wallpaperId = wallpaper.wallpaperId;
         const name = wallpaper.name ? `'${wallpaper.name.replace(/'/g, "''")}'` : 'NULL';
         const nameJP = wallpaper.nameJP ? `'${wallpaper.nameJP}'` : 'NULL';
         const worldId = wallpaper.worldId != null ? `${wallpaper.worldId}` : 'NULL';
@@ -2588,7 +2776,7 @@ function updateWallpaper(pool, wallpaper) {
         const method = wallpaper.method ? `'${wallpaper.method.replace(/'/g, "''")}'` : 'NULL';
         const methodJP = wallpaper.methodJP ? `'${wallpaper.methodJP.replace(/'/g, "''")}'` : 'NULL';
         const removed = wallpaper.removed ? '1' : '0';
-        pool.query(`UPDATE wallpapers SET wallpaperId=${wallpaperId}, name=${name}, nameJP=${nameJP}, worldId=${worldId}, filename='${filename}', method=${method}, methodJP=${methodJP}, removed=${removed} WHERE id=${wallpaper.id}`, (err, _) => {
+        pool.query(`UPDATE wallpapers SET name=${name}, nameJP=${nameJP}, worldId=${worldId}, filename='${filename}', method=${method}, methodJP=${methodJP}, removed=${removed} WHERE id=${wallpaper.id}`, (err, _) => {
             if (err) return reject(err);
             resolve();
         });
@@ -2656,7 +2844,7 @@ function updateBgmTrackData(pool, worldData) {
                             const trackNo = newBgmTrack.trackNo;
                             const variant = newBgmTrack.variant ? `'${newBgmTrack.variant}'` : 'NULL';
                             const name = `'${newBgmTrack.name.replace(/'/g, "''")}'`;
-                            const location = newBgmTrack.location ? `'${newBgmTrack.location.replace(/'/g, "''")}'` : 'NULL';
+                            const location = newBgmTrack.location ? `'${newBgmTrack.location.replace(/'/g, "''").replace(/&#160;/, ' ')}'` : 'NULL';
                             const locationJP = newBgmTrack.locationJP ? `'${newBgmTrack.locationJP}'` : 'NULL';
                             const worldId = newBgmTrack.worldId != null ? `${newBgmTrack.worldId}` : 'NULL';
                             const url = newBgmTrack.url ? `'${newBgmTrack.url}'` : 'NULL';
@@ -2897,8 +3085,6 @@ function addBgmTrackDataJPLocationsAndNotes(bgmTrackData) {
 
 function updateBgmTrack(pool, bgmTrack) {
     return new Promise((resolve, reject) => {
-        const trackNo = bgmTrack.trackNo;
-        const variant = bgmTrack.variant ? `'${bgmTrack.variant}'` : 'NULL';
         const name = `'${bgmTrack.name.replace(/'/g, "''")}'`;
         const location = bgmTrack.location ? `'${bgmTrack.location.replace(/'/g, "''")}'` : 'NULL';
         const locationJP = bgmTrack.locationJP ? `'${bgmTrack.locationJP}'` : 'NULL';
@@ -2907,7 +3093,7 @@ function updateBgmTrack(pool, bgmTrack) {
         const notes = bgmTrack.notes ? `'${bgmTrack.notes.replace(/'/g, "''")}'` : 'NULL';
         const notesJP = bgmTrack.notesJP ? `'${bgmTrack.notesJP}'` : 'NULL';
         const removed = bgmTrack.removed ? '1' : '0';
-        pool.query(`UPDATE bgm_tracks SET trackNo=${trackNo}, variant=${variant}, name=${name}, location=${location}, locationJP=${locationJP}, worldId=${worldId}, url=${url}, notes=${notes}, notesJP=${notesJP}, removed=${removed} WHERE id=${bgmTrack.id}`, (err, _) => {
+        pool.query(`UPDATE bgm_tracks SET name=${name}, location=${location}, locationJP=${locationJP}, worldId=${worldId}, url=${url}, notes=${notes}, notesJP=${notesJP}, removed=${removed} WHERE id=${bgmTrack.id}`, (err, _) => {
             if (err) return reject(err);
             resolve();
         });
@@ -2939,17 +3125,16 @@ function getWorldInfo(worldName) {
             const imageUrlIndex = res.text.indexOf('<a href="https://static.wikia.nocookie.net') + 9;
             const imageUrl = res.text.slice(imageUrlIndex, res.text.indexOf('"', imageUrlIndex));
             const ext = imageUrl.slice(imageUrl.lastIndexOf("."), imageUrl.indexOf("/", imageUrl.lastIndexOf(".")));
-            let filename;
-            if (isRemote)
-                filename = imageUrl.slice(0, imageUrl.indexOf("/", imageUrl.lastIndexOf(".")));
-            else {
-                filename = worldName + ext;
+            let filename = imageUrl.slice(0, imageUrl.indexOf("/", imageUrl.lastIndexOf(".")));
+            if (!isRemote) {
+                const localFilename = `${worldName}${ext}`;
                 try {
-                    if (!fs.existsSync("./public/images/worlds/" + filename))
-                        downloadImage(imageUrl, filename);
+                    if (!fs.existsSync(`./public/images/worlds/${localFilename}`))
+                        downloadImage(imageUrl, localFilename);
                 } catch (err) {
                     console.error(err)
                 }
+                filename = `${localFilename}|${filename}`;
             }
             const mapUrlAndLabel = getMapUrlAndLabel(res.text);
             const bgmUrlAndLabel = getBgmUrlAndLabel(res.text)
@@ -3185,6 +3370,20 @@ function getVerGaps(html) {
 function decodeHtml(html) {
     return html.replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(dec));
 }
+
+app.post('/updateBgmTrackWorldImageOrdinal', function(req, res) {
+    if (req.body.hasOwnProperty('bgmTrackId') && req.body.hasOwnProperty('ordinal')) {
+        getConnPool().then(pool => {
+            pool.query(`UPDATE bgm_tracks SET worldImageOrdinal=${req.body.ordinal} WHERE id=${req.body.bgmTrackId}`, (err, _) => {
+                if (err) console.error(err);
+                res.json({
+                    success: !err
+                });
+                pool.end();
+            });
+        });
+    }
+});
 
 app.post('/updateLocationVersions', function(req, res) {
     if (req.body.hasOwnProperty('adminKey') && req.body.adminKey === appConfig.ADMIN_KEY && req.body.hasOwnProperty('version') && req.body.hasOwnProperty('entries')) {

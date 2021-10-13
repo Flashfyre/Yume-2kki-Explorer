@@ -98,7 +98,7 @@ Display a list of available wallpapers in a modal window. Hovering over a wallpa
 
 ### Soundtrack
 
-Display a list of available BGM tracks in a modal window. Hovering over a track will show information from the Wiki on where it is used. Clicking a track's play button will play the track in the audio player. Clicking the button below a track's play button will add the track to the playlist. Clicking a track image will play the track and also navigate to the world it's located in if applicable.
+Display a list of available BGM tracks in a modal window. Hovering over a track will show information from the Wiki on where it is used. Clicking a track image will play the track and also navigate to the world it's located in if applicable. Clicking a track's play button will play the track in the audio player without navigating to the world or closing the modal. Clicking the button below a track's play button will add the track to the playlist. Tracks directly associated with a world will have a third button with an image icon and clicking this opens another modal window to select a screenshot of the world that best represents where the track is used. The image you choose will also be used for that track for everyone else using the app, so please only use it if you have a reasonable certainty that the current image for a track does not best represent where the track is used.
 
 ## Settings
 
@@ -245,7 +245,7 @@ This setting determines the number of world nodes that make up a stack within th
 
 ### SR分室の曲
 
-ポップアップでSR分室の曲のリストを表示します。 曲の画像にマウスホバーするものを得られる方法を特定します。再生ボタンをクリックで、曲をオーディオプレーヤーで再生させます（エクスプローラに表示）。再生ボタンの下のボタンをクリックで、曲をプレイリストに追加されます。曲の画像をクリックで、曲を再生させて、使用される場所を知らせます（エクスプローラに表示）。
+ポップアップでSR分室の曲のリストを表示します。 曲の画像にマウスホバーするものを得られる方法を特定します。曲の画像をクリックで、曲を再生させて、使用される場所を知らせます（エクスプローラに表示）。再生ボタンをクリックで、曲をポップアップを閉めないでオーディオプレーヤーで再生させます。再生ボタンの下のボタンをクリックで、曲をプレイリストに追加されます。マップに直接関連付けられている曲には、画像アイコンが付いた３つ目のボタンがあり、これをクリックすると別のポップアップが開き、曲が使用される場所を最もよく表すマップのスクリーンショットを選択できます。選択した画像は、アプリを使用している他のユーザーにもその曲に使用されるので、曲の現在の画像がその曲が使用されている場所を最もよく表していないという確信がある場合にのみ、この機能を使用してください。
 
 ### 言語設定
 

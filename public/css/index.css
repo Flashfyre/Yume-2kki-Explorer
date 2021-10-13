@@ -522,7 +522,7 @@ a.close-modal, a.close-audio-player {
     border-width: 12px;
 }
 
-.collectable--border:not([data-id]), .collectable--border:not([data-id]) + .collectable-entry--controls {
+.collectable--border:not([data-id]), .collectable--border:not([data-id]) + .collectable-entry--controls > .collectable-entry--control:not(.bgm-track__set-image) {
     filter: grayscale(1);
 }
 
@@ -602,7 +602,7 @@ a.close-modal, a.close-audio-player {
     margin-bottom: 20px !important;
 }
 
-.effect > img, .menu-theme > img, .wallpaper > img, .bgm-track > img {
+.effect > img, .menu-theme > img, .wallpaper > img, .bgm-track > img, .bgm-track-image > img {
     image-rendering: crisp-edges;
     image-rendering: pixelated;
 }
@@ -660,6 +660,17 @@ a.close-modal, a.close-audio-player {
 }
 
 .bgm-track.collectable--border {
+    min-width: 200px;
+    width: 200px;
+    height: 140px;
+}
+
+.bgm-track-image > img {
+    width: 240px;
+    height: 180px;
+}
+
+.bgm-track-image.collectable--border {
     min-width: 200px;
     width: 200px;
     height: 140px;
