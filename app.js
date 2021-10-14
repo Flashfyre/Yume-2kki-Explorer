@@ -1323,11 +1323,13 @@ function updateWorldImages(pool, worldData) {
 function getAllWorldImageData(worldData) {
     return new Promise((resolve) => {
         const worldImageData = [];
+        const downscaleSuffix = `/revision/latest/scale-to-width-down/${worldImageWidthThreshold}`;
 
         const getAndPushWorldImageData = worldData.map(w => getWorldImageUrls(w.title).then(urls => {
             let i = 0;
             for (let url of urls) {
-                if (url !== (w.filename.indexOf('|') === -1 ? w.filename : w.filename.slice(w.filename.indexOf('|') + 1)))
+                const checkUrl = url.endsWith(downscaleSuffix) ? url.slice(0, downscaleSuffix.length * -1) : url;
+                if (checkUrl !== (w.filename.indexOf('|') === -1 ? w.filename : w.filename.slice(w.filename.indexOf('|') + 1)))
                     worldImageData.push({
                         worldId: w.id,
                         ordinal: ++i,
@@ -1386,7 +1388,7 @@ function getWorldImageInfo(imageTitle) {
                 resolve({
                     width: imageInfo.width,
                     height: imageInfo.height,
-                    url: `${fullUrl.slice(0, revisionIndex + (exceedsWidthThreshold ? revisionIndex : 0))}${widthLimitString}`
+                    url: `${fullUrl.slice(0, revisionIndex + (exceedsWidthThreshold ? revisionText.length : 0))}${widthLimitString}`
                 });
             });
         });
