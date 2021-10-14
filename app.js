@@ -291,8 +291,7 @@ app.post('/updateWorldData', function(req, res) {
             });
             pool.end();
         };
-
-        if (req.body.reset)
+        if (req.body.reset === 'true')
             populateWorldData(pool).then(() => callback(true)).catch(err => console.error(err));
         else {
             pool.query('SELECT lastUpdate FROM updates', (err, rows) => {
@@ -300,9 +299,8 @@ app.post('/updateWorldData', function(req, res) {
                 if (rows.length) {
                     getWorldData(pool, true).then(worldData => {
                         getUpdatedWorldNames(worldData.map(w => w.title), rows[0].lastUpdate)
-                            .then(updatedWorldNames => populateWorldData(pool, worldData, updatedWorldNames)
-                                .then(() => callback(true))
-                            ).catch(err => console.error(err)).catch(err => console.error(err));
+                            .then(updatedWorldNames => populateWorldData(pool, worldData, updatedWorldNames).then(() => callback(true)))
+                            .catch(err => console.error(err)).catch(err => console.error(err));
                         }).catch(err => console.error(err));
                 } else
                     callback(false);
@@ -320,7 +318,7 @@ app.post('/updateMiscData', function(req, res) {
             pool.end();
         };
 
-        if (req.body.reset) {
+        if (req.body.reset === 'true') {
             getWorldData(pool, true).then(worldData => {
                 updateMapData(pool, worldData).then(() => {
                     updateAuthorInfoData(pool).then(() => {
@@ -693,7 +691,7 @@ function getBgmTrackData(pool, worldData, excludeRemovedContent) {
 
 function getUpdatedWorldNames(worldNames, lastUpdate) {
     return new Promise((resolve, reject) => {
-        let recentChanges = [];
+        const recentChanges = [];
         populateRecentChanges(recentChanges, lastUpdate).then(() => resolve(_.uniq(recentChanges.map(c => c.title).filter(w => worldNames.indexOf(w) > -1)))).catch(err => reject(err));
     });
 }

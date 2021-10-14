@@ -3672,7 +3672,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.8");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.9");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
@@ -4222,25 +4222,29 @@ function initBgm(url, label, imageUrl, play, playlistIndex, playlist) {
             return;
     }
 
+    const player = audioPlayer.player;
+
     fetch(requestObj).then(function (response) {
         if (!response.ok)
             $('.audio-player-label').text('ERROR');
         return response;
     }).then(async function (res) {
         const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        audioPlayer.player.src = url;
-        $('.close-audio-player').on('click', function() {
-            audioPlayer = null;
-            config.playlistIndex = -1;
-            updateConfig(config);
-            $('.audio-player-container').removeClass('open');
-            $('.audio-player-image-container, .audio-player-player-container').empty();
-            if (!$('.controls-playlist').hasClass('visible'))
-                updateControlsContainer();
-        });
-        if (play)
-            GreenAudioPlayer.playPlayer(audioPlayer.player);
+        if (player === audioPlayer.player) {
+            const url = window.URL.createObjectURL(blob);
+            player.src = url;
+            $('.close-audio-player').on('click', function() {
+                audioPlayer = null;
+                config.playlistIndex = -1;
+                updateConfig(config);
+                $('.audio-player-container').removeClass('open');
+                $('.audio-player-image-container, .audio-player-player-container').empty();
+                if (!$('.controls-playlist').hasClass('visible'))
+                    updateControlsContainer();
+            });
+            if (play)
+                GreenAudioPlayer.playPlayer(player);
+        }
     }).catch((err) => console.error(err));
 }
 

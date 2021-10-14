@@ -1,4 +1,4 @@
-// Version 3.8.8 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.8.9 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -111480,7 +111480,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.8");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.9");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
@@ -112030,25 +112030,29 @@ function InsertStackElement(node, body) {
 	            return;
 	    }
 
+	    const player = audioPlayer.player;
+
 	    fetch(requestObj).then(function (response) {
 	        if (!response.ok)
 	            jquery('.audio-player-label').text('ERROR');
 	        return response;
 	    }).then(async function (res) {
 	        const blob = await res.blob();
-	        const url = window.URL.createObjectURL(blob);
-	        audioPlayer.player.src = url;
-	        jquery('.close-audio-player').on('click', function() {
-	            audioPlayer = null;
-	            config$1.playlistIndex = -1;
-	            updateConfig(config$1);
-	            jquery('.audio-player-container').removeClass('open');
-	            jquery('.audio-player-image-container, .audio-player-player-container').empty();
-	            if (!jquery('.controls-playlist').hasClass('visible'))
-	                updateControlsContainer();
-	        });
-	        if (play)
-	            GreenAudioPlayer.playPlayer(audioPlayer.player);
+	        if (player === audioPlayer.player) {
+	            const url = window.URL.createObjectURL(blob);
+	            player.src = url;
+	            jquery('.close-audio-player').on('click', function() {
+	                audioPlayer = null;
+	                config$1.playlistIndex = -1;
+	                updateConfig(config$1);
+	                jquery('.audio-player-container').removeClass('open');
+	                jquery('.audio-player-image-container, .audio-player-player-container').empty();
+	                if (!jquery('.controls-playlist').hasClass('visible'))
+	                    updateControlsContainer();
+	            });
+	            if (play)
+	                GreenAudioPlayer.playPlayer(player);
+	        }
 	    }).catch((err) => console.error(err));
 	}
 
