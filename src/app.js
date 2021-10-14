@@ -97,6 +97,7 @@ let effectData;
 let menuThemeData;
 let wallpaperData;
 let bgmTrackData;
+let bgmTrackIds;
 let bgmTrackIndexesById;
 
 function initWorldData(data) {
@@ -802,6 +803,7 @@ function initWallpaperData(data) {
 
 function initBgmTrackData(data) {
     bgmTrackData = data;
+    bgmTrackIds = [];
     bgmTrackIndexesById = {};
 
     const $bgmTracksContainerItems = $('.js--bgm-tracks-container__items');
@@ -879,6 +881,7 @@ function initBgmTrackData(data) {
         $(bgmTrackImageHtml).appendTo(t.trackNo < 1000 ? $bgmTracksContainerItems : !t.removed ? $unnumberedBgmTracksContainerItems : $removedBgmTracksContainerItems);
         $(bgmTrackLinkHtml).appendTo(t.trackNo < 1000 ? $bgmTracksContainerBorders : !t.removed ? $unnumberedBgmTracksContainerBorders : $removedBgmTracksContainerBorders);
         bgmTracksById[t.id] = t;
+        bgmTrackIds.push(t.id);
         bgmTrackIndexesById[t.id] = i++;
     }
 
@@ -926,9 +929,13 @@ function initBgmTrackData(data) {
     const playBgmTrackEntry = function ($bgmTrackEntry, openWorld) {
         const bgmTrack = bgmTracksById[$bgmTrackEntry.data('bgmTrackId')];
         if (bgmTrack.url) {
-            const imageUrl = getBgmTrackImageContainer($bgmTrackEntry).find('.js--bgm-track-image').attr('src');
-            const bgmTrackLabel = getBgmTrackLabel(bgmTrack);
-            playBgm(bgmTrack.url, bgmTrackLabel, imageUrl);
+            const playlistIndex = bgmTrackIds.indexOf(bgmTrack.id);
+            if (!config.playlist && config.playlistIndex === playlistIndex)
+                GreenAudioPlayer.playPlayer(audioPlayer.player);
+            else {
+                playBgmTrack(bgmTrack, playlistIndex);
+                updatePlaylistShuffleIndexes(playlistIndex);
+            }
             if (openWorld) {
                 const worldId = $bgmTrackEntry.data('worldId');
                 if (worldId !== undefined)
@@ -944,17 +951,16 @@ function initBgmTrackData(data) {
         .next('.js--bgm-track--collectable-entry--controls').children().on('click', function () {
             const isPlay = $(this).hasClass('js--bgm-track__play');
             const isPause = !isPlay && $(this).hasClass('js--bgm-track__pause');
-            if (isPlay)
-                playBgmTrackEntry($(this).parent().prev('.js--bgm-track'));
-            else if (isPause)
-                pauseBgm();
-            else if ($(this).hasClass('js--bgm-track__playlist-add'))
-                addPlaylistBgmTrack($(this).parent().prev('.js--bgm-track').data('bgmTrackId'));
             if (isPlay || isPause) {
-                if (isPlay)
-                    $('.js--bgm-track--collectable-entry--controls').children('.js--bgm-track__play.display--none').parent().children('.js--bgm-track__play, .js--bgm-track__pause').toggleClass('display--none');
-                $(this).parent().children('.js--bgm-track__play, .js--bgm-track__pause').toggleClass('display--none');
-            }
+                if (!$(this).hasClass('pressed')) {
+                    if (isPlay)
+                        playBgmTrackEntry($(this).parent().prev('.js--bgm-track'));
+                    else
+                        pauseBgm();
+                    $(this).addClass('pressed');
+                }
+            } else if ($(this).hasClass('js--bgm-track__playlist-add'))
+                addPlaylistBgmTrack($(this).parent().prev('.js--bgm-track').data('bgmTrackId'));
         });
     
     $('.js--bgm-track').on('mousemove', function (e) {
@@ -1087,14 +1093,20 @@ function loadOrInitConfig() {
                         case "versionDisplayToggles":
                             value = getUpdatedVersionDisplayToggles(value);
                             break;
-                        case "playlistBgmTrackIds":
-                            config.playlistBgmTrackIds = value;
+                        case "playlist":
+                            config.playlist = value;
                             break;
                         case "playlistIndex":
                             config.playlistIndex = value;
                             break;
                         case "playlistShuffle":
                             config.playlistShuffle = value;
+                            break;
+                        case "playlistRepeat":
+                            config.playlistRepeat = value;
+                            break;
+                        case "playlistBgmTrackIds":
+                            config.playlistBgmTrackIds = value;
                             break;
                     }
                     config[key] = value;
@@ -1376,9 +1388,11 @@ let config = {
     stackSize: 20,
     versionDisplayToggles: getDefaultVersionDisplayToggles(),
     audioVolume: 0.65,
-    playlistBgmTrackIds: [],
+    playlist: false,
     playlistIndex: -1,
-    playlistShuffle: false
+    playlistShuffle: false,
+    playlistRepeat: false,
+    playlistBgmTrackIds: []
 };
 
 let lastUpdate, lastFullUpdate;
@@ -3658,7 +3672,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.6");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.7");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
@@ -4027,9 +4041,8 @@ function openWorldWikiPage(worldId, newWindow) {
         "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
 }
 
-function initBgm(url, label, imageUrl, play, playlistIndex) {
-    const isPlaylist = playlistIndex !== undefined && playlistIndex > -1;
-    const loopAttribute = !isPlaylist ? ' loop' : '';
+function initBgm(url, label, imageUrl, play, playlistIndex, playlist) {
+    const loopAttribute = playlistIndex === undefined || playlistIndex === -1 ? ' loop' : '';
     $('.audio-player-image-container').empty().append(`<img src="${imageUrl}" class="audio-player-image noselect" />`);
     $('.audio-player-player-container').empty().append(`
         <a href="javascript:void(0);" class="close-audio-player noselect">✖</a>
@@ -4068,9 +4081,17 @@ function initBgm(url, label, imageUrl, play, playlistIndex) {
             </svg>
         </div>
     `);
-    $prevBtn.insertBefore($loadingIndicator);
+    const $repeatBtn = $(`
+        <div class="audio-player-playlist-btn repeat-btn${config.playlistRepeat ? ' on' : ''}" aria-label="Repeat" role="button">
+            <svg width="24" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                <path class="repeat-btn__icon" d="m0 9v-7h15v-2l3 3.5-3 3.5v-2h-12v4zm18 0v7h-15v2l-3-3.5 3-3.5v2h12v-4z" fill-rule="evenodd"/>
+            </svg>
+        </div>
+    `);
+    $shuffleBtn.insertBefore($loadingIndicator);
+    $prevBtn.insertAfter($shuffleBtn);
     $nextBtn.insertAfter($playBtn);
-    $shuffleBtn.insertAfter($nextBtn);
+    $repeatBtn.insertAfter($nextBtn);
 
     $playBtn.addClass('display--none');
 
@@ -4097,51 +4118,92 @@ function initBgm(url, label, imageUrl, play, playlistIndex) {
         }, 1000);
     });
 
-    $('.playlist-item.playing').removeClass('playing');
-    
     if (playlistIndex !== undefined && playlistIndex > -1) {
-        $(`.playlist-item:nth(${playlistIndex})`).addClass('playing');
+        if (url) {
+            const $bgmTrackEntryControls = !playlist ? $(`.js--bgm-track[data-bgm-track-id='${bgmTrackIds[playlistIndex]}']`).next('.js--bgm-track--collectable-entry--controls') : null;
+            const toggleEntryPlayingInList = function (playing) {
+                if (!playlist) {
+                    $bgmTrackEntryControls.children('.js--bgm-track__play').toggleClass('display--none', playing).toggleClass('pressed', playing);
+                    $bgmTrackEntryControls.children('.js--bgm-track__pause').toggleClass('display--none', !playing).toggleClass('pressed', !playing);
+                }
+            };
 
-        config.playlistIndex = playlistIndex;
-        updateConfig(config);
+            $('.playlist-item.playing').removeClass('playing');
 
-        const playPrevTrack = function() {
-            if (config.playlistBgmTrackIds.length > 1) {
-                audioPlayer.player.src = '';
-                if (playPrevPlaylistBgmTrack(playlistIndex))
-                    return;
-                audioPlayer.player.src = url;
-            }
-            GreenAudioPlayer.playPlayer(audioPlayer.player);
-        };
-        const playNextTrack = function() {
-            if (config.playlistBgmTrackIds.length > 1) {
-                audioPlayer.player.src = '';
-                if (playNextPlaylistBgmTrack(playlistIndex))
-                    return;
-                audioPlayer.player.src = url;
-            }
-            GreenAudioPlayer.playPlayer(audioPlayer.player);
-        };
+            $('.js--bgm-track__pause:visible').addClass('display--none')
+                .parent('.js--bgm-track--collectable-entry--controls').children('.js--bgm-track__play').removeClass('display--none').removeClass('pressed');
+            if (playlist)
+                $(`.playlist-item:nth(${playlistIndex})`).addClass('playing');
 
-        audioPlayer.player.addEventListener('ended', playNextTrack);
-
-        $prevBtn.on('click', playPrevTrack);
-        $nextBtn.on('click', playNextTrack);
-        $shuffleBtn.on('click', function() {
-            const shuffle = (config.playlistShuffle = !config.playlistShuffle);
-            $(this).toggleClass('on', shuffle);
-            if (shuffle)
-                updatePlaylistShuffleIndexes();
+            config.playlist = !!playlist;
+            config.playlistIndex = playlistIndex;
             updateConfig(config);
-        });
+
+            const playPrevTrack = function() {
+                if (getPlaylistBgmTrackIds().length > 1) {
+                    audioPlayer.player.src = '';
+                    toggleEntryPlayingInList(false);
+                    if (playPrevPlaylistBgmTrack(playlistIndex))
+                        return;
+                    toggleEntryPlayingInList(true);
+                    audioPlayer.player.src = url;
+                }
+                GreenAudioPlayer.playPlayer(audioPlayer.player);
+            };
+            const playNextTrack = function() {
+                if (getPlaylistBgmTrackIds().length > 1) {
+                    audioPlayer.player.src = '';
+                    toggleEntryPlayingInList(false);
+                    if (playNextPlaylistBgmTrack(playlistIndex))
+                        return;
+                    toggleEntryPlayingInList(true);
+                    audioPlayer.player.src = url;
+                }
+                GreenAudioPlayer.playPlayer(audioPlayer.player);
+            };
+
+            if (!playlist) {
+                audioPlayer.player.addEventListener('play', () => toggleEntryPlayingInList(true));
+                audioPlayer.player.addEventListener('pause', () => toggleEntryPlayingInList(false));
+            }
+
+            audioPlayer.player.addEventListener('ended', function () {
+                if (config.playlistRepeat)
+                    GreenAudioPlayer.playPlayer(audioPlayer.player);
+                else
+                    playNextTrack();
+            });
+
+            $prevBtn.on('click', playPrevTrack);
+            $nextBtn.on('click', playNextTrack);
+            $shuffleBtn.on('click', function() {
+                const shuffle = (config.playlistShuffle = !config.playlistShuffle);
+                $(this).toggleClass('on', shuffle);
+                if (shuffle)
+                    updatePlaylistShuffleIndexes();
+                updateConfig(config);
+            });
+            $repeatBtn.on('click', function() {
+                const repeat = (config.playlistRepeat = !config.playlistRepeat);
+                $(this).toggleClass('on', repeat);
+                updateConfig(config);
+            });
+        } else {
+            audioPlayer.player.src = '';
+            playNextPlaylistBgmTrack(playlistIndex);
+            return;
+        }
     } else {
         $('.audio-player-playlist-btn').addClass('inactive');
 
-        if (config.playlistIndex > -1) {
+        if (config.playlist || config.playlistIndex > -1) {
+            config.playlist = false;
             config.playlistIndex = -1;
             updateConfig(config);
         }
+
+        if (!url)
+            return;
     }
 
     fetch(requestObj).then(function (response) {
@@ -4154,6 +4216,8 @@ function initBgm(url, label, imageUrl, play, playlistIndex) {
         audioPlayer.player.src = url;
         $('.close-audio-player').on('click', function() {
             audioPlayer = null;
+            config.playlistIndex = -1;
+            updateConfig(config);
             $('.audio-player-container').removeClass('open');
             $('.audio-player-image-container, .audio-player-player-container').empty();
             if (!$('.controls-playlist').hasClass('visible'))
@@ -4164,17 +4228,17 @@ function initBgm(url, label, imageUrl, play, playlistIndex) {
     }).catch((err) => console.error(err));
 }
 
-function initBgmTrack(bgmTrack, play, playlistIndex) {
+function initBgmTrack(bgmTrack, play, playlistIndex, playlist) {
     const imageUrl = bgmTrack.worldId != null ? worldData[bgmTrack.worldId].images[bgmTrack.worldImageOrdinal] : getMissingBgmTrackUrl(bgmTrack.location);
-    initBgm(bgmTrack.url, getBgmTrackLabel(bgmTrack), imageUrl, play, playlistIndex);
+    initBgm(bgmTrack.url, getBgmTrackLabel(bgmTrack), imageUrl, play, playlistIndex, playlist);
 }
 
 function playBgm(url, label, imageUrl) {
     initBgm(url, label, imageUrl, true);
 }
 
-function playBgmTrack(bgmTrack, playlistIndex) {
-    initBgmTrack(bgmTrack, true, playlistIndex);
+function playBgmTrack(bgmTrack, playlistIndex, playlist) {
+    initBgmTrack(bgmTrack, true, playlistIndex, playlist);
 }
 
 function playPrevPlaylistBgmTrack(lastPlaylistIndex, attempts) {
@@ -4183,31 +4247,41 @@ function playPrevPlaylistBgmTrack(lastPlaylistIndex, attempts) {
         updatePlaylistShuffleIndexes();
     const playlistIndex = config.playlistShuffle
         ? playlistShuffleIndexes[!wrapIndex ? playlistShuffleIndexes.indexOf(lastPlaylistIndex) - 1 : playlistShuffleIndexes.length - 1]
-        : !wrapIndex ? lastPlaylistIndex - 1 : config.playlistBgmTrackIds.length - 1;
-    const playlistBgmTrackId = config.playlistBgmTrackIds[playlistIndex];
+        : !wrapIndex ? lastPlaylistIndex - 1 : getPlaylistBgmTrackIds().length - 1;
+    const playlistBgmTrackId = getPlaylistBgmTrackIds()[playlistIndex];
+    const skipTrack = () => playPrevPlaylistBgmTrack(playlistIndex, attempts ? ++attempts : 1);
     if (bgmTrackIndexesById.hasOwnProperty(playlistBgmTrackId)) {
-        GreenAudioPlayer.stopOtherPlayers();
-        playBgmTrack(bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]], playlistIndex);
-    } else if (attempts < config.playlistBgmTrackIds.length)
-        playPrevPlaylistBgmTrack(playlistIndex, attempts ? ++attempts : 1);
+        const bgmTrack = bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]];
+        if (bgmTrack.url) {
+            GreenAudioPlayer.stopOtherPlayers();
+            playBgmTrack(bgmTrack, playlistIndex, config.playlist);
+        } else
+            skipTrack();
+    } else if (attempts < getPlaylistBgmTrackIds().length)
+        skipTrack();
     else
         return false;
     return true;
 }
 
 function playNextPlaylistBgmTrack(lastPlaylistIndex, attempts) {
-    const wrapIndex = config.playlistShuffle ? lastPlaylistIndex === playlistShuffleIndexes[playlistShuffleIndexes.length - 1] : lastPlaylistIndex >= config.playlistBgmTrackIds.length - 1;
+    const wrapIndex = config.playlistShuffle ? lastPlaylistIndex === playlistShuffleIndexes[playlistShuffleIndexes.length - 1] : lastPlaylistIndex >= getPlaylistBgmTrackIds().length - 1;
     if (wrapIndex)
         updatePlaylistShuffleIndexes();
     const playlistIndex = config.playlistShuffle
         ? playlistShuffleIndexes[!wrapIndex ? playlistShuffleIndexes.indexOf(lastPlaylistIndex) + 1 : 0]
         : !wrapIndex ? lastPlaylistIndex + 1 : 0;
-    const playlistBgmTrackId = config.playlistBgmTrackIds[playlistIndex];
+    const playlistBgmTrackId = getPlaylistBgmTrackIds()[playlistIndex];
+    const skipTrack = () => playNextPlaylistBgmTrack(playlistIndex, attempts ? ++attempts : 1);
     if (bgmTrackIndexesById.hasOwnProperty(playlistBgmTrackId)) {
-        GreenAudioPlayer.stopOtherPlayers();
-        playBgmTrack(bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]], playlistIndex);
-    } else if (attempts < config.playlistBgmTrackIds.length)
-        playNextPlaylistBgmTrack(playlistIndex, attempts ? ++attempts : 1);
+        const bgmTrack = bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]];
+        if (bgmTrack.url) {
+            GreenAudioPlayer.stopOtherPlayers();
+            playBgmTrack(bgmTrack, playlistIndex, config.playlist);
+        } else
+            skipTrack();
+    } else if (attempts < getPlaylistBgmTrackIds().length)
+        skipTrack();
     else
         return false;
     return true;
@@ -4217,16 +4291,26 @@ function pauseBgm() {
     const audioSources = document.getElementsByClassName('audio-source');
     if (audioSources.length)
         GreenAudioPlayer.pausePlayer(audioSources[0]);
+    if (!config.playlist && config.playlistIndex > -1) {
+        const $bgmTrackEntryControls = $(`.js--bgm-track[data-bgm-track-id='${bgmTrackIds[config.playlistIndex]}']`).next('.js--bgm-track--collectable-entry--controls');
+        $bgmTrackEntryControls.children('.js--bgm-track__pause').addClass('display--none');
+        $bgmTrackEntryControls.children('.js--bgm-track__play').removeClass('display--none').removeClass('pressed');
+    }
+}
+
+function getPlaylistBgmTrackIds() {
+    return config.playlist ? config.playlistBgmTrackIds : bgmTrackIds;
 }
 
 function updatePlaylistShuffleIndexes(firstIndex) {
     if (config.playlistShuffle) {
+        const playlistBgmTrackIds = getPlaylistBgmTrackIds();
         playlistShuffleIndexes = [];
-        if (config.playlistBgmTrackIds.length) {
+        if (playlistBgmTrackIds.length) {
             const availableIndexes = [];
             if (firstIndex !== undefined)
                 playlistShuffleIndexes.push(firstIndex);
-            for (let i = 0; i < config.playlistBgmTrackIds.length; i++) {
+            for (let i = 0; i < playlistBgmTrackIds.length; i++) {
                 if (i !== firstIndex)
                     availableIndexes.push(i);
             }
@@ -4245,13 +4329,24 @@ function initPlaylist() {
 
     if (config.playlistBgmTrackIds.length) {
         $('.controls-playlist--container, .controls-playlist--container--tab').removeClass('display--none');
-        if (config.playlistIndex > -1 && config.playlistIndex < config.playlistBgmTrackIds.length) {
-            const playlistBgmTrackId = config.playlistBgmTrackIds[config.playlistIndex];
-            if (bgmTrackIndexesById.hasOwnProperty(playlistBgmTrackId))
-                initBgmTrack(bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]], false, config.playlistIndex);
+        if (config.playlist) {
+            if (config.playlistIndex > -1 && config.playlistIndex < config.playlistBgmTrackIds.length) {
+                const playlistBgmTrackId = config.playlistBgmTrackIds[config.playlistIndex];
+                if (bgmTrackIndexesById.hasOwnProperty(playlistBgmTrackId))
+                    initBgmTrack(bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]], false, config.playlistIndex, true);
+            }
+            updatePlaylistShuffleIndexes(config.playlistIndex);
         }
+    }
+
+    if (!config.playlist && config.playlistIndex > -1 && config.playlistIndex < bgmTrackIds.length) {
+        const bgmTrackId = bgmTrackIds[config.playlistIndex];
+        if (bgmTrackIndexesById.hasOwnProperty(bgmTrackId))
+            initBgmTrack(bgmTrackData[bgmTrackIndexesById[bgmTrackId]], false, config.playlistIndex);
         updatePlaylistShuffleIndexes(config.playlistIndex);
-    } else
+    }
+    
+    if (!(config.playlistIndex > -1 && config.playlistIndex < getPlaylistBgmTrackIds().length) || (config.playlist && !config.playlistBgmTrackIds.length))
         updatePlaylistShuffleIndexes();
 }
 
@@ -4273,7 +4368,7 @@ function addPlaylistBgmTrack(bgmTrackId, isInit) {
     if (bgmTrack)
         $playlistItem.on('click', function () {
             if (bgmTrackIndexesById.hasOwnProperty(bgmTrackId)) {
-                playBgmTrack(bgmTrackData[bgmTrackIndexesById[bgmTrackId]], $(this).index());
+                playBgmTrack(bgmTrackData[bgmTrackIndexesById[bgmTrackId]], $(this).index(), true);
                 updatePlaylistShuffleIndexes($(this).index());
             }
         });

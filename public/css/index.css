@@ -757,7 +757,7 @@ a.close-modal, a.close-audio-player {
 .audio-player-container {
     position: absolute;
     display: flex;
-    width: 592px;
+    width: 632px;
     margin-left: 10px;
     top: calc(100% - 105px);
     z-index: 11;
@@ -787,13 +787,13 @@ a.close-modal, a.close-audio-player {
 
 .audio-player {
     background: none !important;
-    width: 520px !important;
+    width: 560px !important;
 }
 
 .audio-player .holder {
     display: flex;
     justify-content: space-between;
-    min-width: 126px;
+    min-width: 166px;
 }
 
 .audio-player .holder .loading {
@@ -801,7 +801,7 @@ a.close-modal, a.close-audio-player {
 }
 
 .audio-player .holder .loading .loading__spinner {
-    margin-left: 38px;
+    margin-left: 74px;
 }
 
 .audio-player .holder .audio-player-playlist-btn:not(.inactive) {
