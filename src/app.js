@@ -863,7 +863,7 @@ function initBgmTrackData(data) {
                         </svg>
                     </button>
                     <button class="js--bgm-track__playlist-add collectable-entry--control">
-                        <svg width="18" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                        <svg width="24" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
                             <path class="collectable-entry--control__icon" d="m18 2h-18v-2h18zm0 5h-18v-2h18zm-11 5h-7v-2h7zm0 5h-7v-2h7zm8 1h-3v-3h-3v-3h3v-3h3v3h3v3h-3z" fill-rule="evenodd" />
                         </svg>
                     </button>
@@ -3672,7 +3672,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.7");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.8");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
@@ -4088,10 +4088,21 @@ function initBgm(url, label, imageUrl, play, playlistIndex, playlist) {
             </svg>
         </div>
     `);
+    const $playlistAddBtn = $(`
+        <div class="audio-player-playlist-btn playlist-add-btn" aria-label="Add to Playlist" role="button">
+            <svg width="24" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                <path class="playlist-add-btn__icon" d="m18 2h-18v-2h18zm0 5h-18v-2h18zm-11 5h-7v-2h7zm0 5h-7v-2h7zm8 1h-3v-3h-3v-3h3v-3h3v3h3v3h-3z" fill-rule="evenodd" />
+            </svg>
+        </div>
+    `);
+    const $volumeBtn = $('.audio-player .volume__button');
+    const $rightHolder = $('<div class="right-holder"></div>');
     $shuffleBtn.insertBefore($loadingIndicator);
     $prevBtn.insertAfter($shuffleBtn);
     $nextBtn.insertAfter($playBtn);
     $repeatBtn.insertAfter($nextBtn);
+    $volumeBtn.wrap($rightHolder);
+    $playlistAddBtn.insertBefore($volumeBtn);
 
     $playBtn.addClass('display--none');
 
@@ -4188,6 +4199,11 @@ function initBgm(url, label, imageUrl, play, playlistIndex, playlist) {
                 $(this).toggleClass('on', repeat);
                 updateConfig(config);
             });
+            
+            if (!playlist)
+                $playlistAddBtn.on('click', () => addPlaylistBgmTrack(bgmTrackIds[playlistIndex]));
+            else
+                $playlistAddBtn.addClass('inactive');
         } else {
             audioPlayer.player.src = '';
             playNextPlaylistBgmTrack(playlistIndex);
@@ -4382,7 +4398,7 @@ function addPlaylistBgmTrack(bgmTrackId, isInit) {
         if (!$('.controls-playlist').hasClass('visible'))
             $('.controls-playlist--container--tab__button').trigger('click');
         else
-            updateControlsContainer();
+            updateControlsContainer(true);
         config.playlistBgmTrackIds.push(bgmTrackId);
         updatePlaylistShuffleIndexes();
         updateConfig(config);
@@ -4403,7 +4419,7 @@ function removePlaylistBgmTrack(playlistIndex) {
         if ($('.controls-playlist').hasClass('visible'))
             $('.controls-playlist--container--tab__button').trigger('click');
     } else
-        updateControlsContainer();
+        updateControlsContainer(true);
 }
 
 function getMissingBgmTrackUrl(location) {

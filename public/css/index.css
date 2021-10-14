@@ -394,6 +394,10 @@ a.close-modal, a.close-audio-player {
     right: -10px !important;
 }
 
+a.close-modal {
+    padding-bottom: 0px;
+}
+
 .modal__controls {
     display: flex;
     flex-direction: column;
@@ -757,7 +761,7 @@ a.close-modal, a.close-audio-player {
 .audio-player-container {
     position: absolute;
     display: flex;
-    width: 632px;
+    width: 672px;
     margin-left: 10px;
     top: calc(100% - 105px);
     z-index: 11;
@@ -787,13 +791,20 @@ a.close-modal, a.close-audio-player {
 
 .audio-player {
     background: none !important;
-    width: 560px !important;
+    width: 600px !important;
+}
+
+.audio-player .holder, .audio-player .right-holder {
+    display: flex;
+    justify-content: space-between;
 }
 
 .audio-player .holder {
-    display: flex;
-    justify-content: space-between;
     min-width: 166px;
+}
+
+.audio-player .right-holder {
+    min-width: 64px;
 }
 
 .audio-player .holder .loading {
@@ -804,11 +815,11 @@ a.close-modal, a.close-audio-player {
     margin-left: 74px;
 }
 
-.audio-player .holder .audio-player-playlist-btn:not(.inactive) {
+.audio-player .holder .audio-player-playlist-btn:not(.inactive), .audio-player .right-holder .audio-player-playlist-btn:not(.inactive) {
     cursor: pointer;
 }
 
-.audio-player .holder .audio-player-playlist-btn.inactive {
+.audio-player .holder .audio-player-playlist-btn.inactive, .audio-player .right-holder .audio-player-playlist-btn.inactive {
     opacity: 0.5;
 }
 

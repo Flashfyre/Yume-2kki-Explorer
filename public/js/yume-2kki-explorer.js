@@ -1,4 +1,4 @@
-// Version 3.8.7 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.8.8 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -108673,7 +108673,7 @@ function InsertStackElement(node, body) {
                         </svg>
                     </button>
                     <button class="js--bgm-track__playlist-add collectable-entry--control">
-                        <svg width="18" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                        <svg width="24" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
                             <path class="collectable-entry--control__icon" d="m18 2h-18v-2h18zm0 5h-18v-2h18zm-11 5h-7v-2h7zm0 5h-7v-2h7zm8 1h-3v-3h-3v-3h3v-3h3v3h3v3h-3z" fill-rule="evenodd" />
                         </svg>
                     </button>
@@ -111480,7 +111480,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.7");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.8");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
@@ -111896,10 +111896,21 @@ function InsertStackElement(node, body) {
             </svg>
         </div>
     `);
+	    const $playlistAddBtn = jquery(`
+        <div class="audio-player-playlist-btn playlist-add-btn" aria-label="Add to Playlist" role="button">
+            <svg width="24" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                <path class="playlist-add-btn__icon" d="m18 2h-18v-2h18zm0 5h-18v-2h18zm-11 5h-7v-2h7zm0 5h-7v-2h7zm8 1h-3v-3h-3v-3h3v-3h3v3h3v3h-3z" fill-rule="evenodd" />
+            </svg>
+        </div>
+    `);
+	    const $volumeBtn = jquery('.audio-player .volume__button');
+	    const $rightHolder = jquery('<div class="right-holder"></div>');
 	    $shuffleBtn.insertBefore($loadingIndicator);
 	    $prevBtn.insertAfter($shuffleBtn);
 	    $nextBtn.insertAfter($playBtn);
 	    $repeatBtn.insertAfter($nextBtn);
+	    $volumeBtn.wrap($rightHolder);
+	    $playlistAddBtn.insertBefore($volumeBtn);
 
 	    $playBtn.addClass('display--none');
 
@@ -111996,6 +112007,11 @@ function InsertStackElement(node, body) {
 	                jquery(this).toggleClass('on', repeat);
 	                updateConfig(config$1);
 	            });
+	            
+	            if (!playlist)
+	                $playlistAddBtn.on('click', () => addPlaylistBgmTrack(bgmTrackIds[playlistIndex]));
+	            else
+	                $playlistAddBtn.addClass('inactive');
 	        } else {
 	            audioPlayer.player.src = '';
 	            playNextPlaylistBgmTrack(playlistIndex);
@@ -112190,7 +112206,7 @@ function InsertStackElement(node, body) {
 	        if (!jquery('.controls-playlist').hasClass('visible'))
 	            jquery('.controls-playlist--container--tab__button').trigger('click');
 	        else
-	            updateControlsContainer();
+	            updateControlsContainer(true);
 	        config$1.playlistBgmTrackIds.push(bgmTrackId);
 	        updatePlaylistShuffleIndexes();
 	        updateConfig(config$1);
@@ -112211,7 +112227,7 @@ function InsertStackElement(node, body) {
 	        if (jquery('.controls-playlist').hasClass('visible'))
 	            jquery('.controls-playlist--container--tab__button').trigger('click');
 	    } else
-	        updateControlsContainer();
+	        updateControlsContainer(true);
 	}
 
 	function getMissingBgmTrackUrl(location) {
