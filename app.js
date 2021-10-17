@@ -3527,7 +3527,7 @@ function getVersionUpdatedLocationContent(entry, content) {
     else if (entry.verGaps)
         locationBoxSection += `|VersionGaps = ${entry.verGaps}\n`;*/
 
-    return `${sliceHtml(content, locationBoxSectionStartIndex)}${locationBoxSection}${sliceHtml(content, locationBoxSectionEndIndex)}`;
+    return `${sliceHtml(content, 0, locationBoxSectionStartIndex)}${locationBoxSection}${sliceHtml(content, locationBoxSectionEndIndex)}`;
 }
 
 function getCsrfToken(request) {
