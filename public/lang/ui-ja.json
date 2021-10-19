@@ -112,7 +112,8 @@
                 "Corrupted_Love_World": "恋楔",
                 "Saturated_Eyeball_Zone": "彩愛蝶",
                 "NES_Glitch_Tunnel": "NESトンネル",
-                "Shop_Ruins": "廃墟商店"
+                "Shop_Ruins": "廃墟商店",
+                "Yume_Nikki": "ゆめにっき"
             }
         },
         "fontStyle": {
@@ -303,6 +304,8 @@
     },
     "bgmTracksModal": {
         "search": "検索",
+        "favBgmTracks": "お気に入りの曲",
+        "musicRoomBgmTracks": "SR分室の曲",
         "unnumberedBgmTracks": "番号のない曲",
         "removedBgmTracks": "前の曲"
     },

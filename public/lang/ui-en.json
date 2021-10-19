@@ -112,7 +112,8 @@
                 "Corrupted_Love_World": "Corrupted Love World",
                 "Saturated_Eyeball_Zone": "Saturated Eyeball Zone",
                 "NES_Glitch_Tunnel": "NES Glitch Tunnel",
-                "Shop_Ruins": "Shop Ruins"
+                "Shop_Ruins": "Shop Ruins",
+                "Yume_Nikki": "Yume Nikki"
             }
         },
         "fontStyle": {
@@ -303,6 +304,8 @@
     },
     "bgmTracksModal": {
         "search": "Search:",
+        "favBgmTracks": "Favourite Tracks",
+        "musicRoomBgmTracks": "Music Room Tracks",
         "unnumberedBgmTracks": "Unnumbered Tracks",
         "removedBgmTracks": "Removed Tracks"
     },

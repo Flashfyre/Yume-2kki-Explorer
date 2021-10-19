@@ -846,7 +846,7 @@ function populateWorldData(pool, worldData, updatedWorldNames, continueKey, worl
                     const callback = function (updatedWorldData) {
                         updateConns(pool, _.keyBy(worldData, w => w.title)).then(() => {
                             updateConnTypeParams(pool, worldData).then(() => {
-                                updateWorldImages(pool, worldData).then(() => {
+                                updateWorldImages(pool, worldData, updatedWorldNames).then(() => {
                                     updateWorldDepths(pool, _.sortBy(worldData, [ 'id' ])).then(() => {
                                         deleteRemovedWorlds(pool).then(() => resolve(worldData)).catch(err => reject(err));
                                     }).catch(err => reject(err));
@@ -1249,10 +1249,10 @@ function deleteRemovedConnTypeParams(pool, removedConnTypeParamIds) {
     });
 }
 
-function updateWorldImages(pool, worldData) {
+function updateWorldImages(pool, worldData, updatedWorldNames) {
     return new Promise((resolve, reject) => {
-        getAllWorldImageData(worldData).then(worldImageData => {
-            pool.query('SELECT id, worldId, filename, ordinal FROM world_images', (err, rows) => {
+        getAllWorldImageData(worldData, updatedWorldNames).then(worldImageData => {
+            pool.query('SELECT wi.id, wi.worldId, w.title, wi.filename, wi.ordinal FROM world_images wi JOIN worlds w ON w.id = wi.worldId', (err, rows) => {
                 if (err) return reject(err);
                 const worldImageDataByWorldImageId = _.keyBy(worldImageData, wi => `${wi.worldId}_${wi.filename}`);
                 const newWorldImagesByWorldImageId = _.keyBy(worldImageData, wi => `${wi.worldId}_${wi.filename}`);
@@ -1267,7 +1267,7 @@ function updateWorldImages(pool, worldData) {
                             worldImage.oldOrdinal = row.ordinal;
                             updatedWorldImages.push(worldImage);
                         }
-                    } else
+                    } else if (!updatedWorldNames || updatedWorldNames.indexOf(row.title) > -1)
                         removedWorldImageIds.push(row.id);
                     delete newWorldImagesByWorldImageId[worldImageId];
                 }
@@ -1320,12 +1320,12 @@ function updateWorldImages(pool, worldData) {
     });
 }
 
-function getAllWorldImageData(worldData) {
+function getAllWorldImageData(worldData, updatedWorldNames) {
     return new Promise((resolve) => {
         const worldImageData = [];
         const downscaleSuffix = `/revision/latest/scale-to-width-down/${worldImageWidthThreshold}`;
 
-        const getAndPushWorldImageData = worldData.map(w => getWorldImageUrls(w.title).then(urls => {
+        const getAndPushWorldImageData = worldData.filter(w => !updatedWorldNames || updatedWorldNames.indexOf(w.title) > -1).map(w => getWorldImageUrls(w.title).then(urls => {
             let i = 0;
             for (let url of urls) {
                 const checkUrl = url.endsWith(downscaleSuffix) ? url.slice(0, downscaleSuffix.length * -1) : url;
@@ -2176,7 +2176,7 @@ function getEffectWikiData(worldData) {
                 const effectName = nameMatch[1];
                 if (effectName === 'Instructions')
                     break;
-                const filenameMatch = /(https:\/\/static.wikia.nocookie.net\/yume2kki\/images\/.*?revision\/latest)/.exec(section);
+                const filenameMatch = /(https:\/\/static.wikia.nocookie.net\/yume2kki\/images\/.*?)revision\/latest/.exec(section);
                 if (!filenameMatch)
                     continue;
                 const filename = filenameMatch[1];
@@ -2679,8 +2679,8 @@ function getWallpaperWikiData(worldData) {
             if (err) return reject(err);
             const specHtml = sliceHtml(res.text, res.text.indexOf('id="Specifications"'), res.text.indexOf('id="Removed_or_modified_wallpapers"'));
             const wallpaperSectionsHtml = res.text.split('"wikia-gallery-item"');
-            const wallpaperRegex = /<img .*?src="(.*?\/revision\/latest)[^"]+".*?#(\d+)(?: \- "([^"]+)"|<\/b>).*? \- (.*?)<\/div>/;
-            const removedWallpaperRegex = /<img .*?src="(.*?\/revision\/latest)[^"]+".*<b>.*?"(.*?)".*? \- (.*?[^#]+#(\d+).*?)<\/div>/;
+            const wallpaperRegex = /<img .*?src="(.*?)\/revision\/latest[^"]+".*?#(\d+)(?: \- "([^"]+)"|<\/b>).*? \- (.*?)<\/div>/;
+            const removedWallpaperRegex = /<img .*?src="(.*?)\/revision\/latest[^"]+".*<b>.*?"(.*?)".*? \- (.*?[^#]+#(\d+).*?)<\/div>/;
             const wallpaperData = [];
             let removedFlag = false;
 
@@ -3056,7 +3056,7 @@ function getIndirectBgmTrackUrl(bgmTrack) {
                 const revisionIndex = fullUrl.indexOf(revisionText);
                 if (revisionIndex === -1)
                     reject();
-                resolve(fullUrl.slice(0, revisionIndex + revisionText.length));
+                resolve(fullUrl.slice(0, revisionIndex));
             });
     });
 }
@@ -3218,7 +3218,7 @@ function getMapUrlAndLabel(html) {
                 if (urlIndex > -1) {
                     const revisionIndex = figureHtml.indexOf(revisionText, urlIndex);
                     if (revisionIndex > -1) {
-                        mapUrls.push(figureHtml.slice(urlIndex, revisionIndex + revisionText.length));
+                        mapUrls.push(figureHtml.slice(urlIndex, revisionIndex));
                         mapLabels.push(label);
                     }
                 }
@@ -3251,7 +3251,7 @@ function getBgmUrlAndLabel(html) {
                 const revisionIndex = entry.indexOf(revisionText, urlIndex);
                 const trackStartIndex = entry.indexOf(">", urlIndex) + 1;
                 const trackEndIndex = entry.indexOf("</a>", trackStartIndex);
-                url = revisionIndex > -1 ? entry.slice(urlIndex, revisionIndex + revisionText.length) : entry.slice(urlIndex, entry.indexOf('"', urlIndex));
+                url = revisionIndex > -1 ? entry.slice(urlIndex, revisionIndex) : entry.slice(urlIndex, entry.indexOf('"', urlIndex));
                 areaIndex = entry.indexOf("(", trackEndIndex + 1) + 1;
                 track = entry.slice(trackStartIndex, trackEndIndex).trim();
             } else {

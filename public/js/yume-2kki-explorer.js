@@ -1,4 +1,4 @@
-// Version 3.8.10 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.9.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -108256,7 +108256,11 @@ function InsertStackElement(node, body) {
 	            $versionEntryContentList.append(`<li class="styled-list-item">${vde}</li>`);
 	        $versionEntryContent.append($versionEntryContentList);
 	        $versionEntryLink.append($versionEntryContent);
-	        $versionEntryLink.append('<button class="js--version-entry--expand collectable-entry--expand noselect">▶</button>');
+	        $versionEntryLink.append(`
+            <button class="js--version-entry--expand collectable-entry--expand noselect">
+                <a href="javascript:void(0);" class="tab--arrow tab--right-arrow no-border">&nbsp;</a>
+            </button>
+        `);
 	        
 	        $versionEntry.appendTo($versionEntriesContainerItems);
 	        $versionEntryLink.appendTo($versionEntriesContainerBorders);
@@ -108619,17 +108623,21 @@ function InsertStackElement(node, body) {
 	    const $bgmTracksContainerItems = jquery('.js--bgm-tracks-container__items');
 	    const $unnumberedBgmTracksContainerItems = jquery('.js--unnumbered-bgm-tracks-container__items');
 	    const $removedBgmTracksContainerItems = jquery('.js--removed-bgm-tracks-container__items');
+	    const $favBgmTracksContainerItems = jquery('.js--fav-bgm-tracks-container__items');
 	    const $bgmTracksContainerBorders = jquery('.js--bgm-tracks-container__borders');
 	    const $unnumberedBgmTracksContainerBorders = jquery('.js--unnumbered-bgm-tracks-container__borders');
 	    const $removedBgmTracksContainerBorders = jquery('.js--removed-bgm-tracks-container__borders');
+	    const $favBgmTracksContainerBorders = jquery('.js--fav-bgm-tracks-container__borders');
 	    const bgmTracksById = {};
 
 	    $bgmTracksContainerItems.empty();
 	    $unnumberedBgmTracksContainerItems.empty();
 	    $removedBgmTracksContainerItems.empty();
+	    $favBgmTracksContainerItems.empty();
 	    $bgmTracksContainerBorders.empty();
 	    $unnumberedBgmTracksContainerBorders.empty();
 	    $removedBgmTracksContainerBorders.empty();
+	    $favBgmTracksContainerBorders.empty();
 
 	    let i = 0;
 
@@ -108645,6 +108653,8 @@ function InsertStackElement(node, body) {
 	        const imageUrl = t.worldId != null ? exports.worldData[t.worldId].images[t.worldImageOrdinal] : getMissingBgmTrackUrl(t.location);
 	        const unnumberedAttribute = t.trackNo >= 1000 ? ' data-unnumbered="true"' : '';
 	        const removedAttribute = t.removed ? ' data-removed="true"' : '';
+	        const favButtonClass = config$1.bgmTrackInput.hasOwnProperty(t.id) ? config$1.bgmTrackInput[t.id] ? ' on' : ' inactive' : '';
+	        const ignoreButtonClass = config$1.bgmTrackInput.hasOwnProperty(t.id) ? !config$1.bgmTrackInput[t.id] ? ' on' : ' inactive' : '';
 	        const bgmTrackImageHtml = `<div class="js--bgm-track-image--container bgm-track collectable-entry collectable${removedCollectableClass} noselect"><img src="${imageUrl}" class="js--bgm-track-image" referrerpolicy="no-referrer" /></div>`;
 	        const bgmTrackNameHtml = t.trackNo < 1000 ? `
             <div class="collectable-entry__name--container">
@@ -108654,14 +108664,27 @@ function InsertStackElement(node, body) {
 	        const bgmTrackImageButtonHtml = t.worldId && exports.worldData[t.worldId].images.length > 1 ? `
              <button class="js--bgm-track__set-image bgm-track__set-image collectable-entry--control">
                 <svg width="24" height="18" viewBox="0 0 24 18" xmlns="http://www.w3.org/2000/svg">
-                    <path class="collectable-entry--control__icon" d="m0 0h24v16h-2v-14h-22zm24 16v2h-24v-16h2v14zm-20-2v-2l3-4 3 2 5-5 5 5v4zm0-9a1 1 0 0 0 4 0 1 1 0 0 0 -4 0z" fill-rule="evenodd"/>
+                    <path class="collectable-entry--control__icon" d="m0 0h24v16h-2v-14h-22zm24 16v2h-24v-16h2v14zm-20-2v-2l3-4 3 2 5-5 5 5v4zm0-9a1 1 0 0 0 4 0 1 1 0 0 0 -4 0z" fill-rule="evenodd" />
                 </svg>
             </button>
         ` : '';
 	        const bgmTrackLinkHtml = `
             <div class="js--bgm-track-entry--container bgm-track--collectable-entry-container collectable-entry--container">
                 <a href="javascript:void(0);" class="js--bgm-track bgm-track collectable-entry collectable--border noselect" data-bgm-track-id="${t.id}"${hasIdAttribute}${worldIdAttribute}${unnumberedAttribute}${removedAttribute}>${bgmTrackNameHtml}</a>
-                <div class="js--bgm-track--collectable-entry--controls collectable-entry--controls noselect">
+                <div class="js--bgm-track--collectable-entry--input-controls collectable-entry--controls noselect">
+                    <button class="js--bgm-track__fav bgm-track__fav${favButtonClass} collectable-entry--control">
+                        <svg width="24" height="24" viewBox="0 -1.5 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path class="collectable-entry--control__icon" d="m22.2 2c-2.5-2.7-6.5-2.6-9.1 0.1l-1.1 1.3-1.1-1.3c-2.6-2.7-6.6-2.8-9-0.1h-0.1c-2.4 2.6-2.4 7 0.2 9.7l5.4 5.9 0.1 0.1 4.5 4.8 4.4-4.8h0.1l0.1-0.1 5.4-5.9c2.6-2.7 2.6-7.1 0.2-9.7z" fill-rule="evenodd" />
+                        </svg>
+                    </button>
+                    <button class="js--bgm-track__ignore bgm-track__ignore${ignoreButtonClass} collectable-entry--control">
+                        <svg width="24" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                            <path class="collectable-entry--control__icon" d="m9 0a9 9 90 1 0 9 9 9 9 90 0 0 -9 -9zm0 2.1a6.9 6.9 90 0 1 4.1 1.3l-9.7 9.7a6.9 6.9 90 0 1 5.6 -11zm0 13.8a6.9 6.9 90 0 1 -4.1 -1.3l9.6-9.6a6.9 6.9 90 0 1 -5.5 10.9z" fill-rule="evenodd"/>
+                        </svg>
+                    </button>
+                    ${bgmTrackImageButtonHtml}
+                </div>
+                <div class="js--bgm-track--collectable-entry--play-controls collectable-entry--controls noselect">
                     <button class="js--bgm-track__play collectable-entry--control">
                         <svg width="18" height="24" viewBox="0 0 18 24" xmlns="http://www.w3.org/2000/svg">
                             <path class="collectable-entry--control__icon" d="M18 12L0 24V0" fill-rule="evenodd" />
@@ -108677,7 +108700,6 @@ function InsertStackElement(node, body) {
                             <path class="collectable-entry--control__icon" d="m18 2h-18v-2h18zm0 5h-18v-2h18zm-11 5h-7v-2h7zm0 5h-7v-2h7zm8 1h-3v-3h-3v-3h3v-3h3v3h3v3h-3z" fill-rule="evenodd" />
                         </svg>
                     </button>
-                    ${bgmTrackImageButtonHtml}
                 </div>
             </div>`;
 	        if (t.location)
@@ -108698,7 +108720,9 @@ function InsertStackElement(node, body) {
 	    const $tooltip = jquery('<div class="bgm-track-tooltip scene-tooltip display--none"></div>').prependTo('.content');
 	    
 	    const getBgmTrackImageContainer = function ($bgmTrackEntry) {
-	        const $bgmTracksContainer = $bgmTrackEntry.data('removed') ? $removedBgmTracksContainerItems : $bgmTrackEntry.data('unnumbered') ? $unnumberedBgmTracksContainerItems : $bgmTracksContainerItems;
+	        const $bgmTracksContainer = !$bgmTrackEntry.hasClass('js--fav-bgm-track') ?
+	            $bgmTrackEntry.data('removed') ? $removedBgmTracksContainerItems : $bgmTrackEntry.data('unnumbered') ? $unnumberedBgmTracksContainerItems : $bgmTracksContainerItems
+	            : $favBgmTracksContainerItems;
 	        return jquery(jquery($bgmTracksContainer.children('.js--bgm-track-image--container')[$bgmTrackEntry.parent().index()]));
 	    };
 	    
@@ -108736,8 +108760,8 @@ function InsertStackElement(node, body) {
 	    
 	    jquery('.js--bgm-track-search--container').empty().append($bgmTrackSearch);
 
-	    const playBgmTrackEntry = function ($bgmTrackEntry, openWorld) {
-	        const bgmTrack = bgmTracksById[$bgmTrackEntry.data('bgmTrackId')];
+	    const playBgmTrackEntry = function (openWorld) {
+	        const bgmTrack = bgmTracksById[jquery(this).data('bgmTrackId')];
 	        if (bgmTrack.url) {
 	            const playlistIndex = bgmTrackIds.indexOf(bgmTrack.id);
 	            if (!config$1.playlist && config$1.playlistIndex === playlistIndex)
@@ -108747,7 +108771,7 @@ function InsertStackElement(node, body) {
 	                updatePlaylistShuffleIndexes(playlistIndex);
 	            }
 	            if (openWorld) {
-	                const worldId = $bgmTrackEntry.data('worldId');
+	                const worldId = jquery(this).data('worldId');
 	                if (worldId !== undefined)
 	                    trySelectNode(worldId, true, true);
 	                $tooltip.addClass('display--none');
@@ -108757,20 +108781,50 @@ function InsertStackElement(node, body) {
 	        }
 	    };
 
-	    jquery('.js--bgm-track[data-id]').on('click', function () { playBgmTrackEntry(jquery(this), true); })
-	        .next('.js--bgm-track--collectable-entry--controls').children().on('click', function () {
+	    jquery('.js--bgm-track[data-id]').on('click', function () { playBgmTrackEntry.apply(this, [ true ]); }).parent()
+	        .children('.js--bgm-track--collectable-entry--input-controls').children().on('click', function () {
+	            const $bgmTrackEntry = jquery(this).parent().parent().children('.js--bgm-track');
+	            const bgmTrackId = $bgmTrackEntry.data('bgmTrackId');
+	            const isFav = jquery(this).hasClass('js--bgm-track__fav');
+	            const isIgnore = !isFav && jquery(this).hasClass('js--bgm-track__ignore');
+	            if (isFav || isIgnore) {
+	                const hasInput = config$1.bgmTrackInput.hasOwnProperty(bgmTrackId);
+	                if (!hasInput || !!config$1.bgmTrackInput[bgmTrackId] === isFav) {
+	                    if (hasInput)
+	                        delete config$1.bgmTrackInput[bgmTrackId];
+	                    else
+	                        config$1.bgmTrackInput[bgmTrackId] = isFav ? 1 : 0;
+	                    updateConfig(config$1);
+	                    if (isFav) {
+	                        if (hasInput)
+	                            removeFavBgmTrackEntry(bgmTrackId);
+	                        else
+	                            addFavBgmTrackEntry(bgmTrackId);
+	                    }
+	                    jquery(this).toggleClass('on', !hasInput);
+	                    jquery(this).parent().children(`.js--bgm-track__${isFav ? 'ignore' : 'fav'}`).toggleClass('inactive', !hasInput);
+	                    if (config$1.playlistIndex > -1) {
+	                        if (bgmTrackId === getPlaylistBgmTrackIds()[config$1.playlistIndex]) {
+	                            jquery(`.audio-player .${isFav ? 'fav' : 'ignore'}-btn`).toggleClass('on', !hasInput);
+	                            jquery(`.audio-player .${isFav ? 'ignore' : 'fav'}-btn`).toggleClass('inactive', !hasInput);
+	                        }
+	                    }
+	                }
+	            } else
+	                initBgmTrackImagesModal($bgmTrackEntry, getBgmTrackImageContainer);
+	        }).parent().parent().children('.js--bgm-track--collectable-entry--play-controls').children().on('click', function () {
 	            const isPlay = jquery(this).hasClass('js--bgm-track__play');
 	            const isPause = !isPlay && jquery(this).hasClass('js--bgm-track__pause');
 	            if (isPlay || isPause) {
 	                if (!jquery(this).hasClass('pressed')) {
 	                    if (isPlay)
-	                        playBgmTrackEntry(jquery(this).parent().prev('.js--bgm-track'));
+	                        playBgmTrackEntry.apply(jquery(this).parent().parent().children('.js--bgm-track')[0]);
 	                    else
 	                        pauseBgm();
 	                    jquery(this).addClass('pressed');
 	                }
 	            } else if (jquery(this).hasClass('js--bgm-track__playlist-add'))
-	                addPlaylistBgmTrack(jquery(this).parent().prev('.js--bgm-track').data('bgmTrackId'));
+	                addPlaylistBgmTrack(jquery(this).parent().parent().children('.js--bgm-track').data('bgmTrackId'));
 	        });
 	    
 	    jquery('.js--bgm-track').on('mousemove', function (e) {
@@ -108799,10 +108853,72 @@ function InsertStackElement(node, body) {
 	    }).on('mouseleave', function () {
 	        $tooltip.addClass('display--none');
 	        getBgmTrackImageContainer(jquery(this)).removeClass('hover');
-	    }).next('.js--bgm-track--collectable-entry--controls').children('.js--bgm-track__set-image').on('click', function () {
-	        const $bgmTrackEntry = jquery(this).parent().prev();
-	        initBgmTrackImagesModal($bgmTrackEntry, getBgmTrackImageContainer);
 	    });
+
+	    for (let t of Object.keys(config$1.bgmTrackInput)) {
+	        if (config$1.bgmTrackInput[t])
+	            addFavBgmTrackEntry(t);
+	    }
+	}
+
+	function addFavBgmTrackEntry(bgmTrackId) {
+	    const bgmTrack = bgmTrackData[bgmTrackIndexesById[bgmTrackId]];
+
+	    const $bgmTracksContainerItems = jquery('.js--bgm-tracks-container__items');
+	    const $unnumberedBgmTracksContainerItems = jquery('.js--unnumbered-bgm-tracks-container__items');
+	    const $removedBgmTracksContainerItems = jquery('.js--removed-bgm-tracks-container__items');
+	    const $favBgmTracksContainerItems = jquery('.js--fav-bgm-tracks-container__items');
+	    const $favBgmTracksContainerBorders = jquery('.js--fav-bgm-tracks-container__borders');
+
+	    const $bgmTrackEntry = jquery(`.js--bgm-track[data-bgm-track-id=${bgmTrackId}]`);
+	    const $bgmTracksContainer = $bgmTrackEntry.data('removed') ? $removedBgmTracksContainerItems : $bgmTrackEntry.data('unnumbered') ? $unnumberedBgmTracksContainerItems : $bgmTracksContainerItems;
+	    const $bgmTrackImageContainer = jquery(jquery($bgmTracksContainer.children('.js--bgm-track-image--container')[$bgmTrackEntry.parent().index()]));
+
+	    const $favBgmTrackImageContainer = $bgmTrackImageContainer.clone(true).addClass('fav-bgm-track');
+	    const $favBgmTrackLinkContainer = $bgmTrackEntry.parent().clone(true).data('trackNo', bgmTrack.trackNo).data('variant', bgmTrack.variant);
+
+	    $favBgmTrackLinkContainer.children('.js--bgm-track').addClass('js--fav-bgm-track');
+
+	    let foundPos = false;
+
+	    $favBgmTracksContainerBorders.children().each(function() {
+	        const trackNo = jquery(this).data('trackNo');
+	        if (trackNo > bgmTrack.trackNo || (trackNo === bgmTrack.trackNo && jquery(this).data('variant') > bgmTrack.variant)) {
+	            $favBgmTrackImageContainer.insertBefore($favBgmTracksContainerItems.children()[jquery(this).index()]);
+	            $favBgmTrackLinkContainer.insertBefore(this);
+	            foundPos = true;
+	            return false;
+	        }
+	    });
+
+	    if (!foundPos) {
+	        $favBgmTracksContainerItems.append($favBgmTrackImageContainer);
+	        $favBgmTracksContainerBorders.append($favBgmTrackLinkContainer);
+	    }
+	    
+	    const $bgmTrackEntryInputControls = $favBgmTrackLinkContainer.children('.js--bgm-track--collectable-entry--input-controls');
+	    const $bgmTrackEntryPlayControls = $favBgmTrackLinkContainer.children('.js--bgm-track--collectable-entry--play-controls');
+	    const $setImageBtn = $bgmTrackEntryInputControls.children('.js--bgm-track__set-image');
+	    if ($setImageBtn.length)
+	        $setImageBtn.detach().appendTo($bgmTrackEntryPlayControls);
+	    $bgmTrackEntryInputControls.remove();
+
+	    if ($favBgmTracksContainerBorders.children().length === 1)
+	        jquery('.js--fav-bgm-tracks--section').removeClass('display--none');
+	}
+
+	function removeFavBgmTrackEntry(bgmTrackId) {
+	    const $favBgmTracksContainerItems = jquery('.js--fav-bgm-tracks-container__items');
+	    const $favBgmTracksContainerBorders = jquery('.js--fav-bgm-tracks-container__borders');
+
+	    const $bgmTrackLinkContainer = $favBgmTracksContainerBorders.find(`.js--bgm-track[data-bgm-track-id=${bgmTrackId}]`).parent();
+	    const $bgmTrackImageContainer = jquery(jquery($favBgmTracksContainerItems.children('.js--bgm-track-image--container')[$bgmTrackLinkContainer.index()]));
+	    
+	    $bgmTrackLinkContainer.remove();
+	    $bgmTrackImageContainer.remove();
+
+	    if (!$favBgmTracksContainerBorders.children().length)
+	        jquery('.js--fav-bgm-tracks--section').addClass('display--none');
 	}
 
 	function initBgmTrackImagesModal($bgmTrackEntry, getBgmTrackImageContainer) {
@@ -108831,19 +108947,25 @@ function InsertStackElement(node, body) {
 	            if (data.success) {
 	                const filename = world.images[ordinal];
 	                bgmTrack.worldImageOrdinal = ordinal;
-	                getBgmTrackImageContainer($bgmTrackEntry).find('.js--bgm-track-image').attr('src', filename);
+	                jquery(`.js--bgm-track[data-bgm-track-id='${bgmTrackId}']`).each(function() {
+	                    getBgmTrackImageContainer(jquery(this)).find('.js--bgm-track-image').attr('src', filename);
+	                });
 	                jquery(`.js--playlist-item[data-bgm-track-id='${bgmTrackId}'] .playlist-item__image`).attr('src', filename);
 	                jquery.modal.close();
 	            }
 	        });
 	     });
 	    
-	    jquery(".js--bgm-track-images-modal").modal({
+	    jquery('.js--bgm-track-images-modal').modal({
 	        closeExisting: false,
 	        fadeDuration: 100,
 	        closeClass: 'noselect',
 	        closeText: '✖'
 	    });
+	}
+
+	function isYNTheme() {
+	    return config$1.uiTheme === 'Yume_Nikki';
 	}
 
 	function loadOrInitConfig() {
@@ -109027,14 +109149,14 @@ function InsertStackElement(node, body) {
 	    }
 
 	    let modalMaxWidth;
-	    const modalLeftMargin = 25;
+	    const modalLeftMargin = 28;
 	    let modalRightMargin;
 	    if (jquery(".controls-collectables").hasClass("visible")) {
 	        const collectableControlsWidth = jquery(".controls-collectables").outerWidth() + parseFloat(jquery(".controls-collectables").css("margin-right")) + jquery(".controls-collectables--container--tab__button").outerWidth();
-	        modalMaxWidth = window.innerWidth - ((collectableControlsWidth + 8) + 25);
+	        modalMaxWidth = window.innerWidth - ((collectableControlsWidth + 8) + 28);
 	        modalRightMargin = collectableControlsWidth - 12;
 	    } else {
-	        modalMaxWidth = window.innerWidth - 25;
+	        modalMaxWidth = window.innerWidth - 28;
 	        modalRightMargin = 0;
 	    }
 
@@ -109196,6 +109318,7 @@ function InsertStackElement(node, body) {
 	    stackSize: 20,
 	    versionDisplayToggles: getDefaultVersionDisplayToggles(),
 	    audioVolume: 0.65,
+	    bgmTrackInput: {},
 	    playlist: false,
 	    playlistIndex: -1,
 	    playlistShuffle: false,
@@ -111480,7 +111603,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.8.11");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.9.0");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
@@ -111763,7 +111886,7 @@ function InsertStackElement(node, body) {
 	                if (world.bgmUrl.indexOf('|') === -1) {
 	                    if (!isCtrl) {
 	                        const worldName = config$1.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
-	                        playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel), world.filename);
+	                        playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel), world.filename, world.id);
 	                    } else {
 	                        const handle = window.open(world.bgmUrl, '_blank', 'noreferrer');
 	                        if (handle)
@@ -111820,7 +111943,7 @@ function InsertStackElement(node, body) {
 	                    callback: function () {
 	                        const bgmUrl = bgmUrls[bgmIndex];
 	                        if (!isCtrl) {
-	                            playBgm(bgmUrl, getBgmLabel(worldName, world.bgmLabel.split('|')[bgmIndex]), world.filename);
+	                            playBgm(bgmUrl, getBgmLabel(worldName, world.bgmLabel.split('|')[bgmIndex]), world.filename, world.id);
 	                        } else {
 	                            const handle = window.open(bgmUrl, '_blank', 'noreferrer');
 	                            if (handle)
@@ -111849,9 +111972,11 @@ function InsertStackElement(node, body) {
 	        "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
 	}
 
-	function initBgm(url, label, imageUrl, play, playlistIndex, playlist) {
+	function initBgm(url, label, imageUrl, worldId, play, playlistIndex, playlist) {
 	    const loopAttribute = playlistIndex === undefined || playlistIndex === -1 ? ' loop' : '';
-	    jquery('.audio-player-image-container').empty().append(`<img src="${imageUrl}" class="audio-player-image noselect" />`);
+	    const $bgmTrackLink = worldId != null ? jquery(`<a href="javascript:void(0);" class="js--world-node-link no-border" data-world-id="${worldId}"></a>`) : null;
+	    const $bgmTrackImage = jquery(`<img src="${imageUrl}" class="audio-player-image noselect" />`);
+	    jquery('.audio-player-image-container').empty().append(worldId != null ? $bgmTrackLink.append($bgmTrackImage) : $bgmTrackImage);
 	    jquery('.audio-player-player-container').empty().append(`
         <a href="javascript:void(0);" class="close-audio-player noselect">✖</a>
         <marquee class="audio-player-marquee" scrollamount="5">
@@ -111882,6 +112007,20 @@ function InsertStackElement(node, body) {
             </svg>
         </div>
     `);
+	    const $favBtn = jquery(`
+        <div class="audio-player-playlist-btn fav-btn" aria-label="Favourite" role="button">
+            <svg width="24" height="24" viewBox="0 -1.5 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path class="fav-btn__icon" d="m22.2 2c-2.5-2.7-6.5-2.6-9.1 0.1l-1.1 1.3-1.1-1.3c-2.6-2.7-6.6-2.8-9-0.1h-0.1c-2.4 2.6-2.4 7 0.2 9.7l5.4 5.9 0.1 0.1 4.5 4.8 4.4-4.8h0.1l0.1-0.1 5.4-5.9c2.6-2.7 2.6-7.1 0.2-9.7z" fill-rule="evenodd" />
+            </svg>
+        </div>
+    `);
+	    const $ignoreBtn = jquery(`
+         <div class="audio-player-playlist-btn ignore-btn" aria-label="Ignore" role="button">
+            <svg width="24" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                <path class="ignore-btn__icon" d="m9 0a9 9 90 1 0 9 9 9 9 90 0 0 -9 -9zm0 2.1a6.9 6.9 90 0 1 4.1 1.3l-9.7 9.7a6.9 6.9 90 0 1 5.6 -11zm0 13.8a6.9 6.9 90 0 1 -4.1 -1.3l9.6-9.6a6.9 6.9 90 0 1 -5.5 10.9z" fill-rule="evenodd"/>
+            </svg>
+        </div>
+    `);
 	    const $shuffleBtn = jquery(`
         <div class="audio-player-playlist-btn shuffle-btn${config$1.playlistShuffle ? ' on' : ''}" aria-label="Shuffle" role="button">
             <svg width="24" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
@@ -111903,14 +112042,20 @@ function InsertStackElement(node, body) {
             </svg>
         </div>
     `);
-	    const $volumeBtn = jquery('.audio-player .volume__button');
-	    const $rightHolder = jquery('<div class="right-holder"></div>');
+	    const $volume = jquery('.audio-player .volume');
+	    const $mainHolder = $playBtn.parent().addClass('main-holder');
+	    const $leftHolder = jquery('<div class="holder left-holder"></div>');
+	    const $rightHolder = jquery('<div class="holder right-holder"></div>');
+	    
+	    $leftHolder.insertBefore($mainHolder);
+	    $leftHolder.append($favBtn);
+	    $ignoreBtn.insertAfter($favBtn);
 	    $shuffleBtn.insertBefore($loadingIndicator);
 	    $prevBtn.insertAfter($shuffleBtn);
 	    $nextBtn.insertAfter($playBtn);
 	    $repeatBtn.insertAfter($nextBtn);
-	    $volumeBtn.wrap($rightHolder);
-	    $playlistAddBtn.insertBefore($volumeBtn);
+	    $volume.wrap($rightHolder);
+	    $playlistAddBtn.insertBefore($volume);
 
 	    $playBtn.addClass('display--none');
 
@@ -111937,26 +112082,57 @@ function InsertStackElement(node, body) {
 	        }, 1000);
 	    });
 
-	    if (playlistIndex !== undefined && playlistIndex > -1) {
+	    if (playlistIndex > -1) {
 	        if (url) {
-	            const $bgmTrackEntryControls = !playlist ? jquery(`.js--bgm-track[data-bgm-track-id='${bgmTrackIds[playlistIndex]}']`).next('.js--bgm-track--collectable-entry--controls') : null;
+	            const bgmTrackId = getPlaylistBgmTrackIds()[playlistIndex];
+	            const $bgmTrackEntry = jquery(`.js--bgm-track[data-bgm-track-id='${bgmTrackId}']`);
+	            const $bgmTrackEntryInputControls = $bgmTrackEntry.parent().children('.js--bgm-track--collectable-entry--input-controls');
+	            const $bgmTrackEntryPlayControls = $bgmTrackEntry.parent().children('.js--bgm-track--collectable-entry--play-controls');
 	            const toggleEntryPlayingInList = function (playing) {
 	                if (!playlist) {
-	                    $bgmTrackEntryControls.children('.js--bgm-track__play').toggleClass('display--none', playing).toggleClass('pressed', playing);
-	                    $bgmTrackEntryControls.children('.js--bgm-track__pause').toggleClass('display--none', !playing).toggleClass('pressed', !playing);
+	                    $bgmTrackEntryPlayControls.children('.js--bgm-track__play').toggleClass('display--none', playing).toggleClass('pressed', playing);
+	                    $bgmTrackEntryPlayControls.children('.js--bgm-track__pause').toggleClass('display--none', !playing).toggleClass('pressed', !playing);
 	                }
 	            };
 
-	            jquery('.playlist-item.playing').removeClass('playing');
+	            if (config$1.bgmTrackInput.hasOwnProperty(bgmTrackId)) {
+	                const input = config$1.bgmTrackInput[bgmTrackId];
+	                $favBtn.addClass(input ? 'on' : 'inactive');
+	                $ignoreBtn.addClass(input ? 'inactive' : 'on');
+	            }
+
+	            jquery('.js--playlist-item.playing').removeClass('playing');
 
 	            jquery('.js--bgm-track__pause:visible').addClass('display--none')
-	                .parent('.js--bgm-track--collectable-entry--controls').children('.js--bgm-track__play').removeClass('display--none').removeClass('pressed');
+	                .parent().children('.js--bgm-track__play').removeClass('display--none').removeClass('pressed');
 	            if (playlist)
-	                jquery(`.playlist-item:nth(${playlistIndex})`).addClass('playing');
+	                jquery(`.js--playlist-item:nth(${playlistIndex})`).addClass('playing');
 
 	            config$1.playlist = !!playlist;
 	            config$1.playlistIndex = playlistIndex;
 	            updateConfig(config$1);
+
+	            const updateBgmTrackInput = function() {
+	                const isFav = jquery(this).hasClass('fav-btn');
+	                const hasInput = config$1.bgmTrackInput.hasOwnProperty(bgmTrackId);
+	                if (!hasInput || !!config$1.bgmTrackInput[bgmTrackId] === isFav) {
+	                    if (hasInput)
+	                        delete config$1.bgmTrackInput[bgmTrackId];
+	                    else
+	                        config$1.bgmTrackInput[bgmTrackId] = isFav ? 1 : 0;
+	                    updateConfig(config$1);
+	                    if (isFav) {
+	                        if (hasInput)
+	                            removeFavBgmTrackEntry(bgmTrackId);
+	                        else
+	                            addFavBgmTrackEntry(bgmTrackId);
+	                    }
+	                    jquery(this).toggleClass('on', !hasInput);
+	                    (isFav ? $ignoreBtn : $favBtn).toggleClass('inactive', !hasInput);
+	                    $bgmTrackEntryInputControls.find(`.js--bgm-track__${isFav ? 'fav' : 'ignore'}`).toggleClass('on', !hasInput);
+	                    $bgmTrackEntryInputControls.find(`.js--bgm-track__${isFav ? 'ignore' : 'fav'}`).toggleClass('inactive', !hasInput);
+	                }
+	            };
 
 	            const playPrevTrack = function() {
 	                if (getPlaylistBgmTrackIds().length > 1) {
@@ -111995,6 +112171,8 @@ function InsertStackElement(node, body) {
 
 	            $prevBtn.on('click', playPrevTrack);
 	            $nextBtn.on('click', playNextTrack);
+	            $favBtn.on('click', updateBgmTrackInput);
+	            $ignoreBtn.on('click', updateBgmTrackInput);
 	            $shuffleBtn.on('click', function() {
 	                const shuffle = (config$1.playlistShuffle = !config$1.playlistShuffle);
 	                jquery(this).toggleClass('on', shuffle);
@@ -112009,7 +112187,7 @@ function InsertStackElement(node, body) {
 	            });
 	            
 	            if (!playlist)
-	                $playlistAddBtn.on('click', () => addPlaylistBgmTrack(bgmTrackIds[playlistIndex]));
+	                $playlistAddBtn.on('click', () => addPlaylistBgmTrack(bgmTrackId));
 	            else
 	                $playlistAddBtn.addClass('inactive');
 	        } else {
@@ -112058,11 +112236,11 @@ function InsertStackElement(node, body) {
 
 	function initBgmTrack(bgmTrack, play, playlistIndex, playlist) {
 	    const imageUrl = bgmTrack.worldId != null ? exports.worldData[bgmTrack.worldId].images[bgmTrack.worldImageOrdinal] : getMissingBgmTrackUrl(bgmTrack.location);
-	    initBgm(bgmTrack.url, getBgmTrackLabel(bgmTrack), imageUrl, play, playlistIndex, playlist);
+	    initBgm(bgmTrack.url, getBgmTrackLabel(bgmTrack), imageUrl, bgmTrack.worldId, play, playlistIndex, playlist);
 	}
 
-	function playBgm(url, label, imageUrl) {
-	    initBgm(url, label, imageUrl, true);
+	function playBgm(url, label, imageUrl, worldId) {
+	    initBgm(url, label, imageUrl, worldId, true);
 	}
 
 	function playBgmTrack(bgmTrack, playlistIndex, playlist) {
@@ -112080,7 +112258,7 @@ function InsertStackElement(node, body) {
 	    const skipTrack = () => playPrevPlaylistBgmTrack(playlistIndex, attempts ? ++attempts : 1);
 	    if (bgmTrackIndexesById.hasOwnProperty(playlistBgmTrackId)) {
 	        const bgmTrack = bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]];
-	        if (bgmTrack.url) {
+	        if (bgmTrack.url && (config$1.playlist || !config$1.bgmTrackInput.hasOwnProperty(playlistBgmTrackId) || config$1.bgmTrackInput[playlistBgmTrackId])) {
 	            GreenAudioPlayer.stopOtherPlayers();
 	            playBgmTrack(bgmTrack, playlistIndex, config$1.playlist);
 	        } else
@@ -112103,7 +112281,7 @@ function InsertStackElement(node, body) {
 	    const skipTrack = () => playNextPlaylistBgmTrack(playlistIndex, attempts ? ++attempts : 1);
 	    if (bgmTrackIndexesById.hasOwnProperty(playlistBgmTrackId)) {
 	        const bgmTrack = bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]];
-	        if (bgmTrack.url) {
+	        if (bgmTrack.url && (config$1.playlist || !config$1.bgmTrackInput.hasOwnProperty(playlistBgmTrackId) || config$1.bgmTrackInput[playlistBgmTrackId])) {
 	            GreenAudioPlayer.stopOtherPlayers();
 	            playBgmTrack(bgmTrack, playlistIndex, config$1.playlist);
 	        } else
@@ -112120,7 +112298,7 @@ function InsertStackElement(node, body) {
 	    if (audioSources.length)
 	        GreenAudioPlayer.pausePlayer(audioSources[0]);
 	    if (!config$1.playlist && config$1.playlistIndex > -1) {
-	        const $bgmTrackEntryControls = jquery(`.js--bgm-track[data-bgm-track-id='${bgmTrackIds[config$1.playlistIndex]}']`).next('.js--bgm-track--collectable-entry--controls');
+	        const $bgmTrackEntryControls = jquery(`.js--bgm-track[data-bgm-track-id='${bgmTrackIds[config$1.playlistIndex]}']`).parent().children('.js--bgm-track--collectable-entry--play-controls');
 	        $bgmTrackEntryControls.children('.js--bgm-track__pause').addClass('display--none');
 	        $bgmTrackEntryControls.children('.js--bgm-track__play').removeClass('display--none').removeClass('pressed');
 	    }
@@ -112237,21 +112415,21 @@ function InsertStackElement(node, body) {
 	function getMissingBgmTrackUrl(location) {
 	    if (location) {
 	        if (/Computer/.test(location))
-	            return 'https://static.wikia.nocookie.net/yume2kki/images/5/5b/Pc1.png/revision/latest';
+	            return 'https://static.wikia.nocookie.net/yume2kki/images/5/5b/Pc1.png';
 	        if (/Console/.test(location))
-	            return 'https://static.wikia.nocookie.net/yume2kki/images/e/ea/Console1.png/revision/latest';
+	            return 'https://static.wikia.nocookie.net/yume2kki/images/e/ea/Console1.png';
 	        if (/Kura Puzzle/i.test(location))
-	            return 'https://static.wikia.nocookie.net/yume2kki/images/0/06/Minigame_Puzzle.png/revision/latest'
+	            return 'https://static.wikia.nocookie.net/yume2kki/images/0/06/Minigame_Puzzle.png'
 	        if (/↑V↑/.test(location))
-	            return 'https://static.wikia.nocookie.net/yume2kki/images/d/de/Wavy1.jpg/revision/latest';
+	            return 'https://static.wikia.nocookie.net/yume2kki/images/d/de/Wavy1.jpg';
 	        if (/Plated Snow Country/i.test(location))
-	            return 'https://static.wikia.nocookie.net/yume2kki/images/e/e4/Minigame_snow_1.png/revision/latest';
+	            return 'https://static.wikia.nocookie.net/yume2kki/images/e/e4/Minigame_snow_1.png';
 	        if (/Minigame B/i.test(location))
-	            return 'https://static.wikia.nocookie.net/yume2kki/images/b/b8/Minigame_RBY_game.png/revision/latest';
+	            return 'https://static.wikia.nocookie.net/yume2kki/images/b/b8/Minigame_RBY_game.png';
 	        if (/Bleak Future/i.test(location))
-	            return 'https://static.wikia.nocookie.net/yume2kki/images/a/ab/2kki-bedroom.png/revision/latest';
+	            return 'https://static.wikia.nocookie.net/yume2kki/images/a/ab/2kki-bedroom.png';
 	        if (/Painter\-kun/i.test(location))
-	            return 'https://static.wikia.nocookie.net/yume2kki/images/9/9b/Painter_painting.png/revision/latest';
+	            return 'https://static.wikia.nocookie.net/yume2kki/images/9/9b/Painter_painting.png';
 	    }
 
 	    return './images/title.png';
@@ -112634,7 +112812,7 @@ function InsertStackElement(node, body) {
 	            const bgColorPixel = uiThemeBgColors[config$1.uiTheme];
 	            const altColor = "rgba(" + Math.min(bgColorPixel[0] + 48, 255) + ", " + Math.min(bgColorPixel[1] + 48, 255) + ", " + Math.min(bgColorPixel[2] + 48, 255) + ", 1)";
 	            getFontShadow(config$1.uiTheme, function (shadow) {
-	                themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/[a-zA-Z0-9\_]+\/(containerbg|border(?:2)?|font\d)\.png\)/g, "url(/images/ui/" + config$1.uiTheme + "/$1.png)")
+	                themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/[a-zA-Z0-9\_]+\/(containerbg|border(?:2)?|arrow(?:up|down)|font\d)\.png\)/g, "url(/images/ui/" + config$1.uiTheme + "/$1.png)")
 	                    .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*basebg\*\//g, "background-color:$1" + color + "$2;$3/*basebg*/")
 	                    .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*altbg\*\//g, "background-color:$1" + altColor + "$2;$3/*altbg*/")
 	                    .replace(/(?:[#a-zA-Z0-9]+|rgba\([0-9]+, [0-9]+, [0-9]+, [0-9]+\))(;? *)\/\*shadow\*\//g, shadow + "$1/*shadow*/");
@@ -112647,15 +112825,24 @@ function InsertStackElement(node, body) {
 	    jquery(".js--font-style").on("change", function() {
 	        config$1.fontStyle = parseInt(jquery(this).val());
 	        const themeStyles = jquery(".js--theme-styles")[0];
+	        const defaultAltFontStyleIndex = !isYNTheme() ? 4 : 1;
 	        getFontColor(config$1.uiTheme, config$1.fontStyle, function (baseColor) {
-	            const altFontStyle = config$1.fontStyle !== 4 ? 4 : 0;
-	            getFontColor(config$1.uiTheme, altFontStyle, function (altColor) {
+	            const altFontStyle = config$1.fontStyle !== defaultAltFontStyleIndex ? defaultAltFontStyleIndex : 0;
+	            const altColorCallback = function (altColor) {
 	                themeStyles.textContent = themeStyles.textContent = themeStyles.textContent = themeStyles.textContent
 	                    .replace(/url\(\/images\/ui\/([a-zA-Z0-9\_]+)\/font\d\.png\)( *!important)?;( *)\/\*base\*\//g, "url(/images/ui/$1/font" + (config$1.fontStyle + 1) + ".png)$2;$3/*base*/")
 	                    .replace(/url\(\/images\/ui\/([a-zA-Z0-9\_]+)\/font\d\.png\)( *!important)?;( *)\/\*alt\*\//g, "url(/images/ui/$1/font" + (altFontStyle + 1) + ".png)$2;$3/*alt*/")
 	                    .replace(/([^\-])((?:(?:background|border)\-)?color|fill):( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "$1$2:$3" + baseColor + "$4;$5/*base*/")
 	                    .replace(/([^\-])((?:(?:background|border)\-)?color|fill):( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "$1$2:$3" + altColor + "$4;$5/*alt*/");
 	                updateConfig(config$1);
+	            };
+	            getFontColor(config$1.uiTheme, altFontStyle, function (altColor) {
+	                if (altColor !== baseColor)
+	                    altColorCallback(altColor);
+	                else {
+	                    const fallbackAltFontStyle = config$1.fontStyle !== defaultAltFontStyleIndex ? defaultAltFontStyleIndex + 1 : 1;
+	                    getFontColor(config$1.uiTheme, fallbackAltFontStyle, altColorCallback);
+	                }
 	            });
 	        });
 	    });
@@ -112866,7 +113053,7 @@ function InsertStackElement(node, body) {
 	function getLoadingGifName() {
 	    const rand = Math.floor(Math.random() * 255);
 	    if (rand > 64)
-	        return "urowalk";
+	        return !isYNTheme() ? "urowalk" : "madowalk";
 	    if (rand > 24)
 	        return "urospin";
 	    if (rand > 8)
@@ -113067,7 +113254,7 @@ function InsertStackElement(node, body) {
 
 	function getWorldLinkForAdmin(world) {
 	    const removedPrefix = world.removed ? '[REMOVED] ' : '';
-	    return `${removedPrefix}<a class="world-link no-border" href="javascript:void(0);" data-world-id="${world.id}">${world.title}</a>`
+	    return `${removedPrefix}<a class="js--world-link world-link no-border" href="javascript:void(0);" data-world-id="${world.id}">${world.title}</a>`
 	}
 
 	let versionUpdateState;
@@ -113615,19 +113802,23 @@ function InsertStackElement(node, body) {
 	        reloadData(isReset ? 'reset' : true);
 	    });
 
-	    jquery(document).on('click', 'a.world-link', function () {
+	    jquery(document).on('click', 'a.js--world-link', function () {
 	        openWorldWikiPage(jquery(this).data('worldId'), isShift);
+	    });
+
+	    jquery(document).on('click', 'a.js--world-node-link', function () {
+	        trySelectNode(jquery(this).data('worldId'), true, true);
 	    });
 	}
 
 	/* End Admin */
 
 	jquery(function () {
+	    loadOrInitConfig();
+
 	    const loadCallback = displayLoadingAnim(jquery('#graphContainer'));
 
 	    initControls();
-
-	    loadOrInitConfig();
 
 	    initLocalization(true);
 

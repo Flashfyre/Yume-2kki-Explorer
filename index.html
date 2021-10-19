@@ -148,6 +148,43 @@
                 image-rendering: pixelated;
             }
 
+            .controls-bottom--container--tab > .controls--container--tab__button,
+            .controls-collectables--container--tab > .controls--container--tab__button,
+            .controls-playlist--container--tab > .controls--container--tab__button {
+                background: url(/images/ui/Cog_Maze/containerbg.png) !important;
+                border-image: url(/images/ui/Cog_Maze/border.png) 8 repeat !important;
+                border: 12px solid transparent;
+            }
+            
+            .controls-bottom--container--tab > .controls--container--tab__button {
+                background: url(/images/ui/Cog_Maze/containerbg.png) !important;
+                border-image: url(/images/ui/Cog_Maze/border.png) 8 repeat !important;
+                border: 12px solid transparent;
+                border-bottom: none;
+            }
+
+            .controls-collectables--container--tab > .controls--container--tab__button {
+                background: url(/images/ui/Cog_Maze/containerbg.png) !important;
+                border-image: url(/images/ui/Cog_Maze/border.png) 8 repeat !important;
+                border: 12px solid transparent;
+                border-right: none;
+            }
+
+            .controls-playlist--container--tab > .controls--container--tab__button {
+                background: url(/images/ui/Cog_Maze/containerbg.png) !important;
+                border-image: url(/images/ui/Cog_Maze/border.png) 8 repeat !important;
+                border: 12px solid transparent;
+                border-left: none;
+            }
+            
+            .tab--up-arrow {
+                background-image: url(/images/ui/Default_Custom/arrowup.png);
+            }
+
+            .tab--down-arrow, .tab--left-arrow, .tab--right-arrow {
+                background-image: url(/images/ui/Default_Custom/arrowdown.png);
+            }
+
             .autocomplete-suggestions {
                 color: rgba(216, 216, 216, 1); /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
@@ -205,16 +242,18 @@
                 color: rgba(255, 255, 157, 1) !important; /*base*/
             }
 
-            .audio-player .play-pause-btn, .audio-player .prev-btn, .audio-player .next-btn, .audio-player .shuffle-btn, .audio-player .playlist-add-btn, .audio-player .volume__button, .collectable-entry--controls > .collectable-entry--control {
+            .audio-player .play-pause-btn, .audio-player .prev-btn, .audio-player .next-btn, .audio-player .fav-btn, .audio-player .ignore-btn, .audio-player .shuffle-btn, .audio-player .playlist-add-btn, .audio-player .volume__button, .collectable-entry--controls > .collectable-entry--control {
                 filter: drop-shadow(1.5px 1.5px black /*shadow*/);
             }
 
-            .audio-player .play-pause-btn__icon, .audio-player .prev-btn__icon, .audio-player .next-btn__icon, .audio-player .shuffle-btn__icon, .audio-player .repeat-btn__icon,
-            .audio-player .playlist-add-btn__icon, .audio-player .volume__button .volume__speaker, .collectable-entry--controls > .collectable-entry--control .collectable-entry--control__icon {
+            .audio-player .play-pause-btn__icon, .audio-player .prev-btn__icon, .audio-player .next-btn__icon, .audio-player .fav-btn__icon, .audio-player .ignore-btn__icon,
+            .audio-player .shuffle-btn__icon, .audio-player .repeat-btn__icon, .audio-player .playlist-add-btn__icon, .audio-player .volume__button .volume__speaker,
+            .collectable-entry--controls > .collectable-entry--control .collectable-entry--control__icon {
                 fill: rgba(216, 216, 216, 1); /*base*/
             }
 
-            .audio-player .shuffle-btn.on .shuffle-btn__icon, .audio-player .repeat-btn.on .repeat-btn__icon, .audio-player .volume__button.open path.volume__speaker {
+            .audio-player .fav-btn.on .fav-btn__icon, .audio-player .ignore-btn.on .ignore-btn__icon, .audio-player .shuffle-btn.on .shuffle-btn__icon, .audio-player .repeat-btn.on .repeat-btn__icon, .audio-player .volume__button.open path.volume__speaker,
+            .collectable-entry--controls > .bgm-track__fav.on .collectable-entry--control__icon, .collectable-entry--controls > .bgm-track__ignore.on .collectable-entry--control__icon {
                 fill: rgba(255, 255, 157, 1) !important; /*alt*/
             }
 
@@ -279,7 +318,9 @@
                 <div id="graph" class="graph"></div>
             </div>
             <div class="controls--container--tab controls-side--container--tab controls-collectables--container--tab" style="display: none;">
-                <button class="controls--container--tab__button controls-side--container--tab__button controls-collectables--container--tab__button noselect">◀</button>
+                <button class="controls--container--tab__button controls-side--container--tab__button controls-collectables--container--tab__button noselect">
+                    <a href="javascript:void(0);" class="tab--arrow tab--left-arrow no-border">&nbsp;</a>
+                </button>
             </div>
             <div class="controls--container controls-side--container controls-collectables--container">
                 <div class="y2e-controls controls-side controls-collectables" style="opacity: 0;">
@@ -294,7 +335,9 @@
                 </div>
             </div>
             <div class="controls--container--tab controls-side--container--tab controls-playlist--container--tab display--none" style="display: none;">
-                <button class="controls--container--tab__button controls-side--container--tab__button controls-playlist--container--tab__button noselect">▶</button>
+                <button class="controls--container--tab__button controls-side--container--tab__button controls-playlist--container--tab__button noselect">
+                    <a href="javascript:void(0);" class="tab--arrow tab--right-arrow no-border">&nbsp;</a>
+                </button>
             </div>
             <div class="controls--container controls-side--container controls-playlist--container display--none">
                 <div class="y2e-controls controls-side controls-playlist" style="opacity: 0;">
@@ -302,7 +345,9 @@
                 </div>
             </div>
             <div class="controls--container--tab controls-bottom--container--tab" style="display: none;">
-                <button class="controls--container--tab__button controls-bottom--container--tab__button noselect">▲</button>
+                <button class="controls--container--tab__button controls-bottom--container--tab__button noselect">
+                    <a href="javascript:void(0);" class="tab--arrow tab--up-arrow no-border">&nbsp;</a>
+                </button>
             </div>
             <div class="controls--container controls-bottom--container">
                 <div class="y2e-controls controls-bottom" style="opacity: 0;">
@@ -513,19 +558,31 @@
                         <label data-localize="bgmTracksModal.search" class="noselect">Search:</label>
                         <div class="js--bgm-track-search--container"></div>
                     </div>
+                    <div class="js--fav-bgm-tracks--section display--none">
+                        <span class="bgm-tracks__fav-title noselect">
+                            <h2 data-localize="bgmTracksModal.favBgmTracks">Favourite Tracks</h2>
+                            <hr />
+                        </span>
+                        <div class="js--fav-bgm-tracks-container collectables-container">
+                            <div class="js--fav-bgm-tracks-container__items collectables-container__items"></div>
+                            <div class="js--fav-bgm-tracks-container__borders collectables-container__borders"></div>
+                        </div>
+                    </div>
+                    <span class="bgm-tracks__music-room-title noselect">
+                        <h2 data-localize="bgmTracksModal.musicRoomBgmTracks">Music Room Tracks</h2>
+                        <hr />
+                    </span>
                     <div class="js--bgm-tracks-container collectables-container">
                         <div class="js--bgm-tracks-container__items collectables-container__items"></div>
                         <div class="js--bgm-tracks-container__borders collectables-container__borders"></div>
                     </div>
-                    <div class="js--unnumbered-content">
-                        <span class="bgm-tracks__unnumbered-title noselect">
-                            <h2 data-localize="bgmTracksModal.unnumberedBgmTracks">Unnumbered Tracks</h2>
-                            <hr />
-                        </span>
-                        <div class="js--unnumbered-bgm-tracks-container collectables-container">
-                            <div class="js--unnumbered-bgm-tracks-container__items collectables-container__items"></div>
-                            <div class="js--unnumbered-bgm-tracks-container__borders collectables-container__borders"></div>
-                        </div>
+                    <span class="bgm-tracks__unnumbered-title noselect">
+                        <h2 data-localize="bgmTracksModal.unnumberedBgmTracks">Unnumbered Tracks</h2>
+                        <hr />
+                    </span>
+                    <div class="js--unnumbered-bgm-tracks-container collectables-container">
+                        <div class="js--unnumbered-bgm-tracks-container__items collectables-container__items"></div>
+                        <div class="js--unnumbered-bgm-tracks-container__borders collectables-container__borders"></div>
                     </div>
                     <div class="js--removed-content">
                         <span class="bgm-tracks__removed-title noselect">

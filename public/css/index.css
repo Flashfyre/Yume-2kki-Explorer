@@ -128,7 +128,17 @@ h1 {
 
 .controls-playlist--container--tab {
     bottom: calc(50% - 64px);
-    left: -8px;
+    left: -12px;
+}
+
+.controls-collectables--container--tab > .controls--container--tab__button {
+    padding: 0;
+    margin-left: 0;
+}
+
+.controls-playlist--container--tab > .controls--container--tab__button {
+    padding: 0;
+    margin-right: 0;
 }
 
 .controls--container--tab__button, .collectable-entry--expand {
@@ -136,32 +146,17 @@ h1 {
     align-items: center;
     font-family: 'MS Gothic';
     font-size: 18px;
-    border: none;
-    background-image: none;
-    background-color: rgba(255, 255, 255, 0.25);
 }
 
 .controls-bottom--container--tab > .controls--container--tab__button {
     flex-direction: column;
     width: calc(100% - 16px);
-    height: 16px;
-    padding: 6px 0 24px 0;
-    border-radius: 8px 8px 0 0;
+    height: 30px;
 }
 
 .controls-side--container--tab > .controls--container--tab__button {
     flex-direction: row;
-    padding: 0 24px 0 6px;
     height: calc(100% - 16px);
-    width: 16px;
-}
-
-.controls-collectables--container--tab > .controls--container--tab__button {
-    border-radius: 8px 0 0 8px;
-}
-
-.controls-playlist--container--tab > .controls--container--tab__button {
-    border-radius: 0 8px 8px 0;
 }
 
 .control {
@@ -451,10 +446,18 @@ a.close-modal {
 }
 
 .collectable.expanded {
-    margin-right: 380px;
+    margin-right: 396px;
+}
+
+.version-entry {
+    margin-right: 26px;
 }
 
 .bgm-track.collectable {
+    margin-right: 118px;
+}
+
+.fav-bgm-track.collectable {
     margin-right: 54px;
 }
 
@@ -503,11 +506,11 @@ a.close-modal {
 
 .collectable-entry--container > .collectable-entry--expand {
     flex-direction: row;
-    width: 22px;
-    height: 242px;
+    width: 36px;
     margin: 22px 0 24px 0;
     padding: 2px;
-    border-radius: 0px 8px 8px 0px;
+    border-width: 12px;
+    border-left: none;
 }
 
 .collectable-entry--container > .collectable-entry--controls {
@@ -526,8 +529,20 @@ a.close-modal {
     border-width: 12px;
 }
 
-.collectable--border:not([data-id]), .collectable--border:not([data-id]) + .collectable-entry--controls > .collectable-entry--control:not(.bgm-track__set-image) {
+.collectable-entry--container > .collectable-entry--controls + .collectable-entry--controls > .collectable-entry--control {
+    width: calc(100% - 12px);
+    border-left-width: 0px;
+}
+
+.collectable--border:not([data-id]), .collectable--border:not([data-id]) + .collectable-entry--controls > .collectable-entry--control:not(.bgm-track__set-image),
+    .collectable--border:not([data-id]) + .collectable-entry--controls + .collectable-entry--controls > .collectable-entry--control {
     filter: grayscale(1);
+    cursor: default;
+}
+
+.collectable--border + .collectable-entry--controls > .collectable-entry--control.inactive {
+    filter: grayscale(1);
+    cursor: default;
 }
 
 .collectable-entry {
@@ -680,6 +695,30 @@ a.close-modal {
     height: 140px;
 }
 
+.tab--arrow {
+    width: 32px;
+    height: 16px;
+    background-size: cover;
+}
+
+.tab--up-arrow {
+    margin-top: -6px;
+}
+
+.tab--right-arrow {
+    margin-right: -6px;
+    transform: rotate(-90deg);
+}
+
+.tab--down-arrow {
+    margin-bottom: -6px;
+}
+
+.tab--left-arrow {
+    margin-left: -6px;
+    transform: rotate(90deg);
+}
+
 .autocomplete-suggestions {
     border: 6px solid transparent;
     overflow: auto;
@@ -761,7 +800,7 @@ a.close-modal {
 .audio-player-container {
     position: absolute;
     display: flex;
-    width: 672px;
+    width: 694px;
     margin-left: 10px;
     top: calc(100% - 105px);
     z-index: 11;
@@ -785,41 +824,49 @@ a.close-modal {
 }
 
 .audio-player-marquee {
-    margin-left: 25px;
+    margin-left: 65px;
     margin-right: 25px;
 }
 
 .audio-player {
     background: none !important;
-    width: 600px !important;
+    width: 624px !important;
 }
 
-.audio-player .holder, .audio-player .right-holder {
+.audio-player .holder {
     display: flex;
     justify-content: space-between;
 }
 
-.audio-player .holder {
+.audio-player .main-holder {
     min-width: 166px;
+}
+
+.audio-player .left-holder {
+    height: 100%;
+    min-width: 24px;
+    margin-top: -16px;
+    margin-right: 16px;
+    flex-flow: column;
 }
 
 .audio-player .right-holder {
     min-width: 64px;
 }
 
-.audio-player .holder .loading {
+.audio-player .main-holder .loading {
     width: 18px;
 }
 
-.audio-player .holder .loading .loading__spinner {
+.audio-player .main-holder .loading .loading__spinner {
     margin-left: 74px;
 }
 
-.audio-player .holder .audio-player-playlist-btn:not(.inactive), .audio-player .right-holder .audio-player-playlist-btn:not(.inactive) {
+.audio-player .holder .audio-player-playlist-btn:not(.inactive) {
     cursor: pointer;
 }
 
-.audio-player .holder .audio-player-playlist-btn.inactive, .audio-player .right-holder .audio-player-playlist-btn.inactive {
+.audio-player .holder .audio-player-playlist-btn.inactive {
     opacity: 0.5;
 }
 
