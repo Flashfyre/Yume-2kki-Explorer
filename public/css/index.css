@@ -144,8 +144,6 @@ h1 {
 .controls--container--tab__button, .collectable-entry--expand {
     display: flex;
     align-items: center;
-    font-family: 'MS Gothic';
-    font-size: 18px;
 }
 
 .controls-bottom--container--tab > .controls--container--tab__button {

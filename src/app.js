@@ -1000,8 +1000,7 @@ function initBgmTrackData(data) {
                         }
                     }
                 }
-            } else
-                initBgmTrackImagesModal($bgmTrackEntry, getBgmTrackImageContainer);
+            }
         }).parent().parent().children('.js--bgm-track--collectable-entry--play-controls').children().on('click', function () {
             const isPlay = $(this).hasClass('js--bgm-track__play');
             const isPause = !isPlay && $(this).hasClass('js--bgm-track__pause');
@@ -1016,6 +1015,11 @@ function initBgmTrackData(data) {
             } else if ($(this).hasClass('js--bgm-track__playlist-add'))
                 addPlaylistBgmTrack($(this).parent().parent().children('.js--bgm-track').data('bgmTrackId'));
         });
+
+    $('.js--bgm-track__set-image').on('click', function () {
+        const $bgmTrackEntry = $(this).parent().parent().children('.js--bgm-track');
+        initBgmTrackImagesModal($bgmTrackEntry, getBgmTrackImageContainer);
+    });
     
     $('.js--bgm-track').on('mousemove', function (e) {
         $tooltip.css({
@@ -3795,7 +3799,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.9.0");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.9.1");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {

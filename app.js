@@ -2848,7 +2848,7 @@ function updateBgmTrackData(pool, worldData) {
                     const newBgmTrackIds = Object.keys(newBgmTracksByTrackId);
                     if (newBgmTrackIds.length) {
                         let i = 0;
-                        let bgmTracksQuery = 'INSERT INTO bgm_tracks (trackNo, variant, name, location, locationJP, worldId, url, notes, notesJP, removed) VALUES ';
+                        let bgmTracksQuery = 'INSERT INTO bgm_tracks (trackNo, variant, name, location, locationJP, worldId, worldImageOrdinal, url, notes, notesJP, removed) VALUES ';
                         for (let t in newBgmTracksByTrackId) {
                             const newBgmTrack = newBgmTracksByTrackId[t];
                             if (i++)
@@ -2863,7 +2863,7 @@ function updateBgmTrackData(pool, worldData) {
                             const notes = newBgmTrack.notes ? `'${newBgmTrack.notes.replace(/'/g, "''")}'` : 'NULL';
                             const notesJP = newBgmTrack.notesJP ? `'${newBgmTrack.notesJP}'` : 'NULL';
                             const removed = newBgmTrack.removed ? '1' : '0';
-                            bgmTracksQuery += `(${trackNo}, ${variant}, ${name}, ${location}, ${locationJP}, ${worldId}, ${url}, ${notes}, ${notesJP}, ${removed})`;
+                            bgmTracksQuery += `(${trackNo}, ${variant}, ${name}, ${location}, ${locationJP}, ${worldId}, 0, ${url}, ${notes}, ${notesJP}, ${removed})`;
                         }
                         pool.query(bgmTracksQuery, (err, res) => {
                             if (err) return reject(err);

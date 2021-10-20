@@ -1,4 +1,4 @@
-// Version 3.9.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.9.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -108810,8 +108810,7 @@ function InsertStackElement(node, body) {
 	                        }
 	                    }
 	                }
-	            } else
-	                initBgmTrackImagesModal($bgmTrackEntry, getBgmTrackImageContainer);
+	            }
 	        }).parent().parent().children('.js--bgm-track--collectable-entry--play-controls').children().on('click', function () {
 	            const isPlay = jquery(this).hasClass('js--bgm-track__play');
 	            const isPause = !isPlay && jquery(this).hasClass('js--bgm-track__pause');
@@ -108826,6 +108825,11 @@ function InsertStackElement(node, body) {
 	            } else if (jquery(this).hasClass('js--bgm-track__playlist-add'))
 	                addPlaylistBgmTrack(jquery(this).parent().parent().children('.js--bgm-track').data('bgmTrackId'));
 	        });
+
+	    jquery('.js--bgm-track__set-image').on('click', function () {
+	        const $bgmTrackEntry = jquery(this).parent().parent().children('.js--bgm-track');
+	        initBgmTrackImagesModal($bgmTrackEntry, getBgmTrackImageContainer);
+	    });
 	    
 	    jquery('.js--bgm-track').on('mousemove', function (e) {
 	        $tooltip.css({
@@ -111603,7 +111607,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.9.0");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.9.1");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
