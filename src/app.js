@@ -1219,21 +1219,6 @@ function loadOrInitConfig() {
                         case "versionDisplayToggles":
                             value = getUpdatedVersionDisplayToggles(value);
                             break;
-                        case "playlist":
-                            config.playlist = value;
-                            break;
-                        case "playlistIndex":
-                            config.playlistIndex = value;
-                            break;
-                        case "playlistShuffle":
-                            config.playlistShuffle = value;
-                            break;
-                        case "playlistRepeat":
-                            config.playlistRepeat = value;
-                            break;
-                        case "playlistBgmTrackIds":
-                            config.playlistBgmTrackIds = value;
-                            break;
                     }
                     config[key] = value;
                 }
@@ -1321,7 +1306,6 @@ function updateControlsContainer(updateTabMargin) {
     const playlistControlsHeight = $(".controls-playlist").outerHeight();
     const playlistControlsWidth = $(".controls-playlist").outerWidth();
     $(".controls-playlist--container--tab").css({
-        "width": `${playlistControlsWidth}px`,
         "bottom": `${104 + (((playlistControlsHeight + 16) - $(".controls-playlist--container--tab").outerHeight()) / 2)}px`,
     });
     $(".controls-playlist--container").css({
@@ -3799,7 +3783,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.9.1");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.9.2");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {

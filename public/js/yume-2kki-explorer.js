@@ -1,4 +1,4 @@
-// Version 3.9.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.9.2 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -109029,21 +109029,6 @@ function InsertStackElement(node, body) {
 	                        case "versionDisplayToggles":
 	                            value = getUpdatedVersionDisplayToggles(value);
 	                            break;
-	                        case "playlist":
-	                            config$1.playlist = value;
-	                            break;
-	                        case "playlistIndex":
-	                            config$1.playlistIndex = value;
-	                            break;
-	                        case "playlistShuffle":
-	                            config$1.playlistShuffle = value;
-	                            break;
-	                        case "playlistRepeat":
-	                            config$1.playlistRepeat = value;
-	                            break;
-	                        case "playlistBgmTrackIds":
-	                            config$1.playlistBgmTrackIds = value;
-	                            break;
 	                    }
 	                    config$1[key] = value;
 	                }
@@ -109131,7 +109116,6 @@ function InsertStackElement(node, body) {
 	    const playlistControlsHeight = jquery(".controls-playlist").outerHeight();
 	    const playlistControlsWidth = jquery(".controls-playlist").outerWidth();
 	    jquery(".controls-playlist--container--tab").css({
-	        "width": `${playlistControlsWidth}px`,
 	        "bottom": `${104 + (((playlistControlsHeight + 16) - jquery(".controls-playlist--container--tab").outerHeight()) / 2)}px`,
 	    });
 	    jquery(".controls-playlist--container").css({
@@ -111607,7 +111591,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.9.1");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.9.2");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
