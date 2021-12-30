@@ -3638,22 +3638,22 @@ function getMapLocationNames(mapId, prevMapId, pool) {
     return new Promise((resolve, reject) => {
         let query = `
             SELECT w.id, w.title, w.titleJP
-            FROM y2e.worlds w
-            JOIN y2e.world_maps wm
+            FROM worlds w
+            JOIN world_maps wm
                 ON wm.worldId = w.id
-            JOIN y2e.maps m
+            JOIN maps m
                 ON m.id = wm.mapId
             WHERE m.mapId = '${mapId}'
         `;
         if (prevMapId)
             query += `
                 AND EXISTS (
-                    SELECT w2.id FROM y2e.worlds w2
-                    JOIN y2e.conns w2c
+                    SELECT w2.id FROM worlds w2
+                    JOIN conns w2c
                         ON w2c.sourceId = w2.id OR w2c.targetId = w2.id
-                    JOIN y2e.world_maps wm2
+                    JOIN world_maps wm2
                         ON wm2.worldId = w2.id
-                    JOIN y2e.maps m2
+                    JOIN maps m2
                         ON m2.id = wm2.mapId
                     WHERE m2.mapId = '${prevMapId}'
                         AND (w2c.sourceId = w.id OR w2c.targetId = w.id)
