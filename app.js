@@ -3613,4 +3613,60 @@ function dec(str) {
     return ret;
 }
 
+app.get('/getMapLocationNames', function(req, res) {
+    const mapId = req.query.mapId;
+    const prevMapId = req.query.prevMapId;
+    const mapIdPattern = /^\d{4}$/;
+    if (mapId && mapIdPattern.test(mapId) && (!prevMapId || mapIdPattern.test(prevMapId))) {
+        getConnPool().then(pool => {
+            getMapLocationNames(req.query.mapId, req.query.prevMapId, pool)
+                .then(data => res.json(data))
+                .catch(err => {
+                    console.error(err);
+                    res.json({ error: "Failed to query location names" });
+                })
+                .finally(() => pool.end());
+        }).catch(err => {
+            console.error(err);
+            res.json({ error: "Failed to connect to database" });
+        });
+    } else
+        res.json({ error: 'Invalid request' });
+});
+
+function getMapLocationNames(mapId, prevMapId, pool) {
+    return new Promise((resolve, reject) => {
+        let query = `
+            SELECT w.id, w.title, w.titleJP
+            FROM y2e.worlds w
+            JOIN y2e.world_maps wm
+                ON wm.worldId = w.id
+            JOIN y2e.maps m
+                ON m.id = wm.mapId
+            WHERE m.mapId = '${mapId}'
+        `;
+        if (prevMapId)
+            query += `
+                AND EXISTS (
+                    SELECT w2.id FROM y2e.worlds w2
+                    JOIN y2e.conns w2c
+                        ON w2c.sourceId = w2.id OR w2c.targetId = w2.id
+                    JOIN y2e.world_maps wm2
+                        ON wm2.worldId = w2.id
+                    JOIN y2e.maps m2
+                        ON m2.id = wm2.mapId
+                    WHERE m2.mapId = '${prevMapId}'
+                        AND (w2c.sourceId = w.id OR w2c.targetId = w.id)
+                )
+            `;
+        pool.query(query, (err, rows) => {
+            if (err) return reject(err);
+            const ret = [];
+            for (let row of rows)
+                ret.push({ title: row.title, titleJP: row.titleJP });
+            resolve(ret);
+        });
+    });
+}
+
 app.listen(port, () => console.log(`Yume 2kki Explorer app listening on port ${port}`));
