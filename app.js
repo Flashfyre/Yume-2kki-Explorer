@@ -3617,6 +3617,7 @@ app.get('/getMapLocationNames', function(req, res) {
     const mapId = req.query.mapId;
     const prevMapId = req.query.prevMapId;
     const mapIdPattern = /^\d{4}$/;
+    res.setHeader('Access-Control-Allow-Origin', 'https://ynoproject.net');
     if (mapId && mapIdPattern.test(mapId) && (!prevMapId || mapIdPattern.test(prevMapId))) {
         getConnPool().then(pool => {
             getMapLocationNames(req.query.mapId, req.query.prevMapId, pool)
