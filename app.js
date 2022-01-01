@@ -2739,7 +2739,7 @@ function getWallpaperWikiData(worldData) {
                 let spec = '';
 
                 if (hasSpec) {
-                    const specRegex = new RegExp(`id="Wallpaper\_#${wallpaperId}".*([\\s\\S]*?)<(?:p> *<br.*|h2)`);
+                    const specRegex = new RegExp(`id="Wallpaper\_#${wallpaperId}".*([\\s\\S]*?)<.*?h3`);
                     const specMatch = specRegex.exec(specHtml);
                     if (specMatch)
                         spec = '<br>' + specMatch[1].trim();
