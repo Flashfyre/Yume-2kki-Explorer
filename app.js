@@ -240,6 +240,11 @@ function getConnPool() {
 app.use(express.static('public'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use((req, res, next) => {
+    if (req.get('Host').indexOf('herokuapp') > -1)
+        return res.redirect(301, 'https://2kki.app' + req.originalUrl);
+    return next();
+});
 
 app.get('/', (_, res) => res.sendFile('index.html', { root: '.' }));
 
