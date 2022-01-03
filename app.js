@@ -272,12 +272,12 @@ app.post('/checkUpdateData', function(req, res) {
             pool.end();
         };
         pool.query('SELECT lastFullUpdate FROM updates WHERE DATE_ADD(lastFullUpdate, INTERVAL 1 WEEK) < NOW()', (err, rows) => {
-            if (err) return reject(err);
+            if (err) console.error(err);
             if (rows.length)
                 callback('reset');
             else {
                 pool.query('SELECT lastUpdate FROM updates WHERE DATE_ADD(lastUpdate, INTERVAL 1 HOUR) < NOW()', (err, rows) => {
-                    if (err) return reject(err);
+                    if (err) console.error(err);
                     if (rows.length)
                         callback(true);
                     else
@@ -3621,11 +3621,12 @@ function dec(str) {
 app.get('/getMapLocationNames', function(req, res) {
     const mapId = req.query.mapId;
     const prevMapId = req.query.prevMapId;
+    const prev2MapId = req.query.prev2MapId;
     const mapIdPattern = /^\d{4}$/;
     res.setHeader('Access-Control-Allow-Origin', 'https://ynoproject.net');
-    if (mapId && mapIdPattern.test(mapId) && (!prevMapId || mapIdPattern.test(prevMapId))) {
+    if (mapId && mapIdPattern.test(mapId) && (!prevMapId || mapIdPattern.test(prevMapId)) && (!prev2MapId || mapIdPattern.test(prev2MapId))) {
         getConnPool().then(pool => {
-            getMapLocationNames(req.query.mapId, req.query.prevMapId, pool)
+            getMapLocationNames(req.query.mapId, req.query.prevMapId, req.query.prev2MapId, pool)
                 .then(data => res.json(data))
                 .catch(err => {
                     console.error(err);
@@ -3640,7 +3641,7 @@ app.get('/getMapLocationNames', function(req, res) {
         res.json({ error: 'Invalid request' });
 });
 
-function getMapLocationNames(mapId, prevMapId, pool) {
+function getMapLocationNames(mapId, prevMapId, prev2MapId, pool) {
     return new Promise((resolve, reject) => {
         let query = `
             SELECT w.id, w.title, w.titleJP
@@ -3651,7 +3652,7 @@ function getMapLocationNames(mapId, prevMapId, pool) {
                 ON m.id = wm.mapId
             WHERE m.mapId = '${mapId}'
         `;
-        if (prevMapId)
+        if (prevMapId) {
             query += `
                 AND EXISTS (
                     SELECT w2.id FROM worlds w2
@@ -3662,9 +3663,23 @@ function getMapLocationNames(mapId, prevMapId, pool) {
                     JOIN maps m2
                         ON m2.id = wm2.mapId
                     WHERE m2.mapId = '${prevMapId}'
-                        AND (w2c.sourceId = w.id OR w2c.targetId = w.id)
-                )
-            `;
+                        AND (w2c.sourceId = w.id OR w2c.targetId = w.id)`;
+            if (prev2MapId) {
+                query += `
+                    AND EXISTS (
+                        SELECT w3.id FROM worlds w3
+                        JOIN conns w3c
+                            ON w3c.sourceId = w3.id OR w3c.targetId = w3.id
+                        JOIN world_maps wm3
+                            ON wm3.worldId = w3.id
+                        JOIN maps m3
+                            ON m3.id = wm3.mapId
+                        WHERE m3.mapId = '${prev2MapId}'
+                            AND (w3c.sourceId = w2.id OR w3c.targetId = w2.id)
+                    )`;
+            }
+            query += ')';
+        }
         pool.query(query, (err, rows) => {
             if (err) return reject(err);
             const ret = [];
