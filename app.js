@@ -3674,7 +3674,12 @@ function getMapLocationNames(mapId, prevMapId, prevLocationName, pool) {
             const ret = [];
             for (let row of rows)
                 ret.push({ title: row.title, titleJP: row.titleJP });
-            resolve(ret);
+            if (prevLocationName && !ret.length)
+                getMapLocationNames(mapId, prevMapId, null, pool)
+                    .then(data => resolve(data))
+                    .catch(err => reject(err));
+            else
+                resolve(ret);
         });
     });
 }
