@@ -3629,7 +3629,7 @@ app.get('/getMapLocationNames', function(req, res) {
                 .then(data => res.json(data))
                 .catch(err => {
                     console.error(err);
-                    res.json({ error: "Failed to query location names" });
+                    res.json({ error: "Failed to query map location names" });
                 })
                 .finally(() => pool.end());
         }).catch(err => {
@@ -3680,6 +3680,49 @@ function getMapLocationNames(mapId, prevMapId, prevLocationName, pool) {
                     .catch(err => reject(err));
             else
                 resolve(ret);
+        });
+    });
+}
+
+app.get('/getLocationMaps', function(req, res) {
+    const locationName = req.query.locationName;
+    res.setHeader('Access-Control-Allow-Origin', 'https://ynoproject.net');
+    if (locationName) {
+        getConnPool().then(pool => {
+            getLocationMaps(locationName, pool)
+                .then(data => res.json(data))
+                .catch(err => {
+                    console.error(err);
+                    res.json({ error: "Failed to query location maps" });
+                })
+                .finally(() => pool.end());
+        }).catch(err => {
+            console.error(err);
+            res.json({ error: "Failed to connect to database" });
+        });
+    } else
+        res.json({ error: 'Invalid request' });
+});
+
+function getLocationMaps(locationName, pool) {
+    return new Promise((resolve, reject) => {
+        let query = `
+            SELECT w.mapUrl, w.mapLabel
+            FROM worlds w
+            WHERE w.title = '${locationName}'
+        `;
+        pool.query(query, (err, rows) => {
+            if (err) return reject(err);
+            const ret = [];
+            if (rows.length) {
+                const row = rows[0];
+                const urls = row.mapUrl.split('|');
+                const labels = row.mapLabel.split('|');
+                const mapCount = Math.min(urls.length, labels.length);
+                for (let m = 0; m < mapCount; m++)
+                    ret.push({ url: urls[m], label: labels[m] })
+            }
+            resolve(ret);
         });
     });
 }
