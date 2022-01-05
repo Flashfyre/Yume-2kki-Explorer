@@ -3716,11 +3716,13 @@ function getLocationMaps(locationName, pool) {
             const ret = [];
             if (rows.length) {
                 const row = rows[0];
-                const urls = row.mapUrl.split('|');
-                const labels = row.mapLabel.split('|');
-                const mapCount = Math.min(urls.length, labels.length);
-                for (let m = 0; m < mapCount; m++)
-                    ret.push({ url: urls[m], label: labels[m] })
+                if (row.mapUrl) {
+                    const urls = row.mapUrl.split('|');
+                    const labels = (row.mapLabel || '').split('|');
+                    const mapCount = Math.min(urls.length, labels.length);
+                    for (let m = 0; m < mapCount; m++)
+                        ret.push({ url: urls[m], label: labels[m] })
+                }
             }
             resolve(ret);
         });
