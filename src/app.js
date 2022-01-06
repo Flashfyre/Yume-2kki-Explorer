@@ -32,6 +32,7 @@ $(document).on("keyup", function (event) {
         isCtrl = false;
 });
 
+const urlSearchParams = new URLSearchParams(window.location.search);
 let isDebug = false;
 let isShift = false;
 let isCtrl = false;
@@ -1358,7 +1359,6 @@ export function loadData(update, onSuccess, onFail) {
     let queryString = '';
     if (config.removedContentMode === 1)
         queryString = '?includeRemovedContent=true';
-    const urlSearchParams = new URLSearchParams(window.location.search);
     if (urlSearchParams.has("adminKey"))
         queryString += `${queryString.length ? "&" : "?"}adminKey=${urlSearchParams.get("adminKey")}`;
     const loadData = () => $.get(`/data${queryString}`).done(data => onSuccess(data)).fail(onFail);
@@ -3464,6 +3464,15 @@ function reloadGraph() {
     if (graph)
         graph._destructor();
     initGraph(config.renderMode, config.displayMode, matchPaths);
+    if (urlSearchParams.has('location')) {
+        const worldName = urlSearchParams.get('location');
+        const node = graph.graphData().nodes.find(n => worldData[n.id].title === worldName);
+        if (node) {
+            window.setTimeout(function () {
+                trySelectNode(node, true, true);
+            }, 2000);
+        }
+    }
 }
 
 function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
@@ -3777,13 +3786,19 @@ function findRealPathDepth(paths, worldId, pathWorldIds, worldDepthsMap, maxDept
 }
 
 function initLocalization(isInitial) {
+    if (isInitial && urlSearchParams.has("lang")) {
+        const urlLang = urlSearchParams.get("lang");
+        if (/^(?:en|ja)$/.test(urlLang))
+            config.lang = urlLang;
+    }
+
     const isEn = config.lang === "en";
 
     $("[data-localize]").localize("ui", {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.9.8");
+            data.footer.about = data.footer.about.replace("{VERSION}", "3.10.0");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
@@ -5831,7 +5846,7 @@ function initVersionUpdateEvents() {
             if (versionUpdateEntryUpdateWorldIds.length) {
                 const user = $('.js--username-input').val();
                 const data = {
-                    adminKey: new URLSearchParams(window.location.search).get('adminKey'),
+                    adminKey: urlSearchParams.get('adminKey'),
                     user: user,
                     version: verName,
                     entries: versionUpdateEntryUpdateWorldIds.map(w => $.extend({ location: worldData[w].title }, versionUpdateState.updatedWorldVerInfo[w]))

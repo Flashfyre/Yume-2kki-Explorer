@@ -1,4 +1,4 @@
-// Version 3.9.8 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 3.10.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -107844,6 +107844,7 @@ function InsertStackElement(node, body) {
 	        isCtrl = false;
 	});
 
+	const urlSearchParams = new URLSearchParams(window.location.search);
 	let isDebug = false;
 	let isShift = false;
 	let isCtrl = false;
@@ -109168,7 +109169,6 @@ function InsertStackElement(node, body) {
 	    let queryString = '';
 	    if (config$1.removedContentMode === 1)
 	        queryString = '?includeRemovedContent=true';
-	    const urlSearchParams = new URLSearchParams(window.location.search);
 	    if (urlSearchParams.has("adminKey"))
 	        queryString += `${queryString.length ? "&" : "?"}adminKey=${urlSearchParams.get("adminKey")}`;
 	    const loadData = () => jquery.get(`/data${queryString}`).done(data => onSuccess(data)).fail(onFail);
@@ -111272,6 +111272,15 @@ function InsertStackElement(node, body) {
 	    if (exports.graph)
 	        exports.graph._destructor();
 	    initGraph(config$1.renderMode, config$1.displayMode, matchPaths);
+	    if (urlSearchParams.has('location')) {
+	        const worldName = urlSearchParams.get('location');
+	        const node = exports.graph.graphData().nodes.find(n => exports.worldData[n.id].title === worldName);
+	        if (node) {
+	            window.setTimeout(function () {
+	                trySelectNode(node, true, true);
+	            }, 2000);
+	        }
+	    }
 	}
 
 	function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
@@ -111585,13 +111594,19 @@ function InsertStackElement(node, body) {
 	}
 
 	function initLocalization(isInitial) {
+	    if (isInitial && urlSearchParams.has("lang")) {
+	        const urlLang = urlSearchParams.get("lang");
+	        if (/^(?:en|ja)$/.test(urlLang))
+	            config$1.lang = urlLang;
+	    }
+
 	    const isEn = config$1.lang === "en";
 
 	    jquery("[data-localize]").localize("ui", {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.9.8");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "3.10.0");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
@@ -113637,7 +113652,7 @@ function InsertStackElement(node, body) {
 	            if (versionUpdateEntryUpdateWorldIds.length) {
 	                const user = jquery('.js--username-input').val();
 	                const data = {
-	                    adminKey: new URLSearchParams(window.location.search).get('adminKey'),
+	                    adminKey: urlSearchParams.get('adminKey'),
 	                    user: user,
 	                    version: verName,
 	                    entries: versionUpdateEntryUpdateWorldIds.map(w => jquery.extend({ location: exports.worldData[w].title }, versionUpdateState.updatedWorldVerInfo[w]))
