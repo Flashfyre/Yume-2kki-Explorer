@@ -3709,7 +3709,7 @@ function getLocationMaps(locationName, pool) {
         const query = `
             SELECT w.mapUrl, w.mapLabel
             FROM worlds w
-            WHERE w.title = '${locationName}'
+            WHERE w.title = '${locationName.replace(/'/g, "''")}'
         `;
         pool.query(query, (err, rows) => {
             if (err) return reject(err);
