@@ -3629,15 +3629,15 @@ app.get('/getMapLocationNames', function(req, res) {
                 .then(data => res.json(data))
                 .catch(err => {
                     console.error(err);
-                    res.json({ error: "Failed to query map location names" });
+                    res.json({ error: 'Failed to query map location names', err_code: 'QUERY_FAILED' });
                 })
                 .finally(() => pool.end());
         }).catch(err => {
             console.error(err);
-            res.json({ error: "Failed to connect to database" });
+            res.json({ error: 'Failed to connect to database', err_code: 'DB_CONN_FAILED' });
         });
     } else
-        res.json({ error: 'Invalid request' });
+        res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
 });
 
 function getMapLocationNames(mapId, prevMapId, prevLocationName, pool) {
@@ -3693,20 +3693,20 @@ app.get('/getLocationMaps', function(req, res) {
                 .then(data => res.json(data))
                 .catch(err => {
                     console.error(err);
-                    res.json({ error: "Failed to query location maps" });
+                    res.json({ error: 'Failed to query location maps', err_code: 'QUERY_FAILED' });
                 })
                 .finally(() => pool.end());
         }).catch(err => {
             console.error(err);
-            res.json({ error: "Failed to connect to database" });
+            res.json({ error: 'Failed to connect to database', err_code: 'DB_CONN_FAILED' });
         });
     } else
-        res.json({ error: 'Invalid request' });
+        res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
 });
 
 function getLocationMaps(locationName, pool) {
     return new Promise((resolve, reject) => {
-        let query = `
+        const query = `
             SELECT w.mapUrl, w.mapLabel
             FROM worlds w
             WHERE w.title = '${locationName}'
@@ -3723,7 +3723,8 @@ function getLocationMaps(locationName, pool) {
                     for (let m = 0; m < mapCount; m++)
                         ret.push({ url: urls[m], label: labels[m] })
                 }
-            }
+            } else
+                resolve({ error: 'Location not found', err_code: 'LOCATION_NOT_FOUND' });
             resolve(ret);
         });
     });
