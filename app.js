@@ -3684,6 +3684,51 @@ function getMapLocationNames(mapId, prevMapId, prevLocationName, pool) {
     });
 }
 
+app.get('/getConnectedLocations', function(req, res) {
+    const locationName = req.query.locationName;
+    let connLocationNames = req.query.connLocationNames;
+    res.setHeader('Access-Control-Allow-Origin', 'https://ynoproject.net');
+    if (locationName && connLocationNames) {
+        if (!Array.isArray(connLocationNames))
+            connLocationNames =  [ connLocationNames ];
+        getConnPool().then(pool => {
+            getConnectedLocations(locationName, connLocationNames, pool)
+                .then(data => res.json(data))
+                .catch(err => {
+                    console.error(err);
+                    res.json({ error: 'Failed to query connected locations', err_code: 'QUERY_FAILED' });
+                })
+                .finally(() => pool.end());
+        }).catch(err => {
+            console.error(err);
+            res.json({ error: 'Failed to connect to database', err_code: 'DB_CONN_FAILED' });
+        });
+    } else
+        res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
+});
+
+function getConnectedLocations(locationName, connLocationNames, pool) {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT DISTINCT cw.title
+            FROM worlds w
+            JOIN conns c
+                ON c.sourceId = w.id OR c.targetId = w.id
+            JOIN worlds cw
+                ON cw.id <> w.id AND (cw.id = c.sourceId OR cw.id = c.targetId)
+            WHERE w.title = '${locationName.replace(/'/g, "''")}'
+                AND cw.title IN ('${connLocationNames.map(l => l.replace(/'/g, "''")).join("', '")}')
+        `;
+        pool.query(query, (err, rows) => {
+            if (err) return reject(err);
+            const ret = [];
+            for (let row of rows)
+                ret.push(row.title);
+            resolve(ret);
+        });
+    });
+}
+
 app.get('/getLocationMaps', function(req, res) {
     const locationName = req.query.locationName;
     res.setHeader('Access-Control-Allow-Origin', 'https://ynoproject.net');
