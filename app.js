@@ -3621,11 +3621,19 @@ function dec(str) {
 app.get('/getMapLocationNames', function(req, res) {
     const mapId = req.query.mapId;
     const prevMapId = req.query.prevMapId;
+    const prevLocationName = req.query.prevLocationName;
+    let prevLocationNames = req.query.prevLocationNames;
+    if (!prevLocationNames)
+        prevLocationNames = [];
+    else if (!Array.isArray(prevLocationNames))
+        prevLocationNames = [prevLocationNames];
+    if (prevLocationName)
+        prevLocationNames.push(prevLocationName);
     const mapIdPattern = /^\d{4}$/;
     res.setHeader('Access-Control-Allow-Origin', 'https://ynoproject.net');
     if (mapId && mapIdPattern.test(mapId) && (!prevMapId || mapIdPattern.test(prevMapId))) {
         getConnPool().then(pool => {
-            getMapLocationNames(mapId, prevMapId, req.query.prevLocationName, pool)
+            getMapLocationNames(mapId, prevMapId, prevLocationNames, pool)
                 .then(data => res.json(data))
                 .catch(err => {
                     console.error(err);
@@ -3640,7 +3648,7 @@ app.get('/getMapLocationNames', function(req, res) {
         res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
 });
 
-function getMapLocationNames(mapId, prevMapId, prevLocationName, pool) {
+function getMapLocationNames(mapId, prevMapId, prevLocationNames, pool) {
     return new Promise((resolve, reject) => {
         let query = `
             SELECT w.id, w.title, w.titleJP
@@ -3652,8 +3660,10 @@ function getMapLocationNames(mapId, prevMapId, prevLocationName, pool) {
             WHERE m.mapId = '${mapId}'
         `;
         if (prevMapId) {
-            const prevLocationClause = prevLocationName
-                ? ` AND w2.title = '${prevLocationName.replace(/'/g, "''")}'`
+            const prevLocationClause = prevLocationNames.length
+                ? (prevLocationNames.length === 1
+                    ? ` AND w2.title = '${prevLocationNames[0].replace(/'/g, "''")}'`
+                    : ` AND w2.title IN ('${prevLocationNames.map(l => l.replace(/'/g, "''")).join("', '")}')`)
                 : '';
             query += `
                 AND EXISTS (
@@ -3674,8 +3684,8 @@ function getMapLocationNames(mapId, prevMapId, prevLocationName, pool) {
             const ret = [];
             for (let row of rows)
                 ret.push({ title: row.title, titleJP: row.titleJP });
-            if (prevLocationName && !ret.length)
-                getMapLocationNames(mapId, prevMapId, null, pool)
+            if (prevLocationNames.length && !ret.length)
+                getMapLocationNames(mapId, prevMapId, [], pool)
                     .then(data => resolve(data))
                     .catch(err => reject(err));
             else
