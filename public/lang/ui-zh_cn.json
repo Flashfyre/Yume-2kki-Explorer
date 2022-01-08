@@ -59,8 +59,8 @@
             "name": "语言",
             "values": {
                 "english": "英文",
-                "japanese": "日文"
-				"simplified_chinese": "简体中文"
+                "japanese": "日文",
+		"simplified_chinese": "简体中文"
             }
         },
         "uiTheme": {
