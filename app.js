@@ -3709,7 +3709,7 @@ app.get('/getConnectedLocations', function(req, res) {
 
 function getConnectedLocations(locationName, connLocationNames, pool) {
     return new Promise((resolve, reject) => {
-        const query = `
+        let query = `
             SELECT DISTINCT cw.title
             FROM worlds w
             JOIN conns c
@@ -3717,8 +3717,11 @@ function getConnectedLocations(locationName, connLocationNames, pool) {
             JOIN worlds cw
                 ON cw.id <> w.id AND (cw.id = c.sourceId OR cw.id = c.targetId)
             WHERE w.title = '${locationName.replace(/'/g, "''")}'
-                AND cw.title IN ('${connLocationNames.map(l => l.replace(/'/g, "''")).join("', '")}')
-        `;
+                AND cw.title `;
+        query += connLocationNames.length === 1
+            ? `= '${connLocationNames[0].replace(/'/g, "''")}'`
+            : `IN ('${connLocationNames.map(l => l.replace(/'/g, "''")).join("', '")}')`;
+        query += ' ORDER BY cw.depth';
         pool.query(query, (err, rows) => {
             if (err) return reject(err);
             const ret = [];
@@ -3731,10 +3734,17 @@ function getConnectedLocations(locationName, connLocationNames, pool) {
 
 app.get('/getLocationMaps', function(req, res) {
     const locationName = req.query.locationName;
+    let locationNames = req.query.locationNames;
+    if (!locationNames)
+        locationNames = [];
+    else if (!Array.isArray(locationNames))
+        locationNames = [locationNames];
+    if (locationName)
+        locationNames.push(locationName);
     res.setHeader('Access-Control-Allow-Origin', 'https://ynoproject.net');
-    if (locationName) {
+    if (locationNames.length) {
         getConnPool().then(pool => {
-            getLocationMaps(locationName, pool)
+            getLocationMaps(locationNames, pool)
                 .then(data => res.json(data))
                 .catch(err => {
                     console.error(err);
@@ -3749,18 +3759,20 @@ app.get('/getLocationMaps', function(req, res) {
         res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
 });
 
-function getLocationMaps(locationName, pool) {
+function getLocationMaps(locationNames, pool) {
     return new Promise((resolve, reject) => {
-        const query = `
+        let query = `
             SELECT w.mapUrl, w.mapLabel
             FROM worlds w
-            WHERE w.title = '${locationName.replace(/'/g, "''")}'
-        `;
+            WHERE w.title `;
+        query += locationNames.length === 1
+            ? `= '${locationNames[0].replace(/'/g, "''")}'`
+            : `IN ('${locationNames.map(l => l.replace(/'/g, "''")).join("', '")}')`;
+        query += ' ORDER BY w.depth';
         pool.query(query, (err, rows) => {
             if (err) return reject(err);
             const ret = [];
-            if (rows.length) {
-                const row = rows[0];
+            for (let row of rows) {
                 if (row.mapUrl) {
                     const urls = row.mapUrl.split('|');
                     const labels = (row.mapLabel || '').split('|');
@@ -3768,8 +3780,7 @@ function getLocationMaps(locationName, pool) {
                     for (let m = 0; m < mapCount; m++)
                         ret.push({ url: urls[m], label: labels[m] })
                 }
-            } else
-                resolve({ error: 'Location not found', err_code: 'LOCATION_NOT_FOUND' });
+            }
             resolve(ret);
         });
     });
