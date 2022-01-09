@@ -1,4 +1,4 @@
-// Version 3.10.2 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 4.0.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -107435,10 +107435,50 @@ function InsertStackElement(node, body) {
 	        .test(userAgent.substr(0,4));
 	}
 
-	function formatDate (date, lang, showTime) {
+	function formatDate(date, lang, showTime) {
 	    const formatFunc = showTime ? date.toLocaleString : date.toLocaleDateString;
-	    const isEn = lang === 'en';
-	    return formatFunc.apply(date, [ isEn ? 'en-US' : 'ja-JP', showTime ? { timeZoneName: 'short' } : {} ]);
+	    return formatFunc.apply(date, [ getLangDateFormat(lang), showTime ? { timeZoneName: 'short' } : {} ]);
+	}
+
+	function getLangDateFormat(lang) {
+	    switch (lang) {
+	        case 'ja':
+	            return 'ja-JP';
+	        case 'zh':
+	            return 'zh-CN';
+	        default:
+	            return 'en-US';
+	    }
+	}
+
+	function getLocalizedValue(enValue, jaValue, lang, singleValue) {
+	    if (!jaValue)
+	        return enValue;
+	    if (!enValue)
+	        return jaValue;
+	    switch (lang) {
+	        case 'en':
+	            return enValue;
+	        case 'ja':
+	            return jaValue;
+	        default:
+	            const useEn = getLangUsesEn(lang);
+	            if (singleValue)
+	                return useEn ? enValue : jaValue;
+	            else if (enValue !== jaValue)
+	                return `${useEn ? enValue : jaValue} (${useEn ? jaValue : enValue})`;
+	    }
+	    return enValue;
+	}
+
+	function getLangUsesEn(lang) {
+	    switch (lang) {
+	        case 'ja':
+	        case 'zh':
+	            return false;
+	        default:
+	            return true;
+	    }
 	}
 
 	function hueToRGBA(h, a) {
@@ -107871,6 +107911,8 @@ function InsertStackElement(node, body) {
 
 	const imageLoader = new ImageLoader();
 
+	const getLocalizedLabel = (enLabel, jaLabel, singleValue) => getLocalizedValue(enLabel, jaLabel, config$1.lang, singleValue);
+
 	const isMobile = checkIsMobile(navigator.userAgent);
 
 	jquery.fn.extend({
@@ -108096,12 +108138,11 @@ function InsertStackElement(node, body) {
 	            left: (e.pageX - ($tooltip.innerWidth() / 2)) + 'px'
 	        });
 	    }).on('mouseenter', function () {
-	        const isEn = config$1.lang === 'en';
 	        const author = authorsByName[jquery(this).data('id')];
 	        $tooltip.html(localizedAuthorLabel
-	            .replace('{AUTHOR}', config$1.lang === 'en' || !author.displayNameJP ? author.displayName : author.displayNameJP)
-	            .replace('{FIRST_VERSION}', author.firstVer ? isEn ? author.firstVer.name : author.firstVer.nameJP : '')
-	            .replace('{LAST_VERSION}', author.lastVer !== author.firstVer ? isEn ? author.lastVer.name : author.lastVer.nameJP : '')
+	            .replace('{AUTHOR}', getLocalizedLabel(author.displayName, author.displayNameJP))
+	            .replace('{FIRST_VERSION}', author.firstVer ? getLocalizedLabel(author.firstVer.name, author.firstVer.nameJP, true) : '')
+	            .replace('{LAST_VERSION}', author.lastVer !== author.firstVer ? getLocalizedLabel(author.lastVer.name, author.lastVer.nameJP, true) : '')
 	            .replace('{WORLD_COUNT}', author.worldIds.length)
 	        ).removeClass('display--none');
 	        if (!author.firstVer)
@@ -108120,17 +108161,17 @@ function InsertStackElement(node, body) {
 	    const authorLower = author.toLowerCase();
 	    const authorNameMatches = !authorData
 	        ? author
-	        : authorData.filter(a => a.name.toLowerCase() === authorLower).map(a => config$1.lang === 'en' || !a.displayNameJP ? a.displayName : a.displayNameJP);
+	        : authorData.filter(a => a.name.toLowerCase() === authorLower).map(a => {
+	            if (a.displayName !== a.displayNameJP)
+	                return getLocalizedLabel(a.displayName, appendShi ? `${a.displayNameJP}氏` : a.displayNameJP);
+	            return !getLangUsesEn(config$1.lang) && appendShi ? `${a.displayNameJP}氏` : a.displayName;
+	        });
 	    if (authorNameMatches.length)
 	        ret = authorNameMatches[0];
-	    if (appendShi && config$1.lang !== 'en')
-	        ret += '氏';
 	    return ret;
 	}
 
 	function initVersionData(versionInfoData) {
-	    const isEn = config$1.lang === 'en';
-
 	    const $versionEntriesControls = jquery('.js--version-entries-controls');
 	    const $versionEntriesContainerItems = jquery('.js--version-entries-container__items');
 	    const $versionEntriesContainerBorders = jquery('.js--version-entries-container__borders');
@@ -108242,8 +108283,8 @@ function InsertStackElement(node, body) {
             <div class="js--version-entry--container collectable-entry--container">
                 <a href="javascript:void(0);" class="js--version-entry-link version-entry collectable-entry collectable--border noselect" data-id="${v.index}">
                     <div class="collectable-entry__name--container">
-                        <h1 class="version-entry__name--shadow collectable-entry__name--shadow">${isEn ? v.name : v.nameJP}</h1>
-                        <h1 class="version-entry__name collectable-entry__name">${isEn ? v.name : v.nameJP}</h1>
+                        <h1 class="version-entry__name--shadow collectable-entry__name--shadow">${getLocalizedLabel(v.name, v.nameJP, true)}</h1>
+                        <h1 class="version-entry__name collectable-entry__name">${getLocalizedLabel(v.name, v.nameJP, true)}</h1>
                     </div>
                 </a>
             </div>
@@ -108285,8 +108326,8 @@ function InsertStackElement(node, body) {
 	        const verIndex = jquery(this).data('id');
 	        const version = versionsByIndex[verIndex];
 	        $tooltip.html(localizedVersionLabel
-	            .replace('{VERSION}', isEn ? version.name : version.nameJP)
-	            .replace('{AUTHORS}', version.authors.map(a => `<span class='tooltip__value'>${(a ? getAuthorDisplayName(a, true) : localizedNA)}</span>`).join(isEn ? ', ' : 'と'))
+	            .replace('{VERSION}', getLocalizedLabel(version.name, version.nameJP, true))
+	            .replace('{AUTHORS}', version.authors.map(a => `<span class='tooltip__value'>${(a ? getAuthorDisplayName(a, true) : localizedNA)}</span>`).join(localizedComma))
 	            .replace('{RELEASE_DATE}', version.releaseDate ? formatDate(version.releaseDate, config$1.lang) : localizedNA)
 	            .replace('{WORLD_COUNT}', versionIndexAddedWorldIds[verIndex].length)
 	            .replace('{UPDATED_WORLD_COUNT}', versionIndexUpdatedWorldIds[verIndex].length)
@@ -108407,7 +108448,7 @@ function InsertStackElement(node, body) {
 
 	    const world = exports.worldData[worldId];
 
-	    return ret.replace('{WORLD}', config$1.lang === 'en' ? world.title : world.titleJP);
+	    return ret.replace('{WORLD}', getLocalizedLabel(world.title, world.titleJP));
 	}
 
 	function getDisplayWorldIdsForEntryImage(worldIds, displayCount) {
@@ -108481,12 +108522,12 @@ function InsertStackElement(node, body) {
 	        });
 	    }).on('mouseenter', function () {
 	        const effect = effectsById[jquery(this).data('effectId')];
-	        const effectName = config$1.lang === 'en' || !effect.nameJP ? effect.name : effect.nameJP;
+	        const effectName = getLocalizedLabel(effect.name, effect.nameJP);
 	        const world = effect.worldId != null ? exports.worldData[effect.worldId] : null;
 	        const worldName = world ?
-	            config$1.lang === 'en' || !world.titleJP ? world.title : world.titleJP
+	            getLocalizedLabel(world.title, world.titleJP)
 	            : localizedNA;
-	        const method = config$1.lang === 'en' ? effect.method : effect.methodJP;
+	        const method = getLocalizedLabel(effect.method, effect.methodJP);
 	        $tooltip.html(localizedEffectLabel
 	            .replace('{EFFECT}', effectName)
 	            .replace('{LOCATION}', worldName)
@@ -108543,10 +108584,10 @@ function InsertStackElement(node, body) {
 	        const location = menuThemeLocationsById[jquery(this).data('locationId')];
 	        const world = location.worldId != null ? exports.worldData[location.worldId] : null;
 	        const worldName = world ?
-	            config$1.lang === 'en' || !world.titleJP ? world.title : world.titleJP
+	            getLocalizedLabel(world.title, world.titleJP)
 	            : null;
 	        const worldLabel = worldName ? `<span class="menu-theme-tooltip__world tooltip__value">${worldName}</span><br>` : '';
-	        const method = config$1.lang === 'en' || !location.methodJP ? location.method : location.methodJP;
+	        const method = getLocalizedLabel(location.method, location.methodJP);
 	        $tooltip.html(`${worldLabel}${method}`).removeClass('display--none');
 	    }).on('mouseleave', function () {
 	        $tooltip.addClass('display--none');
@@ -108598,8 +108639,8 @@ function InsertStackElement(node, body) {
 	        });
 	    }).on('mouseenter', function () {
 	        const wallpaper = wallpapersById[jquery(this).data('wallpaperId')];
-	        const title = config$1.lang === 'en' ? wallpaper.name : wallpaper.nameJP;
-	        const method = config$1.lang === 'en' ? wallpaper.method : wallpaper.methodJP;
+	        const title = getLocalizedLabel(wallpaper.name, wallpaper.nameJP);
+	        const method = getLocalizedLabel(wallpaper.method, wallpaper.methodJP);
 	        $tooltip.html(localizedWallpaperLabel
 	                .replace('{WALLPAPER_ID}', wallpaper.wallpaperId - (wallpaper.removed ? 1000 : 0))
 	                .replace('{TITLE}', title)
@@ -108741,8 +108782,8 @@ function InsertStackElement(node, body) {
 	                    jquery('.js--bgm-track[data-bgm-track-id]').each(function() {
 	                        const bgmTrack = bgmTracksById[jquery(this).data('bgmTrackId')];
 	                        const name = bgmTrack.name;
-	                        const location = config$1.lang === 'en' ? bgmTrack.location : bgmTrack.locationJP;
-	                        const notes = config$1.lang === 'en' ? bgmTrack.notes : bgmTrack.notesJP;
+	                        const location = getLocalizedLabel(bgmTrack.location, bgmTrack.locationJP);
+	                        const notes = getLocalizedLabel(bgmTrack.notes, bgmTrack.notesJP);
 	                        let visible = (name && name.toLowerCase().indexOf(changeValueLower) > -1) ||
 	                                        (location && location.toLowerCase().indexOf(changeValueLower) > -1) ||
 	                                        (notes && notes.toLowerCase().indexOf(changeValueLower) > -1);
@@ -108840,8 +108881,8 @@ function InsertStackElement(node, body) {
 	    }).on('mouseenter', function () {
 	        const bgmTrack = bgmTracksById[jquery(this).data('bgmTrackId')];
 	        const name = bgmTrack.name;
-	        const location = config$1.lang === 'en' ? bgmTrack.location : bgmTrack.locationJP;
-	        const notes = config$1.lang === 'en' ? bgmTrack.notes : bgmTrack.notesJP;
+	        const location = getLocalizedLabel(bgmTrack.location, bgmTrack.locationJP);
+	        const notes = getLocalizedLabel(bgmTrack.notes, bgmTrack.notesJP);
 	        $tooltip.html(localizedBgmTrackLabel
 	                .replace('{BGM_TRACK_ID}', bgmTrack.trackNo < 1000 ? bgmTrack.trackNo + (bgmTrack.variant ? ` ${bgmTrack.variant}` : '') : '')
 	                .replace('{NAME}', name)
@@ -109279,6 +109320,8 @@ function InsertStackElement(node, body) {
 	let localizedVersionDetails;
 	let localizedVersionDisplayToggle;
 	let localizedSeparator;
+	let localizedDot;
+	let localizedComma;
 	let localizedBraces;
 	let localizedNA;
 
@@ -109579,7 +109622,7 @@ function InsertStackElement(node, body) {
 	        const img = imageLoader.load(d.filename);
 	        img.id = d.id;
 	        img.rId = d.rId;
-	        img.title = config$1.lang === "en" || !d.titleJP ? d.title : d.titleJP;
+	        img.title = getLocalizedLabel(d.title, d.titleJP);
 	        return img;
 	    });
 	    
@@ -109690,7 +109733,7 @@ function InsertStackElement(node, body) {
 	            }
 
 	            if (!(isWebGL2 && is2d)) {
-	                const worldName = config$1.lang === "en" || !world.titleJP ? world.title : world.titleJP;
+	                const worldName = getLocalizedLabel(world.title, world.titleJP);
 	                const text = new _default(worldName, 1.5, node.removed ? getNodeTextColor(node, ret.material.grayscale) : 'white');
 	                text.fontFace = 'MS Gothic';
 	                text.fontSize = 80;
@@ -109826,23 +109869,22 @@ function InsertStackElement(node, body) {
 	        .connMode(() => config$1.connMode)
 	        .nodeVal(node => node.width)
 	        .nodeLabel(node => {
-	            const isEn = config$1.lang === 'en';
 	            const world = exports.worldData[node.id];
 	            let ret = (paths && node.depth !== node.minDepth ? localizedPathNodeLabel : localizedNodeLabel)
 	                .replace('{WORLD}', node.img.title).replace('{DEPTH}', node.depth).replace('{DEPTH_COLOR}', node.depthColor).replace('{AUTHOR}', world.author ? getAuthorDisplayName(world.author, true) : localizedNA)
-	                .replace('{VERSION_ADDED}', world.verAdded ? (isEn ? world.verAdded.name : world.verAdded.nameJP) : localizedNA);
+	                .replace('{VERSION_ADDED}', world.verAdded ? (getLocalizedLabel(world.verAdded.name, world.verAdded.nameJP, true)) : localizedNA);
 	            if (paths)
 	                ret = ret.replace('{MIN_DEPTH}', node.minDepth).replace('{MIN_DEPTH_COLOR}', node.minDepthColor);
 	            if (world.verUpdated) {
 	                const verUpdated = world.verUpdated[world.verUpdated.length - 1];
 	                let nodeLabelLastUpdated = (verUpdated.updateType ? localizedNodeLabelVersionLastUpdatedWithUpdateType : localizedNodeLabelVersionLastUpdated)
-	                    .replace('{VERSION_LAST_UPDATED}', isEn ? verUpdated.verUpdated.name : verUpdated.verUpdated.nameJP);
+	                    .replace('{VERSION_LAST_UPDATED}', getLocalizedLabel(verUpdated.verUpdated.name, verUpdated.verUpdated.nameJP, true));
 	                if (verUpdated.updateType)
 	                    nodeLabelLastUpdated = nodeLabelLastUpdated.replace('{VERSION_LAST_UPDATED_TYPE}', localizedNodeLabelVersionUpdateTypes[verUpdated.updateType]);
 	                ret += nodeLabelLastUpdated;
 	            }
 	            if (node.removed)
-	                ret += localizedNodeLabelVersionRemoved.replace('{VERSION_REMOVED}', world.verRemoved ? (isEn ? world.verRemoved.name : world.verRemoved.nameJP) : localizedNA);
+	                ret += localizedNodeLabelVersionRemoved.replace('{VERSION_REMOVED}', world.verRemoved ? getLocalizedLabel(world.verRemoved.name, world.verRemoved.nameJP, true) : localizedNA);
 	            return ret;
 	        })
 	        .nodesPerStack(config$1.stackSize)
@@ -110475,7 +110517,7 @@ function InsertStackElement(node, body) {
 	                    nodeObjectMaterial.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
 	                    const worldId = index;
 	                    const world = exports.worldData[worldId];
-	                    const worldName = config$1.lang === "en" || !world.titleJP ? world.title : world.titleJP;
+	                    const worldName = getLocalizedLabel(world.title, world.titleJP);
 
 	                    if (world.removed)
 	                        ctx.save();
@@ -111170,6 +111212,7 @@ function InsertStackElement(node, body) {
 	}
 
 	function getConnTypeIcon(connType, typeParams) {
+	    const useEn = getLangUsesEn(config$1.lang);
 	    const localizedConn = localizedConns[connType];
 	    const char = getConnTypeChar(connType);
 	    const name = localizedConn.name;
@@ -111177,18 +111220,18 @@ function InsertStackElement(node, body) {
 	    if (description) {
 	        switch (connType) {
 	            case connType_1.EFFECT:
-	                description = typeParams && ((config$1.lang === 'en' && typeParams.params) || (config$1.lang !== 'en' && typeParams.paramsJP))
-	                    ? description.replace('{0}', config$1.lang === 'en' ? typeParams.params : typeParams.paramsJP)
+	                description = typeParams && ((useEn && typeParams.params) || (!useEn && typeParams.paramsJP))
+	                    ? description.replace('{0}', getLocalizedLabel(typeParams.params, typeParams.paramsJP))
 	                    : null;
 	                break;
 	            case connType_1.CHANCE:
 	                description = typeParams && typeParams.params
-	                    ? description.replace('{0}', config$1.lang === 'en' ? typeParams.params : typeParams.params.replace('%', '％'))
+	                    ? description.replace('{0}', useEn ? typeParams.params : typeParams.params.replace('%', '％'))
 	                    : '';
 	                break;
 	            case connType_1.LOCKED_CONDITION:
-	                description = typeParams && ((config$1.lang === 'en' && typeParams.params) || (config$1.lang !== 'en' && typeParams.paramsJP))
-	                    ? description.replace('{0}', config$1.lang === 'en' ? typeParams.params : typeParams.paramsJP)
+	                description = typeParams && ((useEn && typeParams.params) || (!useEn && typeParams.paramsJP))
+	                    ? description.replace('{0}', getLocalizedLabel(typeParams.params, typeParams.paramsJP))
 	                    : '';
 	                break;
 	        }
@@ -111196,7 +111239,7 @@ function InsertStackElement(node, body) {
 	    return {
 	        type: connType,
 	        char: char,
-	        text: name + (description ? (config$1.lang === 'en' ? ' - ' : '：') + description : '')
+	        text: name + (description ? (useEn ? localizedSeparator : '：') + description : '')
 	    };
 	}
 
@@ -111600,13 +111643,11 @@ function InsertStackElement(node, body) {
 	            config$1.lang = urlLang;
 	    }
 
-	    const isEn = config$1.lang === "en";
-
 	    jquery("[data-localize]").localize("ui", {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "3.10.2");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "4.0.0");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
@@ -111615,6 +111656,8 @@ function InsertStackElement(node, body) {
 	                convertJPControlLabels(data.settings);
 	            }
 	            localizedSeparator = data.separator;
+	            localizedDot = data.dot;
+	            localizedComma = data.comma;
 	            localizedBraces = data.braces;
 	            localizedNA = data.na;
 	            localizedConns = data.conn;
@@ -111649,8 +111692,12 @@ function InsertStackElement(node, body) {
 	        }
 	    });
 
+	    const isEn = getLangUsesEn(config$1.lang);
+
 	    jquery(".js--help-modal__content--localized--en").toggle(isEn);
 	    jquery(".js--help-modal__content--localized--jp").toggle(!isEn);
+
+	    jquery('html').attr('lang', config$1.lang);
 
 	    jquery.localize("conn", {
 	        language: config$1.lang,
@@ -111674,12 +111721,12 @@ function InsertStackElement(node, body) {
 	                const val = jquery(this).val();
 	                if (val && worldNames.indexOf(val) > -1) {
 	                    const world = exports.worldsByName[worldNames[worldNames.indexOf(val)]];
-	                    jquery(this).val(isEn || !world.titleJP ? world.title : world.titleJP);
+	                    jquery(this).val(getLocalizedLabel(world.title, world.titleJP));
 	                }
 	            });
 	        }
 
-	        exports.worldsByName = isEn ? lodash.keyBy(exports.worldData, w => w.title) : lodash.keyBy(exports.worldData, w => w.titleJP || w.title);
+	        exports.worldsByName = lodash.keyBy(exports.worldData, w => getLocalizedLabel(w.title, w.titleJP));
 
 	        worldNames = Object.keys(exports.worldsByName);
 
@@ -111688,7 +111735,7 @@ function InsertStackElement(node, body) {
 	            jquery(this).on("change", function () {
 	                const currentWorldId = jquery(this).is(".js--start-world") ? startWorldId : endWorldId;
 	                const currentWorld = exports.worldData[currentWorldId];
-	                if (currentWorld != null && jquery(this).val() !== (config$1.lang === 'en' || !currentWorld.titleJP ? currentWorld.title : currentWorld.titleJP)) {
+	                if (currentWorld != null && jquery(this).val() !== (getLocalizedLabel(currentWorld.title, currentWorld.titleJP))) {
 	                    let isReloadGraph;
 	                    jquery(this).removeClass("selected");
 	                    if (jquery(this).is(".js--start-world")) {
@@ -111722,7 +111769,7 @@ function InsertStackElement(node, body) {
 	        });
 
 	        jquery(".js--author-entry").each(function () {
-	            const displayName = jquery(this).data(isEn ? "displayName" : "displayNameJp");
+	            const displayName = jquery(this).data(getLangUsesEn(config$1.lang) ? "displayName" : "displayNameJp");
 	            jquery(this).find('h1').text(displayName);
 	        });
 	    }
@@ -111750,7 +111797,7 @@ function InsertStackElement(node, body) {
 	function initWorldSearch() {
 	    const $search = jquery(".js--search-world");
 	    $search.devbridgeAutocomplete("destroy");
-	    const visibleWorldNames = exports.worldData ? exports.worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1).map(w => config$1.lang === 'en' || !w.titleJP ? w.title : w.titleJP) : [];
+	    const visibleWorldNames = exports.worldData ? exports.worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1).map(w => getLocalizedLabel(w.title, w.titleJP)) : [];
 	    if (selectedWorldId != null && visibleWorldIds.indexOf(selectedWorldId) === -1) {
 	        $search.removeClass("selected").val("");
 	        selectedWorldId = null;
@@ -111760,7 +111807,7 @@ function InsertStackElement(node, body) {
 	        triggerSelectOnValidInput: false,
 	        onSearchComplete: function (query, searchWorlds) {
 	            const selectedWorld = selectedWorldId != null ? exports.worldData[selectedWorldId] : null;
-	            const selectedWorldName = selectedWorld ? config$1.lang === 'en' || !selectedWorld.titleJP ? selectedWorld.title : selectedWorld.titleJP : null;
+	            const selectedWorldName = selectedWorld ? getLocalizedLabel(selectedWorld.title, selectedWorld.titleJP) : null;
 	            searchWorldIds = searchWorlds.length && (!selectedWorld || (searchWorlds.length > 1 || searchWorlds.find(w => w.value !== selectedWorldName))) ? searchWorlds.map(w => exports.worldsByName[w.value].id) : [];
 	            if (searchWorldIds.length && selectedWorld && (searchWorldIds.length !== 1 || selectedWorldId !== searchWorldIds[0])) {
 	                $search.removeClass("selected");
@@ -111776,7 +111823,7 @@ function InsertStackElement(node, body) {
 	        onHide: function () {
 	           if (selectedWorldId != null) {
 	                const selectedWorld = exports.worldData[selectedWorldId];
-	                const selectedWorldName = config$1.lang === 'en' || !selectedWorld.titleJP ? selectedWorld.title : selectedWorld.titleJP;
+	                const selectedWorldName = getLocalizedLabel(selectedWorld.title, selectedWorld.titleJP);
 	                if (jquery(this).val() !== selectedWorldName) {
 	                    $search.removeClass("selected");
 	                    selectedWorldId = null;
@@ -111820,7 +111867,7 @@ function InsertStackElement(node, body) {
 	        if (!v.addedWorldIds.length && !v.removedWorldIds.length && v.index !== missingVersionIndex)
 	            $opt.addClass('temp-select-only');
 	        $opt.val(v.index);
-	        $opt.text(config$1.lang === 'en' ? v.name : v.nameJP);
+	        $opt.text(getLocalizedLabel(v.name, v.nameJP, true));
 	        $versionSelect.append($opt);
 	    });
 	    if (!selectedVersionIndex)
@@ -111847,7 +111894,7 @@ function InsertStackElement(node, body) {
 	            name: () => localizedContextMenu.items.start,
 	            callback: function () {
 	                const world = exports.worldData[contextWorldId];
-	                const worldName = config$1.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
+	                const worldName = getLocalizedLabel(world.title, world.titleJP);
 	                jquery('.js--start-world').val(worldName).trigger('change').devbridgeAutocomplete().select(0);
 	            }
 	        },
@@ -111855,7 +111902,7 @@ function InsertStackElement(node, body) {
 	            name: () => localizedContextMenu.items.end,
 	            callback: function () {
 	                const world = exports.worldData[contextWorldId];
-	                const worldName = config$1.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
+	                const worldName = getLocalizedLabel(world.title, world.titleJP);
 	                jquery('.js--end-world').val(worldName).trigger('change').devbridgeAutocomplete().select(0);
 	            }
 	        },
@@ -111888,7 +111935,7 @@ function InsertStackElement(node, body) {
 	                const world = exports.worldData[contextWorldId];
 	                if (world.bgmUrl.indexOf('|') === -1) {
 	                    if (!isCtrl) {
-	                        const worldName = config$1.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
+	                        const worldName = getLocalizedLabel(world.title, world.titleJP);
 	                        playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel), world.filename, world.id);
 	                    } else {
 	                        const handle = window.open(world.bgmUrl, '_blank', 'noreferrer');
@@ -111936,7 +111983,7 @@ function InsertStackElement(node, body) {
 	        }
 	        
 	        if (world.bgmUrl && world.bgmUrl.indexOf('|') > -1) {
-	            const worldName = config$1.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
+	            const worldName = getLocalizedLabel(world.title, world.titleJP);
 	            const bgmUrls = world.bgmUrl.split('|');
 	            const bgmLabels = getBgmLabels(world.bgmLabel.split('|'), localizedContextMenu.items.bgm);
 	            for (let b = 0; b < bgmUrls.length; b++) {
@@ -111969,7 +112016,7 @@ function InsertStackElement(node, body) {
 
 	function openWorldWikiPage(worldId, newWindow) {
 	    const world = exports.worldData[worldId];
-	    window.open(config$1.lang === 'en' || !world.titleJP || world.removed
+	    window.open(!world.titleJP || world.removed || getLangUsesEn(config$1.lang)
 	        ? 'https://yume2kki.fandom.com/wiki/' + world.title
 	        : ('https://wikiwiki.jp/yume2kki-t/' + (world.titleJP.indexOf("：") > -1 ? world.titleJP.slice(0, world.titleJP.indexOf("：")) : world.titleJP)),
 	        "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
@@ -112444,7 +112491,7 @@ function InsertStackElement(node, body) {
 	        ret = bgmLabels;
 	    else {
 	        const namedTracksCount = bgmLabels.filter(l => !l.endsWith('^')).length;
-	        if (config$1.lang !== 'en' || !namedTracksCount)
+	        if (!namedTracksCount || !getLangUsesEn(config$1.lang))
 	            ret = bgmLabels.map(l => l.slice(0, l.indexOf('^')));
 	        else if (namedTracksCount === bgmLabels.length)
 	            ret = bgmLabels.map(l => l.slice(l.indexOf('^') + 1));
@@ -112474,7 +112521,7 @@ function InsertStackElement(node, body) {
 
 	function getBgmLabel(worldName, bgmLabel) {
 	    const separatorIndex = bgmLabel.indexOf('^');
-	    if (config$1.lang !== 'en' || separatorIndex === bgmLabel.length - 1)
+	    if (separatorIndex === bgmLabel.length - 1 || !getLangUsesEn(config$1.lang))
 	        return `${worldName}${localizedSeparator}${bgmLabel.slice(0, separatorIndex)}`;
 	    return `${worldName}${localizedSeparator}${bgmLabel.slice(separatorIndex + 1)}${localizedBraces.replace('{VALUE}', bgmLabel.slice(0, separatorIndex))})`;
 	}
@@ -112489,7 +112536,7 @@ function InsertStackElement(node, body) {
 	        trackLabel += localizedSeparator;
 	    }
 
-	    const location = config$1.lang == 'en' ? bgmTrack.location : bgmTrack.locationJP;
+	    const location = getLocalizedLabel(bgmTrack.location, bgmTrack.locationJP);
 	    const name = bgmTrack.name;
 
 	    if (location) {
@@ -112513,7 +112560,7 @@ function InsertStackElement(node, body) {
 	    const world = exports.worldData[node.id];
 	    if ((node && (selectedWorldId == null || selectedWorldId !== node.id))) {
 	        if (!ignoreSearch)
-	            jquery(".js--search-world").addClass("selected").val(config$1.lang === 'en' || !world.titleJP ? world.title : world.titleJP);
+	            jquery(".js--search-world").addClass("selected").val(getLocalizedLabel(world.title, world.titleJP));
 	        if (forceFocus)
 	            focusNode(node);
 	    } else
@@ -113043,10 +113090,11 @@ function InsertStackElement(node, body) {
 	            jquery.get("/help", function (data) {
 	                const md = new Remarkable();
 	                data = data.split('---');
+	                const useEn = getLangUsesEn(config$1.lang);
 	                const helpEn = md.render(data[0]);
 	                const helpJp = data.length > 1 ? md.render(data[1]) : helpEn;
-	                jquery('.js--help-modal__content--localized').html('<div class="js--help-modal__content--localized--en"' + (config$1.lang === 'en' ? '' : ' style="display: none;"') + '>' + helpEn + '</div>'
-	                    + '<div class="js--help-modal__content--localized--jp"' + (config$1.lang === 'en' ? ' style="display: none;"' : '') + '>' + helpJp + '</div>');
+	                jquery('.js--help-modal__content--localized').html('<div class="js--help-modal__content--localized--en"' + (useEn ? '' : ' style="display: none;"') + '>' + helpEn + '</div>'
+	                    + '<div class="js--help-modal__content--localized--jp"' + (useEn ? ' style="display: none;"' : '') + '>' + helpJp + '</div>');
 	                openHelpModal();
 	            });
 	        }
@@ -113085,8 +113133,8 @@ function InsertStackElement(node, body) {
 	    let loadingFrameCount = 0;
 	    const updateLoadingText = () => {
 	        let loadingTextAppend = "";
-	        const loadingTextAppendChar = config$1.lang === "en" ? "." : "．";
-	        const loadingTextSpaceChar = config$1.lang === "en" ? " " : "　";
+	        const loadingTextAppendChar = localizedDot;
+	        const loadingTextSpaceChar = getLangUsesEn(config$1.lang) ? " " : "　";
 	        for (let i = 0; i < 3; i++)
 	            loadingTextAppend += i < loadingFrameCount ? loadingTextAppendChar : loadingTextSpaceChar;
 	        $loadingContainer.find(".loading-container__text__append").text(loadingTextAppend);

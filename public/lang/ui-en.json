@@ -56,11 +56,7 @@
     },
     "settings": {
         "lang": {
-            "name": "Language:",
-            "values": {
-                "english": "English",
-                "japanese": "Japanese"
-            }
+            "name": "Language:"
         },
         "uiTheme": {
             "name": "UI Theme:",
@@ -317,6 +313,8 @@
         "lastUpdate": "Data updated on {LAST_UPDATE}",
         "lastFullUpdate": "Data reset on {LAST_FULL_UPDATE}"
     },
+    "dot": ".",
+    "comma": ", ",
     "separator": " - ",
     "braces": " ({VALUE})",
     "na": "N/A"

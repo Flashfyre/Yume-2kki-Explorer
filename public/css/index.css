@@ -3,12 +3,21 @@
     src: url('/fonts/MS Gothic.ttf');
 }
 
+@font-face {
+    font-family: 'MS Yahei';
+    src: url('/fonts/MS Yahei.ttf');
+}
+
 body {
     font-family: 'MS Gothic';
     margin: 0;
     background: url(https://img2.wikia.nocookie.net/__cb20140715140243/yume2kki/images/5/50/Wiki-background) top left repeat;
     background-blend-mode: screen;
     overflow: hidden;
+}
+
+html[lang='zh'] body {
+    font-family: 'MS Yahei';
 }
 
 h1 {
@@ -208,11 +217,10 @@ h1 {
     position: absolute;
     padding: 8px;
     padding-left: 4px;
-    top: calc(100% - 72px);
+    top: calc(100% - 80px);
     text-align: right;
     height: 26px;
     width: calc(100% - 16px);
-    font-family: 'MS Gothic';
     font-size: 18px;
 }
 
@@ -257,6 +265,10 @@ input[type='text'], select, .slider {
     font-family: 'MS Gothic';
     font-size: 18px;
     border: 6px solid transparent;
+}
+
+html[lang='zh'] button, html[lang='zh'] a:not(.no-border), html[lang='zh'] input[type='text'], html[lang='zh'] select {
+    font-family: 'MS Yahei';
 }
 
 input[type='checkbox'].checkbox {
@@ -608,6 +620,10 @@ a.close-modal {
     justify-content: center;
 }
 
+.collectable-entry__name, .collectable-entry__name--shadow {
+    font-family: 'MS Gothic';
+}
+
 .collectable-entry__name--shadow {
     width: 0;
     white-space: nowrap;
@@ -746,6 +762,10 @@ a.close-modal {
     font-size: 16px !important;
     padding: 4px;
     border: 6px solid transparent;
+}
+
+html[lang='zh'] .graph-tooltip, html[lang='zh'] .scene-tooltip {
+    font-family: 'MS Yahei' !important;
 }
 
 .scene-nav-info {

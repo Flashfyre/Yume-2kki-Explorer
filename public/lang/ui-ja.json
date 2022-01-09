@@ -56,11 +56,7 @@
     },
     "settings": {
         "lang": {
-            "name": "言語",
-            "values": {
-                "english": "英語",
-                "japanese": "日本語"
-            }
+            "name": "言語"
         },
         "uiTheme": {
             "name": "アプリの メニュー タイプ",
@@ -317,6 +313,8 @@
         "lastUpdate": "データ最終更新日：{LAST_UPDATE}",
         "lastFullUpdate": "データ最終置換日：{LAST_FULL_UPDATE}"
     },
+    "dot": "．",
+    "comma": "、",
     "separator": " － ",
     "braces": "「{VALUE}」",
     "na": "不明"

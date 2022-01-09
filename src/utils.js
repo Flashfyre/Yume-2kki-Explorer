@@ -5,10 +5,50 @@ export function checkIsMobile(userAgent) {
         .test(userAgent.substr(0,4));
 }
 
-export function formatDate (date, lang, showTime) {
+export function formatDate(date, lang, showTime) {
     const formatFunc = showTime ? date.toLocaleString : date.toLocaleDateString;
-    const isEn = lang === 'en';
-    return formatFunc.apply(date, [ isEn ? 'en-US' : 'ja-JP', showTime ? { timeZoneName: 'short' } : {} ]);
+    return formatFunc.apply(date, [ getLangDateFormat(lang), showTime ? { timeZoneName: 'short' } : {} ]);
+}
+
+function getLangDateFormat(lang) {
+    switch (lang) {
+        case 'ja':
+            return 'ja-JP';
+        case 'zh':
+            return 'zh-CN';
+        default:
+            return 'en-US';
+    }
+}
+
+export function getLocalizedValue(enValue, jaValue, lang, singleValue) {
+    if (!jaValue)
+        return enValue;
+    if (!enValue)
+        return jaValue;
+    switch (lang) {
+        case 'en':
+            return enValue;
+        case 'ja':
+            return jaValue;
+        default:
+            const useEn = getLangUsesEn(lang);
+            if (singleValue)
+                return useEn ? enValue : jaValue;
+            else if (enValue !== jaValue)
+                return `${useEn ? enValue : jaValue} (${useEn ? jaValue : enValue})`;
+    }
+    return enValue;
+}
+
+export function getLangUsesEn(lang) {
+    switch (lang) {
+        case 'ja':
+        case 'zh':
+            return false;
+        default:
+            return true;
+    }
 }
 
 export function hueToRGBA(h, a) {
