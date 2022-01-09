@@ -13,7 +13,7 @@ import SpriteText from 'three-spritetext';
 import ForceGraph3D from '3d-force-graph';
 import TWEEN from '@tweenjs/tween.js';
 import GreenAudioPlayer from 'green-audio-player/dist/js/green-audio-player';
-import { checkIsMobile, formatDate, hueToRGBA, uiThemeFontColors, uiThemeBgColors, getFontColor, getBaseBgColor, getFontShadow } from './utils';
+import { checkIsMobile, formatDate, getLocalizedValue, getLangUsesEn, hueToRGBA, uiThemeFontColors, uiThemeBgColors, getFontColor, getBaseBgColor, getFontShadow } from './utils';
 import { updateConfig } from './config.js';
 import { ConnType } from './conn-type.js';
 import * as versionUtils from './version-utils.js';
@@ -58,6 +58,8 @@ THREE.ImageLoader.prototype.load = function (url, onLoad, onProgress, onError) {
 };
 
 const imageLoader = new THREE.ImageLoader();
+
+const getLocalizedLabel = (enLabel, jaLabel, singleValue) => getLocalizedValue(enLabel, jaLabel, config.lang, singleValue);
 
 const isMobile = checkIsMobile(navigator.userAgent);
 
@@ -286,12 +288,11 @@ function initAuthorData(authorInfoData, versionInfoData) {
             left: (e.pageX - ($tooltip.innerWidth() / 2)) + 'px'
         });
     }).on('mouseenter', function () {
-        const isEn = config.lang === 'en';
         const author = authorsByName[$(this).data('id')];
         $tooltip.html(localizedAuthorLabel
-            .replace('{AUTHOR}', config.lang === 'en' || !author.displayNameJP ? author.displayName : author.displayNameJP)
-            .replace('{FIRST_VERSION}', author.firstVer ? isEn ? author.firstVer.name : author.firstVer.nameJP : '')
-            .replace('{LAST_VERSION}', author.lastVer !== author.firstVer ? isEn ? author.lastVer.name : author.lastVer.nameJP : '')
+            .replace('{AUTHOR}', getLocalizedLabel(author.displayName, author.displayNameJP))
+            .replace('{FIRST_VERSION}', author.firstVer ? getLocalizedLabel(author.firstVer.name, author.firstVer.nameJP, true) : '')
+            .replace('{LAST_VERSION}', author.lastVer !== author.firstVer ? getLocalizedLabel(author.lastVer.name, author.lastVer.nameJP, true) : '')
             .replace('{WORLD_COUNT}', author.worldIds.length)
         ).removeClass('display--none');
         if (!author.firstVer)
@@ -310,17 +311,17 @@ function getAuthorDisplayName(author, appendShi) {
     const authorLower = author.toLowerCase();
     const authorNameMatches = !authorData
         ? author
-        : authorData.filter(a => a.name.toLowerCase() === authorLower).map(a => config.lang === 'en' || !a.displayNameJP ? a.displayName : a.displayNameJP);
+        : authorData.filter(a => a.name.toLowerCase() === authorLower).map(a => {
+            if (a.displayName !== a.displayNameJP)
+                return getLocalizedLabel(a.displayName, appendShi ? `${a.displayNameJP}氏` : a.displayNameJP);
+            return !getLangUsesEn(config.lang) && appendShi ? `${a.displayNameJP}氏` : a.displayName;
+        });
     if (authorNameMatches.length)
         ret = authorNameMatches[0];
-    if (appendShi && config.lang !== 'en')
-        ret += '氏';
     return ret;
 }
 
 function initVersionData(versionInfoData) {
-    const isEn = config.lang === 'en';
-
     const $versionEntriesControls = $('.js--version-entries-controls');
     const $versionEntriesContainerItems = $('.js--version-entries-container__items');
     const $versionEntriesContainerBorders = $('.js--version-entries-container__borders');
@@ -432,8 +433,8 @@ function initVersionData(versionInfoData) {
             <div class="js--version-entry--container collectable-entry--container">
                 <a href="javascript:void(0);" class="js--version-entry-link version-entry collectable-entry collectable--border noselect" data-id="${v.index}">
                     <div class="collectable-entry__name--container">
-                        <h1 class="version-entry__name--shadow collectable-entry__name--shadow">${isEn ? v.name : v.nameJP}</h1>
-                        <h1 class="version-entry__name collectable-entry__name">${isEn ? v.name : v.nameJP}</h1>
+                        <h1 class="version-entry__name--shadow collectable-entry__name--shadow">${getLocalizedLabel(v.name, v.nameJP, true)}</h1>
+                        <h1 class="version-entry__name collectable-entry__name">${getLocalizedLabel(v.name, v.nameJP, true)}</h1>
                     </div>
                 </a>
             </div>
@@ -475,8 +476,8 @@ function initVersionData(versionInfoData) {
         const verIndex = $(this).data('id');
         const version = versionsByIndex[verIndex];
         $tooltip.html(localizedVersionLabel
-            .replace('{VERSION}', isEn ? version.name : version.nameJP)
-            .replace('{AUTHORS}', version.authors.map(a => `<span class='tooltip__value'>${(a ? getAuthorDisplayName(a, true) : localizedNA)}</span>`).join(isEn ? ', ' : 'と'))
+            .replace('{VERSION}', getLocalizedLabel(version.name, version.nameJP, true))
+            .replace('{AUTHORS}', version.authors.map(a => `<span class='tooltip__value'>${(a ? getAuthorDisplayName(a, true) : localizedNA)}</span>`).join(localizedComma))
             .replace('{RELEASE_DATE}', version.releaseDate ? formatDate(version.releaseDate, config.lang) : localizedNA)
             .replace('{WORLD_COUNT}', versionIndexAddedWorldIds[verIndex].length)
             .replace('{UPDATED_WORLD_COUNT}', versionIndexUpdatedWorldIds[verIndex].length)
@@ -597,7 +598,7 @@ function getVersionDetailsEntryText(worldId, entryType, updateType) {
 
     const world = worldData[worldId];
 
-    return ret.replace('{WORLD}', config.lang === 'en' ? world.title : world.titleJP);
+    return ret.replace('{WORLD}', getLocalizedLabel(world.title, world.titleJP));
 }
 
 function getDisplayWorldIdsForEntryImage(worldIds, displayCount) {
@@ -671,12 +672,12 @@ function initEffectData(data) {
         });
     }).on('mouseenter', function () {
         const effect = effectsById[$(this).data('effectId')];
-        const effectName = config.lang === 'en' || !effect.nameJP ? effect.name : effect.nameJP;
+        const effectName = getLocalizedLabel(effect.name, effect.nameJP);
         const world = effect.worldId != null ? worldData[effect.worldId] : null;
         const worldName = world ?
-            config.lang === 'en' || !world.titleJP ? world.title : world.titleJP
+            getLocalizedLabel(world.title, world.titleJP)
             : localizedNA;
-        const method = config.lang === 'en' ? effect.method : effect.methodJP;
+        const method = getLocalizedLabel(effect.method, effect.methodJP);
         $tooltip.html(localizedEffectLabel
             .replace('{EFFECT}', effectName)
             .replace('{LOCATION}', worldName)
@@ -733,10 +734,10 @@ function initMenuThemeData(data) {
         const location = menuThemeLocationsById[$(this).data('locationId')];
         const world = location.worldId != null ? worldData[location.worldId] : null;
         const worldName = world ?
-            config.lang === 'en' || !world.titleJP ? world.title : world.titleJP
+            getLocalizedLabel(world.title, world.titleJP)
             : null;
         const worldLabel = worldName ? `<span class="menu-theme-tooltip__world tooltip__value">${worldName}</span><br>` : '';
-        const method = config.lang === 'en' || !location.methodJP ? location.method : location.methodJP;
+        const method = getLocalizedLabel(location.method, location.methodJP);
         $tooltip.html(`${worldLabel}${method}`).removeClass('display--none');
     }).on('mouseleave', function () {
         $tooltip.addClass('display--none');
@@ -788,8 +789,8 @@ function initWallpaperData(data) {
         });
     }).on('mouseenter', function () {
         const wallpaper = wallpapersById[$(this).data('wallpaperId')];
-        const title = config.lang === 'en' ? wallpaper.name : wallpaper.nameJP;
-        const method = config.lang === 'en' ? wallpaper.method : wallpaper.methodJP;
+        const title = getLocalizedLabel(wallpaper.name, wallpaper.nameJP);
+        const method = getLocalizedLabel(wallpaper.method, wallpaper.methodJP);
         $tooltip.html(localizedWallpaperLabel
                 .replace('{WALLPAPER_ID}', wallpaper.wallpaperId - (wallpaper.removed ? 1000 : 0))
                 .replace('{TITLE}', title)
@@ -931,8 +932,8 @@ function initBgmTrackData(data) {
                     $('.js--bgm-track[data-bgm-track-id]').each(function() {
                         const bgmTrack = bgmTracksById[$(this).data('bgmTrackId')];
                         const name = bgmTrack.name;
-                        const location = config.lang === 'en' ? bgmTrack.location : bgmTrack.locationJP;
-                        const notes = config.lang === 'en' ? bgmTrack.notes : bgmTrack.notesJP;
+                        const location = getLocalizedLabel(bgmTrack.location, bgmTrack.locationJP);
+                        const notes = getLocalizedLabel(bgmTrack.notes, bgmTrack.notesJP);
                         let visible = (name && name.toLowerCase().indexOf(changeValueLower) > -1) ||
                                         (location && location.toLowerCase().indexOf(changeValueLower) > -1) ||
                                         (notes && notes.toLowerCase().indexOf(changeValueLower) > -1);
@@ -1030,8 +1031,8 @@ function initBgmTrackData(data) {
     }).on('mouseenter', function () {
         const bgmTrack = bgmTracksById[$(this).data('bgmTrackId')];
         const name = bgmTrack.name;
-        const location = config.lang === 'en' ? bgmTrack.location : bgmTrack.locationJP;
-        const notes = config.lang === 'en' ? bgmTrack.notes : bgmTrack.notesJP;
+        const location = getLocalizedLabel(bgmTrack.location, bgmTrack.locationJP);
+        const notes = getLocalizedLabel(bgmTrack.notes, bgmTrack.notesJP);
         $tooltip.html(localizedBgmTrackLabel
                 .replace('{BGM_TRACK_ID}', bgmTrack.trackNo < 1000 ? bgmTrack.trackNo + (bgmTrack.variant ? ` ${bgmTrack.variant}` : '') : '')
                 .replace('{NAME}', name)
@@ -1471,6 +1472,8 @@ let localizedNodeIconNew;
 let localizedVersionDetails;
 let localizedVersionDisplayToggle;
 let localizedSeparator;
+let localizedDot;
+let localizedComma;
 let localizedBraces;
 let localizedNA;
 
@@ -1771,7 +1774,7 @@ function initGraph(renderMode, displayMode, paths) {
         const img = imageLoader.load(d.filename);
         img.id = d.id;
         img.rId = d.rId;
-        img.title = config.lang === "en" || !d.titleJP ? d.title : d.titleJP;
+        img.title = getLocalizedLabel(d.title, d.titleJP);
         return img;
     });
     
@@ -1882,7 +1885,7 @@ function initGraph(renderMode, displayMode, paths) {
             }
 
             if (!(isWebGL2 && is2d)) {
-                const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
+                const worldName = getLocalizedLabel(world.title, world.titleJP);
                 const text = new SpriteText(worldName, 1.5, node.removed ? getNodeTextColor(node, ret.material.grayscale) : 'white');
                 text.fontFace = 'MS Gothic';
                 text.fontSize = 80;
@@ -2018,23 +2021,22 @@ function initGraph(renderMode, displayMode, paths) {
         .connMode(() => config.connMode)
         .nodeVal(node => node.width)
         .nodeLabel(node => {
-            const isEn = config.lang === 'en';
             const world = worldData[node.id];
             let ret = (paths && node.depth !== node.minDepth ? localizedPathNodeLabel : localizedNodeLabel)
                 .replace('{WORLD}', node.img.title).replace('{DEPTH}', node.depth).replace('{DEPTH_COLOR}', node.depthColor).replace('{AUTHOR}', world.author ? getAuthorDisplayName(world.author, true) : localizedNA)
-                .replace('{VERSION_ADDED}', world.verAdded ? (isEn ? world.verAdded.name : world.verAdded.nameJP) : localizedNA);
+                .replace('{VERSION_ADDED}', world.verAdded ? (getLocalizedLabel(world.verAdded.name, world.verAdded.nameJP, true)) : localizedNA);
             if (paths)
                 ret = ret.replace('{MIN_DEPTH}', node.minDepth).replace('{MIN_DEPTH_COLOR}', node.minDepthColor);
             if (world.verUpdated) {
                 const verUpdated = world.verUpdated[world.verUpdated.length - 1];
                 let nodeLabelLastUpdated = (verUpdated.updateType ? localizedNodeLabelVersionLastUpdatedWithUpdateType : localizedNodeLabelVersionLastUpdated)
-                    .replace('{VERSION_LAST_UPDATED}', isEn ? verUpdated.verUpdated.name : verUpdated.verUpdated.nameJP);
+                    .replace('{VERSION_LAST_UPDATED}', getLocalizedLabel(verUpdated.verUpdated.name, verUpdated.verUpdated.nameJP, true));
                 if (verUpdated.updateType)
                     nodeLabelLastUpdated = nodeLabelLastUpdated.replace('{VERSION_LAST_UPDATED_TYPE}', localizedNodeLabelVersionUpdateTypes[verUpdated.updateType]);
                 ret += nodeLabelLastUpdated;
             }
             if (node.removed)
-                ret += localizedNodeLabelVersionRemoved.replace('{VERSION_REMOVED}', world.verRemoved ? (isEn ? world.verRemoved.name : world.verRemoved.nameJP) : localizedNA);
+                ret += localizedNodeLabelVersionRemoved.replace('{VERSION_REMOVED}', world.verRemoved ? getLocalizedLabel(world.verRemoved.name, world.verRemoved.nameJP, true) : localizedNA);
             return ret;
         })
         .nodesPerStack(config.stackSize)
@@ -2667,7 +2669,7 @@ function initNodeObjectMaterial() {
                     nodeObjectMaterial.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
                     const worldId = index;
                     const world = worldData[worldId];
-                    const worldName = config.lang === "en" || !world.titleJP ? world.title : world.titleJP;
+                    const worldName = getLocalizedLabel(world.title, world.titleJP);
 
                     if (world.removed)
                         ctx.save();
@@ -3362,6 +3364,7 @@ function getLinkGrayscale(link) {
 }
 
 function getConnTypeIcon(connType, typeParams) {
+    const useEn = getLangUsesEn(config.lang);
     const localizedConn = localizedConns[connType];
     const char = getConnTypeChar(connType);
     const name = localizedConn.name;
@@ -3369,18 +3372,18 @@ function getConnTypeIcon(connType, typeParams) {
     if (description) {
         switch (connType) {
             case ConnType.EFFECT:
-                description = typeParams && ((config.lang === 'en' && typeParams.params) || (config.lang !== 'en' && typeParams.paramsJP))
-                    ? description.replace('{0}', config.lang === 'en' ? typeParams.params : typeParams.paramsJP)
+                description = typeParams && ((useEn && typeParams.params) || (!useEn && typeParams.paramsJP))
+                    ? description.replace('{0}', getLocalizedLabel(typeParams.params, typeParams.paramsJP))
                     : null;
                 break;
             case ConnType.CHANCE:
                 description = typeParams && typeParams.params
-                    ? description.replace('{0}', config.lang === 'en' ? typeParams.params : typeParams.params.replace('%', '％'))
+                    ? description.replace('{0}', useEn ? typeParams.params : typeParams.params.replace('%', '％'))
                     : '';
                 break;
             case ConnType.LOCKED_CONDITION:
-                description = typeParams && ((config.lang === 'en' && typeParams.params) || (config.lang !== 'en' && typeParams.paramsJP))
-                    ? description.replace('{0}', config.lang === 'en' ? typeParams.params : typeParams.paramsJP)
+                description = typeParams && ((useEn && typeParams.params) || (!useEn && typeParams.paramsJP))
+                    ? description.replace('{0}', getLocalizedLabel(typeParams.params, typeParams.paramsJP))
                     : '';
                 break;
         }
@@ -3388,7 +3391,7 @@ function getConnTypeIcon(connType, typeParams) {
     return {
         type: connType,
         char: char,
-        text: name + (description ? (config.lang === 'en' ? ' - ' : '：') + description : '')
+        text: name + (description ? (useEn ? localizedSeparator : '：') + description : '')
     };
 }
 
@@ -3792,13 +3795,11 @@ function initLocalization(isInitial) {
             config.lang = urlLang;
     }
 
-    const isEn = config.lang === "en";
-
     $("[data-localize]").localize("ui", {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "3.10.2");
+            data.footer.about = data.footer.about.replace("{VERSION}", "4.0.0");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
@@ -3807,6 +3808,8 @@ function initLocalization(isInitial) {
                 convertJPControlLabels(data.settings);
             }
             localizedSeparator = data.separator;
+            localizedDot = data.dot;
+            localizedComma = data.comma;
             localizedBraces = data.braces;
             localizedNA = data.na;
             localizedConns = data.conn;
@@ -3841,8 +3844,12 @@ function initLocalization(isInitial) {
         }
     });
 
+    const isEn = getLangUsesEn(config.lang);
+
     $(".js--help-modal__content--localized--en").toggle(isEn);
     $(".js--help-modal__content--localized--jp").toggle(!isEn);
+
+    $('html').attr('lang', config.lang);
 
     $.localize("conn", {
         language: config.lang,
@@ -3866,12 +3873,12 @@ function initLocalization(isInitial) {
                 const val = $(this).val();
                 if (val && worldNames.indexOf(val) > -1) {
                     const world = worldsByName[worldNames[worldNames.indexOf(val)]];
-                    $(this).val(isEn || !world.titleJP ? world.title : world.titleJP);
+                    $(this).val(getLocalizedLabel(world.title, world.titleJP));
                 }
             });
         }
 
-        worldsByName = isEn ? _.keyBy(worldData, w => w.title) : _.keyBy(worldData, w => w.titleJP || w.title);
+        worldsByName = _.keyBy(worldData, w => getLocalizedLabel(w.title, w.titleJP));
 
         worldNames = Object.keys(worldsByName);
 
@@ -3880,7 +3887,7 @@ function initLocalization(isInitial) {
             $(this).on("change", function () {
                 const currentWorldId = $(this).is(".js--start-world") ? startWorldId : endWorldId;
                 const currentWorld = worldData[currentWorldId];
-                if (currentWorld != null && $(this).val() !== (config.lang === 'en' || !currentWorld.titleJP ? currentWorld.title : currentWorld.titleJP)) {
+                if (currentWorld != null && $(this).val() !== (getLocalizedLabel(currentWorld.title, currentWorld.titleJP))) {
                     let isReloadGraph;
                     $(this).removeClass("selected");
                     if ($(this).is(".js--start-world")) {
@@ -3914,7 +3921,7 @@ function initLocalization(isInitial) {
         });
 
         $(".js--author-entry").each(function () {
-            const displayName = $(this).data(isEn ? "displayName" : "displayNameJp");
+            const displayName = $(this).data(getLangUsesEn(config.lang) ? "displayName" : "displayNameJp");
             $(this).find('h1').text(displayName);
         });
     }
@@ -3942,7 +3949,7 @@ function convertJPControlLabels(data) {
 function initWorldSearch() {
     const $search = $(".js--search-world");
     $search.devbridgeAutocomplete("destroy");
-    const visibleWorldNames = worldData ? worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1).map(w => config.lang === 'en' || !w.titleJP ? w.title : w.titleJP) : [];
+    const visibleWorldNames = worldData ? worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1).map(w => getLocalizedLabel(w.title, w.titleJP)) : [];
     if (selectedWorldId != null && visibleWorldIds.indexOf(selectedWorldId) === -1) {
         $search.removeClass("selected").val("");
         selectedWorldId = null;
@@ -3952,7 +3959,7 @@ function initWorldSearch() {
         triggerSelectOnValidInput: false,
         onSearchComplete: function (query, searchWorlds) {
             const selectedWorld = selectedWorldId != null ? worldData[selectedWorldId] : null;
-            const selectedWorldName = selectedWorld ? config.lang === 'en' || !selectedWorld.titleJP ? selectedWorld.title : selectedWorld.titleJP : null;
+            const selectedWorldName = selectedWorld ? getLocalizedLabel(selectedWorld.title, selectedWorld.titleJP) : null;
             searchWorldIds = searchWorlds.length && (!selectedWorld || (searchWorlds.length > 1 || searchWorlds.find(w => w.value !== selectedWorldName))) ? searchWorlds.map(w => worldsByName[w.value].id) : [];
             if (searchWorldIds.length && selectedWorld && (searchWorldIds.length !== 1 || selectedWorldId !== searchWorldIds[0])) {
                 $search.removeClass("selected");
@@ -3968,7 +3975,7 @@ function initWorldSearch() {
         onHide: function () {
            if (selectedWorldId != null) {
                 const selectedWorld = worldData[selectedWorldId];
-                const selectedWorldName = config.lang === 'en' || !selectedWorld.titleJP ? selectedWorld.title : selectedWorld.titleJP;
+                const selectedWorldName = getLocalizedLabel(selectedWorld.title, selectedWorld.titleJP);
                 if ($(this).val() !== selectedWorldName) {
                     $search.removeClass("selected");
                     selectedWorldId = null;
@@ -4012,7 +4019,7 @@ function initVersionSelectOptions() {
         if (!v.addedWorldIds.length && !v.removedWorldIds.length && v.index !== missingVersionIndex)
             $opt.addClass('temp-select-only');
         $opt.val(v.index);
-        $opt.text(config.lang === 'en' ? v.name : v.nameJP);
+        $opt.text(getLocalizedLabel(v.name, v.nameJP, true));
         $versionSelect.append($opt);
     });
     if (!selectedVersionIndex)
@@ -4039,7 +4046,7 @@ function initContextMenu(localizedContextMenu) {
             name: () => localizedContextMenu.items.start,
             callback: function () {
                 const world = worldData[contextWorldId];
-                const worldName = config.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
+                const worldName = getLocalizedLabel(world.title, world.titleJP);
                 $('.js--start-world').val(worldName).trigger('change').devbridgeAutocomplete().select(0);
             }
         },
@@ -4047,7 +4054,7 @@ function initContextMenu(localizedContextMenu) {
             name: () => localizedContextMenu.items.end,
             callback: function () {
                 const world = worldData[contextWorldId];
-                const worldName = config.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
+                const worldName = getLocalizedLabel(world.title, world.titleJP);
                 $('.js--end-world').val(worldName).trigger('change').devbridgeAutocomplete().select(0);
             }
         },
@@ -4080,7 +4087,7 @@ function initContextMenu(localizedContextMenu) {
                 const world = worldData[contextWorldId];
                 if (world.bgmUrl.indexOf('|') === -1) {
                     if (!isCtrl) {
-                        const worldName = config.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
+                        const worldName = getLocalizedLabel(world.title, world.titleJP);
                         playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel), world.filename, world.id);
                     } else {
                         const handle = window.open(world.bgmUrl, '_blank', 'noreferrer');
@@ -4128,7 +4135,7 @@ function initContextMenu(localizedContextMenu) {
         }
         
         if (world.bgmUrl && world.bgmUrl.indexOf('|') > -1) {
-            const worldName = config.lang === 'en' || !world.titleJP ? world.title : world.titleJP;
+            const worldName = getLocalizedLabel(world.title, world.titleJP);
             const bgmUrls = world.bgmUrl.split('|');
             const bgmLabels = getBgmLabels(world.bgmLabel.split('|'), localizedContextMenu.items.bgm);
             for (let b = 0; b < bgmUrls.length; b++) {
@@ -4161,7 +4168,7 @@ function initContextMenu(localizedContextMenu) {
 
 function openWorldWikiPage(worldId, newWindow) {
     const world = worldData[worldId];
-    window.open(config.lang === 'en' || !world.titleJP || world.removed
+    window.open(!world.titleJP || world.removed || getLangUsesEn(config.lang)
         ? 'https://yume2kki.fandom.com/wiki/' + world.title
         : ('https://wikiwiki.jp/yume2kki-t/' + (world.titleJP.indexOf("：") > -1 ? world.titleJP.slice(0, world.titleJP.indexOf("：")) : world.titleJP)),
         "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
@@ -4636,7 +4643,7 @@ function getBgmLabels(bgmLabels, localizedBgm) {
         ret = bgmLabels;
     else {
         const namedTracksCount = bgmLabels.filter(l => !l.endsWith('^')).length;
-        if (config.lang !== 'en' || !namedTracksCount)
+        if (!namedTracksCount || !getLangUsesEn(config.lang))
             ret = bgmLabels.map(l => l.slice(0, l.indexOf('^')));
         else if (namedTracksCount === bgmLabels.length)
             ret = bgmLabels.map(l => l.slice(l.indexOf('^') + 1));
@@ -4666,7 +4673,7 @@ function getBgmLabels(bgmLabels, localizedBgm) {
 
 function getBgmLabel(worldName, bgmLabel) {
     const separatorIndex = bgmLabel.indexOf('^');
-    if (config.lang !== 'en' || separatorIndex === bgmLabel.length - 1)
+    if (separatorIndex === bgmLabel.length - 1 || !getLangUsesEn(config.lang))
         return `${worldName}${localizedSeparator}${bgmLabel.slice(0, separatorIndex)}`;
     return `${worldName}${localizedSeparator}${bgmLabel.slice(separatorIndex + 1)}${localizedBraces.replace('{VALUE}', bgmLabel.slice(0, separatorIndex))})`;
 }
@@ -4681,7 +4688,7 @@ function getBgmTrackLabel(bgmTrack) {
         trackLabel += localizedSeparator;
     }
 
-    const location = config.lang == 'en' ? bgmTrack.location : bgmTrack.locationJP;
+    const location = getLocalizedLabel(bgmTrack.location, bgmTrack.locationJP);
     const name = bgmTrack.name;
 
     if (location) {
@@ -4705,7 +4712,7 @@ function trySelectNode(node, forceFocus, ignoreSearch) {
     const world = worldData[node.id];
     if ((node && (selectedWorldId == null || selectedWorldId !== node.id))) {
         if (!ignoreSearch)
-            $(".js--search-world").addClass("selected").val(config.lang === 'en' || !world.titleJP ? world.title : world.titleJP);
+            $(".js--search-world").addClass("selected").val(getLocalizedLabel(world.title, world.titleJP));
         if (forceFocus)
             focusNode(node);
     } else
@@ -5237,10 +5244,11 @@ function initControls() {
             $.get("/help", function (data) {
                 const md = new Remarkable();
                 data = data.split('---');
+                const useEn = getLangUsesEn(config.lang);
                 const helpEn = md.render(data[0]);
                 const helpJp = data.length > 1 ? md.render(data[1]) : helpEn;
-                $('.js--help-modal__content--localized').html('<div class="js--help-modal__content--localized--en"' + (config.lang === 'en' ? '' : ' style="display: none;"') + '>' + helpEn + '</div>'
-                    + '<div class="js--help-modal__content--localized--jp"' + (config.lang === 'en' ? ' style="display: none;"' : '') + '>' + helpJp + '</div>');
+                $('.js--help-modal__content--localized').html('<div class="js--help-modal__content--localized--en"' + (useEn ? '' : ' style="display: none;"') + '>' + helpEn + '</div>'
+                    + '<div class="js--help-modal__content--localized--jp"' + (useEn ? ' style="display: none;"' : '') + '>' + helpJp + '</div>');
                 openHelpModal();
             });
         }
@@ -5279,8 +5287,8 @@ function displayLoadingAnim($container) {
     let loadingFrameCount = 0;
     const updateLoadingText = () => {
         let loadingTextAppend = "";
-        const loadingTextAppendChar = config.lang === "en" ? "." : "．";
-        const loadingTextSpaceChar = config.lang === "en" ? " " : "　";
+        const loadingTextAppendChar = localizedDot;
+        const loadingTextSpaceChar = getLangUsesEn(config.lang) ? " " : "　";
         for (let i = 0; i < 3; i++)
             loadingTextAppend += i < loadingFrameCount ? loadingTextAppendChar : loadingTextSpaceChar;
         $loadingContainer.find(".loading-container__text__append").text(loadingTextAppend);
