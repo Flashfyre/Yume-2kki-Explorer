@@ -3791,7 +3791,7 @@ function findRealPathDepth(paths, worldId, pathWorldIds, worldDepthsMap, maxDept
 function initLocalization(isInitial) {
     if (isInitial && urlSearchParams.has("lang")) {
         const urlLang = urlSearchParams.get("lang");
-        if (/^(?:en|ja|zh)$/.test(urlLang))
+        if (/^(?:en|ja|zh|ko)$/.test(urlLang))
             config.lang = urlLang;
     }
 
@@ -3799,7 +3799,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "4.0.0");
+            data.footer.about = data.footer.about.replace("{VERSION}", "4.0.1");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {

@@ -14,6 +14,8 @@ function getLangDateFormat(lang) {
     switch (lang) {
         case 'ja':
             return 'ja-JP';
+        case 'ko':
+            return 'ko-KR';
         case 'zh':
             return 'zh-CN';
         default:
@@ -46,6 +48,7 @@ export function getLangUsesEn(lang) {
     switch (lang) {
         case 'ja':
         case 'zh':
+        case 'ko':
             return false;
         default:
             return true;
