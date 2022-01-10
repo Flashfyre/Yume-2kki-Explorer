@@ -1,0 +1,321 @@
+{
+    "title": "Yume 2kki Explorer",
+    "loading": {
+        "label": "로딩 중",
+        "space": "   ",
+        "error": "오류가 발생했습니다. : 새로 고침을 눌러 다시 접속해 주세요."
+    },
+    "controls": {
+        "search": {
+            "name": "검색:"
+        },
+        "author": {
+            "name": "제작자:",
+            "values": {
+                "null": "전체"
+            }
+        },
+        "version": {
+            "name": "버전:",
+            "values": {
+                "0": "전체"
+            }
+        },
+        "origin": {
+            "name": "출발지:"
+        },
+        "destination": {
+            "name": "도착지:"
+        },
+        "reset": {
+            "name": "리셋"
+        },
+        "help": {
+            "name": "도움말"
+        }
+    },
+    "collectableControls": {
+        "authors": {
+            "name": "제작자"
+        },
+        "versions": {
+            "name": "버전"
+        },
+        "effects": {
+            "name": "이펙트"
+        },
+        "menuThemes": {
+            "name": "메뉴 테마"
+        },
+        "wallpapers": {
+            "name": "배경화면"
+        },
+        "bgmTracks": {
+            "name": "사운드트랙"
+        }
+    },
+    "settings": {
+        "lang": {
+            "name": "언어:"
+        },
+        "uiTheme": {
+            "name": "UI 테마:",
+            "values": {
+                "Default_Custom": "Default (Custom)",
+                "Default": "Default",
+                "Default_2": "Default 2",
+                "Default_3": "Default 3",
+                "Default_4": "Default 4",
+                "Default_5": "Default 5",
+                "Developer_Room": "Developer Room",
+                "Glitch_Ending": "Bleak Future",
+                "Glitch_Ending_2": "Bleak Future 2",
+                "Black_Building": "Black Building",
+                "Cog_Maze": "Cog Maze",
+                "Square_Square_World": "Square-Square World",
+                "Verdant_Promenade": "Verdant Promenade",
+                "Urotsukis_Dream_Apartments": "Urotsuki's Dream Apartments",
+                "Sofa_Room": "Sofa Room",
+                "Depths": "Depths",
+                "Depths_2": "Depths 2",
+                "Guts_World": "Guts World",
+                "Maple_Shrine": "Maple Shrine",
+                "Pencil_World": "Pencil World",
+                "Chocolate_World": "Chocolate World",
+                "Blue_Cactus_Islands": "Blue Cactus Islands",
+                "Stone_Towers": "Stone Towers",
+                "Constellation_World": "Star Building",
+                "Blob_Desert": "Blob Desert",
+                "Cipher_Keyboard": "Cipher Keyboard",
+                "Viridian_Wetlands": "Viridian Wetlands",
+                "Polluted_Swamp": "Polluted Swamp",
+                "Snowy_Village": "Snowy Village",
+                "Decrepit_Dwellings": "Decrepit Dwellings",
+                "Verdant_Promenade_2": "Verdant Promenade 2",
+                "Black_Ink_World": "Black Ink World",
+                "Forgotten_Megalopolis": "Forgotten Megalopolis",
+                "Tomb_of_Velleities": "Tomb of Velleities",
+                "Visine_Spacecraft": "Visine Spacecraft",
+                "Data_Stream": "Data Stream",
+                "Lavender_Waters": "Lavender Waters",
+                "Originator_Garden": "Originator Garden",
+                "Fluorescent_Halls": "Fluorescent Halls",
+                "City_of_Liars": "City of Liars",
+                "Misc": "Misc. Theme",
+                "Monochrome_GB_World": "Monochrome GB World",
+                "Smiley_Signs_World": "Smiley Signs World",
+                "Lovesick_World": "Lovesick World",
+                "Corrupted_Love_World": "Corrupted Love World",
+                "Saturated_Eyeball_Zone": "Saturated Eyeball Zone",
+                "NES_Glitch_Tunnel": "NES Glitch Tunnel",
+                "Shop_Ruins": "Shop Ruins",
+                "Yume_Nikki": "Yume Nikki"
+            }
+        },
+        "fontStyle": {
+            "name": "폰트 스타일:",
+            "values": {
+                "style1": "스타일 1",
+                "style2": "스타일 2",
+                "style3": "스타일 3",
+                "style4": "스타일 4",
+                "style5": "스타일 5",
+                "style6": "스타일 6",
+                "style7": "스타일 7"
+            }
+        },
+        "renderMode": {
+            "name": "렌더링 모드:",
+            "values": {
+                "2d": "2D",
+                "3d": "3D"
+            }
+        },
+        "displayMode": {
+            "name": "정렬 모드:",
+            "values": {
+                "vertical": "수직",
+                "horizontal": "수평",
+                "radialIn": "안쪽으로",
+                "radialOut": "바깥쪽으로",
+                "free": "자유"
+            }
+        },
+        "connMode": {
+            "name": "연결 모드:",
+            "values": {
+                "oneWay": "단방향",
+                "twoWay": "양방향"
+            }
+        },
+        "labelMode": {
+            "name": "맵 이름 표시:",
+            "values": {
+                "never": "표시하지 않음",
+                "hover": "커서를 갖다댈 경우",
+                "select": "선택했을 경우",
+                "always": "항상 표시"
+            }
+        },
+        "removedContentMode": {
+            "name": "삭제된 맵:",
+            "values": {
+                "hide": "숨김",
+                "show": "표시"
+            }
+        },
+        "pathMode": {
+            "name": "경로 모드:",
+            "values": {
+                "simple": "간단히",
+                "normal": "보통",
+                "detailed": "자세히"
+            }
+        },
+        "sizeDiff": {
+            "name": "크기 차이 정도:"
+        },
+        "stackSize": {
+            "name": "월드 분포 정도:"
+        }
+    },
+    "contextMenu": {
+        "items": {
+            "wiki": "위키 페이지 열기",
+            "start": "출발지로 설정하기",
+            "end": "도착지로 설정하기",
+            "map": "맵 보기",
+            "bgm": {
+                "name": "BGM 듣기",
+                "main": "메인"
+            }
+        }
+    },
+    "nodeLabel": {
+        "depth": "깊이: ",
+        "author": "제작자: ",
+        "versionAdded": "추가된 버전: ",
+        "versionLastUpdated": "최종 업데이트 버전: ",
+        "versionRemoved": "삭제된 버전: ",
+        "versionUpdateType": {
+            "CHANGE": "",
+            "MINOR_CHANGE": "소규모 업데이트",
+            "MAJOR_CHANGE": "대규모 업데이트",
+            "BUG_FIX": "버그 수정",
+            "ADD_CONTENT": "컨텐츠 추가",
+            "REMOVE_CONTENT": "컨텐츠 제거",
+            "LAYOUT_CHANGE": "레이아웃 변경",
+            "EXPANSION": "확장",
+            "REDUCTION": "축소",
+            "ADD_SUB_AREA": "서브 맵 추가",
+            "REMOVE_SUB_AREA": "서브 맵 제거",
+            "CONNECTION_CHANGE": "연결 변경",
+            "ADD_CONNECTION": "연결 추가",
+            "REMOVE_CONNECTION": "연결 제거",
+            "BGM_CHANGE": "BGM 변경",
+            "EFFECT_CHANGE": "이펙트 관련 변경",
+            "REWORK": "재작업"
+        }
+    },
+    "authorLabel": {
+        "worldCount": "맵 수: "
+    },
+    "versionLabel": {
+        "authors": "제작자 : ",
+        "releaseDate": "출시 날짜: ",
+        "worldCount": "추가된 월드 수: ",
+        "updatedWorldCount": "업데이트된 월드 수: ",
+        "removedWorldCount": "삭제된 월드 수: "
+    },
+    "effectLabel": {
+        "location": "취득 장소: "
+    },
+    "wallpaperLabel": {
+        "number": "#",
+        "titleTemplate": " - \"{TITLE}\""
+    },
+    "bgmTrackLabel": {
+        "location": "장소: "
+    },
+    "nodeIcon": {
+        "new": "신규"
+    },
+    "versionDetails": {
+        "ADD": "{WORLD} 추가됨",
+        "UPDATE": {
+            "CHANGE": "{WORLD} 업데이트",
+            "MINOR_CHANGE": "{WORLD} 소규모 업데이트",
+            "MAJOR_CHANGE": "{WORLD} 대규모 업데이트",
+            "BUG_FIX": "{WORLD}의 버그를 수정함",
+            "ADD_CONTENT": "{WORLD}의 컨텐츠 추가",
+            "REMOVE_CONTENT": "{WORLD}의 컨텐츠 삭제",
+            "LAYOUT_CHANGE": "{WORLD}의 레이아웃 변경",
+            "EXPANSION": "{WORLD} 사이즈 확장",
+            "REDUCTION": "{WORLD} 사이즈 축소",
+            "ADD_SUB_AREA": "{WORLD}의 서브 맵 추가",
+            "REMOVE_SUB_AREA": "{WORLD}의 서브 맵 제거",
+            "CONNECTION_CHANGE": "{WORLD}의 연결 변경",
+            "ADD_CONNECTION": "{WORLD}의 연결 추가",
+            "REMOVE_CONNECTION": "{WORLD}의 연결 제거",
+            "BGM_CHANGE": "{WORLD}의 BGM 변경",
+            "EFFECT_CHANGE": "{WORLD}의 이펙트 관련 변경",
+            "REWORK": "{WORLD}을(를) 재작업함"
+        },
+        "REMOVE": "{WORLD}을(를) 삭제함"
+    },
+    "versionEntriesModal": {
+        "filters": "필터",
+        "versionDisplayToggle": {
+            "name": "{ENTRY_TYPE} 표시",
+            "entryType": {
+                "ADD": "월드 추가 항목들",
+                "UPDATE": "월드 업데이트 항목들",
+                "REMOVE": "월드 삭제 항목들"
+            },
+            "entryUpdateType": {
+                "MINOR_CHANGE": "소규모 업데이트",
+                "MAJOR_CHANGE": "대규모 업데이트",
+                "BUG_FIX": "버그 ",
+                "ADD_CONTENT": "컨텐츠 추가 항목들",
+                "REMOVE_CONTENT": "컨텐츠 제거 항목들",
+                "LAYOUT_CHANGE": "레이아웃 변경 사항",
+                "EXPANSION": "월드 확장 정보",
+                "REDUCTION": "월드 축소 정보",
+                "ADD_SUB_AREA": "서브 맵 추가",
+                "REMOVE_SUB_AREA": "서브 맵 제거",
+                "CONNECTION_CHANGE": "연결 변경사항",
+                "ADD_CONNECTION": "연결 추가사항",
+                "REMOVE_CONNECTION": "연결 삭제 항목",
+                "BGM_CHANGE": "BGM 변경점",
+                "EFFECT_CHANGE": "이펙트 관련 변경점",
+                "REWORK": "재작업"
+            }
+        }
+    },
+    "menuThemesModal": {
+        "previousMethods": "이전 방법들"
+    },
+    "wallpapersModal": {
+        "removedWallpapers": "삭제된 배경화면"
+    },
+    "bgmTracksModal": {
+        "search": "검색:",
+        "favBgmTracks": "관심 트랙",
+        "musicRoomBgmTracks": "사운드트랙",
+        "unnumberedBgmTracks": "번호가 없는 트랙",
+        "removedBgmTracks": "삭제된 트랙"
+    },
+    "helpModal": {
+        "reportBug": "버그 제보하기"
+    },
+    "footer": {
+        "about": "Yume 2kki Explorer {VERSION} 버전 by FlashfyreDev",
+        "lastUpdate": "{LAST_UPDATE}에 데이터 업데이트 함",
+        "lastFullUpdate": "{LAST_FULL_UPDATE}에 데이터 리셋 함"
+    },
+    "dot": ".",
+    "comma": ", ",
+    "separator": " - ",
+    "braces": " ({VALUE})",
+    "na": "없음"
+}
