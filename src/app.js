@@ -3791,7 +3791,7 @@ function findRealPathDepth(paths, worldId, pathWorldIds, worldDepthsMap, maxDept
 function initLocalization(isInitial) {
     if (isInitial && urlSearchParams.has("lang")) {
         const urlLang = urlSearchParams.get("lang");
-        if (/^(?:en|ja)$/.test(urlLang))
+        if (/^(?:en|ja|zh)$/.test(urlLang))
             config.lang = urlLang;
     }
 
