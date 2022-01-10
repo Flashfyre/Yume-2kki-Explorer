@@ -2216,13 +2216,13 @@ function addEffectDataJPMethod(effect) {
         let url = `https://wikiwiki.jp/yume2kki-t/${encodeURI(effect.nameJP)}`;
         superagent.get(url, function (err, res) {
             if (err) return reject(err);
-            const methodMatch = /<th>備考<\/th><td>(.*)<\/td><\/tr>/.exec(res.text);
+            const methodMatch = /<th>備考<\/th><td>(.*?)<\/td><\/tr>/.exec(res.text);
             let method = null;
             if (methodMatch) {
                 method = methodMatch[1].replace(/<a .*?>\?<\/a>/g, '');
 
                 const routeWorlds = [];
-                const routeSectionMatch = /<th>ルート例<\/th>.*<\/tr>/.exec(res.text);
+                const routeSectionMatch = /<th>ルート例<\/th>.*?<\/tr>/.exec(res.text);
                 if (routeSectionMatch) {
                     const routeSection = routeSectionMatch[0];
                     const routeWorldRegex = /(?:<a [^>]+>)([^<]+)</g;
