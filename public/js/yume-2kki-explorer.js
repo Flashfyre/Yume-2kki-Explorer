@@ -107462,11 +107462,12 @@ function InsertStackElement(node, body) {
 	        case 'ja':
 	            return jaValue;
 	        default:
-	            const useEn = getLangUsesEn(lang);
-	            if (singleValue)
-	                return useEn ? enValue : jaValue;
-	            else if (enValue !== jaValue)
-	                return `${useEn ? enValue : jaValue} (${useEn ? jaValue : enValue})`;
+	            if (!getLangUsesEn(lang)) {
+	                if (singleValue)
+	                    return jaValue;
+	                else if (enValue !== jaValue)
+	                    return `${jaValue} (${enValue})`;
+	            }
 	    }
 	    return enValue;
 	}
