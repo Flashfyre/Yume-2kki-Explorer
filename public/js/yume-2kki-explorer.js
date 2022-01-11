@@ -1,4 +1,4 @@
-// Version 4.0.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 4.0.2 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -107889,6 +107889,7 @@ function InsertStackElement(node, body) {
 	});
 
 	const urlSearchParams = new URLSearchParams(window.location.search);
+	const helpLangs = ['en', 'ja', 'ko'];
 	let isDebug = false;
 	let isShift = false;
 	let isCtrl = false;
@@ -111651,7 +111652,7 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "4.0.1");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "4.0.2");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            if (config$1.lang === "ja") {
@@ -111696,10 +111697,14 @@ function InsertStackElement(node, body) {
 	        }
 	    });
 
-	    const isEn = getLangUsesEn(config$1.lang);
+	    let helpLangIndex = helpLangs.indexOf(config$1.lang);
+	    if (helpLangIndex < 0)
+	        helpLangIndex = helpLangs.indexOf(getLangUsesEn(config$1.lang) ? 'en' : 'ja');
+	    const compatibleHelpLang = helpLangs[helpLangIndex];
 
-	    jquery(".js--help-modal__content--localized--en").toggle(isEn);
-	    jquery(".js--help-modal__content--localized--jp").toggle(!isEn);
+	    jquery(".js--help-modal__content--localized__text").each(function () {
+	        jquery(this).toggle(jquery(this).data('lang') === compatibleHelpLang);
+	    });
 
 	    jquery('html').attr('lang', config$1.lang);
 
@@ -113094,11 +113099,15 @@ function InsertStackElement(node, body) {
 	            jquery.get("/help", function (data) {
 	                const md = new Remarkable();
 	                data = data.split('---');
-	                const useEn = getLangUsesEn(config$1.lang);
-	                const helpEn = md.render(data[0]);
-	                const helpJp = data.length > 1 ? md.render(data[1]) : helpEn;
-	                jquery('.js--help-modal__content--localized').html('<div class="js--help-modal__content--localized--en"' + (useEn ? '' : ' style="display: none;"') + '>' + helpEn + '</div>'
-	                    + '<div class="js--help-modal__content--localized--jp"' + (useEn ? ' style="display: none;"' : '') + '>' + helpJp + '</div>');
+	                let helpLangIndex = helpLangs.indexOf(config$1.lang);
+	                if (helpLangIndex < 0)
+	                    helpLangIndex = helpLangs.indexOf(getLangUsesEn(config$1.lang) ? 'en' : 'ja');
+	                const compatibleHelpLang = helpLangs[helpLangIndex];
+	                jquery('.js--help-modal__content--localized').empty();
+	                for (let l in helpLangs) {
+	                    const lang = helpLangs[l];
+	                    jquery('.js--help-modal__content--localized').append(`<div class="js--help-modal__content--localized__text"${lang !== compatibleHelpLang ? ' style="display: none;"' : ''} data-lang="${lang}">${md.render(data[l])}</div>`);
+	                }
 	                openHelpModal();
 	            });
 	        }

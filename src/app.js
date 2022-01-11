@@ -33,6 +33,7 @@ $(document).on("keyup", function (event) {
 });
 
 const urlSearchParams = new URLSearchParams(window.location.search);
+const helpLangs = ['en', 'ja', 'ko'];
 let isDebug = false;
 let isShift = false;
 let isCtrl = false;
@@ -3799,7 +3800,7 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "4.0.1");
+            data.footer.about = data.footer.about.replace("{VERSION}", "4.0.2");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             if (config.lang === "ja") {
@@ -3844,10 +3845,14 @@ function initLocalization(isInitial) {
         }
     });
 
-    const isEn = getLangUsesEn(config.lang);
+    let helpLangIndex = helpLangs.indexOf(config.lang);
+    if (helpLangIndex < 0)
+        helpLangIndex = helpLangs.indexOf(getLangUsesEn(config.lang) ? 'en' : 'ja');
+    const compatibleHelpLang = helpLangs[helpLangIndex];
 
-    $(".js--help-modal__content--localized--en").toggle(isEn);
-    $(".js--help-modal__content--localized--jp").toggle(!isEn);
+    $(".js--help-modal__content--localized__text").each(function () {
+        $(this).toggle($(this).data('lang') === compatibleHelpLang);
+    });
 
     $('html').attr('lang', config.lang);
 
@@ -5244,11 +5249,15 @@ function initControls() {
             $.get("/help", function (data) {
                 const md = new Remarkable();
                 data = data.split('---');
-                const useEn = getLangUsesEn(config.lang);
-                const helpEn = md.render(data[0]);
-                const helpJp = data.length > 1 ? md.render(data[1]) : helpEn;
-                $('.js--help-modal__content--localized').html('<div class="js--help-modal__content--localized--en"' + (useEn ? '' : ' style="display: none;"') + '>' + helpEn + '</div>'
-                    + '<div class="js--help-modal__content--localized--jp"' + (useEn ? ' style="display: none;"' : '') + '>' + helpJp + '</div>');
+                let helpLangIndex = helpLangs.indexOf(config.lang);
+                if (helpLangIndex < 0)
+                    helpLangIndex = helpLangs.indexOf(getLangUsesEn(config.lang) ? 'en' : 'ja');
+                const compatibleHelpLang = helpLangs[helpLangIndex];
+                $('.js--help-modal__content--localized').empty();
+                for (let l in helpLangs) {
+                    const lang = helpLangs[l];
+                    $('.js--help-modal__content--localized').append(`<div class="js--help-modal__content--localized__text"${lang !== compatibleHelpLang ? ' style="display: none;"' : ''} data-lang="${lang}">${md.render(data[l])}</div>`);
+                }
                 openHelpModal();
             });
         }
