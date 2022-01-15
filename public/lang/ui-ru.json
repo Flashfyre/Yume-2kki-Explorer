@@ -1,0 +1,321 @@
+{
+    "title": "Yume 2kki Explorer",
+    "loading": {
+        "label": "Загрузка",
+        "space": "   ",
+        "error": "Произошла ошибка: Пожалуйста, повторите позже."
+    },
+    "controls": {
+        "search": {
+            "name": "Поиск:"
+        },
+        "author": {
+            "name": "Автор:",
+            "values": {
+                "null": "Все"
+            }
+        },
+        "version": {
+            "name": "Версия:",
+            "values": {
+                "0": "Все"
+            }
+        },
+        "origin": {
+            "name": "Откуда:"
+        },
+        "destination": {
+            "name": "Куда:"
+        },
+        "reset": {
+            "name": "Сброс"
+        },
+        "help": {
+            "name": "Помощь"
+        }
+    },
+    "collectableControls": {
+        "authors": {
+            "name": "Авторы"
+        },
+        "versions": {
+            "name": "Версии"
+        },
+        "effects": {
+            "name": "Эффекты"
+        },
+        "menuThemes": {
+            "name": "Стили Меню"
+        },
+        "wallpapers": {
+            "name": "Обои"
+        },
+        "bgmTracks": {
+            "name": "Треки"
+        }
+    },
+    "settings": {
+        "lang": {
+            "name": "Язык:"
+        },
+        "uiTheme": {
+            "name": "Стиль Интерфейса:",
+            "values": {
+                "Default_Custom": "Обычный (Custom)",
+				"system1": "Обычный",
+				"system2": "Обычный 2",
+				"system3": "Обычный 3",
+				"system4": "Обычный 4",
+				"system5": "Обычный 5",
+                "Developer_Room": "Developer Room",
+                "Glitch_Ending": "Bleak Future",
+                "Glitch_Ending_2": "Bleak Future 2",
+                "Black_Building": "Black Building",
+                "Cog_Maze": "Cog Maze",
+                "Square_Square_World": "Square-Square World",
+                "Verdant_Promenade": "Verdant Promenade",
+                "Urotsukis_Dream_Apartments": "Urotsuki's Dream Apartments",
+                "Sofa_Room": "Sofa Room",
+                "Depths": "Depths",
+                "Depths_2": "Depths 2",
+                "Guts_World": "Guts World",
+                "Maple_Shrine": "Maple Shrine",
+                "Pencil_World": "Pencil World",
+                "Chocolate_World": "Chocolate World",
+                "Blue_Cactus_Islands": "Blue Cactus Islands",
+                "Stone_Towers": "Stone Towers",
+                "Constellation_World": "Star Building",
+                "Blob_Desert": "Blob Desert",
+                "Cipher_Keyboard": "Cipher Keyboard",
+                "Viridian_Wetlands": "Viridian Wetlands",
+                "Polluted_Swamp": "Polluted Swamp",
+                "Snowy_Village": "Snowy Village",
+                "Decrepit_Dwellings": "Decrepit Dwellings",
+                "Verdant_Promenade_2": "Verdant Promenade 2",
+                "Black_Ink_World": "Black Ink World",
+                "Forgotten_Megalopolis": "Forgotten Megalopolis",
+                "Tomb_of_Velleities": "Tomb of Velleities",
+                "Visine_Spacecraft": "Visine Spacecraft",
+                "Data_Stream": "Data Stream",
+                "Lavender_Waters": "Lavender Waters",
+                "Originator_Garden": "Originator Garden",
+                "Fluorescent_Halls": "Fluorescent Halls",
+                "City_of_Liars": "City of Liars",
+                "Misc": "Доп. Стиль",
+                "Monochrome_GB_World": "Monochrome GB World",
+                "Smiley_Signs_World": "Smiley Signs World",
+                "Lovesick_World": "Lovesick World",
+                "Corrupted_Love_World": "Corrupted Love World",
+                "Saturated_Eyeball_Zone": "Saturated Eyeball Zone",
+                "NES_Glitch_Tunnel": "NES Glitch Tunnel",
+                "Shop_Ruins": "Shop Ruins",
+                "Yume_Nikki": "Yume Nikki"
+            }
+        },
+        "fontStyle": {
+            "name": "Стиль Шрифта:",
+            "values": {
+                "style1": "Стиль 1",
+                "style2": "Стиль 2",
+                "style3": "Стиль 3",
+                "style4": "Стиль 4",
+                "style5": "Стиль 5",
+                "style6": "Стиль 6",
+                "style7": "Стиль 7"
+            }
+        },
+        "renderMode": {
+            "name": "Режим Отрисовки:",
+            "values": {
+                "2d": "2D",
+                "3d": "3D"
+            }
+        },
+        "displayMode": {
+            "name": "Режим Отображения:",
+            "values": {
+                "vertical": "Вертикальный",
+                "horizontal": "Горизонтальный",
+                "radialIn": "Внутрь",
+                "radialOut": "Наружу",
+                "free": "Свободный"
+            }
+        },
+        "connMode": {
+            "name": "Отображение соединений:",
+            "values": {
+                "oneWay": "Одностороннее",
+                "twoWay": "Двустороннее"
+            }
+        },
+        "labelMode": {
+            "name": "Отображение Названий:",
+            "values": {
+                "never": "Никогда",
+                "hover": "При наведении",
+                "select": "При выборе",
+                "always": "Всегда"
+            }
+        },
+        "removedContentMode": {
+            "name": "Удалённый контент:",
+            "values": {
+                "hide": "Скрыть",
+                "show": "Показать"
+            }
+        },
+        "pathMode": {
+            "name": "Режим построения маршрута:",
+            "values": {
+                "simple": "Простой",
+                "normal": "Обычный",
+                "detailed": "Детальный"
+            }
+        },
+        "sizeDiff": {
+            "name": "Разница в размерах:"
+        },
+        "stackSize": {
+            "name": "Высота/Широта:"
+        }
+    },
+    "contextMenu": {
+        "items": {
+            "wiki": "Просмотреть страницу Вики",
+            "start": "Назначить Точкой Отправления",
+            "end": "Назначить Точкой Назначения",
+            "map": "Посмотреть карту",
+            "bgm": {
+                "name": "Проиграть трек",
+                "main": "Главная"
+            }
+        }
+    },
+    "nodeLabel": {
+        "depth": "Глубина: ",
+        "author": "Автор: ",
+        "versionAdded": "Добавлено в: ",
+        "versionLastUpdated": "Обновлено в последний раз в: ",
+        "versionRemoved": "Удалено в: ",
+        "versionUpdateType": {
+            "CHANGE": "",
+            "MINOR_CHANGE": "Небольшие изменения",
+            "MAJOR_CHANGE": "Крупные изменения",
+            "BUG_FIX": "Исправление",
+            "ADD_CONTENT": "Добавление контента",
+            "REMOVE_CONTENT": "Удаление контента",
+            "LAYOUT_CHANGE": "Изменение строения",
+            "EXPANSION": "Расширение",
+            "REDUCTION": "Уменьшение",
+            "ADD_SUB_AREA": "Добавлена под-зона",
+            "REMOVE_SUB_AREA": "Удалена под-зона",
+            "CONNECTION_CHANGE": "Изменения в соединениях",
+            "ADD_CONNECTION": "Добавлено(-ы) соединение(-я)",
+            "REMOVE_CONNECTION": "Удалено(-ы) соединение(-я)",
+            "BGM_CHANGE": "Измененён Трек",
+            "EFFECT_CHANGE": "Изменения, Связанные с эффектами",
+            "REWORK": "Переработано"
+        }
+    },
+    "authorLabel": {
+        "worldCount": "Миров: "
+    },
+    "versionLabel": {
+        "authors": "Автор(ы), принявший(-е) участие: ",
+        "releaseDate": "Дата Выхода: ",
+        "worldCount": "Добавленные Миры: ",
+        "updatedWorldCount": "Обновлённые Миры: ",
+        "removedWorldCount": "Удалённые Миры: "
+    },
+    "effectLabel": {
+        "location": "Локация: "
+    },
+    "wallpaperLabel": {
+        "number": "№",
+        "titleTemplate": " - \"{TITLE}\""
+    },
+    "bgmTrackLabel": {
+        "location": "Локация: "
+    },
+    "nodeIcon": {
+        "new": "НОВОЕ"
+    },
+    "versionDetails": {
+        "ADD": "Добавлено: {WORLD}",
+        "UPDATE": {
+            "CHANGE": "Обновлено: {WORLD}",
+            "MINOR_CHANGE": "Небольшие изменения в: {WORLD}",
+            "MAJOR_CHANGE": "Крупные изменения в: {WORLD}",
+            "BUG_FIX": "Исправления в: {WORLD}",
+            "ADD_CONTENT": "Добавлен контент в: {WORLD}",
+            "REMOVE_CONTENT": "Удалён контент из: {WORLD}",
+            "LAYOUT_CHANGE": "Изменено строение у: {WORLD}",
+            "EXPANSION": "Расширено: {WORLD}",
+            "REDUCTION": "Уменьшен размер: {WORLD}",
+            "ADD_SUB_AREA": "Добавлена под-зона в: {WORLD}",
+            "REMOVE_SUB_AREA": "Удалена под-зона из: {WORLD}",
+            "CONNECTION_CHANGE": "Изменены соединения в: {WORLD}",
+            "ADD_CONNECTION": "Добавлено соединение с: {WORLD}",
+            "REMOVE_CONNECTION": "Удалено соединение из: {WORLD}",
+            "BGM_CHANGE": "Изменён трек в: {WORLD}",
+            "EFFECT_CHANGE": "Связанные с эффектами изменения в: {WORLD}",
+            "REWORK": "Переработано: {WORLD}"
+        },
+        "REMOVE": "Удалено: {WORLD}"
+    },
+    "versionEntriesModal": {
+        "filters": "Фильтры",
+        "versionDisplayToggle": {
+            "name": "Показать {ENTRY_TYPE}",
+            "entryType": {
+                "ADD": "Добавления Миров",
+                "UPDATE": "Обновления Миров",
+                "REMOVE": "Удаления Миров"
+            },
+            "entryUpdateType": {
+                "MINOR_CHANGE": "Небольшие Изменения",
+                "MAJOR_CHANGE": "Крупные Изменения",
+                "BUG_FIX": "Исправления",
+                "ADD_CONTENT": "Добавления Контента",
+                "REMOVE_CONTENT": "Удаления Контента",
+                "LAYOUT_CHANGE": "Изменения Строения",
+                "EXPANSION": "Расширения Миров",
+                "REDUCTION": "Уменьшения Миров",
+                "ADD_SUB_AREA": "Добавления Под-зон",
+                "REMOVE_SUB_AREA": "Удаления Под-зон",
+                "CONNECTION_CHANGE": "Изменения Соединений",
+                "ADD_CONNECTION": "Добавления Соединений",
+                "REMOVE_CONNECTION": "Удаления Соединений",
+                "BGM_CHANGE": "Изменения Треков",
+                "EFFECT_CHANGE": "Изменения, Связанные с Эффектами",
+                "REWORK": "Переработки"
+            }
+        }
+    },
+    "menuThemesModal": {
+        "previousMethods": "Предыдущие методы"
+    },
+    "wallpapersModal": {
+        "removedWallpapers": "Удалённые Обои"
+    },
+    "bgmTracksModal": {
+        "search": "Поиск:",
+        "favBgmTracks": "Любимые треки",
+        "musicRoomBgmTracks": "Треки Музыкальной Комнаты",
+        "unnumberedBgmTracks": "Ненумерованные Треки",
+        "removedBgmTracks": "Удалённые Треки"
+    },
+    "helpModal": {
+        "reportBug": "Сообщить об Ошибке"
+    },
+    "footer": {
+        "about": "Yume 2kki Explorer v{VERSION} от FlashfyreDev",
+        "lastUpdate": "Данные обновлены {LAST_UPDATE}",
+        "lastFullUpdate": "Данные перезагружены {LAST_FULL_UPDATE}"
+    },
+    "dot": ".",
+    "comma": ", ",
+    "separator": " - ",
+    "braces": " ({VALUE})",
+    "na": "Н/Д"
+}
