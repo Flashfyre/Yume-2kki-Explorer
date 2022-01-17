@@ -107889,7 +107889,7 @@ function InsertStackElement(node, body) {
 	});
 
 	const urlSearchParams = new URLSearchParams(window.location.search);
-	const helpLangs = ['en', 'ja', 'ko'];
+	const helpLangs = ['en', 'ja', 'ko', 'ru'];
 	let isDebug = false;
 	let isShift = false;
 	let isCtrl = false;
@@ -111652,11 +111652,11 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
+	            if (config$1.lang === 'ja' || config$1.lang === 'ru')
+	                massageLocalizedValues(data, true);
 	            data.footer.about = data.footer.about.replace("{VERSION}", "4.0.3");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
-	            if (config$1.lang === 'ja' || config$1.label === 'ru')
-	                massageControlLabels(data);
 	            localizedSeparator = data.separator;
 	            localizedDot = data.dot;
 	            localizedComma = data.comma;
@@ -111710,6 +111710,8 @@ function InsertStackElement(node, body) {
 	        pathPrefix: "/lang",
 	        callback: function (data) {
 	            localizedConns = data;
+	            if (config$1.lang === 'ja' || config$1.lang === 'ru')
+	                massageLocalizedValues(localizedConns);
 	        }
 	    });
 
@@ -111781,30 +111783,34 @@ function InsertStackElement(node, body) {
 	    }
 	}
 
-	function massageControlLabels(data) {
+	function massageLocalizedValues(data, isUI) {
 	    if (data) {
 	        Object.keys(data).forEach(function (key) {
 	            const value = data[key];
 	            if (value) {
 	                switch (typeof value) {
 	                    case "object":
-	                        massageControlLabels(value);
+	                        massageLocalizedValues(value, isUI);
 	                        break;
 	                    case "string":
-	                        switch (config$1.lang) {
-	                            case "ja":
-	                                if (value.indexOf(" ") > -1)
-	                                    data[key] = value.split(/ +/g).map(v => `<span class="jp-word-break">${v}</span>`).join("");
-	                                break;
-	                            case "ru":
-	                                data[key] = value.replace(/([\u0400-\u04FF]+)/g, '<span class="ru-spacing-fix">$1</span>');
-	                                break;
-	                        }
+	                        data[key] = getMassagedLocalizedValue(value, isUI);
 	                        break;
 	                }
 	            }
 	        });
 	    }
+	}
+
+	function getMassagedLocalizedValue(value, isUI) {
+	    switch (config$1.lang) {
+	        case "ja":
+	            if (isUI && value.indexOf(" ") > -1)
+	                return value.split(/ +/g).map(v => `<span class="jp-word-break">${v}</span>`).join("");
+	            break;
+	        case "ru":
+	            return value.replace(/([\u0400-\u04FF]+)/g, '<span class="ru-spacing-fix">$1</span>');
+	    }
+	    return value;
 	}
 
 	function initWorldSearch() {
@@ -113110,7 +113116,7 @@ function InsertStackElement(node, body) {
 	                jquery('.js--help-modal__content--localized').empty();
 	                for (let l in helpLangs) {
 	                    const lang = helpLangs[l];
-	                    jquery('.js--help-modal__content--localized').append(`<div class="js--help-modal__content--localized__text"${lang !== compatibleHelpLang ? ' style="display: none;"' : ''} data-lang="${lang}">${md.render(data[l])}</div>`);
+	                    jquery('.js--help-modal__content--localized').append(`<div class="js--help-modal__content--localized__text"${lang !== compatibleHelpLang ? ' style="display: none;"' : ''} data-lang="${lang}">${getMassagedLocalizedValue(md.render(data[l]))}</div>`);
 	                }
 	                openHelpModal();
 	            });

@@ -33,7 +33,7 @@ $(document).on("keyup", function (event) {
 });
 
 const urlSearchParams = new URLSearchParams(window.location.search);
-const helpLangs = ['en', 'ja', 'ko'];
+const helpLangs = ['en', 'ja', 'ko', 'ru'];
 let isDebug = false;
 let isShift = false;
 let isCtrl = false;
@@ -3800,11 +3800,11 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
+            if (config.lang === 'ja' || config.lang === 'ru')
+                massageLocalizedValues(data, true);
             data.footer.about = data.footer.about.replace("{VERSION}", "4.0.3");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
-            if (config.lang === 'ja' || config.label === 'ru')
-                massageControlLabels(data);
             localizedSeparator = data.separator;
             localizedDot = data.dot;
             localizedComma = data.comma;
@@ -3858,6 +3858,8 @@ function initLocalization(isInitial) {
         pathPrefix: "/lang",
         callback: function (data) {
             localizedConns = data;
+            if (config.lang === 'ja' || config.lang === 'ru')
+                massageLocalizedValues(localizedConns);
         }
     });
 
@@ -3929,30 +3931,34 @@ function initLocalization(isInitial) {
     }
 }
 
-function massageControlLabels(data) {
+function massageLocalizedValues(data, isUI) {
     if (data) {
         Object.keys(data).forEach(function (key) {
             const value = data[key];
             if (value) {
                 switch (typeof value) {
                     case "object":
-                        massageControlLabels(value);
+                        massageLocalizedValues(value, isUI);
                         break;
                     case "string":
-                        switch (config.lang) {
-                            case "ja":
-                                if (value.indexOf(" ") > -1)
-                                    data[key] = value.split(/ +/g).map(v => `<span class="jp-word-break">${v}</span>`).join("");
-                                break;
-                            case "ru":
-                                data[key] = value.replace(/([\u0400-\u04FF]+)/g, '<span class="ru-spacing-fix">$1</span>');
-                                break;
-                        }
+                        data[key] = getMassagedLocalizedValue(value, isUI);
                         break;
                 }
             }
         });
     }
+}
+
+function getMassagedLocalizedValue(value, isUI) {
+    switch (config.lang) {
+        case "ja":
+            if (isUI && value.indexOf(" ") > -1)
+                return value.split(/ +/g).map(v => `<span class="jp-word-break">${v}</span>`).join("");
+            break;
+        case "ru":
+            return value.replace(/([\u0400-\u04FF]+)/g, '<span class="ru-spacing-fix">$1</span>');
+    }
+    return value;
 }
 
 function initWorldSearch() {
@@ -5260,7 +5266,7 @@ function initControls() {
                 $('.js--help-modal__content--localized').empty();
                 for (let l in helpLangs) {
                     const lang = helpLangs[l];
-                    $('.js--help-modal__content--localized').append(`<div class="js--help-modal__content--localized__text"${lang !== compatibleHelpLang ? ' style="display: none;"' : ''} data-lang="${lang}">${md.render(data[l])}</div>`);
+                    $('.js--help-modal__content--localized').append(`<div class="js--help-modal__content--localized__text"${lang !== compatibleHelpLang ? ' style="display: none;"' : ''} data-lang="${lang}">${getMassagedLocalizedValue(md.render(data[l]))}</div>`);
                 }
                 openHelpModal();
             });
