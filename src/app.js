@@ -3800,14 +3800,11 @@ function initLocalization(isInitial) {
         language: config.lang,
         pathPrefix: "/lang",
         callback: function (data, defaultCallback) {
-            data.footer.about = data.footer.about.replace("{VERSION}", "4.0.2");
+            data.footer.about = data.footer.about.replace("{VERSION}", "4.0.3");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
-            if (config.lang === "ja") {
-                convertJPControlLabels(data.controls);
-                convertJPControlLabels(data.collectableControls);
-                convertJPControlLabels(data.settings);
-            }
+            if (config.lang === 'ja' || config.label === 'ru')
+                massageControlLabels(data);
             localizedSeparator = data.separator;
             localizedDot = data.dot;
             localizedComma = data.comma;
@@ -3932,18 +3929,25 @@ function initLocalization(isInitial) {
     }
 }
 
-function convertJPControlLabels(data) {
+function massageControlLabels(data) {
     if (data) {
         Object.keys(data).forEach(function (key) {
             const value = data[key];
             if (value) {
                 switch (typeof value) {
                     case "object":
-                        convertJPControlLabels(value);
+                        massageControlLabels(value);
                         break;
                     case "string":
-                        if (value.indexOf(" ") > -1)
-                            data[key] = value.split(/ +/g).map(v => `<span class="jp-word-break">${v}</span>`).join("");
+                        switch (config.lang) {
+                            case "ja":
+                                if (value.indexOf(" ") > -1)
+                                    data[key] = value.split(/ +/g).map(v => `<span class="jp-word-break">${v}</span>`).join("");
+                                break;
+                            case "ru":
+                                data[key] = value.replace(/([\u0400-\u04FF]+)/g, '<span class="ru-spacing-fix">$1</span>');
+                                break;
+                        }
                         break;
                 }
             }

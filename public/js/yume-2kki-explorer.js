@@ -1,4 +1,4 @@
-// Version 4.0.2 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 4.0.3 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -111652,14 +111652,11 @@ function InsertStackElement(node, body) {
 	        language: config$1.lang,
 	        pathPrefix: "/lang",
 	        callback: function (data, defaultCallback) {
-	            data.footer.about = data.footer.about.replace("{VERSION}", "4.0.2");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "4.0.3");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
-	            if (config$1.lang === "ja") {
-	                convertJPControlLabels(data.controls);
-	                convertJPControlLabels(data.collectableControls);
-	                convertJPControlLabels(data.settings);
-	            }
+	            if (config$1.lang === 'ja' || config$1.label === 'ru')
+	                massageControlLabels(data);
 	            localizedSeparator = data.separator;
 	            localizedDot = data.dot;
 	            localizedComma = data.comma;
@@ -111784,18 +111781,25 @@ function InsertStackElement(node, body) {
 	    }
 	}
 
-	function convertJPControlLabels(data) {
+	function massageControlLabels(data) {
 	    if (data) {
 	        Object.keys(data).forEach(function (key) {
 	            const value = data[key];
 	            if (value) {
 	                switch (typeof value) {
 	                    case "object":
-	                        convertJPControlLabels(value);
+	                        massageControlLabels(value);
 	                        break;
 	                    case "string":
-	                        if (value.indexOf(" ") > -1)
-	                            data[key] = value.split(/ +/g).map(v => `<span class="jp-word-break">${v}</span>`).join("");
+	                        switch (config$1.lang) {
+	                            case "ja":
+	                                if (value.indexOf(" ") > -1)
+	                                    data[key] = value.split(/ +/g).map(v => `<span class="jp-word-break">${v}</span>`).join("");
+	                                break;
+	                            case "ru":
+	                                data[key] = value.replace(/([\u0400-\u04FF]+)/g, '<span class="ru-spacing-fix">$1</span>');
+	                                break;
+	                        }
 	                        break;
 	                }
 	            }
