@@ -40,6 +40,11 @@ h1 {
     white-space: nowrap;
 }
 
+.ru-spacing-fix {
+    letter-spacing: -6px !important;
+    padding-right: 2px;
+}
+
 .content {
     background: rgba(0,0,0,0.8);
     padding-top: 0.1px;
