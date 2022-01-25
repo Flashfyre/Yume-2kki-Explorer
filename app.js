@@ -273,12 +273,12 @@ app.post('/checkUpdateData', function(req, res) {
         };
         pool.query('SELECT lastFullUpdate FROM updates WHERE DATE_ADD(lastFullUpdate, INTERVAL 1 WEEK) < NOW()', (err, rows) => {
             if (err) console.error(err);
-            if (rows.length)
+            if (rows && rows.length)
                 callback('reset');
             else {
                 pool.query('SELECT lastUpdate FROM updates WHERE DATE_ADD(lastUpdate, INTERVAL 1 HOUR) < NOW()', (err, rows) => {
                     if (err) console.error(err);
-                    if (rows.length)
+                    if (rows && rows.length)
                         callback(true);
                     else
                         callback(false);
@@ -301,7 +301,7 @@ app.post('/updateWorldData', function(req, res) {
         else {
             pool.query('SELECT lastUpdate FROM updates', (err, rows) => {
                 if (err) console.error(err);
-                if (rows.length) {
+                if (rows && rows.length) {
                     getWorldData(pool, true).then(worldData => {
                         getUpdatedWorldNames(worldData.map(w => w.title), rows[0].lastUpdate)
                             .then(updatedWorldNames => populateWorldData(pool, worldData, updatedWorldNames).then(() => callback(true)))
@@ -347,7 +347,7 @@ app.post('/updateMiscData', function(req, res) {
         } else {
             pool.query('SELECT lastUpdate FROM updates', (err, rows) => {
                 if (err) console.error(err);
-                if (rows.length) {
+                if (rows && rows.length) {
                     getWorldData(pool, true).then(worldData => {
                         checkUpdateMapData(pool, worldData, rows[0].lastUpdate).then(() => {
                             checkUpdateAuthorInfoData(pool, rows[0].lastUpdate).then(() => {
@@ -387,7 +387,7 @@ function getData(req, pool) {
                                 getBgmTrackData(pool, worldData, excludeRemovedContent).then(bgmTrackData => {
                                     pool.query('SELECT lastUpdate, lastFullUpdate FROM updates', (err, rows) => {
                                         if (err) reject(err);
-                                        const row = rows.length ? rows[0] : null;
+                                        const row = rows && rows.length ? rows[0] : null;
                                         const lastUpdate = row ? row.lastUpdate : null;
                                         const lastFullUpdate = row ? row.lastFullUpdate : null;
                                         const isAdmin = req.query.hasOwnProperty('adminKey') && req.query.adminKey === appConfig.ADMIN_KEY;
