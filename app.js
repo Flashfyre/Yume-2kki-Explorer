@@ -732,12 +732,14 @@ function checkUpdatePage(pageTitle, lastUpdate) {
                 const pages = data.query.pages;
                 const pageIds = Object.keys(pages);
                 if (pageIds.length) {
-                    const revisions = pages[pageIds[0]].revisions;
-                    if (revisions.length) {
-                        const revDate = new Date(revisions[0].timestamp);
-                        if (lastUpdate < revDate) {
-                            resolve(true);
-                            return;
+                    for (let pageId of pageIds) {
+                        const revisions = pages[pageId].revisions;
+                        if (revisions.length) {
+                            const revDate = new Date(revisions[0].timestamp);
+                            if (lastUpdate < revDate) {
+                                resolve(true);
+                                return;
+                            }
                         }
                     }
                 }
@@ -748,7 +750,7 @@ function checkUpdatePage(pageTitle, lastUpdate) {
 
 function checkUpdateMapData(pool, worldData, lastUpdate) {
     return new Promise((resolve, reject) => {
-        checkUpdatePage("Map IDs", lastUpdate).then(needsUpdate => {
+        checkUpdatePage("Map IDs/0000-0400|Map IDs/0401-0800|Map IDs/0801-1200|Map IDs/1201-1600|Map IDs/1601-2000", lastUpdate).then(needsUpdate => {
             if (needsUpdate)
                 updateMapData(pool, worldData).then(() => resolve()).catch(err => reject(err));
             else
@@ -1631,9 +1633,13 @@ function updateMapData(pool, worldData) {
     });
 }
 
-function getMapData(worldData) {
+function getMapData(worldData, url) {
+    const root = !url;
+    if (root)
+        url = 'https://yume2kki.fandom.com/wiki/Map_IDs/0000-0400';
+
     return new Promise((resolve, reject) => {
-        superagent.get('https://yume2kki.fandom.com/wiki/Map_IDs', function (err, res) {
+        superagent.get(url, function (err, res) {
             if (err) return reject(err);
             worldData.forEach(w => w.mapIds = []);
             const worldDataByName = _.keyBy(worldData, w => w.title);
@@ -1662,7 +1668,27 @@ function getMapData(worldData) {
                     mapData.push(map);
                 }
             });
-            resolve(mapData);
+
+            if (root)
+            {
+                const getTabMapData = [];
+                let cursor = res.text.indexOf('<a href="/wiki/Map_IDs/') + 23;
+
+                while (cursor >= 23) {
+                    const tabUrl = `${url.slice(0, -9)}${sliceHtml(res.text, cursor, res.text.indexOf('"', cursor))}`;
+                    if (tabUrl !== url)
+                        getTabMapData.push(getMapData(worldData, tabUrl)
+                            .then(tabMapData => tabMapData.forEach(map => mapData.push(map)))
+                            .catch(err => console.error(err)));
+                    cursor = res.text.indexOf('<a href="/wiki/Map_IDs/', cursor) + 23;
+                }
+
+                if (getTabMapData.length)
+                    Promise.allSettled(getTabMapData).finally(() => resolve(mapData));
+                else
+                    resolve(mapData);
+            } else
+                resolve(mapData);
         });
     });
 }
