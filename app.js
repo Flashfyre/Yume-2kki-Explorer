@@ -1641,7 +1641,8 @@ function getMapData(worldData, url) {
     return new Promise((resolve, reject) => {
         superagent.get(url, function (err, res) {
             if (err) return reject(err);
-            worldData.forEach(w => w.mapIds = []);
+            if (root)
+                worldData.forEach(w => w.mapIds = []);
             const worldDataByName = _.keyBy(worldData, w => w.title);
             const mapIdTablesHtml = sliceHtml(res.text, res.text.indexOf('<table '), res.text.lastIndexOf('</table>'));
             const rawMapData = mapIdTablesHtml.split('<td>#').slice(1).map(t => {
