@@ -44,6 +44,10 @@
       "description": "从对面区域使用一次公用电话将会传送到此处。"
   },
   "2048": {
+    "name": "Seasonal",
+    "description": "Accessible during the following season: {0}"
+  },
+  "4096": {
       "name": "无法到达",
       "description": "当前游戏版本无法到达。"
   }

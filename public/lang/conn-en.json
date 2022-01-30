@@ -44,6 +44,10 @@
         "description": "Telephone takes you here when used from the opposite area"
     },
     "2048": {
+        "name": "Seasonal",
+        "description": "Accessible during the following season: {0}"
+    },
+    "4096": {
         "name": "Inaccessible",
         "description": "Cannot be accessed in the current version of the game"
     }

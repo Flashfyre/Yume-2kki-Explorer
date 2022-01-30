@@ -44,6 +44,10 @@
         "description": "Телефон отправит вас сюда из предыдущей зоны"
     },
     "2048": {
+        "name": "Seasonal",
+        "description": "Accessible during the following season: {0}"
+    },
+    "4096": {
         "name": "Недоступно",
         "description": "Нельзя сюда попасть в текущей версии игры"
     }

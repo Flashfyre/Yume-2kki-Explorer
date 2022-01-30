@@ -1769,6 +1769,8 @@ function initGraph(renderMode, displayMode, paths) {
             icons.push(getConnTypeIcon(ConnType.EFFECT, l.typeParams[ConnType.EFFECT]));
         if (connType & ConnType.CHANCE)
             icons.push(getConnTypeIcon(ConnType.CHANCE, l.typeParams[ConnType.CHANCE]));
+        if (connType & ConnType.SEASONAL)
+            icons.push(getConnTypeIcon(ConnType.SEASONAL, l.typeParams[ConnType.SEASONAL]));
     });
 
     const images = (paths ? worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1) : worldData).map(d => {
@@ -2431,6 +2433,10 @@ function makeIconObject(is2d) {
         ConnType.LOCKED_CONDITION,
         ConnType.SHORTCUT,
         ConnType.EXIT_POINT,
+        { type: ConnType.SEASONAL, params: { params: 'Spring' } },
+        { type: ConnType.SEASONAL, params: { params: 'Summer' } },
+        { type: ConnType.SEASONAL, params: { params: 'Fall' } },
+        { type: ConnType.SEASONAL, params: { params: 'Winter' } },
         ConnType.INACCESSIBLE
     ];
     const iconImgDimensions = { x: 64, y: 64 };
@@ -2453,8 +2459,10 @@ function makeIconObject(is2d) {
     context.font = '50px MS Gothic';
     context.fillStyle = 'white';
     const dataLength = iconImgDimensions.x * iconImgDimensions.y * 4;
-    connTypes.forEach(type => {
-        let char = getConnTypeChar(type);
+    connTypes.forEach(connType => {
+        const type = connType.hasOwnProperty('type') ? connType.type : connType;
+        const params = connType.hasOwnProperty('params') ? connType.params : null;
+        let char = getConnTypeChar(type, params);
         context.fillText(char, 0, 52);
         const imgData = context.getImageData(0, 0, iconImgDimensions.x, iconImgDimensions.y);
         const offset = index * dataLength;
@@ -2489,7 +2497,7 @@ function makeIconObject(is2d) {
         link.icons.forEach(icon => {
             opacities[iconIndex] = 1.0;
             grayscales[iconIndex] = 0;
-            texIndexes[iconIndex] = connTypes.findIndex(a => a == icon.type);
+            texIndexes[iconIndex] = connTypes.findIndex(ct => (ct.hasOwnProperty('type') ? ct.type : ct) === icon.type && (!ct.hasOwnProperty('params') || ct.params.params === icon.typeParams));
             iconIndex++;
         });
     });
@@ -2547,18 +2555,18 @@ function updateIconPositions(is2d) {
                     iconObject.setMatrixAt(index, dummy.matrix);
                 }
                 const texIndex = unsortedIconTexIndexes[index];
-                if (texIndex == 0 || texIndex == 12) {
+                if (texIndex == 0 || texIndex == 16) {
                     if (is2d) {
                         if (start.x > end.x) {
                             if (texIndex == 0)
-                                unsortedIconTexIndexes[index] = 12;
-                        } else if (texIndex == 12)
+                                unsortedIconTexIndexes[index] = 16;
+                        } else if (texIndex == 16)
                             unsortedIconTexIndexes[index] = 0;
                     } else {
                         if (graph.graph2ScreenCoords(start.x, start.y, start.z).x > graph.graph2ScreenCoords(end.x, end.y, end.z).x) {
                             if (texIndex == 0)
-                                unsortedIconTexIndexes[index] = 12;
-                        } else if (texIndex == 12)
+                                unsortedIconTexIndexes[index] = 16;
+                        } else if (texIndex == 16)
                             unsortedIconTexIndexes[index] = 0;
                     }
                 }
@@ -3367,7 +3375,7 @@ function getLinkGrayscale(link) {
 function getConnTypeIcon(connType, typeParams) {
     const useEn = getLangUsesEn(config.lang);
     const localizedConn = localizedConns[connType];
-    const char = getConnTypeChar(connType);
+    const char = getConnTypeChar(connType, typeParams);
     const name = localizedConn.name;
     let description = localizedConn.description;
     if (description) {
@@ -3383,6 +3391,7 @@ function getConnTypeIcon(connType, typeParams) {
                     : '';
                 break;
             case ConnType.LOCKED_CONDITION:
+            case ConnType.SEASONAL:
                 description = typeParams && ((useEn && typeParams.params) || (!useEn && typeParams.paramsJP))
                     ? description.replace('{0}', getLocalizedLabel(typeParams.params, typeParams.paramsJP))
                     : '';
@@ -3391,12 +3400,13 @@ function getConnTypeIcon(connType, typeParams) {
     }
     return {
         type: connType,
+        typeParams: typeParams ? typeParams.params : null,
         char: char,
         text: name + (description ? (useEn ? localizedSeparator : '：') + description : '')
     };
 }
 
-function getConnTypeChar(connType) {
+function getConnTypeChar(connType, typeParams) {
     let char;
     switch (connType) {
         case ConnType.ONE_WAY:
@@ -3431,6 +3441,23 @@ function getConnTypeChar(connType) {
             break;
         case ConnType.EXIT_POINT:
             char = "☎️";
+            break;
+        case ConnType.SEASONAL:
+            const seasonParam = typeParams ? typeParams.params : null;
+            switch (seasonParam || "Summer") {
+                case "Spring":
+                    char = "🌸";
+                    break;
+                case "Summer":
+                    char = "☀️";
+                    break;
+                case "Fall":
+                    char = "🍂";
+                    break;
+                case "Winter":
+                    char = "❄️";
+                    break;
+            }
             break;
         case ConnType.INACCESSIBLE:
             char = "🚫";
@@ -3802,7 +3829,7 @@ function initLocalization(isInitial) {
         callback: function (data, defaultCallback) {
             if (config.lang === 'ja' || config.lang === 'ru')
                 massageLocalizedValues(data, true);
-            data.footer.about = data.footer.about.replace("{VERSION}", "4.0.6");
+            data.footer.about = data.footer.about.replace("{VERSION}", "4.1.0");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             localizedSeparator = data.separator;
@@ -5447,6 +5474,10 @@ function getMissingLocationParams() {
                     ret.push(`${getWorldLinkForAdmin(w)} is missing the lock condition parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
                 if (!conn.typeParamsJP || !conn.typeParams[ConnType.LOCKED_CONDITION] || !conn.typeParams[ConnType.LOCKED_CONDITION].paramsJP)
                     ret.push(`${getWorldLinkForAdmin(w)} is missing the Japanese lock condition parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
+            }
+            if (conn.type & ConnType.SEASONAL) {
+                if (!conn.typeParams || !conn.typeParams[ConnType.SEASONAL] || !conn.typeParams[ConnType.SEASONAL].params)
+                    ret.push(`${getWorldLinkForAdmin(w)} is missing the season parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
             }
         }
     }

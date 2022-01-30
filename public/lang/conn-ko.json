@@ -44,6 +44,10 @@
         "description": "반대편 맵에서 전화기를 사용하면 이곳으로 이동합니다"
     },
     "2048": {
+        "name": "Seasonal",
+        "description": "Accessible during the following season: {0}"
+    },
+    "4096": {
         "name": "접근 불가",
         "description": "해당 버전에서 접근할 수 없습니다"
     }

@@ -3367,6 +3367,34 @@ function getConnections(html) {
                             params[ConnType.CHANCE] = { params: paramsText + "%" };
                     }
                 }
+                if (areaText.indexOf(">Seasonal<") > -1) {
+                    connType |= ConnType.SEASONAL;
+                    if (areaText.indexOf("data-season-params=\"") > -1) {
+                        const paramsIndex = areaText.indexOf("data-season-params=\"") + 20;
+                        let paramsText = areaText.slice(paramsIndex, areaText.indexOf("\"", paramsIndex)).trim();
+                        let paramsTextJP = null;
+                        if (/^(?:spring|summer|fall|autumn|winter)$/i.test(paramsText)) {
+                            paramsText = paramsText.substring(0, 1).toUpperCase() + paramsText.slice(1).toLowerCase();
+                            switch (paramsText) {
+                                case "Spring":
+                                    paramsTextJP = "春";
+                                    break;
+                                case "Summer":
+                                    paramsTextJP = "夏";
+                                    break;
+                                case "Autumn":
+                                    paramsText = "Fall";
+                                case "Fall":
+                                    paramsTextJP = "秋";
+                                    break;
+                                case "Winter":
+                                    paramsTextJP = "冬";
+                                    break;
+                            }
+                            params[ConnType.SEASONAL] = { params: paramsText, paramsJP: paramsTextJP };
+                        }
+                    }
+                }
                 if (removed)
                     connType |= ConnType.INACCESSIBLE;
                 ret.push({

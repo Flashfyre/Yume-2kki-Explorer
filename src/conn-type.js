@@ -10,7 +10,8 @@ const ConnType = {
     LOCKED_CONDITION: 256,
     SHORTCUT: 512,
     EXIT_POINT: 1024,
-    INACCESSIBLE: 2048
+    SEASONAL: 2048,
+    INACCESSIBLE: 4096
 };
 
 if (typeof exports === "object")

@@ -1,4 +1,4 @@
-// Version 4.0.6 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 4.1.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -107587,7 +107587,8 @@ function InsertStackElement(node, body) {
 	    LOCKED_CONDITION: 256,
 	    SHORTCUT: 512,
 	    EXIT_POINT: 1024,
-	    INACCESSIBLE: 2048
+	    SEASONAL: 2048,
+	    INACCESSIBLE: 4096
 	};
 
 	module.exports = {
@@ -109621,6 +109622,8 @@ function InsertStackElement(node, body) {
 	            icons.push(getConnTypeIcon(connType_1.EFFECT, l.typeParams[connType_1.EFFECT]));
 	        if (connType & connType_1.CHANCE)
 	            icons.push(getConnTypeIcon(connType_1.CHANCE, l.typeParams[connType_1.CHANCE]));
+	        if (connType & connType_1.SEASONAL)
+	            icons.push(getConnTypeIcon(connType_1.SEASONAL, l.typeParams[connType_1.SEASONAL]));
 	    });
 
 	    const images = (paths ? exports.worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1) : exports.worldData).map(d => {
@@ -110283,6 +110286,10 @@ function InsertStackElement(node, body) {
 	        connType_1.LOCKED_CONDITION,
 	        connType_1.SHORTCUT,
 	        connType_1.EXIT_POINT,
+	        { type: connType_1.SEASONAL, params: { params: 'Spring' } },
+	        { type: connType_1.SEASONAL, params: { params: 'Summer' } },
+	        { type: connType_1.SEASONAL, params: { params: 'Fall' } },
+	        { type: connType_1.SEASONAL, params: { params: 'Winter' } },
 	        connType_1.INACCESSIBLE
 	    ];
 	    const iconImgDimensions = { x: 64, y: 64 };
@@ -110305,8 +110312,10 @@ function InsertStackElement(node, body) {
 	    context.font = '50px MS Gothic';
 	    context.fillStyle = 'white';
 	    const dataLength = iconImgDimensions.x * iconImgDimensions.y * 4;
-	    connTypes.forEach(type => {
-	        let char = getConnTypeChar(type);
+	    connTypes.forEach(connType => {
+	        const type = connType.hasOwnProperty('type') ? connType.type : connType;
+	        const params = connType.hasOwnProperty('params') ? connType.params : null;
+	        let char = getConnTypeChar(type, params);
 	        context.fillText(char, 0, 52);
 	        const imgData = context.getImageData(0, 0, iconImgDimensions.x, iconImgDimensions.y);
 	        const offset = index * dataLength;
@@ -110341,7 +110350,7 @@ function InsertStackElement(node, body) {
 	        link.icons.forEach(icon => {
 	            opacities[iconIndex] = 1.0;
 	            grayscales[iconIndex] = 0;
-	            texIndexes[iconIndex] = connTypes.findIndex(a => a == icon.type);
+	            texIndexes[iconIndex] = connTypes.findIndex(ct => (ct.hasOwnProperty('type') ? ct.type : ct) === icon.type && (!ct.hasOwnProperty('params') || ct.params.params === icon.typeParams));
 	            iconIndex++;
 	        });
 	    });
@@ -110399,18 +110408,18 @@ function InsertStackElement(node, body) {
 	                    iconObject.setMatrixAt(index, dummy.matrix);
 	                }
 	                const texIndex = unsortedIconTexIndexes[index];
-	                if (texIndex == 0 || texIndex == 12) {
+	                if (texIndex == 0 || texIndex == 16) {
 	                    if (is2d) {
 	                        if (start.x > end.x) {
 	                            if (texIndex == 0)
-	                                unsortedIconTexIndexes[index] = 12;
-	                        } else if (texIndex == 12)
+	                                unsortedIconTexIndexes[index] = 16;
+	                        } else if (texIndex == 16)
 	                            unsortedIconTexIndexes[index] = 0;
 	                    } else {
 	                        if (exports.graph.graph2ScreenCoords(start.x, start.y, start.z).x > exports.graph.graph2ScreenCoords(end.x, end.y, end.z).x) {
 	                            if (texIndex == 0)
-	                                unsortedIconTexIndexes[index] = 12;
-	                        } else if (texIndex == 12)
+	                                unsortedIconTexIndexes[index] = 16;
+	                        } else if (texIndex == 16)
 	                            unsortedIconTexIndexes[index] = 0;
 	                    }
 	                }
@@ -111219,7 +111228,7 @@ function InsertStackElement(node, body) {
 	function getConnTypeIcon(connType, typeParams) {
 	    const useEn = getLangUsesEn(config$1.lang);
 	    const localizedConn = localizedConns[connType];
-	    const char = getConnTypeChar(connType);
+	    const char = getConnTypeChar(connType, typeParams);
 	    const name = localizedConn.name;
 	    let description = localizedConn.description;
 	    if (description) {
@@ -111235,6 +111244,7 @@ function InsertStackElement(node, body) {
 	                    : '';
 	                break;
 	            case connType_1.LOCKED_CONDITION:
+	            case connType_1.SEASONAL:
 	                description = typeParams && ((useEn && typeParams.params) || (!useEn && typeParams.paramsJP))
 	                    ? description.replace('{0}', getLocalizedLabel(typeParams.params, typeParams.paramsJP))
 	                    : '';
@@ -111243,12 +111253,13 @@ function InsertStackElement(node, body) {
 	    }
 	    return {
 	        type: connType,
+	        typeParams: typeParams ? typeParams.params : null,
 	        char: char,
 	        text: name + (description ? (useEn ? localizedSeparator : '：') + description : '')
 	    };
 	}
 
-	function getConnTypeChar(connType) {
+	function getConnTypeChar(connType, typeParams) {
 	    let char;
 	    switch (connType) {
 	        case connType_1.ONE_WAY:
@@ -111283,6 +111294,23 @@ function InsertStackElement(node, body) {
 	            break;
 	        case connType_1.EXIT_POINT:
 	            char = "☎️";
+	            break;
+	        case connType_1.SEASONAL:
+	            const seasonParam = typeParams ? typeParams.params : null;
+	            switch (seasonParam || "Summer") {
+	                case "Spring":
+	                    char = "🌸";
+	                    break;
+	                case "Summer":
+	                    char = "☀️";
+	                    break;
+	                case "Fall":
+	                    char = "🍂";
+	                    break;
+	                case "Winter":
+	                    char = "❄️";
+	                    break;
+	            }
 	            break;
 	        case connType_1.INACCESSIBLE:
 	            char = "🚫";
@@ -111654,7 +111682,7 @@ function InsertStackElement(node, body) {
 	        callback: function (data, defaultCallback) {
 	            if (config$1.lang === 'ja' || config$1.lang === 'ru')
 	                massageLocalizedValues(data, true);
-	            data.footer.about = data.footer.about.replace("{VERSION}", "4.0.6");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "4.1.0");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            localizedSeparator = data.separator;
@@ -113297,6 +113325,10 @@ function InsertStackElement(node, body) {
 	                    ret.push(`${getWorldLinkForAdmin(w)} is missing the lock condition parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
 	                if (!conn.typeParamsJP || !conn.typeParams[connType_1.LOCKED_CONDITION] || !conn.typeParams[connType_1.LOCKED_CONDITION].paramsJP)
 	                    ret.push(`${getWorldLinkForAdmin(w)} is missing the Japanese lock condition parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
+	            }
+	            if (conn.type & connType_1.SEASONAL) {
+	                if (!conn.typeParams || !conn.typeParams[connType_1.SEASONAL] || !conn.typeParams[connType_1.SEASONAL].params)
+	                    ret.push(`${getWorldLinkForAdmin(w)} is missing the season parameter for its connection to ${getWorldLinkForAdmin(connWorld)}`);
 	            }
 	        }
 	    }
