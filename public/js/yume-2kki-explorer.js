@@ -1,4 +1,4 @@
-// Version 4.1.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 4.1.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -111682,7 +111682,7 @@ function InsertStackElement(node, body) {
 	        callback: function (data, defaultCallback) {
 	            if (config$1.lang === 'ja' || config$1.lang === 'ru')
 	                massageLocalizedValues(data, true);
-	            data.footer.about = data.footer.about.replace("{VERSION}", "4.1.0");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "4.1.1");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            localizedSeparator = data.separator;

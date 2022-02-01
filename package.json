@@ -1,6 +1,6 @@
 {
   "name": "yume-2kki-explorer",
-  "version": "4.1.0",
+  "version": "4.1.1",
   "description": "A visualization of maps in Yume 2kki that scrapes the wiki for data",
   "main": "app.js",
   "dependencies": {
