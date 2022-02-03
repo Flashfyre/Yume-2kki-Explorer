@@ -13,7 +13,7 @@ import SpriteText from 'three-spritetext';
 import ForceGraph3D from '3d-force-graph';
 import TWEEN from '@tweenjs/tween.js';
 import GreenAudioPlayer from 'green-audio-player/dist/js/green-audio-player';
-import { checkIsMobile, formatDate, getLocalizedValue, getLangUsesEn, hueToRGBA, uiThemeFontColors, uiThemeBgColors, getFontColor, getBaseBgColor, getFontShadow } from './utils';
+import { checkIsMobile, formatDate, getLocalizedValue, getLangUsesEn, getColorRgba, hueToRGBA, uiThemeFontColors, uiThemeBgColors, getBaseBgColor, getFontColors, getFontShadow, getGradientText, updateSvgGradient, getSvgGradientStop } from './utils';
 import { updateConfig } from './config.js';
 import { ConnType } from './conn-type.js';
 import * as versionUtils from './version-utils.js';
@@ -3829,7 +3829,7 @@ function initLocalization(isInitial) {
         callback: function (data, defaultCallback) {
             if (config.lang === 'ja' || config.lang === 'ru')
                 massageLocalizedValues(data, true);
-            data.footer.about = data.footer.about.replace("{VERSION}", "4.1.1");
+            data.footer.about = data.footer.about.replace("{VERSION}", "4.2.0");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             localizedSeparator = data.separator;
@@ -5056,12 +5056,13 @@ function initControls() {
         const themeStyles = $(".js--theme-styles")[0];
         getBaseBgColor(config.uiTheme || (config.uiTheme = "Default_Custom"), function (color) {
             const bgColorPixel = uiThemeBgColors[config.uiTheme];
-            const altColor = "rgba(" + Math.min(bgColorPixel[0] + 48, 255) + ", " + Math.min(bgColorPixel[1] + 48, 255) + ", " + Math.min(bgColorPixel[2] + 48, 255) + ", 1)";
+            const altColor = getColorRgba([Math.min(bgColorPixel[0] + 48, 255), Math.min(bgColorPixel[1] + 48, 255), Math.min(bgColorPixel[2] + 48, 255)]);
             getFontShadow(config.uiTheme, function (shadow) {
                 themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/[a-zA-Z0-9\_]+\/(containerbg|border(?:2)?|arrow(?:up|down)|font\d)\.png\)/g, "url(/images/ui/" + config.uiTheme + "/$1.png)")
                     .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*basebg\*\//g, "background-color:$1" + color + "$2;$3/*basebg*/")
                     .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*altbg\*\//g, "background-color:$1" + altColor + "$2;$3/*altbg*/")
                     .replace(/(?:[#a-zA-Z0-9]+|rgba\([0-9]+, [0-9]+, [0-9]+, [0-9]+\))(;? *)\/\*shadow\*\//g, shadow + "$1/*shadow*/");
+                document.getElementById('dropShadow').children[0].setAttribute('flood-color', shadow);
                 $(".js--font-style").trigger("change");
                 updateConfig(config);
             });
@@ -5071,23 +5072,26 @@ function initControls() {
     $(".js--font-style").on("change", function() {
         config.fontStyle = parseInt($(this).val());
         const themeStyles = $(".js--theme-styles")[0];
-        const defaultAltFontStyleIndex = !isYNTheme() ? 4 : 1;
-        getFontColor(config.uiTheme, config.fontStyle, function (baseColor) {
-            const altFontStyle = config.fontStyle !== defaultAltFontStyleIndex ? defaultAltFontStyleIndex : 0;
-            const altColorCallback = function (altColor) {
+        const defaultAltFontStyleIndex = 1;
+        const defaultFallbackAltFontStyleIndex = 3;
+        getFontColors(config.uiTheme, config.fontStyle, function (baseColors) {
+            const altFontStyle = config.fontStyle !== defaultAltFontStyleIndex ? defaultAltFontStyleIndex : defaultAltFontStyleIndex - 1;
+            const altColorCallback = function (altColors) {
                 themeStyles.textContent = themeStyles.textContent = themeStyles.textContent = themeStyles.textContent
-                    .replace(/url\(\/images\/ui\/([a-zA-Z0-9\_]+)\/font\d\.png\)( *!important)?;( *)\/\*base\*\//g, "url(/images/ui/$1/font" + (config.fontStyle + 1) + ".png)$2;$3/*base*/")
-                    .replace(/url\(\/images\/ui\/([a-zA-Z0-9\_]+)\/font\d\.png\)( *!important)?;( *)\/\*alt\*\//g, "url(/images/ui/$1/font" + (altFontStyle + 1) + ".png)$2;$3/*alt*/")
-                    .replace(/([^\-])((?:(?:background|border)\-)?color|fill):( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "$1$2:$3" + baseColor + "$4;$5/*base*/")
-                    .replace(/([^\-])((?:(?:background|border)\-)?color|fill):( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "$1$2:$3" + altColor + "$4;$5/*alt*/");
+                    .replace(/linear\-gradient\((.*?),.*?\)( *!important)?;( *)\/\*base\*\//g, "linear-gradient($1, " + getGradientText(baseColors) + ")$2;$3/*base*/")
+                    .replace(/linear\-gradient\((.*?),.*?\)( *!important)?;( *)\/\*alt\*\//g, "linear-gradient($1, " + getGradientText(altColors) + ")$2;$3/*alt*/")
+                    .replace(/([^\-])((?:(?:background|border)\-)?color):( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "$1$2:$3" + getColorRgba(baseColors[8]) + "$4;$5/*base*/")
+                    .replace(/([^\-])((?:(?:background|border)\-)?color):( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "$1$2:$3" + getColorRgba(altColors[8]) + "$4;$5/*alt*/");
+                updateSvgGradient(document.getElementById('baseGradient'), baseColors);
+                updateSvgGradient(document.getElementById('altGradient'), altColors);
                 updateConfig(config);
             };
-            getFontColor(config.uiTheme, altFontStyle, function (altColor) {
-                if (altColor !== baseColor)
-                    altColorCallback(altColor);
+            getFontColors(config.uiTheme, altFontStyle, function (altColors) {
+                if (altColors[8][0] !== baseColors[8][0] || altColors[8][1] !== baseColors[8][1] || altColors[8][2] !== baseColors[8][2])
+                    altColorCallback(altColors);
                 else {
-                    const fallbackAltFontStyle = config.fontStyle !== defaultAltFontStyleIndex ? defaultAltFontStyleIndex + 1 : 1;
-                    getFontColor(config.uiTheme, fallbackAltFontStyle, altColorCallback);
+                    const fallbackAltFontStyle = config.fontStyle !== defaultFallbackAltFontStyleIndex ? defaultFallbackAltFontStyleIndex : defaultFallbackAltFontStyleIndex - 1;
+                    getFontColors(config.uiTheme, fallbackAltFontStyle, altColorCallback);
                 }
             });
         });

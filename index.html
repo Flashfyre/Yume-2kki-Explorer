@@ -22,8 +22,8 @@
                 color: rgba(216, 216, 216, 1); /*base*/
             }
 
-            label, h1, h2, h3, h4, p, li.styled-list-item, .close-modal, .close-audio-player, .playlist-item__remove-btn, .loading-container .loading-container__text {
-                background-image: url(/images/ui/Default_Custom/font1.png) !important; /*base*/
+            label, h1, h2, h3, h4, p, li.styled-list-item, .close-modal, .close-audio-player, .playlist-item__remove-btn, .loading-container .loading-container__text, .footer div {
+                background-image: linear-gradient(to bottom, rgba(216, 216, 216, 1) 0% 100%) !important; /*base*/
                 -webkit-background-clip: text;
 	            -webkit-text-fill-color: transparent;
                 background-clip: text;
@@ -31,7 +31,7 @@
             }
 
             a.world-link {
-                background-image: url(/images/ui/Default_Custom/font4.png) !important; /*alt*/
+                background-image: linear-gradient(to bottom, rgba(216, 173, 173, 1) 0% 100%) !important; /*alt*/
                 -webkit-background-clip: text;
 	            -webkit-text-fill-color: transparent;
                 background-clip: text;
@@ -43,28 +43,8 @@
                 color: rgba(255, 255, 157, 1); /*alt*/
             }
 
-            label, p, li, h1, h2, h3, h4, .loading-container .loading-container__text {
-                background-position-y: 2px;
-            }
-
-            label {
-                background-size: 18px;
-            }
-
-            h1, .loading-container .loading-container__text {
-                background-size: 36px;
-            }
-
-            h2 {
-                background-size: 24px;
-            }
-
-            h3 {
-                background-size: 18.72px;
-            }
-
-            p, li, h4 {
-                background-size: 20px;
+            p {
+                display: inline;
             }
 
             hr {
@@ -88,7 +68,7 @@
                 image-rendering: pixelated;
             }
 
-            .controls, .footer {
+            .controls {
                 color: rgba(216, 216, 216, 1); /*base*/
                 text-shadow: 1.5px 1.5px black; /*shadow*/
             }
@@ -131,7 +111,7 @@
             }
 
             .control.reverse-control > select.temp-select + label {
-                background-image: url(/images/ui/Default_Custom/font4.png) !important; /*alt*/
+                background-image: linear-gradient(to bottom, rgba(216, 173, 173, 1) 0% 100%) !important; /*alt*/
             }
 
             .slider::-webkit-slider-thumb {
@@ -229,7 +209,7 @@
             }
 
             .author-entry.collectable--border:hover .author-entry__name {
-                background-image: url(/images/ui/Default_Custom/font4.png) !important; /*alt*/
+                background-image: linear-gradient(to bottom, rgba(216, 173, 173, 1) 0% 100%) !important; /*alt*/
             }
 
             .audio-player .loading__spinner {
@@ -249,12 +229,12 @@
             .audio-player .play-pause-btn__icon, .audio-player .prev-btn__icon, .audio-player .next-btn__icon, .audio-player .fav-btn__icon, .audio-player .ignore-btn__icon,
             .audio-player .shuffle-btn__icon, .audio-player .repeat-btn__icon, .audio-player .playlist-add-btn__icon, .audio-player .volume__button .volume__speaker,
             .collectable-entry--controls > .collectable-entry--control .collectable-entry--control__icon {
-                fill: rgba(216, 216, 216, 1); /*base*/
+                fill: url(#baseGradient); /*base*/
             }
 
             .audio-player .fav-btn.on .fav-btn__icon, .audio-player .ignore-btn.on .ignore-btn__icon, .audio-player .shuffle-btn.on .shuffle-btn__icon, .audio-player .repeat-btn.on .repeat-btn__icon, .audio-player .volume__button.open path.volume__speaker,
             .collectable-entry--controls > .bgm-track__fav.on .collectable-entry--control__icon, .collectable-entry--controls > .bgm-track__ignore.on .collectable-entry--control__icon {
-                fill: rgba(255, 255, 157, 1) !important; /*alt*/
+                fill: url(#altGradient) !important; /*alt*/
             }
 
             .audio-player .gap-progress, .audio-player .pin {
@@ -446,6 +426,19 @@
                 <div data-localize="footer.lastFullUpdate"></div>
             </div>
         </div>
+        <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0">
+            <defs>
+                <linearGradient id="baseGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="rgba(216, 216, 216, 1)" />
+                </linearGradient>
+                <linearGradient id="altGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="rgba(255, 255, 157, 1)" />
+                </linearGradient>
+                <filter id="dropShadow">
+                    <feDropShadow dx="1" dy="1" stdDeviation="0.2" flood-color="black" />
+                </filter>
+            </defs>
+        </svg>
         <div id="dataIssuesModal" class="js--data-issues-modal modal">
             <div class="js--data-issues-modal__content modal__content">
                 <div class="data-issues__container">

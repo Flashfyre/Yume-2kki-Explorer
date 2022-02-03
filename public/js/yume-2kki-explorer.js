@@ -1,4 +1,4 @@
-// Version 4.1.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 4.2.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -107485,6 +107485,10 @@ function InsertStackElement(node, body) {
 	    }
 	}
 
+	function getColorRgba(color) {
+	    return `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color.length > 3 ? color[3] : 1})`;
+	}
+
 	function hueToRGBA(h, a) {
 	    let s = 1, v = 1, r, g, b, i, f, p, q, t;
 	    i = Math.floor(h * 6);
@@ -107500,7 +107504,7 @@ function InsertStackElement(node, body) {
 	        case 4: r = t, g = p, b = v; break;
 	        case 5: r = v, g = p, b = q; break;
 	    }
-	    return `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${a})`;
+	    return getColorRgba([Math.round(r * 255), Math.round(g * 255), Math.round(b * 255), a]);
 	}
 
 	let uiThemeBgColors = {};
@@ -107509,20 +107513,23 @@ function InsertStackElement(node, body) {
 
 	let uiThemeFontColors = {};
 
-	function getFontColor(uiTheme, fontStyle, callback) {
+	function getFontColors(uiTheme, fontStyle, callback) {
 	    if (!uiThemeFontColors[uiTheme])
 	        uiThemeFontColors[uiTheme] = {};
-	    let pixel = uiThemeFontColors[uiTheme][fontStyle];
-	    if (pixel)
-	        return callback(`rgba(${pixel[0]}, ${pixel[1]}, ${pixel[2]}, 1)`);
+	    let colors = uiThemeFontColors[uiTheme][fontStyle];
+	    if (colors)
+	        return callback(colors);
 	    const img = new Image();
 	    img.onload = function () {
 	        const canvas = document.createElement('canvas');
 	        const context = canvas.getContext('2d');
 	        context.drawImage(img, 0, 0);
-	        pixel = context.getImageData(0, 8, 1, 1).data;
-	        uiThemeFontColors[uiTheme][fontStyle] = [ pixel[0], pixel[1], pixel[2] ];
-	        callback(`rgba(${pixel[0]}, ${pixel[1]}, ${pixel[2]}, 1)`);
+	        const data = context.getImageData(0, 0, 1, 16).data;
+	        const colors = [];
+	        for (let i = 0; i < data.length; i += 4)
+	            colors.push([ data[i], data[i + 1], data[i + 2] ]);
+	        uiThemeFontColors[uiTheme][fontStyle] = colors;
+	        callback(colors);
 	        canvas.remove();
 	    };
 	    img.src = `./images/ui/${uiTheme}/font${(fontStyle + 1)}.png`;
@@ -107539,7 +107546,7 @@ function InsertStackElement(node, body) {
 	        context.drawImage(img, 0, 0);
 	        pixel = context.getImageData(0, 8, 1, 1).data;
 	        uiThemeFontShadows[uiTheme] = [ pixel[0], pixel[1], pixel[2] ];
-	        callback(`rgba(${pixel[0]}, ${pixel[1]}, ${pixel[2]}, 1)`);
+	        callback(getColorRgba(pixel));
 	        canvas.remove();
 	    };
 	    img.src = `./images/ui/${uiTheme}/fontshadow.png`;
@@ -107561,10 +107568,44 @@ function InsertStackElement(node, body) {
 	        const g = Math.round((pixel[1] + pixel2[1] + pixel3[1]) / 3);
 	        const b = Math.round((pixel[2] + pixel2[2] + pixel3[2]) / 3);
 	        uiThemeBgColors[uiTheme] = [ r, g, b ];
-	        callback(`rgba(${r}, ${g}, ${b}, 1)`);
+	        callback(getColorRgba([r, g, b]));
 	        canvas.remove();
 	    };
 	    img.src = `./images/ui/${uiTheme}/containerbg.png`;
+	}
+
+	function getGradientText(colors) {
+	    let lastColor = colors[0];
+	    let ret = `${getColorRgba(lastColor)} 0 `;
+	    colors.forEach(function (color, c) {
+	        if (color[0] !== lastColor[0] || color[1] !== lastColor[1] || color[2] !== lastColor[2]) {
+	            const percent = Math.floor(((c + 1) / colors.length) * 10000) / 100;
+	            ret += `${percent}%, ${getColorRgba(color)} ${percent}% `;
+	            lastColor = color;
+	        }
+	    });
+	    ret += '100%';
+	    return ret;
+	}
+	  
+	function updateSvgGradient(gradient, colors) {
+	    gradient.innerHTML = '';
+	    let lastColor = colors[0];
+	    gradient.appendChild(getSvgGradientStop(lastColor, 0));
+	    colors.forEach(function (color, c) {
+	        if (color[0] !== lastColor[0] || color[1] !== lastColor[1] || color[2] !== lastColor[2]) {
+	            const offset = Math.floor(((c + 1) / colors.length) * 10000) / 100;
+	            gradient.appendChild(getSvgGradientStop(color, offset));
+	            lastColor = color;
+	        }
+	    });
+	}
+
+	function getSvgGradientStop(color, offset) {
+	    const ret = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+	    ret.setAttribute('stop-color', getColorRgba(color));
+	    ret.setAttribute('offset', `${offset}%`);
+	    return ret;
 	}
 
 	function updateConfig(config) {
@@ -111682,7 +111723,7 @@ function InsertStackElement(node, body) {
 	        callback: function (data, defaultCallback) {
 	            if (config$1.lang === 'ja' || config$1.lang === 'ru')
 	                massageLocalizedValues(data, true);
-	            data.footer.about = data.footer.about.replace("{VERSION}", "4.1.1");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "4.2.0");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            localizedSeparator = data.separator;
@@ -112907,12 +112948,13 @@ function InsertStackElement(node, body) {
 	        const themeStyles = jquery(".js--theme-styles")[0];
 	        getBaseBgColor(config$1.uiTheme || (config$1.uiTheme = "Default_Custom"), function (color) {
 	            const bgColorPixel = uiThemeBgColors[config$1.uiTheme];
-	            const altColor = "rgba(" + Math.min(bgColorPixel[0] + 48, 255) + ", " + Math.min(bgColorPixel[1] + 48, 255) + ", " + Math.min(bgColorPixel[2] + 48, 255) + ", 1)";
+	            const altColor = getColorRgba([Math.min(bgColorPixel[0] + 48, 255), Math.min(bgColorPixel[1] + 48, 255), Math.min(bgColorPixel[2] + 48, 255)]);
 	            getFontShadow(config$1.uiTheme, function (shadow) {
 	                themeStyles.textContent = themeStyles.textContent.replace(/url\(\/images\/ui\/[a-zA-Z0-9\_]+\/(containerbg|border(?:2)?|arrow(?:up|down)|font\d)\.png\)/g, "url(/images/ui/" + config$1.uiTheme + "/$1.png)")
 	                    .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*basebg\*\//g, "background-color:$1" + color + "$2;$3/*basebg*/")
 	                    .replace(/background-color:( *)[^;!]*(!important)?;( *)\/\*altbg\*\//g, "background-color:$1" + altColor + "$2;$3/*altbg*/")
 	                    .replace(/(?:[#a-zA-Z0-9]+|rgba\([0-9]+, [0-9]+, [0-9]+, [0-9]+\))(;? *)\/\*shadow\*\//g, shadow + "$1/*shadow*/");
+	                document.getElementById('dropShadow').children[0].setAttribute('flood-color', shadow);
 	                jquery(".js--font-style").trigger("change");
 	                updateConfig(config$1);
 	            });
@@ -112922,23 +112964,26 @@ function InsertStackElement(node, body) {
 	    jquery(".js--font-style").on("change", function() {
 	        config$1.fontStyle = parseInt(jquery(this).val());
 	        const themeStyles = jquery(".js--theme-styles")[0];
-	        const defaultAltFontStyleIndex = !isYNTheme() ? 4 : 1;
-	        getFontColor(config$1.uiTheme, config$1.fontStyle, function (baseColor) {
-	            const altFontStyle = config$1.fontStyle !== defaultAltFontStyleIndex ? defaultAltFontStyleIndex : 0;
-	            const altColorCallback = function (altColor) {
+	        const defaultAltFontStyleIndex = 1;
+	        const defaultFallbackAltFontStyleIndex = 3;
+	        getFontColors(config$1.uiTheme, config$1.fontStyle, function (baseColors) {
+	            const altFontStyle = config$1.fontStyle !== defaultAltFontStyleIndex ? defaultAltFontStyleIndex : defaultAltFontStyleIndex - 1;
+	            const altColorCallback = function (altColors) {
 	                themeStyles.textContent = themeStyles.textContent = themeStyles.textContent = themeStyles.textContent
-	                    .replace(/url\(\/images\/ui\/([a-zA-Z0-9\_]+)\/font\d\.png\)( *!important)?;( *)\/\*base\*\//g, "url(/images/ui/$1/font" + (config$1.fontStyle + 1) + ".png)$2;$3/*base*/")
-	                    .replace(/url\(\/images\/ui\/([a-zA-Z0-9\_]+)\/font\d\.png\)( *!important)?;( *)\/\*alt\*\//g, "url(/images/ui/$1/font" + (altFontStyle + 1) + ".png)$2;$3/*alt*/")
-	                    .replace(/([^\-])((?:(?:background|border)\-)?color|fill):( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "$1$2:$3" + baseColor + "$4;$5/*base*/")
-	                    .replace(/([^\-])((?:(?:background|border)\-)?color|fill):( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "$1$2:$3" + altColor + "$4;$5/*alt*/");
+	                    .replace(/linear\-gradient\((.*?),.*?\)( *!important)?;( *)\/\*base\*\//g, "linear-gradient($1, " + getGradientText(baseColors) + ")$2;$3/*base*/")
+	                    .replace(/linear\-gradient\((.*?),.*?\)( *!important)?;( *)\/\*alt\*\//g, "linear-gradient($1, " + getGradientText(altColors) + ")$2;$3/*alt*/")
+	                    .replace(/([^\-])((?:(?:background|border)\-)?color):( *)[^;!]*(!important)?;( *)\/\*base\*\//g, "$1$2:$3" + getColorRgba(baseColors[8]) + "$4;$5/*base*/")
+	                    .replace(/([^\-])((?:(?:background|border)\-)?color):( *)[^;!]*(!important)?;( *)\/\*alt\*\//g, "$1$2:$3" + getColorRgba(altColors[8]) + "$4;$5/*alt*/");
+	                updateSvgGradient(document.getElementById('baseGradient'), baseColors);
+	                updateSvgGradient(document.getElementById('altGradient'), altColors);
 	                updateConfig(config$1);
 	            };
-	            getFontColor(config$1.uiTheme, altFontStyle, function (altColor) {
-	                if (altColor !== baseColor)
-	                    altColorCallback(altColor);
+	            getFontColors(config$1.uiTheme, altFontStyle, function (altColors) {
+	                if (altColors[8][0] !== baseColors[8][0] || altColors[8][1] !== baseColors[8][1] || altColors[8][2] !== baseColors[8][2])
+	                    altColorCallback(altColors);
 	                else {
-	                    const fallbackAltFontStyle = config$1.fontStyle !== defaultAltFontStyleIndex ? defaultAltFontStyleIndex + 1 : 1;
-	                    getFontColor(config$1.uiTheme, fallbackAltFontStyle, altColorCallback);
+	                    const fallbackAltFontStyle = config$1.fontStyle !== defaultFallbackAltFontStyleIndex ? defaultFallbackAltFontStyleIndex : defaultFallbackAltFontStyleIndex - 1;
+	                    getFontColors(config$1.uiTheme, fallbackAltFontStyle, altColorCallback);
 	                }
 	            });
 	        });

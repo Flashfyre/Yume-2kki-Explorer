@@ -55,6 +55,10 @@ export function getLangUsesEn(lang) {
     }
 }
 
+export function getColorRgba(color) {
+    return `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color.length > 3 ? color[3] : 1})`;
+}
+
 export function hueToRGBA(h, a) {
     let s = 1, v = 1, r, g, b, i, f, p, q, t;
     i = Math.floor(h * 6);
@@ -70,7 +74,7 @@ export function hueToRGBA(h, a) {
         case 4: r = t, g = p, b = v; break;
         case 5: r = v, g = p, b = q; break;
     }
-    return `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${a})`;
+    return getColorRgba([Math.round(r * 255), Math.round(g * 255), Math.round(b * 255), a]);
 }
 
 export let uiThemeBgColors = {};
@@ -79,20 +83,23 @@ export let uiThemeFontShadows = {};
 
 export let uiThemeFontColors = {};
 
-export function getFontColor(uiTheme, fontStyle, callback) {
+export function getFontColors(uiTheme, fontStyle, callback) {
     if (!uiThemeFontColors[uiTheme])
         uiThemeFontColors[uiTheme] = {};
-    let pixel = uiThemeFontColors[uiTheme][fontStyle];
-    if (pixel)
-        return callback(`rgba(${pixel[0]}, ${pixel[1]}, ${pixel[2]}, 1)`);
+    let colors = uiThemeFontColors[uiTheme][fontStyle];
+    if (colors)
+        return callback(colors);
     const img = new Image();
     img.onload = function () {
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
         context.drawImage(img, 0, 0);
-        pixel = context.getImageData(0, 8, 1, 1).data;
-        uiThemeFontColors[uiTheme][fontStyle] = [ pixel[0], pixel[1], pixel[2] ];
-        callback(`rgba(${pixel[0]}, ${pixel[1]}, ${pixel[2]}, 1)`);
+        const data = context.getImageData(0, 0, 1, 16).data;
+        const colors = [];
+        for (let i = 0; i < data.length; i += 4)
+            colors.push([ data[i], data[i + 1], data[i + 2] ]);
+        uiThemeFontColors[uiTheme][fontStyle] = colors;
+        callback(colors);
         canvas.remove();
     };
     img.src = `./images/ui/${uiTheme}/font${(fontStyle + 1)}.png`;
@@ -109,7 +116,7 @@ export function getFontShadow(uiTheme, callback) {
         context.drawImage(img, 0, 0);
         pixel = context.getImageData(0, 8, 1, 1).data;
         uiThemeFontShadows[uiTheme] = [ pixel[0], pixel[1], pixel[2] ];
-        callback(`rgba(${pixel[0]}, ${pixel[1]}, ${pixel[2]}, 1)`);
+        callback(getColorRgba(pixel));
         canvas.remove();
     };
     img.src = `./images/ui/${uiTheme}/fontshadow.png`;
@@ -131,8 +138,42 @@ export function getBaseBgColor(uiTheme, callback) {
         const g = Math.round((pixel[1] + pixel2[1] + pixel3[1]) / 3);
         const b = Math.round((pixel[2] + pixel2[2] + pixel3[2]) / 3);
         uiThemeBgColors[uiTheme] = [ r, g, b ];
-        callback(`rgba(${r}, ${g}, ${b}, 1)`);
+        callback(getColorRgba([r, g, b]));
         canvas.remove();
     };
     img.src = `./images/ui/${uiTheme}/containerbg.png`;
+}
+
+export function getGradientText(colors) {
+    let lastColor = colors[0];
+    let ret = `${getColorRgba(lastColor)} 0 `;
+    colors.forEach(function (color, c) {
+        if (color[0] !== lastColor[0] || color[1] !== lastColor[1] || color[2] !== lastColor[2]) {
+            const percent = Math.floor(((c + 1) / colors.length) * 10000) / 100;
+            ret += `${percent}%, ${getColorRgba(color)} ${percent}% `;
+            lastColor = color;
+        }
+    });
+    ret += '100%';
+    return ret;
+}
+  
+export function updateSvgGradient(gradient, colors) {
+    gradient.innerHTML = '';
+    let lastColor = colors[0];
+    gradient.appendChild(getSvgGradientStop(lastColor, 0));
+    colors.forEach(function (color, c) {
+        if (color[0] !== lastColor[0] || color[1] !== lastColor[1] || color[2] !== lastColor[2]) {
+            const offset = Math.floor(((c + 1) / colors.length) * 10000) / 100;
+            gradient.appendChild(getSvgGradientStop(color, offset));
+            lastColor = color;
+        }
+    });
+}
+
+export function getSvgGradientStop(color, offset) {
+    const ret = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+    ret.setAttribute('stop-color', getColorRgba(color));
+    ret.setAttribute('offset', `${offset}%`);
+    return ret;
 }
