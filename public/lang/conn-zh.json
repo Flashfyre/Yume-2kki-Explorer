@@ -44,8 +44,8 @@
       "description": "从对面区域使用一次公用电话将会传送到此处。"
   },
   "2048": {
-    "name": "Seasonal",
-    "description": "Accessible during the following season: {0}"
+    "name": "时令通行",
+    "description": "仅在此季节期间开放通行: {0}"
   },
   "4096": {
       "name": "无法到达",
