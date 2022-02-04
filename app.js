@@ -733,7 +733,10 @@ function checkUpdatePage(pageTitle, lastUpdate) {
                 const pageIds = Object.keys(pages);
                 if (pageIds.length) {
                     for (let pageId of pageIds) {
-                        const revisions = pages[pageId].revisions;
+                        const page = pages[pageId];
+                        if (page.hasOwnProperty('missing'))
+                            continue;
+                        const revisions = page.revisions;
                         if (revisions.length) {
                             const revDate = new Date(revisions[0].timestamp);
                             if (lastUpdate < revDate) {
@@ -750,7 +753,7 @@ function checkUpdatePage(pageTitle, lastUpdate) {
 
 function checkUpdateMapData(pool, worldData, lastUpdate) {
     return new Promise((resolve, reject) => {
-        checkUpdatePage("Map IDs/0000-0400|Map IDs/0401-0800|Map IDs/0801-1200|Map IDs/1201-1600|Map IDs/1601-2000", lastUpdate).then(needsUpdate => {
+        checkUpdatePage("Map IDs/0000-0400|Map IDs/0401-0800|Map IDs/0801-1200|Map IDs/1201-1600|Map IDs/1601-2000|Map IDs/2001-2400", lastUpdate).then(needsUpdate => {
             if (needsUpdate)
                 updateMapData(pool, worldData).then(() => resolve()).catch(err => reject(err));
             else
@@ -816,7 +819,7 @@ function checkUpdateWallpaperData(pool, worldData, lastUpdate) {
 
 function checkUpdateBgmTrackData(pool, worldData, lastUpdate) {
     return new Promise((resolve, reject) => {
-        checkUpdatePage("Soundtrack", lastUpdate).then(needsUpdate => {
+        checkUpdatePage("Soundtrack/001-100|Soundtrack/101-200|Soundtrack/201-300|Soundtrack/301-400|Soundtrack/401-500|Soundtrack/501-600|Soundtrack/601-700|Soundtrack/701-800|Soundtrack/801-900|Soundtrack/901-1000|Soundtrack/Miscellaneous", lastUpdate).then(needsUpdate => {
             if (needsUpdate)
                 updateBgmTrackData(pool, worldData).then(() => resolve()).catch(err => reject(err));
             else
@@ -2921,12 +2924,16 @@ function updateBgmTrackData(pool, worldData) {
     });
 }
 
-function getBgmTrackWikiData(worldData) {
+function getBgmTrackWikiData(worldData, url) {
+    const root = !url;
+    if (root)
+        url = 'https://yume2kki.fandom.com/wiki/Soundtrack/001-100';
+        
     return new Promise((resolve, reject) => {
-        superagent.get('https://yume2kki.fandom.com/wiki/Soundtrack', function (err, res) {
+        superagent.get(url, function (err, res) {
             if (err) return reject(err);
             const tableRowRegex = /<tr>[.\s\S]*?<\/tr>/g;
-            const tablesHtml = sliceHtml(res.text, res.text.indexOf('id="Track_list"'), res.text.indexOf('id="Trivia"'));
+            const tablesHtml = sliceHtml(res.text, res.text.indexOf('</table>') + 8, res.text.indexOf('class="page-footer"'));
             const unnumberedIndex = tablesHtml.indexOf('id="Unnumbered_Tracks"');
             const unusedIndex = tablesHtml.indexOf('id="Unused_Tracks"');
             const bgmTrackRegexTrackNoPart = '<td>(\\d{3})(?: ([A-Z]))?<\\/td>';
@@ -2956,16 +2963,16 @@ function getBgmTrackWikiData(worldData) {
             let name;
             let location;
             let worldId;
-            let url;
+            let bgmUrl;
 
             let i;
             
             while ((tableRowMatch = tableRowRegex.exec(tablesHtml))) {
-                if (!unnumberedFlag && tableRowMatch.index > unnumberedIndex) {
+                if (!unnumberedFlag && unnumberedIndex > -1 && tableRowMatch.index > unnumberedIndex) {
                     unnumberedFlag = true;
                     i = 1000;
                 } else {
-                    if (!unusedFlag && tableRowMatch.index > unusedIndex) {
+                    if (!unusedFlag && unusedIndex > -1 && tableRowMatch.index > unusedIndex) {
                         unusedFlag = true;
                         i = 2000;
                     } else
@@ -3016,7 +3023,7 @@ function getBgmTrackWikiData(worldData) {
                     if (!newUrlColSkip && urlColSkip > 0)
                         urlColSkip--;
                     else {
-                        url = trackDataMatch[8] ? decodeURI(trackDataMatch[8]) : null;
+                        bgmUrl = trackDataMatch[8] ? decodeURI(trackDataMatch[8]) : null;
                         if (newUrlColSkip)
                             urlColSkip = newUrlColSkip;
                     }
@@ -3038,7 +3045,7 @@ function getBgmTrackWikiData(worldData) {
                             location: location,
                             locationJP: null,
                             worldId: worldId,
-                            url: url,
+                            url: bgmUrl,
                             notes: notes,
                             notesJP: null,
                             removed: unusedFlag
@@ -3055,18 +3062,39 @@ function getBgmTrackWikiData(worldData) {
                 }
             }
 
-            const updateIndirectBgmTrackUrls = bgmTrackData.filter(t => t.url && t.url.startsWith('/wiki/'))
-                .map(t => getIndirectBgmTrackUrl(t).then(u => t.url = u)
-                    .catch(err => {
-                        if (err)
-                            console.error(err);
-                        t.url = null;
-                    })
-                );
+            if (root)
+            {
+                const getTabBgmTrackData = [];
+                let cursor = res.text.indexOf('<a href="/wiki/Soundtrack/') + 26;
+                while (cursor >= 26) {
+                    const tabUrl = `${url.slice(0, url.lastIndexOf('/') + 1)}${sliceHtml(res.text, cursor, res.text.indexOf('"', cursor))}`;
+                    if (tabUrl !== url) {
+                        getTabBgmTrackData.push(getBgmTrackWikiData(worldData, tabUrl)
+                            .then(tabBgmTrackData => tabBgmTrackData.forEach(bgmTrack => bgmTrackData.push(bgmTrack)))
+                            .catch(err => console.error(err)));
+                    }
+                    cursor = res.text.indexOf('<a href="/wiki/Soundtrack/', cursor) + 26;
+                }
 
-            Promise.allSettled(updateIndirectBgmTrackUrls).finally(() => {
-                addBgmTrackDataJPLocationsAndNotes(bgmTrackData).then(() => resolve(bgmTrackData)).catch(err => console.error(err));
-            });
+                if (getTabBgmTrackData.length)
+                    Promise.allSettled(getTabBgmTrackData).finally(() => {
+                        const updateIndirectBgmTrackUrls = bgmTrackData.filter(t => t.url && t.url.startsWith('/wiki/'))
+                            .map(t => getIndirectBgmTrackUrl(t).then(u => t.url = u)
+                                .catch(err => {
+                                    if (err)
+                                        console.error(err);
+                                    t.url = null;
+                                })
+                            );
+
+                        Promise.allSettled(updateIndirectBgmTrackUrls).finally(() => {
+                            addBgmTrackDataJPLocationsAndNotes(bgmTrackData).then(() => resolve(bgmTrackData)).catch(err => console.error(err));
+                        });
+                    });
+                else
+                    resolve(bgmTrackData);
+            } else
+                resolve(bgmTrackData);
         });
     });
 }
