@@ -237,6 +237,17 @@ function getConnPool() {
     });
 }
 
+function queryWithRetry(pool, query, callback, retryCount) {
+    if (!retryCount)
+        retryCount = 0;
+    pool.query(query, (err, rows) => {
+        if (err && ++retryCount < 10)
+            setTimeout(() => queryWithRetry(pool, query, callback, retryCount), 1000);
+        else
+            callback(err, rows);
+    });
+}
+
 app.use(express.static('public'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -3762,7 +3773,7 @@ function getMapLocationNames(mapId, prevMapId, prevLocationNames, pool) {
                 )
             `;
         }
-        pool.query(query, (err, rows) => {
+        queryWithRetry(pool, query, (err, rows) => {
             if (err) return reject(err);
             const ret = [];
             for (let row of rows)
@@ -3815,7 +3826,7 @@ function getConnectedLocations(locationName, connLocationNames, pool) {
             ? `= '${connLocationNames[0].replace(/'/g, "''")}'`
             : `IN ('${connLocationNames.map(l => l.replace(/'/g, "''")).join("', '")}')`;
         query += ' ORDER BY cw.depth';
-        pool.query(query, (err, rows) => {
+        queryWithRetry(pool, query, (err, rows) => {
             if (err) return reject(err);
             const ret = [];
             for (let row of rows)
@@ -3862,7 +3873,7 @@ function getLocationMaps(locationNames, pool) {
             ? `= '${locationNames[0].replace(/'/g, "''")}'`
             : `IN ('${locationNames.map(l => l.replace(/'/g, "''")).join("', '")}')`;
         query += ' ORDER BY w.depth';
-        pool.query(query, (err, rows) => {
+        queryWithRetry(pool, query, (err, rows) => {
             if (err) return reject(err);
             const ret = [];
             for (let row of rows) {
