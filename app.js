@@ -241,7 +241,7 @@ function queryWithRetry(pool, query, callback, retryCount) {
     if (!retryCount)
         retryCount = 0;
     pool.query(query, (err, rows) => {
-        if (err && ++retryCount < 10)
+        if (err && ++retryCount < 20)
             setTimeout(() => queryWithRetry(pool, query, callback, retryCount), 1000);
         else
             callback(err, rows);
@@ -2222,7 +2222,7 @@ function getEffectWikiData(worldData) {
                 const effectName = nameMatch[1];
                 if (effectName === 'Instructions')
                     break;
-                const filenameMatch = /(https:\/\/static.wikia.nocookie.net\/yume2kki\/images\/.*?)revision\/latest/.exec(section);
+                const filenameMatch = /(https:\/\/static.wikia.nocookie.net\/yume2kki\/images\/.*?)\/revision\/latest/.exec(section);
                 if (!filenameMatch)
                     continue;
                 const filename = filenameMatch[1];
@@ -3202,7 +3202,7 @@ function deleteRemovedBgmTracks(pool, removedBgmTrackIds) {
 
 function getWorldInfo(worldName) {
     return new Promise((resolve, reject) => {
-        superagent.get('https://yume2kki.fandom.com/wiki/' + worldName, function (err, res) {
+        superagent.get('https://yume2kki.fandom.com/wiki/' + encodeURI(worldName), function (err, res) {
             if (err) return reject(err);
             worldName = worldName.replace(/\_/g, ' ');
             const html = res.text;
