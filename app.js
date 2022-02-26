@@ -289,10 +289,7 @@ app.post('/checkUpdateData', function(req, res) {
             else {
                 pool.query('SELECT lastUpdate FROM updates WHERE DATE_ADD(lastUpdate, INTERVAL 1 HOUR) < NOW()', (err, rows) => {
                     if (err) console.error(err);
-                    if (rows && rows.length)
-                        callback(true);
-                    else
-                        callback(false);
+                    callback(rows && rows.length);
                 });
             }
         });
