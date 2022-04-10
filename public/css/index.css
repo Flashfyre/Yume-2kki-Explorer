@@ -851,6 +851,10 @@ html[lang='zh'] .graph-tooltip, html[lang='zh'] .scene-tooltip {
     margin-right: 25px;
 }
 
+.audio-player-label {
+    image-rendering: auto;
+}
+
 .audio-player {
     background: none !important;
     width: 624px !important;

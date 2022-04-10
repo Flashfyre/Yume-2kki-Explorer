@@ -3887,4 +3887,72 @@ function getLocationMaps(locationNames, pool) {
     });
 }
 
+app.get('/getRandomLocations', function(req, res) {
+    let count = req.query.count ? Math.min(parseInt(req.query.count), 10) : 1;
+    if (isNaN(count))
+        count = 1;
+    let minDepth = req.query.minDepth ? parseInt(req.query.minDepth) : 0;
+    if (isNaN(minDepth))
+        minDepth = 0;
+    let maxDepth = req.query.maxDepth ? parseInt(req.query.maxDepth) : 25;
+    if (isNaN(maxDepth))
+        maxDepth = 25;
+    if (count > 0 && minDepth >= 0 && maxDepth >= minDepth) {
+        getConnPool().then(pool => {
+            getRandomLocations(count, minDepth, maxDepth, pool)
+                .then(data => res.json(data))
+                .catch(err => {
+                    console.error(err);
+                    res.json({ error: 'Failed to query random locations', err_code: 'QUERY_FAILED' });
+                })
+                .finally(() => pool.end());
+        }).catch(err => {
+            console.error(err);
+            res.json({ error: 'Failed to connect to database', err_code: 'DB_CONN_FAILED' });
+        });
+    } else
+        res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
+});
+
+function getRandomLocations(count, minDepth, maxDepth, pool) {
+    return new Promise((resolve, reject) => {
+        let query =  `
+            WITH w AS
+                (SELECT w.id,
+                    w.title,
+                    w.titleJP,
+                    w.depth
+                FROM worlds w
+                WHERE w.depth >= ${minDepth}
+                AND w.depth <= ${maxDepth}
+                HAVING (SELECT COUNT(wm.id) FROM world_maps wm WHERE wm.worldId = w.id) > 0
+                ORDER BY RAND()
+                LIMIT ${count})
+            SELECT w.title,
+                w.titleJP,
+                w.depth,
+                m.mapId
+            FROM maps m
+            JOIN world_maps wm ON wm.mapId = m.id
+            JOIN w ON w.id = wm.worldId
+            ORDER BY w.depth`;
+        queryWithRetry(pool, query, (err, rows) => {
+            if (err) return reject(err);
+            const ret = [];
+            for (let row of rows) {
+                if (!ret.length || row.title !== ret[ret.length - 1].title) {
+                    ret.push({
+                        title: row.title,
+                        titleJP: row.titleJP,
+                        depth: row.depth,
+                        maps: []
+                    });
+                }
+                ret[ret.length - 1].maps.push(row.mapId);
+            }
+            resolve(ret);
+        });
+    });
+}
+
 app.listen(port, () => console.log(`Yume 2kki Explorer app listening on port ${port}`));
