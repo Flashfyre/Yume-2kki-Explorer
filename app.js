@@ -3898,8 +3898,10 @@ app.get('/getRandomLocations', function(req, res) {
     if (isNaN(maxDepth))
         maxDepth = 25;
     if (count > 0 && minDepth >= 0 && maxDepth >= minDepth) {
+        const includeRemoved = req.query.includeRemoved === '1';
+        const ignoreSecret = req.query.ignoreSecret === '1';
         getConnPool().then(pool => {
-            getRandomLocations(count, minDepth, maxDepth, pool)
+            getRandomLocations(count, minDepth, maxDepth, includeRemoved, ignoreSecret, pool)
                 .then(data => res.json(data))
                 .catch(err => {
                     console.error(err);
@@ -3914,7 +3916,7 @@ app.get('/getRandomLocations', function(req, res) {
         res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
 });
 
-function getRandomLocations(count, minDepth, maxDepth, pool) {
+function getRandomLocations(count, minDepth, maxDepth, includeRemoved, ignoreSecret, pool) {
     return new Promise((resolve, reject) => {
         let query =  `
             WITH w AS
@@ -3925,6 +3927,8 @@ function getRandomLocations(count, minDepth, maxDepth, pool) {
                 FROM worlds w
                 WHERE w.depth >= ${minDepth}
                 AND w.depth <= ${maxDepth}
+                ${includeRemoved ? '' : 'AND w.removed = 0'}
+                ${ignoreSecret ? 'AND w.title NOT IN (\'Innocent Dream\')' : ''}
                 HAVING (SELECT COUNT(wm.id) FROM world_maps wm WHERE wm.worldId = w.id) > 0
                 ORDER BY RAND()
                 LIMIT ${count})
@@ -3945,10 +3949,10 @@ function getRandomLocations(count, minDepth, maxDepth, pool) {
                         title: row.title,
                         titleJP: row.titleJP,
                         depth: row.depth,
-                        maps: []
+                        mapIds: []
                     });
                 }
-                ret[ret.length - 1].maps.push(row.mapId);
+                ret[ret.length - 1].mapIds.push(row.mapId);
             }
             resolve(ret);
         });
