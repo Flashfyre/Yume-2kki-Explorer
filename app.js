@@ -3919,26 +3919,28 @@ app.get('/getRandomLocations', function(req, res) {
 function getRandomLocations(count, minDepth, maxDepth, includeRemoved, ignoreSecret, pool) {
     return new Promise((resolve, reject) => {
         let query =  `
-            WITH w AS
-                (SELECT w.id,
-                    w.title,
-                    w.titleJP,
-                    w.depth
-                FROM worlds w
-                WHERE w.depth >= ${minDepth}
-                AND w.depth <= ${maxDepth}
-                ${includeRemoved ? '' : 'AND w.removed = 0'}
-                ${ignoreSecret ? 'AND w.title NOT IN (\'Innocent Dream\')' : ''}
-                HAVING (SELECT COUNT(wm.id) FROM world_maps wm WHERE wm.worldId = w.id) > 0
-                ORDER BY RAND()
-                LIMIT ${count})
             SELECT w.title,
                 w.titleJP,
                 w.depth,
                 m.mapId
             FROM maps m
             JOIN world_maps wm ON wm.mapId = m.id
-            JOIN w ON w.id = wm.worldId
+            JOIN
+                (SELECT w.id,
+                        w.title,
+                        w.titleJP,
+                        w.depth
+                FROM worlds w
+                WHERE w.depth >= ${minDepth}
+                    AND w.depth <= ${maxDepth}
+                    ${includeRemoved ? '' : 'AND w.removed = 0'}
+                    ${ignoreSecret ? 'AND w.title NOT IN (\'Innocent Dream\')' : ''}
+                HAVING
+                    (SELECT COUNT(wm.id)
+                    FROM world_maps wm
+                    WHERE wm.worldId = w.id) > 0
+                ORDER BY RAND()
+                LIMIT ${count}) w ON w.id = wm.worldId
             ORDER BY w.depth`;
         queryWithRetry(pool, query, (err, rows) => {
             if (err) return reject(err);
