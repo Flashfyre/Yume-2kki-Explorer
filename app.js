@@ -89,7 +89,8 @@ function initDb(pool) {
                 verRemoved VARCHAR(20) NULL,
                 verUpdated VARCHAR(1000) NULL,
                 verGaps VARCHAR(255) NULL,
-                removed BIT NOT NULL
+                removed BIT NOT NULL,
+                secret BIT NOT NULL
             )`)).then(() => queryAsPromise(pool,
             `CREATE TABLE IF NOT EXISTS conns (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -957,7 +958,7 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                 const newWorldNames = Object.keys(newWorldsByName);
                 if (newWorldNames.length) {
                     let i = 0;
-                    let worldsQuery = 'INSERT INTO worlds (title, titleJP, author, depth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, removed) VALUES ';
+                    let worldsQuery = 'INSERT INTO worlds (title, titleJP, author, depth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, removed, secret) VALUES ';
                     for (const w in newWorldsByName) {
                         const newWorld = newWorldsByName[w];
                         if (i++)
@@ -974,7 +975,7 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                         const verUpdatedValue = newWorld.verUpdated ? `'${newWorld.verUpdated}'` : 'NULL';
                         const verGapsValue = newWorld.verGaps ? `'${newWorld.verGaps}'` : 'NULL';
                         const removedValue = newWorld.removed ? '1' : '0';
-                        worldsQuery += `('${title}', ${titleJPValue}, ${authorValue}, 0, '${newWorld.filename.replace(/'/g, "''")}', ${mapUrlValue}, ${mapLabelValue}, ${bgmUrlValue}, ${bgmLabelValue}, ${verAddedValue}, ${verRemovedValue}, ${verUpdatedValue}, ${verGapsValue}, ${removedValue})`;
+                        worldsQuery += `('${title}', ${titleJPValue}, ${authorValue}, 0, '${newWorld.filename.replace(/'/g, "''")}', ${mapUrlValue}, ${mapLabelValue}, ${bgmUrlValue}, ${bgmLabelValue}, ${verAddedValue}, ${verRemovedValue}, ${verUpdatedValue}, ${verGapsValue}, ${removedValue}, 0)`;
                     }
                     pool.query(worldsQuery, (err, _) => {
                         if (err) return reject(err);
@@ -3934,7 +3935,7 @@ function getRandomLocations(count, minDepth, maxDepth, includeRemoved, ignoreSec
                 WHERE w.depth >= ${minDepth}
                     AND w.depth <= ${maxDepth}
                     ${includeRemoved ? '' : 'AND w.removed = 0'}
-                    ${ignoreSecret ? 'AND w.title NOT IN (\'Innocent Dream\')' : ''}
+                    ${ignoreSecret ? 'AND w.secret = 0' : ''}
                 HAVING
                     (SELECT COUNT(wm.id)
                     FROM world_maps wm
