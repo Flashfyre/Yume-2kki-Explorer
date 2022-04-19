@@ -1,5 +1,5 @@
 {
-    "title": "梦２记探索辅助工具",
+    "title": "梦２记导航",
     "loading": {
         "label": "正在载入",
         "space": "　　　",
@@ -311,7 +311,7 @@
         "reportBug": "BUG反馈"
     },
     "footer": {
-        "about": "梦２记探索辅助工具　版本号：{VERSION} 作者：FlashfyreDev",
+        "about": "梦２记导航　版本号：{VERSION} 作者：FlashfyreDev",
         "lastUpdate": "最后一次数据更新日期：{LAST_UPDATE}",
         "lastFullUpdate": "最后一次数据迭代日期：{LAST_FULL_UPDATE}"
     },
