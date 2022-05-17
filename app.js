@@ -89,6 +89,8 @@ function initDb(pool) {
                 verRemoved VARCHAR(20) NULL,
                 verUpdated VARCHAR(1000) NULL,
                 verGaps VARCHAR(255) NULL,
+                fgColor VARCHAR(20) NULL,
+                bgColor VARCHAR(20) NULL,
                 removed BIT NOT NULL,
                 secret BIT NOT NULL
             )`)).then(() => queryAsPromise(pool,
@@ -930,7 +932,7 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                     existingWorld.removed = world.removed;
                 }
             }
-            pool.query('SELECT id, title, titleJP, author, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, removed FROM worlds', (err, rows) => {
+            pool.query('SELECT id, title, titleJP, author, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, fgColor, bgColor, removed FROM worlds', (err, rows) => {
                 if (err) return reject(err);
                 for (let row of rows) {
                     const worldName = row.title;
@@ -941,7 +943,8 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                             row.mapUrl !== world.mapUrl || row.mapLabel !== world.mapLabel ||
                             row.bgmUrl !== world.bgmUrl || row.bgmLabel !== world.bgmLabel ||
                             row.verAdded !== world.verAdded || row.verRemoved !== world.verRemoved ||
-                            row.verUpdated !== world.verUpdated || row.verGaps !== world.verGaps || row.removed !== world.removed)
+                            row.verUpdated !== world.verUpdated || row.verGaps !== world.verGaps ||
+                            row.fgColor !== world.fgColor || row.bgColor !== world.bgColor || row.removed !== world.removed)
                             updatedWorlds.push(world);
                     }
                     delete newWorldsByName[worldName];
@@ -958,7 +961,7 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                 const newWorldNames = Object.keys(newWorldsByName);
                 if (newWorldNames.length) {
                     let i = 0;
-                    let worldsQuery = 'INSERT INTO worlds (title, titleJP, author, depth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, removed, secret) VALUES ';
+                    let worldsQuery = 'INSERT INTO worlds (title, titleJP, author, depth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, fgColor, bgColor, removed, secret) VALUES ';
                     for (const w in newWorldsByName) {
                         const newWorld = newWorldsByName[w];
                         if (i++)
@@ -974,8 +977,10 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                         const verRemovedValue = newWorld.verRemoved ? `'${newWorld.verRemoved}'` : 'NULL';
                         const verUpdatedValue = newWorld.verUpdated ? `'${newWorld.verUpdated}'` : 'NULL';
                         const verGapsValue = newWorld.verGaps ? `'${newWorld.verGaps}'` : 'NULL';
+                        const fgColorValue = newWorld.fgColor ? `'${newWorld.fgColor}'` : 'NULL';
+                        const bgColorValue = newWorld.bgColor ? `'${newWorld.bgColor}'` : 'NULL';
                         const removedValue = newWorld.removed ? '1' : '0';
-                        worldsQuery += `('${title}', ${titleJPValue}, ${authorValue}, 0, '${newWorld.filename.replace(/'/g, "''")}', ${mapUrlValue}, ${mapLabelValue}, ${bgmUrlValue}, ${bgmLabelValue}, ${verAddedValue}, ${verRemovedValue}, ${verUpdatedValue}, ${verGapsValue}, ${removedValue}, 0)`;
+                        worldsQuery += `('${title}', ${titleJPValue}, ${authorValue}, 0, '${newWorld.filename.replace(/'/g, "''")}', ${mapUrlValue}, ${mapLabelValue}, ${bgmUrlValue}, ${bgmLabelValue}, ${verAddedValue}, ${verRemovedValue}, ${verUpdatedValue}, ${verGapsValue}, ${fgColorValue}, ${bgColorValue}, ${removedValue}, 0)`;
                     }
                     pool.query(worldsQuery, (err, _) => {
                         if (err) return reject(err);
@@ -1051,9 +1056,11 @@ function updateWorldInfo(pool, world) {
         const verRemovedValue = world.verRemoved ? `'${world.verRemoved}'` : 'NULL';
         const verUpdatedValue = world.verUpdated ? `'${world.verUpdated}'` : 'NULL';
         const verGapsValue = world.verGaps ? `'${world.verGaps}'` : 'NULL';
+        const fgColorValue = world.fgColor ? `'${world.fgColor}'` : 'NULL';
+        const bgColorValue = world.bgColor ? `'${world.bgColor}'` : 'NULL';
         const removedValue = world.removed ? '1' : '0';
         if (world.filename)
-            pool.query(`UPDATE worlds SET titleJP=${titleJPValue}, author=${authorValue}, filename='${world.filename.replace(/'/g, "''")}', mapUrl=${mapUrlValue}, mapLabel=${mapLabelValue}, bgmUrl=${bgmUrlValue}, bgmLabel=${bgmLabelValue}, verAdded=${verAddedValue}, verRemoved=${verRemovedValue}, verUpdated=${verUpdatedValue}, verGaps=${verGapsValue}, removed=${removedValue} WHERE id=${world.id}`,
+            pool.query(`UPDATE worlds SET titleJP=${titleJPValue}, author=${authorValue}, filename='${world.filename.replace(/'/g, "''")}', mapUrl=${mapUrlValue}, mapLabel=${mapLabelValue}, bgmUrl=${bgmUrlValue}, bgmLabel=${bgmLabelValue}, verAdded=${verAddedValue}, verRemoved=${verRemovedValue}, verUpdated=${verUpdatedValue}, verGaps=${verGapsValue}, fgColor=${fgColorValue}, bgColor=${bgColorValue}, removed=${removedValue} WHERE id=${world.id}`,
             (err, _) => {
                 if (err) return reject(err);
                 resolve();
@@ -3220,6 +3227,7 @@ function getWorldInfo(worldName) {
             }
             const mapUrlAndLabel = getMapUrlAndLabel(html);
             const bgmUrlAndLabel = getBgmUrlAndLabel(html);
+            const worldColors = getWorldColors(html);
             resolve({
                 titleJP: getTitleJP(html),
                 connections: getConnections(html),
@@ -3232,7 +3240,9 @@ function getWorldInfo(worldName) {
                 verAdded: getVerAdded(html),
                 verRemoved: getVerRemoved(html),
                 verUpdated: getVerUpdated(html),
-                verGaps: getVerGaps(html)
+                verGaps: getVerGaps(html),
+                fgColor: worldColors.fgColor,
+                bgColor: worldColors.bgColor
             });
         });
     });
@@ -3475,6 +3485,16 @@ function getVerGaps(html) {
     if (verGapsIndex === -1)
         return null;
     return versionUtils.validateVersionGaps(sliceHtml(html, verGapsIndex + 15, html.indexOf("\"", verGapsIndex + 15)).replace(/, +/g, ","));
+}
+
+function getWorldColors(html) {
+    const infoboxIndex = html.indexOf("infobox");
+    const fgColorIndex = html.indexOf(' color:', infoboxIndex) + 7;
+    const bgColorIndex = html.indexOf(' background-color:', infoboxIndex) + 18;
+    return {
+        fgColor: fgColorIndex > -1 ? sliceHtml(html, fgColorIndex, html.indexOf(';', fgColorIndex)) : null,
+        bgColor: bgColorIndex > -1 ? sliceHtml(html, bgColorIndex, html.indexOf(';', bgColorIndex)) : null
+    };
 }
 
 function decodeHtml(html) {
@@ -3883,6 +3903,43 @@ function getLocationMaps(locationNames, pool) {
                         ret.push({ url: urls[m], label: labels[m] })
                 }
             }
+            resolve(ret);
+        });
+    });
+}
+
+app.get('/getLocationColors', function(req, res) {
+    const locationName = req.query.locationName;
+    res.setHeader('Access-Control-Allow-Origin', 'https://ynoproject.net');
+    if (locationName) {
+        getConnPool().then(pool => {
+            getLocationColors(locationName, pool)
+                .then(data => res.json(data))
+                .catch(err => {
+                    console.error(err);
+                    res.json({ error: 'Failed to query location maps', err_code: 'QUERY_FAILED' });
+                })
+                .finally(() => pool.end());
+        }).catch(err => {
+            console.error(err);
+            res.json({ error: 'Failed to connect to database', err_code: 'DB_CONN_FAILED' });
+        });
+    } else
+        res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
+});
+
+function getLocationColors(locationName, pool) {
+    return new Promise((resolve, reject) => {
+        const query = `
+            SELECT w.fgColor, w.bgColor
+            FROM worlds w
+            WHERE w.title = '${locationName.replace(/'/g, "''")}'
+        `;
+        queryWithRetry(pool, query, (err, rows) => {
+            if (err) return reject(err);
+            let ret = { fgColor: null, bgColor: null };
+            if (rows.length)
+                ret = rows[0];
             resolve(ret);
         });
     });
