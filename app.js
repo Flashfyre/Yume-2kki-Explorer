@@ -17,6 +17,7 @@ const appConfig = process.env.ADMIN_KEY ?
 const apiUrl = 'https://yume2kki.fandom.com/api.php';
 const isRemote = Boolean(process.env.DATABASE_URL);
 const defaultPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT;
+const minDepthPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED;
 const worldImageWidthThreshold = 960;
 
 let dbInitialized = false;
@@ -80,6 +81,7 @@ function initDb(pool) {
                 titleJP VARCHAR(255) NULL,
                 author VARCHAR(100) NULL,
                 depth INT NOT NULL,
+                minDepth INT NOT NULL,
                 filename VARCHAR(255) NOT NULL,
                 mapUrl VARCHAR(1000) NULL,
                 mapLabel VARCHAR(1000) NULL,
@@ -432,7 +434,7 @@ function getData(req, pool) {
 function getWorldData(pool, preserveIds, excludeRemovedContent) {
     return new Promise((resolve, reject) => {
         const worldDataById = {};
-        pool.query('SELECT id, title, titleJP, author, depth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, removed FROM worlds' + (excludeRemovedContent ? ' where removed = 0' : ''), (err, rows) => {
+        pool.query('SELECT id, title, titleJP, author, depth, minDepth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, removed FROM worlds' + (excludeRemovedContent ? ' where removed = 0' : ''), (err, rows) => {
             if (err) return reject(err);
             for (let row of rows) {
                 worldDataById[row.id] = {
@@ -441,6 +443,7 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
                     titleJP: row.titleJP,
                     author: row.author,
                     depth: row.depth,
+                    minDepth: row.minDepth,
                     filename: row.filename,
                     mapUrl: row.mapUrl,
                     mapLabel: row.mapLabel,
@@ -961,7 +964,7 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                 const newWorldNames = Object.keys(newWorldsByName);
                 if (newWorldNames.length) {
                     let i = 0;
-                    let worldsQuery = 'INSERT INTO worlds (title, titleJP, author, depth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, fgColor, bgColor, removed, secret) VALUES ';
+                    let worldsQuery = 'INSERT INTO worlds (title, titleJP, author, depth, minDepth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, fgColor, bgColor, removed, secret) VALUES ';
                     for (const w in newWorldsByName) {
                         const newWorld = newWorldsByName[w];
                         if (i++)
@@ -980,7 +983,7 @@ function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldN
                         const fgColorValue = newWorld.fgColor ? `'${newWorld.fgColor}'` : 'NULL';
                         const bgColorValue = newWorld.bgColor ? `'${newWorld.bgColor}'` : 'NULL';
                         const removedValue = newWorld.removed ? '1' : '0';
-                        worldsQuery += `('${title}', ${titleJPValue}, ${authorValue}, 0, '${newWorld.filename.replace(/'/g, "''")}', ${mapUrlValue}, ${mapLabelValue}, ${bgmUrlValue}, ${bgmLabelValue}, ${verAddedValue}, ${verRemovedValue}, ${verUpdatedValue}, ${verGapsValue}, ${fgColorValue}, ${bgColorValue}, ${removedValue}, 0)`;
+                        worldsQuery += `('${title}', ${titleJPValue}, ${authorValue}, 0, 0, '${newWorld.filename.replace(/'/g, "''")}', ${mapUrlValue}, ${mapLabelValue}, ${bgmUrlValue}, ${bgmLabelValue}, ${verAddedValue}, ${verRemovedValue}, ${verUpdatedValue}, ${verGapsValue}, ${fgColorValue}, ${bgColorValue}, ${removedValue}, 0)`;
                     }
                     pool.query(worldsQuery, (err, _) => {
                         if (err) return reject(err);
@@ -1452,23 +1455,73 @@ function deleteRemovedWorldImages(pool, removedWorldImageIds) {
 function updateWorldDepths(pool, worldData) {
     return new Promise((resolve, reject) => {
         const depthMap = {};
+        const minDepthMap = {};
 
-        for (let world of worldData)
+        for (let world of worldData) {
             depthMap[world.title] = -1;
+            minDepthMap[world.title] = -1;
+        }
 
         const worldDataById = _.keyBy(worldData, w => w.id);
+
+        calcDepth(worldData, worldDataById, depthMap, null, 0, defaultPathIgnoreConnTypeFlags, 'depth');
+        calcDepth(worldData, worldDataById, minDepthMap, null, 0, minDepthPathIgnoreConnTypeFlags, 'minDepth');
+
+        const worldsByDepth = _.groupBy(worldData, 'depth');
+        const worldsByMinDepth = _.groupBy(worldData, 'minDepth');
+
+        if (Object.keys(worldsByDepth).length) {
+            const updateWorldsOfDepths = [];
+            const worldDepths = Object.keys(worldsByDepth);
+            const worldMinDepths = Object.keys(worldsByMinDepth);
+            for (let depth of worldDepths)
+                updateWorldsOfDepths.push(updateWorldsOfDepth(pool, depth, worldsByDepth[depth]));
+            for (let minDepth of worldMinDepths)
+                updateWorldsOfDepths.push(updateWorldsOfDepth(pool, minDepth, worldsByMinDepth[minDepth], true));
+            Promise.all(updateWorldsOfDepths).then(() => resolve()).catch(err => reject(err));
+        } else
+            resolve();
+    });
+}
+
+function calcDepth(worldData, worldDataById, depthMap, world, depth, ignoreTypeFlags, depthProp, targetWorldName, removed) {
+    const worldDataByName = _.keyBy(worldData, w => w.title);
+    const worldNames = Object.keys(worldDataByName);
+    let currentWorld;
+    if (depth > 0)
+        currentWorld = world;
+    else {
+        currentWorld = worldDataByName[startLocation];
+        currentWorld[depthProp] = depthMap[currentWorld.title] = depth;
+    }
+    for (let conn of currentWorld.connections) {
+        const targetWorld = worldDataById[conn.targetId];
+        const w = targetWorld ? targetWorld.title : conn.location;
+        if (worldNames.indexOf(w) > -1 && (!targetWorldName || w === targetWorldName)) {
+            if (conn.type & ignoreTypeFlags)
+                continue;
+            const connWorld = worldDataByName[w];
+            if ((removed && !connWorld.removed) || (!removed && (!connWorld.removed && conn.type & ConnType.INACCESSIBLE)))
+                continue;
+            const d = depthMap[w];
+            if (d === -1 || d > depth + 1) {
+                connWorld[depthProp] = depthMap[w] = depth + 1;
+                if (!targetWorldName)
+                    calcDepth(worldData, worldDataById, depthMap, connWorld, depth + 1, ignoreTypeFlags, depthProp, null, removed || connWorld.removed);
+            }
+        }
+    }
+
+    if (world === null) {
         const worldDataByName = _.keyBy(worldData, w => w.title);
 
-        calcDepth(worldData, worldDataById, depthMap, null, 0, defaultPathIgnoreConnTypeFlags);
-
-        let ignoreTypeFlags = defaultPathIgnoreConnTypeFlags;
         let anyDepthFound;
         
         while (true) {
             anyDepthFound = false;
             
             missingDepthWorlds = worldData.filter(w => depthMap[w.title] === -1 && w.title !== startLocation);
-            missingDepthWorlds.forEach(w => anyDepthFound |= resolveMissingDepths(worldData, worldDataById, worldDataByName, depthMap, w, ignoreTypeFlags));
+            missingDepthWorlds.forEach(w => anyDepthFound |= resolveMissingDepths(worldData, worldDataById, worldDataByName, depthMap, w, ignoreTypeFlags, depthProp));
 
             if (missingDepthWorlds.length) {
                 if (!anyDepthFound) {
@@ -1490,54 +1543,15 @@ function updateWorldDepths(pool, worldData) {
         }
 
         for (let world of worldData) {
-            if (world.depth === undefined)
-                world.depth = 1;
-        }
-
-        const worldsByDepth = _.groupBy(worldData, 'depth');
-
-        if (Object.keys(worldsByDepth).length) {
-            const updateWorldsOfDepths = [];
-            const worldDepths = Object.keys(worldsByDepth);
-            for (let depth of worldDepths)
-                updateWorldsOfDepths.push(updateWorldsOfDepth(pool, depth, worldsByDepth[depth]));
-            Promise.all(updateWorldsOfDepths).then(() => resolve()).catch(err => reject(err));
-        } else
-            resolve();
-    });
-}
-
-function calcDepth(worldData, worldDataById, depthMap, world, depth, ignoreTypeFlags, targetWorldName, removed) {
-    const worldDataByName = _.keyBy(worldData, w => w.title);
-    const worldNames = Object.keys(worldDataByName);
-    let currentWorld;
-    if (depth > 0)
-        currentWorld = world;
-    else {
-        currentWorld = worldDataByName[startLocation];
-        currentWorld.depth = depthMap[currentWorld.title] = depth;
-    }
-    for (let conn of currentWorld.connections) {
-        const targetWorld = worldDataById[conn.targetId];
-        const w = targetWorld ? targetWorld.title : conn.location;
-        if (worldNames.indexOf(w) > -1 && (!targetWorldName || w === targetWorldName)) {
-            if (conn.type & ignoreTypeFlags)
-                continue;
-            const connWorld = worldDataByName[w];
-            if ((removed && !connWorld.removed) || (!removed && (!connWorld.removed && conn.type & ConnType.INACCESSIBLE)))
-                continue;
-            const d = depthMap[w];
-            if (d === -1 || d > depth + 1) {
-                connWorld.depth = depthMap[w] = depth + 1;
-                if (!targetWorldName)
-                    calcDepth(worldData, worldDataById, depthMap, connWorld, depth + 1, defaultPathIgnoreConnTypeFlags, null, removed || connWorld.removed);
-            }
+            if (world[depthProp] === undefined)
+                world[depthProp] = 1;
         }
     }
+
     return depth;
 }
 
-function resolveMissingDepths(worldData, worldDataById, worldDataByName, depthMap, world, ignoreTypeFlags) {
+function resolveMissingDepths(worldData, worldDataById, worldDataByName, depthMap, world, ignoreTypeFlags, depthProp) {
     const worldNames = Object.keys(worldDataByName);
     const conns = world.connections.filter(c => c.targetId ? worldDataById[c.targetId] : worldNames.indexOf(c.location) > -1);
 
@@ -1545,23 +1559,23 @@ function resolveMissingDepths(worldData, worldDataById, worldDataByName, depthMa
         let sourceWorld = c.targetId ? worldDataById[c.targetId] : worldDataByName[c.location];
         if (!sourceWorld.removed && c.type & ConnType.INACCESSIBLE)
             continue;
-        if (sourceWorld.depth !== undefined)
-            calcDepth(worldData, worldDataById, depthMap, sourceWorld, depthMap[sourceWorld.title], ignoreTypeFlags, world.title, sourceWorld.removed);
+        if (sourceWorld[depthProp] !== undefined)
+            calcDepth(worldData, worldDataById, depthMap, sourceWorld, depthMap[sourceWorld.title], ignoreTypeFlags, depthProp, world.title, sourceWorld.removed);
     }
 
     if (depthMap[world.title] > -1) {
         conns.filter(c => depthMap[c.location ? c.location : worldDataById[c.targetId].title] === -1)
-            .forEach(c => resolveMissingDepths(worldData, worldDataById, worldDataByName, depthMap, c.targetId ? worldDataById[c.targetId] : worldDataByName[c.location], ignoreTypeFlags));
+            .forEach(c => resolveMissingDepths(worldData, worldDataById, worldDataByName, depthMap, c.targetId ? worldDataById[c.targetId] : worldDataByName[c.location], ignoreTypeFlags, depthProp));
         return true;
     }
 
     return false;
 }
 
-function updateWorldsOfDepth(pool, depth, worlds) {
+function updateWorldsOfDepth(pool, depth, worlds, isMinDepth) {
     return new Promise((resolve, reject) => {
         let i = 0;
-        let updateDepthsQuery = `UPDATE worlds SET depth=${depth} WHERE id IN (`;
+        let updateDepthsQuery = `UPDATE worlds SET ${isMinDepth ? 'minDepth' : 'depth'}=${depth} WHERE id IN (`;
         for (let world of worlds) {
             if (i++)
                 updateDepthsQuery += ", ";

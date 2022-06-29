@@ -1,4 +1,4 @@
-// Version 4.4.2 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 4.5.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -109356,7 +109356,7 @@ function InsertStackElement(node, body) {
 	const nodeTextColors = ["#FFFFFF", "#AAAAAA", "#888888"];
 
 	let localizedNodeLabel;
-	let localizedPathNodeLabel;
+	let localizedMinDepthNodeLabel;
 	let localizedNodeLabelVersionLastUpdated;
 	let localizedNodeLabelVersionLastUpdatedWithUpdateType;
 	let localizedNodeLabelVersionRemoved;
@@ -109425,7 +109425,7 @@ function InsertStackElement(node, body) {
 	    const dagIgnore = {};
 
 	    const worldDepths = {};
-	    const worldRealDepths = {};
+	    const worldMinDepths = {};
 	    const worldIsNew = {};
 	    const worldRemoved = {};
 
@@ -109511,13 +109511,13 @@ function InsertStackElement(node, body) {
 	            }
 	        }
 
-	        const worldMinDepths = {};
+	        const worldMinPathDepths = {};
 
 	        for (let w of visibleWorldIds) {
 	            const worldDepthsMap = pathWorldIds.map(p => p.indexOf(w));
 	            worldDepths[w] = lodash.max(worldDepthsMap);
-	            worldMinDepths[w] = lodash.min(worldDepthsMap.filter(d => d > -1));
-	            worldRealDepths[w] = findRealPathDepth(paths, w, pathWorldIds, worldDepthsMap, worldDepths[w], worldMinDepths[w]);
+	            worldMinPathDepths[w] = lodash.min(worldDepthsMap.filter(d => d > -1));
+	            worldMinDepths[w] = findRealPathDepth(paths, w, pathWorldIds, worldDepthsMap, worldDepths[w], worldMinPathDepths[w]);
 	        }
 
 	        const depths = Object.values(worldDepths);
@@ -109556,7 +109556,7 @@ function InsertStackElement(node, body) {
 	                if (conn.type & connType_1.NO_ENTRY) {
 	                    hidden = true;
 	                    dagIgnoreIds.push(connWorld.id);
-	                } else if (worldMinDepths[w] >= worldMinDepths[connWorld.id]) {
+	                } else if (worldMinPathDepths[w] >= worldMinPathDepths[connWorld.id]) {
 	                    dagIgnoreIds.push(connWorld.id);
 	                    if (worldDepths[w] >= worldDepths[connWorld.id]) {
 	                        const sameDepth = worldDepths[w] === worldDepths[connWorld.id];
@@ -109605,6 +109605,8 @@ function InsertStackElement(node, body) {
 	            const connections = world.connections;
 	            const dagIgnoreIds = dagIgnore[w] = [];
 	            worldDepths[w] = world.depth;
+	            if (world.minDepth < world.depth)
+	                worldMinDepths[w] = world.minDepth;
 	            for (let conn of connections) {
 	                const connWorld = exports.worldData[conn.targetId];
 	                let hidden = false;
@@ -109696,9 +109698,9 @@ function InsertStackElement(node, body) {
 	        ret.depth = worldDepths[id];
 	        ret.depthColor = depthColors[ret.depth];
 	        if (paths)
-	        {
 	            ret.depthOverride = ret.depth;
-	            ret.minDepth = worldRealDepths[id];
+	        if (worldMinDepths.hasOwnProperty(id)) {
+	            ret.minDepth = worldMinDepths[id];
 	            ret.minDepthColor = depthColors[ret.minDepth];
 	        }
 	        ret.dagIgnore = dagIgnore[id];
@@ -109922,10 +109924,10 @@ function InsertStackElement(node, body) {
 	        .nodeVal(node => node.width)
 	        .nodeLabel(node => {
 	            const world = exports.worldData[node.id];
-	            let ret = (paths && node.depth !== node.minDepth ? localizedPathNodeLabel : localizedNodeLabel)
+	            let ret = (node.hasOwnProperty('minDepth') && node.depth !== node.minDepth ? localizedMinDepthNodeLabel : localizedNodeLabel)
 	                .replace('{WORLD}', node.img.title).replace('{DEPTH}', node.depth).replace('{DEPTH_COLOR}', node.depthColor).replace('{AUTHOR}', world.author ? getAuthorDisplayName(world.author, true) : localizedNA)
 	                .replace('{VERSION_ADDED}', world.verAdded ? (getLocalizedLabel(world.verAdded.name, world.verAdded.nameJP, true)) : localizedNA);
-	            if (paths)
+	            if (node.hasOwnProperty('minDepth'))
 	                ret = ret.replace('{MIN_DEPTH}', node.minDepth).replace('{MIN_DEPTH_COLOR}', node.minDepthColor);
 	            if (world.verUpdated) {
 	                const verUpdated = world.verUpdated[world.verUpdated.length - 1];
@@ -110777,10 +110779,10 @@ function InsertStackElement(node, body) {
 	}
 	// END WEBGL2.0 SPECIFIC CODE
 
-	function getLocalizedNodeLabel(localizedNodeLabel, forPath) {
+	function getLocalizedNodeLabel(localizedNodeLabel, hasMinDepth) {
 	    return `<span class='node-label__world node-label__value'>{WORLD}</span><br>
             ${localizedNodeLabel.depth}<span class='node-label__value' style='color:{DEPTH_COLOR}'>{DEPTH}</span>
-            ${forPath ? " <span class='node-label__value' style='color:{MIN_DEPTH_COLOR}'>({MIN_DEPTH})</span>" : ""}<br>
+            ${hasMinDepth ? " <span class='node-label__value' style='color:{MIN_DEPTH_COLOR}'>({MIN_DEPTH})</span>" : ""}<br>
             ${localizedNodeLabel.author}<span class='node-label__value'>{AUTHOR}</span><br>
             ${localizedNodeLabel.versionAdded}<span class='node-label__value'>{VERSION_ADDED}</span>`;
 	}
@@ -111726,7 +111728,7 @@ function InsertStackElement(node, body) {
 	        callback: function (data, defaultCallback) {
 	            if (config$1.lang === 'ja' || config$1.lang === 'ru')
 	                massageLocalizedValues(data, true);
-	            data.footer.about = data.footer.about.replace("{VERSION}", "4.4.2");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "4.5.0");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            localizedSeparator = data.separator;
@@ -111738,7 +111740,7 @@ function InsertStackElement(node, body) {
 	            if (exports.worldData)
 	                initContextMenu(data.contextMenu);
 	            localizedNodeLabel = getLocalizedNodeLabel(data.nodeLabel);
-	            localizedPathNodeLabel = getLocalizedNodeLabel(data.nodeLabel, true);
+	            localizedMinDepthNodeLabel = getLocalizedNodeLabel(data.nodeLabel, true);
 	            localizedNodeLabelVersionLastUpdated = getLocalizedNodeLabelVersionLastUpdated(data.nodeLabel);
 	            localizedNodeLabelVersionLastUpdatedWithUpdateType = getLocalizedNodeLabelVersionLastUpdated(data.nodeLabel, true);
 	            localizedNodeLabelVersionRemoved = getLocalizedNodeLabelVersionRemoved(data.nodeLabel);
