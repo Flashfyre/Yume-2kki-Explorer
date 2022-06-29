@@ -3994,6 +3994,7 @@ function getRandomLocations(count, minDepth, maxDepth, includeRemoved, ignoreSec
             SELECT w.title,
                 w.titleJP,
                 w.depth,
+                w.minDepth,
                 m.mapId
             FROM maps m
             JOIN world_maps wm ON wm.mapId = m.id
@@ -4001,7 +4002,8 @@ function getRandomLocations(count, minDepth, maxDepth, includeRemoved, ignoreSec
                 (SELECT w.id,
                         w.title,
                         w.titleJP,
-                        w.depth
+                        w.depth,
+                        w.minDepth
                 FROM worlds w
                 WHERE w.depth >= ${minDepth}
                     AND w.depth <= ${maxDepth}
@@ -4023,6 +4025,7 @@ function getRandomLocations(count, minDepth, maxDepth, includeRemoved, ignoreSec
                         title: row.title,
                         titleJP: row.titleJP,
                         depth: row.depth,
+                        minDepth: row.minDepth,
                         mapIds: []
                     });
                 }
