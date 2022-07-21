@@ -560,3 +560,154 @@ SHIFT + Клик левой кнопки мыши по узлу-Миру.
 ### Высота/Широта
 
 От этой настройки зависит, насколько плотно миры группируются на одном уровне глубины. Чем ниже значение, тем выше граф. Чем выше значение, тем шире граф. Эта настройка доступна только в "Вертикальном" и "Горизонтальном" режимах отображения.
+
+---
+# Yume 2kki Explorer
+
+Yume 2kki Explorer est une application web qui utilise des Graphiques de Forces pour afficher tous les mondes du jeu avec leurs connections entre chacun d'entre eux. Les données peuvent être affichées de différentes manières et les routes entre chaque paires de mondes peuvent être calculées et visualisées. Les données utilisées dans cette application sont automatiquement mises à jour depuis le Yume 2kki Wiki chaque heure avec un additionnel rechargement complet des données une fois par semaine.
+
+## Graphique
+
+Le graphique va ajouter des mondes et leurs connections avec leurs icônes attachés aux connections reliant les mondes qui montre quel type de connection possèdent chacun d'entre eux.
+
+### Contrôler le Zoom
+
+Roue de la souris
+
+### Bouger la Map
+
+#### Graphique 2D
+
+Clic gauche le fond et faites glisser
+
+#### Graphique 3D
+
+Clic droit le fond et faites glisser
+
+### Tourner la Map (Mode 3D seulement)
+
+Clic gauche le fond et faites glisser
+
+### Choisir un nœud de Monde
+
+Clic gauche
+
+### Zoomer sur un nœud de Monde
+
+Clic gauche sur un nœud d'un Monde déjà sélectionné
+
+### Ouvrir la page du Wiki sur le Monde
+
+#### Ouvrir dans un nouvel onglet
+
+CTRL + clic gauche sur un nœud de Monde
+
+**OU**
+
+Clic droit sur un nœud de Monde -> Ouvrir page du Wiki
+
+#### Ouvrir dans une nouvelle fenêtre
+
+MAJ + clic gauche sur un nœud de Monde
+
+## Contrôles
+
+### Rechercher
+
+Cherchez rapidement un monde en le recherchant par son propre nom. En recherchant, les mondes non compris dans le résultat vont devenir transparent. Choisir un monde des résultats va le sélectionner et le zoomer.
+
+### Auteur
+
+En choisissant un auteur, les mondes faits par d'autres auteurs vont apparaître moins clairement pour mettre l'accent sur les mondes créés par l'auteur choisi.
+
+### Version
+
+En choisissant une version, les mondes indisponibles dans la version actuelle vont apparaître moins clairement pour mettre l'accent sur ceux qui le sont.
+
+### Origine et Destination
+
+En choisissant un monde dans les deux cases, le graphique va charger des routes de l'origine jusqu'à la destination. Si il y a plein de routes, les routes non efficaces seront ignorées. Notez que les connections des routes individuelles possèdent un code couleur de bleu (plus courte) à rouge (plus longue). Les routes sans connections à débloquer seront priorisées.
+
+Vous pouvez aussi régler un monde en tant qu'origine ou destination depuis le menu du clic droit.
+
+### Réinitialiser
+
+Réinitialiser va recharger le graphique sans votre recherche, origine, et votre destination.
+
+### Aide
+
+Chargez cette documentation dans l'app dans une fenêtre modal.
+
+## Menu de côté
+
+### Auteurs
+
+Affiche une liste des auteurs qui ont ajoutés des mondes dans le jeu. Survoler un auteur va vous montrer plus d'information sur ledit auteur. Cliquer sur un auteur va activer un filtre temporaire pour montrer ces mondes sur le graphique. Pour désactiver ce filtre, cliquez simplement sur un espace vide sur le graphique ou sélectionnez 'Tous' sur le filtre des auteurs.
+
+### Versions
+
+Affiche une liste des versions qui ont ajoutés, mis à jour ou retirés des mondes. Survoler une version affichera des informations liées à ladite mise à jour. Cliquer sur l'onglet à droite de la version va afficher les changements spécifiques de la version. Cliquer sur une version va activer un filtre temporaire pour afficher les mondes affectés par cette mise à jour sur le graphique. Pour désactiver ce filtre, cliquez simplement sur un espace vide sur le graphe ou sélectionnez 'Toutes' sur le filtre des versions.
+
+### Effets
+
+Affiche une liste des effets disponibles dans une fenêtre modal.Survoler un effet va montrer des informations du Wiki sur comment le trouver. Cliquer sur un effet va vous amener au monde où il se trouve.
+
+### Thèmes de Menu
+
+Affiche une liste des thèmes de menu disponibles dans une fenêtre modal.Survoler un thème de menu va montrer des informations du Wiki sur commnt l'obtenir. Cliquer sur un thème de menu va vous naviguer au monde où il se trouve si applicable.
+
+### Fonds d'écrans
+
+Affiche une liste des fonds d'écrans dans une fenêtre modal. Survoler un fond d'écran va montrer des informations du Wiki sur comment l'obtenir. Cliquer sur un fond d'écran va vous naviguer au monde où il se trouve si applicable.
+
+### Bande sonore
+
+Affiche une liste des pistes sonores dans une fenêtre modal. Survoler une piste va montrer des informations du Wiki et où elle est utilisée. Cliquer sur l'image d'une piste va jouer la piste et va vous naviguer au monde où elle se trouve si applicable. Cliquer sur le bouton jouer d'une piste va jouer ladite piste dans le lecteur audio sans naviguer au monde ou fermer le modal. Cliquer sur le bouton en dessous du bouton jouer d'une piste va ajouter la piste à la playlist. Les pistes directement associées à un monde vont avoir un troisième bouton avec l'icône d'une image et cliquer dessus ouvrira une autre fenêtre modal pour choisir un screenshot du monde qui représente le mieux où la piste est utilisée. L'image que vous choisissez sera aussi utilisée pour la piste pour toutes les autres personnes utilisant cette appli, donc merci de l'utiliser uniquement si vous êtes raisonnablement certain que l'image actuelle d'une piste ne représente pas pleinement où ladite piste est jouée.
+
+## Paramètres
+
+Les paramètres sont accessibles en cliquant sur l'onglet avec la flèche en bas au centre de la page.
+
+### Langue
+
+Changer la langue de l'application.
+
+### Thème d'IU
+
+Choisir le thème de l'application depuis la liste des thèmes de menu utilisés en jeu.
+
+### Style de Police
+
+Choisir la couleur de la police depuis les couleurs de police du jeu qui correspondent à votre actuel Thème d'IU.
+
+### Mode de rendu
+
+Choisir entre afficher la version 2D ou 3D du graphique.
+
+### Mode d'affichage
+
+Ce mode détermine comment les mondes sont organisés visuellement dans le graphique. Chacun possèdent leurs avantages donc n'oubliez pas de tous les tester.
+
+### Mode de connection
+
+Choisir si il faut afficher les icônes de connections qui reculent en profondeur. 'Voie à sens unique'  affichera seulement les icônes des connections qui augmentent la profondeur.
+
+### Affichage du label
+
+Choisir quand afficher les labels sur les nœuds de mondes.
+
+### Contenu retiré
+
+Choisir si il faut afficher les mondes retirés et leurs connections.
+
+### Mode de routage
+
+Choisir la complexité à utiliser lors de la génération d'un trajet entre une map d'origine et un monde de destination. Plus complexe veut dire que plus de passages seront montrés.
+
+### Différence de taille
+
+Choisir le ratio de grandeur à utiliser entre les nœuds de mondes. Les ratios sont grossièrement basés sur les tailles de map pour les maps appartenant à chaque monde.
+
+### Seuil de pile
+
+Ce paramètre détermine le nombre de nœuds de monde qui s'empilent au même niveau de profondeur. Une valeur plus basse produira un graphique plus grand et une valeur plus grande produira un graphique plus large. Ce paramètre est seulement disponible dans les modes d'affichages 'Vertical' et 'Horizontal.
