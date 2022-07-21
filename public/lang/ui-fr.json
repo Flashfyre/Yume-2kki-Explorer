@@ -1,72 +1,72 @@
 {
     "title": "Yume 2kki Explorer",
     "loading": {
-        "label": "Loading",
+        "label": "Chargement",
         "space": "   ",
-        "error": "An error occurred: please try again later."
+        "error": "Une erreur est survenue: veuillez réessayer plus tard."
     },
     "controls": {
         "search": {
-            "name": "Search:"
+            "name": "Rechercher:"
         },
         "author": {
-            "name": "Author:",
+            "name": "Auteur:",
             "values": {
-                "null": "All"
+                "null": "Tous"
             }
         },
         "version": {
             "name": "Version:",
             "values": {
-                "0": "All"
+                "0": "Toutes"
             }
         },
         "origin": {
-            "name": "Origin:"
+            "name": "Origine:"
         },
         "destination": {
             "name": "Destination:"
         },
         "reset": {
-            "name": "Reset"
+            "name": "Réinitialiser"
         },
         "help": {
-            "name": "Help"
+            "name": "Aide"
         }
     },
     "collectableControls": {
         "authors": {
-            "name": "Authors"
+            "name": "Auteurs"
         },
         "versions": {
             "name": "Versions"
         },
         "effects": {
-            "name": "Effects"
+            "name": "Effets"
         },
         "menuThemes": {
-            "name": "Menu Themes"
+            "name": "Thèmes de Menu"
         },
         "wallpapers": {
-            "name": "Wallpapers"
+            "name": "Fonds d'écrans"
         },
         "bgmTracks": {
-            "name": "Soundtrack"
+            "name": "Bande sonore"
         }
     },
     "settings": {
         "lang": {
-            "name": "Language:"
+            "name": "Langue:"
         },
         "uiTheme": {
-            "name": "UI Theme:",
+            "name": "Thème IU:",
             "values": {
-                "Default_Custom": "Default (Custom)",
-                "Default": "Default",
-                "Default_2": "Default 2",
-                "Default_3": "Default 3",
-                "Default_4": "Default 4",
-                "Default_5": "Default 5",
+                "Default_Custom": "Défault (Personnalisé)",
+                "Default": "Défaut",
+                "Default_2": "Défaut 2",
+                "Default_3": "Défaut 3",
+                "Default_4": "Défaut 4",
+                "Default_5": "Défaut 5",
                 "Developer_Room": "Developer Room",
                 "Glitch_Ending": "Bleak Future",
                 "Glitch_Ending_2": "Bleak Future 2",
@@ -101,7 +101,7 @@
                 "Originator_Garden": "Originator Garden",
                 "Fluorescent_Halls": "Fluorescent Halls",
                 "City_of_Liars": "City of Liars",
-                "Misc": "Misc. Theme",
+                "Misc": "Thème divers",
                 "Monochrome_GB_World": "Monochrome GB World",
                 "Smiley_Signs_World": "Smiley Signs World",
                 "Lovesick_World": "Lovesick World",
@@ -116,7 +116,7 @@
             }
         },
         "fontStyle": {
-            "name": "Font Style:",
+            "name": "Style de police:",
             "values": {
                 "style1": "Style 1",
                 "style2": "Style 2",
@@ -128,193 +128,193 @@
             }
         },
         "renderMode": {
-            "name": "Render Mode:",
+            "name": "Mode de rendu:",
             "values": {
                 "2d": "2D",
                 "3d": "3D"
             }
         },
         "displayMode": {
-            "name": "Display Mode:",
+            "name": "Mode d'affichage:",
             "values": {
                 "vertical": "Vertical",
                 "horizontal": "Horizontal",
-                "radialIn": "Inward",
-                "radialOut": "Outward",
-                "free": "Free"
+                "radialIn": "Vers l'intérieur",
+                "radialOut": "Vers l'extérieur",
+                "free": "Libre"
             }
         },
         "connMode": {
-            "name": "Connection Mode:",
+            "name": "Mode de connection:",
             "values": {
-                "oneWay": "One-Way",
-                "twoWay": "Two-Way"
+                "oneWay": "Dans un seul sens",
+                "twoWay": "Dans les deux sens"
             }
         },
         "labelMode": {
-            "name": "Label Display:",
+            "name": "Affichage du label:",
             "values": {
-                "never": "Never",
-                "hover": "On Hover",
-                "select": "On Select",
-                "always": "Always"
+                "never": "Jamais",
+                "hover": "En survolant",
+                "select": "En sélectionnant",
+                "always": "Toujours"
             }
         },
         "removedContentMode": {
-            "name": "Removed Content:",
+            "name": "Contenu retiré:",
             "values": {
-                "hide": "Hide",
-                "show": "Show"
+                "hide": "Cacher",
+                "show": "Montrer"
             }
         },
         "pathMode": {
-            "name": "Routing Mode:",
+            "name": "Mode de routage:",
             "values": {
                 "simple": "Simple",
                 "normal": "Normal",
-                "detailed": "Detailed"
+                "detailed": "Détaillé"
             }
         },
         "sizeDiff": {
-            "name": "Size Difference:"
+            "name": "Différence de taille:"
         },
         "stackSize": {
-            "name": "Stack Threshold:"
+            "name": "Seuil de pile:"
         }
     },
     "contextMenu": {
         "items": {
-            "wiki": "View Wiki Page",
-            "start": "Set as Origin",
-            "end": "Set as Destination",
-            "map": "View Map",
+            "wiki": "Voir la page du Wiki",
+            "start": "Régler comme point de départ",
+            "end": "Régler comme destination",
+            "map": "Voir la Map",
             "bgm": {
-                "name": "Play BGM",
-                "main": "Main"
+                "name": "Jouer la Piste",
+                "main": "Principale"
             }
         }
     },
     "nodeLabel": {
-        "depth": "Depth: ",
-        "author": "Author: ",
-        "versionAdded": "Added: ",
-        "versionLastUpdated": "Last Updated: ",
-        "versionRemoved": "Removed: ",
+        "depth": "Profondeur: ",
+        "author": "Auteur: ",
+        "versionAdded": "Ajoutée: ",
+        "versionLastUpdated": "Dernière mise à jour: ",
+        "versionRemoved": "Retirée: ",
         "versionUpdateType": {
             "CHANGE": "",
-            "MINOR_CHANGE": "Minor change",
-            "MAJOR_CHANGE": "Major change",
-            "BUG_FIX": "Bug fix",
-            "ADD_CONTENT": "Content added",
-            "REMOVE_CONTENT": "Content removed",
-            "LAYOUT_CHANGE": "Layout changed",
+            "MINOR_CHANGE": "Changement mineur",
+            "MAJOR_CHANGE": "Changement majeur",
+            "BUG_FIX": "Correction de bug",
+            "ADD_CONTENT": "Contenu ajouté",
+            "REMOVE_CONTENT": "Contenu retiré",
+            "LAYOUT_CHANGE": "Changement d'agencement",
             "EXPANSION": "Expansion",
-            "REDUCTION": "Reduction",
-            "ADD_SUB_AREA": "Sub-area added",
-            "REMOVE_SUB_AREA": "Sub-area removed",
-            "CONNECTION_CHANGE": "Connection(s) changed",
-            "ADD_CONNECTION": "Connection(s) added",
-            "REMOVE_CONNECTION": "Connection(s) removed",
-            "BGM_CHANGE": "BGM changed",
-            "EFFECT_CHANGE": "Effect-related changes",
-            "REWORK": "Reworked"
+            "REDUCTION": "Réduction",
+            "ADD_SUB_AREA": "Sous-zone ajoutée",
+            "REMOVE_SUB_AREA": "Sous-zone retirée",
+            "CONNECTION_CHANGE": "Connection(s) changée(s)",
+            "ADD_CONNECTION": "Connection(s) ajoutée(s)",
+            "REMOVE_CONNECTION": "Connection(s) retirée(s)",
+            "BGM_CHANGE": "Piste changée",
+            "EFFECT_CHANGE": "Changements liés aux effets",
+            "REWORK": "Retravaillée"
         }
     },
     "authorLabel": {
-        "worldCount": "Worlds: "
+        "worldCount": "Mondes: "
     },
     "versionLabel": {
-        "authors": "Contributing Author(s): ",
-        "releaseDate": "Release Date: ",
-        "worldCount": "Worlds Added: ",
-        "updatedWorldCount": "Worlds Updated: ",
-        "removedWorldCount": "Worlds Removed: "
+        "authors": "Auteur(s) contributeur(s): ",
+        "releaseDate": "Date d'ajout: ",
+        "worldCount": "Mondes ajoutées: ",
+        "updatedWorldCount": "Mondes mis à jour: ",
+        "removedWorldCount": "Mondes retirées: "
     },
     "effectLabel": {
-        "location": "Location: "
+        "location": "Lieu: "
     },
     "wallpaperLabel": {
         "number": "#",
         "titleTemplate": " - \"{TITLE}\""
     },
     "bgmTrackLabel": {
-        "location": "Location: "
+        "location": "Lieu: "
     },
     "nodeIcon": {
-        "new": "NEW"
+        "new": "NOUVEAU"
     },
     "versionDetails": {
-        "ADD": "Added {WORLD}",
+        "ADD": "Ajouté {WORLD}",
         "UPDATE": {
-            "CHANGE": "Updated {WORLD}",
-            "MINOR_CHANGE": "Made minor changes to {WORLD}",
-            "MAJOR_CHANGE": "Made major changes to {WORLD}",
-            "BUG_FIX": "Fixed bugs in {WORLD}",
-            "ADD_CONTENT": "Added content to {WORLD}",
-            "REMOVE_CONTENT": "Removed content from {WORLD}",
-            "LAYOUT_CHANGE": "Made layout changes to {WORLD}",
-            "EXPANSION": "Expanded {WORLD}",
-            "REDUCTION": "Reduced the size of {WORLD}",
-            "ADD_SUB_AREA": "Added a sub-area to {WORLD}",
-            "REMOVE_SUB_AREA": "Removed a sub-area from {WORLD}",
-            "CONNECTION_CHANGE": "Made connection changes to {WORLD}",
-            "ADD_CONNECTION": "Added a connection to {WORLD}",
-            "REMOVE_CONNECTION": "Removed a connection from {WORLD}",
-            "BGM_CHANGE": "Changed BGM in {WORLD}",
-            "EFFECT_CHANGE": "Made effect-related changes to {WORLD}",
-            "REWORK": "Reworked {WORLD}"
+            "CHANGE": "{WORLD} mis à jour",
+            "MINOR_CHANGE": "Changements mineurs fait à {WORLD}",
+            "MAJOR_CHANGE": "Changements majeurs fait à {WORLD}",
+            "BUG_FIX": "Bugs corrigés dans {WORLD}",
+            "ADD_CONTENT": "Contenu ajouté dans {WORLD}",
+            "REMOVE_CONTENT": "Contenu retiré dans {WORLD}",
+            "LAYOUT_CHANGE": "Des changements d'agencements ont été faits dans {WORLD}",
+            "EXPANSION": "{WORLD} a été agrandi",
+            "REDUCTION": "Réduit la taille de {WORLD}",
+            "ADD_SUB_AREA": "Sous-zone ajoutée à {WORLD}",
+            "REMOVE_SUB_AREA": "Sous-zone retirée de {WORLD}",
+            "CONNECTION_CHANGE": "Changements liés aux connections dans {WORLD}",
+            "ADD_CONNECTION": "Connection ajoutée à {WORLD}",
+            "REMOVE_CONNECTION": "Connection retirée dans {WORLD}",
+            "BGM_CHANGE": "Piste changée dans {WORLD}",
+            "EFFECT_CHANGE": "Changements liés aux effets dans {WORLD}",
+            "REWORK": "Retravaillé {WORLD}"
         },
-        "REMOVE": "Removed {WORLD}"
+        "REMOVE": "Retiré {WORLD}"
     },
     "versionEntriesModal": {
-        "filters": "Filters",
+        "filters": "Filtres",
         "versionDisplayToggle": {
-            "name": "Show {ENTRY_TYPE}",
+            "name": "Montrer {ENTRY_TYPE}",
             "entryType": {
-                "ADD": "World Additions",
-                "UPDATE": "World Updates",
-                "REMOVE": "World Removals"
+                "ADD": "Ajout de Monde",
+                "UPDATE": "Mise à jour de Monde",
+                "REMOVE": "Retrait de Monde"
             },
             "entryUpdateType": {
-                "MINOR_CHANGE": "Minor Changes",
-                "MAJOR_CHANGE": "Major Changes",
-                "BUG_FIX": "Bug Fixes",
-                "ADD_CONTENT": "Content Additions",
-                "REMOVE_CONTENT": "Content Removals",
-                "LAYOUT_CHANGE": "Layout Changes",
-                "EXPANSION": "World Expansions",
-                "REDUCTION": "World Size Reductions",
-                "ADD_SUB_AREA": "Sub-area Additions",
-                "REMOVE_SUB_AREA": "Sub-area Removals",
-                "CONNECTION_CHANGE": "Connection Changes",
-                "ADD_CONNECTION": "Connection Additions",
-                "REMOVE_CONNECTION": "Connection Removals",
-                "BGM_CHANGE": "BGM Changes",
-                "EFFECT_CHANGE": "Effect-related Changes",
-                "REWORK": "Reworks"
+                "MINOR_CHANGE": "Changements mineurs",
+                "MAJOR_CHANGE": "Changements majeurs",
+                "BUG_FIX": "Corrections de bugs",
+                "ADD_CONTENT": "Ajout de contenu",
+                "REMOVE_CONTENT": "Retrait de contenu",
+                "LAYOUT_CHANGE": "Changements d'agencement",
+                "EXPANSION": "Agrandissement de Monde",
+                "REDUCTION": "Réduction de la taille de la Map",
+                "ADD_SUB_AREA": "Ajouts de sous-zone",
+                "REMOVE_SUB_AREA": "Retraits de sous-zone",
+                "CONNECTION_CHANGE": "Changements liés aux connections",
+                "ADD_CONNECTION": "Ajouts de connections",
+                "REMOVE_CONNECTION": "Retraits de connections",
+                "BGM_CHANGE": "Changements liés aux pistes",
+                "EFFECT_CHANGE": "Changements liés aux effets",
+                "REWORK": "Contenu retravaillé"
             }
         }
     },
     "menuThemesModal": {
-        "previousMethods": "Previous Methods"
+        "previousMethods": "Anciennes méthodes d'obtentions"
     },
     "wallpapersModal": {
-        "removedWallpapers": "Removed Wallpapers"
+        "removedWallpapers": "Fonds d'écrans retirées"
     },
     "bgmTracksModal": {
-        "search": "Search:",
-        "favBgmTracks": "Favourite Tracks",
-        "musicRoomBgmTracks": "Music Room Tracks",
-        "unnumberedBgmTracks": "Unnumbered Tracks",
-        "removedBgmTracks": "Removed Tracks"
+        "search": "Rechercher:",
+        "favBgmTracks": "Pistes favorites",
+        "musicRoomBgmTracks": "Pistes de la Music Room",
+        "unnumberedBgmTracks": "Pistes non numérotées",
+        "removedBgmTracks": "Pistes retirées"
     },
     "helpModal": {
-        "reportBug": "Report a Bug"
+        "reportBug": "Signaler un Bug"
     },
     "footer": {
-        "about": "Yume 2kki Explorer v{VERSION} by FlashfyreDev",
-        "lastUpdate": "Data updated on {LAST_UPDATE}",
-        "lastFullUpdate": "Data reset on {LAST_FULL_UPDATE}"
+        "about": "Yume 2kki Explorer v{VERSION} par FlashfyreDev",
+        "lastUpdate": "Données mises à jour le {LAST_UPDATE}",
+        "lastFullUpdate": "Données réinitialisées le {LAST_FULL_UPDATE}"
     },
     "dot": ".",
     "comma": ", ",
