@@ -1,0 +1,324 @@
+{
+    "title": "Yume 2kki Explorer",
+    "loading": {
+        "label": "Loading",
+        "space": "   ",
+        "error": "An error occurred: please try again later."
+    },
+    "controls": {
+        "search": {
+            "name": "Search:"
+        },
+        "author": {
+            "name": "Author:",
+            "values": {
+                "null": "All"
+            }
+        },
+        "version": {
+            "name": "Version:",
+            "values": {
+                "0": "All"
+            }
+        },
+        "origin": {
+            "name": "Origin:"
+        },
+        "destination": {
+            "name": "Destination:"
+        },
+        "reset": {
+            "name": "Reset"
+        },
+        "help": {
+            "name": "Help"
+        }
+    },
+    "collectableControls": {
+        "authors": {
+            "name": "Authors"
+        },
+        "versions": {
+            "name": "Versions"
+        },
+        "effects": {
+            "name": "Effects"
+        },
+        "menuThemes": {
+            "name": "Menu Themes"
+        },
+        "wallpapers": {
+            "name": "Wallpapers"
+        },
+        "bgmTracks": {
+            "name": "Soundtrack"
+        }
+    },
+    "settings": {
+        "lang": {
+            "name": "Language:"
+        },
+        "uiTheme": {
+            "name": "UI Theme:",
+            "values": {
+                "Default_Custom": "Default (Custom)",
+                "Default": "Default",
+                "Default_2": "Default 2",
+                "Default_3": "Default 3",
+                "Default_4": "Default 4",
+                "Default_5": "Default 5",
+                "Developer_Room": "Developer Room",
+                "Glitch_Ending": "Bleak Future",
+                "Glitch_Ending_2": "Bleak Future 2",
+                "Black_Building": "Black Building",
+                "Cog_Maze": "Cog Maze",
+                "Square_Square_World": "Square-Square World",
+                "Verdant_Promenade": "Verdant Promenade",
+                "Urotsukis_Dream_Apartments": "Urotsuki's Dream Apartments",
+                "Sofa_Room": "Sofa Room",
+                "Depths": "Depths",
+                "Depths_2": "Depths 2",
+                "Guts_World": "Guts World",
+                "Maple_Shrine": "Maple Shrine",
+                "Pencil_World": "Pencil World",
+                "Chocolate_World": "Chocolate World",
+                "Blue_Cactus_Islands": "Blue Cactus Islands",
+                "Stone_Towers": "Stone Towers",
+                "Constellation_World": "Star Building",
+                "Blob_Desert": "Blob Desert",
+                "Cipher_Keyboard": "Cipher Keyboard",
+                "Viridian_Wetlands": "Viridian Wetlands",
+                "Polluted_Swamp": "Polluted Swamp",
+                "Snowy_Village": "Snowy Village",
+                "Decrepit_Dwellings": "Decrepit Dwellings",
+                "Verdant_Promenade_2": "Verdant Promenade 2",
+                "Black_Ink_World": "Black Ink World",
+                "Forgotten_Megalopolis": "Forgotten Megalopolis",
+                "Tomb_of_Velleities": "Tomb of Velleities",
+                "Visine_Spacecraft": "Visine Spacecraft",
+                "Data_Stream": "Data Stream",
+                "Lavender_Waters": "Lavender Waters",
+                "Originator_Garden": "Originator Garden",
+                "Fluorescent_Halls": "Fluorescent Halls",
+                "City_of_Liars": "City of Liars",
+                "Misc": "Misc. Theme",
+                "Monochrome_GB_World": "Monochrome GB World",
+                "Smiley_Signs_World": "Smiley Signs World",
+                "Lovesick_World": "Lovesick World",
+                "Corrupted_Love_World": "Corrupted Love World",
+                "Pastel_Chalk_World": "Pastel Chalk World",
+                "Luminous_Lake": "Luminous Lake",
+                "Monochrome_GB_World_2": "Monochrome GB World 2",
+                "Saturated_Eyeball_Zone": "Saturated Eyeball Zone",
+                "NES_Glitch_Tunnel": "NES Glitch Tunnel",
+                "Shop_Ruins": "Shop Ruins",
+                "Yume_Nikki": "Yume Nikki"
+            }
+        },
+        "fontStyle": {
+            "name": "Font Style:",
+            "values": {
+                "style1": "Style 1",
+                "style2": "Style 2",
+                "style3": "Style 3",
+                "style4": "Style 4",
+                "style5": "Style 5",
+                "style6": "Style 6",
+                "style7": "Style 7"
+            }
+        },
+        "renderMode": {
+            "name": "Render Mode:",
+            "values": {
+                "2d": "2D",
+                "3d": "3D"
+            }
+        },
+        "displayMode": {
+            "name": "Display Mode:",
+            "values": {
+                "vertical": "Vertical",
+                "horizontal": "Horizontal",
+                "radialIn": "Inward",
+                "radialOut": "Outward",
+                "free": "Free"
+            }
+        },
+        "connMode": {
+            "name": "Connection Mode:",
+            "values": {
+                "oneWay": "One-Way",
+                "twoWay": "Two-Way"
+            }
+        },
+        "labelMode": {
+            "name": "Label Display:",
+            "values": {
+                "never": "Never",
+                "hover": "On Hover",
+                "select": "On Select",
+                "always": "Always"
+            }
+        },
+        "removedContentMode": {
+            "name": "Removed Content:",
+            "values": {
+                "hide": "Hide",
+                "show": "Show"
+            }
+        },
+        "pathMode": {
+            "name": "Routing Mode:",
+            "values": {
+                "simple": "Simple",
+                "normal": "Normal",
+                "detailed": "Detailed"
+            }
+        },
+        "sizeDiff": {
+            "name": "Size Difference:"
+        },
+        "stackSize": {
+            "name": "Stack Threshold:"
+        }
+    },
+    "contextMenu": {
+        "items": {
+            "wiki": "View Wiki Page",
+            "start": "Set as Origin",
+            "end": "Set as Destination",
+            "map": "View Map",
+            "bgm": {
+                "name": "Play BGM",
+                "main": "Main"
+            }
+        }
+    },
+    "nodeLabel": {
+        "depth": "Depth: ",
+        "author": "Author: ",
+        "versionAdded": "Added: ",
+        "versionLastUpdated": "Last Updated: ",
+        "versionRemoved": "Removed: ",
+        "versionUpdateType": {
+            "CHANGE": "",
+            "MINOR_CHANGE": "Minor change",
+            "MAJOR_CHANGE": "Major change",
+            "BUG_FIX": "Bug fix",
+            "ADD_CONTENT": "Content added",
+            "REMOVE_CONTENT": "Content removed",
+            "LAYOUT_CHANGE": "Layout changed",
+            "EXPANSION": "Expansion",
+            "REDUCTION": "Reduction",
+            "ADD_SUB_AREA": "Sub-area added",
+            "REMOVE_SUB_AREA": "Sub-area removed",
+            "CONNECTION_CHANGE": "Connection(s) changed",
+            "ADD_CONNECTION": "Connection(s) added",
+            "REMOVE_CONNECTION": "Connection(s) removed",
+            "BGM_CHANGE": "BGM changed",
+            "EFFECT_CHANGE": "Effect-related changes",
+            "REWORK": "Reworked"
+        }
+    },
+    "authorLabel": {
+        "worldCount": "Worlds: "
+    },
+    "versionLabel": {
+        "authors": "Contributing Author(s): ",
+        "releaseDate": "Release Date: ",
+        "worldCount": "Worlds Added: ",
+        "updatedWorldCount": "Worlds Updated: ",
+        "removedWorldCount": "Worlds Removed: "
+    },
+    "effectLabel": {
+        "location": "Location: "
+    },
+    "wallpaperLabel": {
+        "number": "#",
+        "titleTemplate": " - \"{TITLE}\""
+    },
+    "bgmTrackLabel": {
+        "location": "Location: "
+    },
+    "nodeIcon": {
+        "new": "NEW"
+    },
+    "versionDetails": {
+        "ADD": "Added {WORLD}",
+        "UPDATE": {
+            "CHANGE": "Updated {WORLD}",
+            "MINOR_CHANGE": "Made minor changes to {WORLD}",
+            "MAJOR_CHANGE": "Made major changes to {WORLD}",
+            "BUG_FIX": "Fixed bugs in {WORLD}",
+            "ADD_CONTENT": "Added content to {WORLD}",
+            "REMOVE_CONTENT": "Removed content from {WORLD}",
+            "LAYOUT_CHANGE": "Made layout changes to {WORLD}",
+            "EXPANSION": "Expanded {WORLD}",
+            "REDUCTION": "Reduced the size of {WORLD}",
+            "ADD_SUB_AREA": "Added a sub-area to {WORLD}",
+            "REMOVE_SUB_AREA": "Removed a sub-area from {WORLD}",
+            "CONNECTION_CHANGE": "Made connection changes to {WORLD}",
+            "ADD_CONNECTION": "Added a connection to {WORLD}",
+            "REMOVE_CONNECTION": "Removed a connection from {WORLD}",
+            "BGM_CHANGE": "Changed BGM in {WORLD}",
+            "EFFECT_CHANGE": "Made effect-related changes to {WORLD}",
+            "REWORK": "Reworked {WORLD}"
+        },
+        "REMOVE": "Removed {WORLD}"
+    },
+    "versionEntriesModal": {
+        "filters": "Filters",
+        "versionDisplayToggle": {
+            "name": "Show {ENTRY_TYPE}",
+            "entryType": {
+                "ADD": "World Additions",
+                "UPDATE": "World Updates",
+                "REMOVE": "World Removals"
+            },
+            "entryUpdateType": {
+                "MINOR_CHANGE": "Minor Changes",
+                "MAJOR_CHANGE": "Major Changes",
+                "BUG_FIX": "Bug Fixes",
+                "ADD_CONTENT": "Content Additions",
+                "REMOVE_CONTENT": "Content Removals",
+                "LAYOUT_CHANGE": "Layout Changes",
+                "EXPANSION": "World Expansions",
+                "REDUCTION": "World Size Reductions",
+                "ADD_SUB_AREA": "Sub-area Additions",
+                "REMOVE_SUB_AREA": "Sub-area Removals",
+                "CONNECTION_CHANGE": "Connection Changes",
+                "ADD_CONNECTION": "Connection Additions",
+                "REMOVE_CONNECTION": "Connection Removals",
+                "BGM_CHANGE": "BGM Changes",
+                "EFFECT_CHANGE": "Effect-related Changes",
+                "REWORK": "Reworks"
+            }
+        }
+    },
+    "menuThemesModal": {
+        "previousMethods": "Previous Methods"
+    },
+    "wallpapersModal": {
+        "removedWallpapers": "Removed Wallpapers"
+    },
+    "bgmTracksModal": {
+        "search": "Search:",
+        "favBgmTracks": "Favourite Tracks",
+        "musicRoomBgmTracks": "Music Room Tracks",
+        "unnumberedBgmTracks": "Unnumbered Tracks",
+        "removedBgmTracks": "Removed Tracks"
+    },
+    "helpModal": {
+        "reportBug": "Report a Bug"
+    },
+    "footer": {
+        "about": "Yume 2kki Explorer v{VERSION} by FlashfyreDev",
+        "lastUpdate": "Data updated on {LAST_UPDATE}",
+        "lastFullUpdate": "Data reset on {LAST_FULL_UPDATE}"
+    },
+    "dot": ".",
+    "comma": ", ",
+    "separator": " - ",
+    "braces": " ({VALUE})",
+    "na": "N/A"
+}
