@@ -59,7 +59,7 @@
             "name": "Langue:"
         },
         "uiTheme": {
-            "name": "Thème IU:",
+            "name": "Thème d'IU:",
             "values": {
                 "Default_Custom": "Défault (Personnalisé)",
                 "Default": "Défaut",
