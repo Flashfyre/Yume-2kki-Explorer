@@ -1,54 +1,54 @@
 {
     "1": {
-        "name": "One-Way",
-        "description": "Does not connect back to this area"
+        "name": "Voie à sens unique",
+        "description": "Ne ramène pas à cette zone"
     },
     "2": {
-        "name": "No Entry",
-        "description": "Cannot be entered from this area"
+        "name": "Pas d'entrée",
+        "description": "N'est pas accessible depuis cette zone"
     },
     "4": {
-        "name": "Unlock",
-        "description": "Unlocks access to this area from the opposite entrance"
+        "name": "À débloquer",
+        "description": "Débloquez l'accès à cette zone depuis l'entrée opposée"
     },
     "8": {
-        "name": "Locked",
-        "description": "Unlockable from the opposite entrance"
+        "name": "Bloqué",
+        "description": "À débloquer depuis l'entrée opposée"
     },
     "16": {
-        "name": "Dead End",
-        "description": "Leads to an isolated section of the opposite side"
+        "name": "Impasse",
+        "description": "Mène à une section isolée du côté opposé"
     },
     "32": {
-        "name": "Isolated",
-        "description": "Isolated location only accessible from the opposite side"
+        "name": "Isolé",
+        "description": "Lieu isolé seulement accessible depuis le côté opposé"
     },
     "64": {
-        "name": "Effect",
-        "description": "Can be accessed with the following effect(s): {0}"
+        "name": "Effet",
+        "description": "Peut être accéder avec l'/les effet(s) suivant(s): {0}"
     },
     "128": {
         "name": "Chance",
         "description": "{0} chance"
     },
     "256": {
-        "name": "Conditional",
-        "description": "Unlocked with the following condition: {0}"
+        "name": "Condition",
+        "description": "À débloquer avec la condition suivante: {0}"
     },
     "512": {
-        "name": "Shortcut",
-        "description": "Telephone serves as a shortcut back to the area when used"
+        "name": "Raccourci",
+        "description": "Le téléphone sert de raccourci vers la zone où il a été utilisé"
     },
     "1024": {
-        "name": "Exit Point",
-        "description": "Telephone takes you here when used from the opposite area"
+        "name": "Point de sortie",
+        "description": "Le téléphone mène ici quand il est utilisé depuis la zone opposée"
     },
     "2048": {
-        "name": "Seasonal",
-        "description": "Accessible during the following season: {0}"
+        "name": "Saisonnier",
+        "description": "Accessible durant la saison suivante: {0}"
     },
     "4096": {
         "name": "Inaccessible",
-        "description": "Cannot be accessed in the current version of the game"
+        "description": "Ne peut être accéder dans la version actuelle du jeu"
     }
 }
