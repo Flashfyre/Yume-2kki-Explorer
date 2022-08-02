@@ -650,11 +650,11 @@ Affiche une liste des versions qui ont ajoutés, mis à jour ou retirés des mon
 
 ### Effets
 
-Affiche une liste des effets disponibles dans une fenêtre modal.Survoler un effet va montrer des informations du Wiki sur comment le trouver. Cliquer sur un effet va vous amener au monde où il se trouve.
+Affiche une liste des effets disponibles dans une fenêtre modal. Survoler un effet va montrer des informations du Wiki sur comment le trouver. Cliquer sur un effet va vous amener au monde où il se trouve.
 
 ### Thèmes de Menu
 
-Affiche une liste des thèmes de menu disponibles dans une fenêtre modal.Survoler un thème de menu va montrer des informations du Wiki sur commnt l'obtenir. Cliquer sur un thème de menu va vous naviguer au monde où il se trouve si applicable.
+Affiche une liste des thèmes de menu disponibles dans une fenêtre modal. Survoler un thème de menu va montrer des informations du Wiki sur comment l'obtenir. Cliquer sur un thème de menu va vous naviguer au monde où il se trouve si applicable.
 
 ### Fonds d'écrans
 
@@ -662,7 +662,7 @@ Affiche une liste des fonds d'écrans dans une fenêtre modal. Survoler un fond 
 
 ### Bande sonore
 
-Affiche une liste des pistes sonores dans une fenêtre modal. Survoler une piste va montrer des informations du Wiki et où elle est utilisée. Cliquer sur l'image d'une piste va jouer la piste et va vous naviguer au monde où elle se trouve si applicable. Cliquer sur le bouton jouer d'une piste va jouer ladite piste dans le lecteur audio sans naviguer au monde ou fermer le modal. Cliquer sur le bouton en dessous du bouton jouer d'une piste va ajouter la piste à la playlist. Les pistes directement associées à un monde vont avoir un troisième bouton avec l'icône d'une image et cliquer dessus ouvrira une autre fenêtre modal pour choisir un screenshot du monde qui représente le mieux où la piste est utilisée. L'image que vous choisissez sera aussi utilisée pour la piste pour toutes les autres personnes utilisant cette appli, donc merci de l'utiliser uniquement si vous êtes raisonnablement certain que l'image actuelle d'une piste ne représente pas pleinement où ladite piste est jouée.
+Affiche une liste des pistes sonores dans une fenêtre modal. Survoler une piste va montrer des informations du Wiki et où elle est utilisée. Cliquer sur l'image d'une piste va jouer la piste et va vous naviguer au monde où elle se trouve si applicable. Cliquer sur le bouton jouer d'une piste va jouer ladite piste dans le lecteur audio sans naviguer au monde ou fermer le modal. Cliquer sur le bouton en dessous du bouton jouer d'une piste va ajouter la piste à la playlist. Les pistes directement associées à un monde vont avoir un troisième bouton avec l'icône d'une image et cliquer dessus ouvrira une autre fenêtre modal pour choisir une capture d'écran du monde qui représente le mieux où la piste est utilisée. L'image que vous choisissez sera aussi utilisée pour la piste pour toutes les autres personnes utilisant cette appli, donc merci de l'utiliser uniquement si vous êtes raisonnablement certain que l'image actuelle d'une piste ne représente pas pleinement où ladite piste est jouée.
 
 ## Paramètres
 
@@ -690,7 +690,7 @@ Ce mode détermine comment les mondes sont organisés visuellement dans le graph
 
 ### Mode de connection
 
-Choisir si il faut afficher les icônes de connections qui reculent en profondeur. 'Voie à sens unique'  affichera seulement les icônes des connections qui augmentent la profondeur.
+Choisir si il faut afficher les icônes de connections qui reculent en profondeur. 'Voie à sens unique' affichera seulement les icônes des connections qui augmentent la profondeur.
 
 ### Affichage du label
 
