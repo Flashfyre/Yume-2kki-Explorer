@@ -61,7 +61,7 @@
         "uiTheme": {
             "name": "Thème d'IU:",
             "values": {
-                "Default_Custom": "Défault (Personnalisé)",
+                "Default_Custom": "Défaut (Personnalisé)",
                 "Default": "Défaut",
                 "Default_2": "Défaut 2",
                 "Default_3": "Défaut 3",
