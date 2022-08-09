@@ -189,7 +189,7 @@
             "end": "Régler comme destination",
             "map": "Voir la Map",
             "bgm": {
-                "name": "Jouer la Piste",
+                "name": "Jouer le morceau",
                 "main": "Principale"
             }
         }
@@ -215,7 +215,7 @@
             "CONNECTION_CHANGE": "Connection(s) changée(s)",
             "ADD_CONNECTION": "Connection(s) ajoutée(s)",
             "REMOVE_CONNECTION": "Connection(s) retirée(s)",
-            "BGM_CHANGE": "Piste changée",
+            "BGM_CHANGE": "Morceau changé",
             "EFFECT_CHANGE": "Changements liés aux effets",
             "REWORK": "Retravaillée"
         }
@@ -260,7 +260,7 @@
             "CONNECTION_CHANGE": "Changements liés aux connections dans {WORLD}",
             "ADD_CONNECTION": "Connection ajoutée à {WORLD}",
             "REMOVE_CONNECTION": "Connection retirée dans {WORLD}",
-            "BGM_CHANGE": "Piste changée dans {WORLD}",
+            "BGM_CHANGE": "Morceau changé dans {WORLD}",
             "EFFECT_CHANGE": "Changements liés aux effets dans {WORLD}",
             "REWORK": "Retravaillé {WORLD}"
         },
@@ -289,7 +289,7 @@
                 "CONNECTION_CHANGE": "Changements liés aux connections",
                 "ADD_CONNECTION": "Ajouts de connections",
                 "REMOVE_CONNECTION": "Retraits de connections",
-                "BGM_CHANGE": "Changements liés aux pistes",
+                "BGM_CHANGE": "Changements liés aux morceaux",
                 "EFFECT_CHANGE": "Changements liés aux effets",
                 "REWORK": "Contenu retravaillé"
             }
@@ -303,10 +303,10 @@
     },
     "bgmTracksModal": {
         "search": "Rechercher:",
-        "favBgmTracks": "Pistes favorites",
-        "musicRoomBgmTracks": "Pistes de la Music Room",
-        "unnumberedBgmTracks": "Pistes non numérotées",
-        "removedBgmTracks": "Pistes retirées"
+        "favBgmTracks": "Morceaux favoris",
+        "musicRoomBgmTracks": "Morceaux de la Salle de Son",
+        "unnumberedBgmTracks": "Morceaux non numérotés",
+        "removedBgmTracks": "Morceaux retirés"
     },
     "helpModal": {
         "reportBug": "Signaler un Bug"
