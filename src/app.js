@@ -1370,18 +1370,19 @@ export function loadData(update, onSuccess, onFail) {
     const loadOrUpdateData = update => {
         if (update) {
             const req = { reset: update === 'reset' };
-            $.post('/updateWorldData', req)
-                .done(uwdResponse => {
-                    if (uwdResponse.success) {
-                        $.post('/updateMiscData', req)
-                            .done(umdResponse => {
-                                if (umdResponse.success)
-                                    loadData();
-                                else
-                                    onFail(null, null, true);
-                            }).fail(onFail);
-                    } else
-                        onFail(null, null, true);
+            $.post('/updateData', req)
+                .done(() => {
+                    const pollTimer = setInterval(() => {
+                        $.post('/pollUpdate').done(res => {
+                            if (res.done) {
+                                loadData();
+                                clearInterval(pollTimer)
+                            }
+                        }).fail(() => {
+                            onFail();
+                            clearInterval(pollTimer)
+                        });
+                    }, 1200);
                 }).fail(onFail);
         } else
             loadData();
@@ -3834,7 +3835,7 @@ function initLocalization(isInitial) {
         callback: function (data, defaultCallback) {
             if (config.lang === 'ja' || config.lang === 'ru')
                 massageLocalizedValues(data, true);
-            data.footer.about = data.footer.about.replace("{VERSION}", "4.5.0");
+            data.footer.about = data.footer.about.replace("{VERSION}", "4.6.0");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             localizedSeparator = data.separator;

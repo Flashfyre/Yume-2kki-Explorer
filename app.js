@@ -1,5 +1,7 @@
+const { Worker, isMainThread, parentPort } = require('worker_threads');
+
 const express = require('express');
-const app = express();
+const app = isMainThread ? express() : null;
 const port = process.env.PORT || 5000;
 const _ = require('lodash');
 const superagent = require('superagent');
@@ -8,6 +10,7 @@ const download = require('image-downloader');
 const mysql = require('mysql');
 const ConnType = require('./src/conn-type').ConnType;
 const versionUtils = require('./src/version-utils');
+const { resolve } = require('path');
 const appConfig = process.env.ADMIN_KEY ?
     {
         ADMIN_KEY: process.env.ADMIN_KEY,
@@ -19,8 +22,13 @@ const isRemote = Boolean(process.env.DATABASE_URL);
 const defaultPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT;
 const minDepthPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED;
 const worldImageWidthThreshold = 960;
+const startLocation = "Urotsuki's Room";
+const batchSize = 20;
 
 let dbInitialized = false;
+
+let updateWorker = isMainThread ? new Worker('./app.js') : null;
+let updating = false;
 
 function initConnPool() {
     let ret;
@@ -253,140 +261,83 @@ function queryWithRetry(pool, query, callback, retryCount) {
     });
 }
 
-app.use(express.static('public'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use((req, res, next) => {
-    if (req.get('Host').indexOf('herokuapp') > -1)
-        return res.redirect(301, 'https://2kki.app' + req.originalUrl);
-    return next();
-});
-
-app.get('/', (_, res) => res.sendFile('index.html', { root: '.' }));
-
-app.get('/help', (_, res) => res.sendFile('README.md', { root: '.' }));
-
-const startLocation = "Urotsuki's Room";
-
-const batchSize = 20;
-
-app.get('/data', function(req, res) {
-    getConnPool().then(pool => {
-        getData(req, pool)
-            .then(data => res.json(data))
-            .catch(err => console.error(err))
-            .finally(() => pool.end());
-    }).catch(err => console.error(err));
-});
-
-app.post('/checkUpdateData', function(req, res) {
-    getConnPool().then(pool => {
-        const callback = function (update) {
-            res.json({
-                update: update
-            });
-            pool.end();
-        };
-        pool.query('SELECT lastFullUpdate FROM updates WHERE DATE_ADD(lastFullUpdate, INTERVAL 1 WEEK) < NOW()', (err, rows) => {
-            if (err) console.error(err);
-            if (rows && rows.length)
-                callback('reset');
-            else {
-                pool.query('SELECT lastUpdate FROM updates WHERE DATE_ADD(lastUpdate, INTERVAL 1 HOUR) < NOW()', (err, rows) => {
-                    if (err) console.error(err);
-                    callback(rows && rows.length);
-                });
-            }
-        });
-    }).catch(err => console.error(err));
-});
-
-app.post('/updateWorldData', function(req, res) {
-    getConnPool().then(pool => {
-        const callback = function (success) {
-            res.json({
-                success: success
-            });
-            pool.end();
-        };
-        if (req.body.reset === 'true')
-            populateWorldData(pool).then(() => callback(true)).catch(err => console.error(err));
-        else {
-            pool.query('SELECT lastUpdate FROM updates', (err, rows) => {
-                if (err) console.error(err);
-                if (rows && rows.length) {
-                    getWorldData(pool, true).then(worldData => {
-                        getUpdatedWorldNames(worldData.map(w => w.title), rows[0].lastUpdate)
-                            .then(updatedWorldNames => populateWorldData(pool, worldData, updatedWorldNames).then(() => callback(true)))
-                            .catch(err => console.error(err)).catch(err => console.error(err));
-                        }).catch(err => console.error(err));
-                } else
-                    callback(false);
-            });
-        }
-    }).catch(err => console.error(err));
-});
-
-app.post('/updateMiscData', function(req, res) {
-    getConnPool().then(pool => {
-        const callback = function (success) {
-            res.json({
-                success: success
-            });
-            pool.end();
-        };
-
-        if (req.body.reset === 'true') {
-            getWorldData(pool, true).then(worldData => {
-                updateMapData(pool, worldData).then(() => {
-                    updateAuthorInfoData(pool).then(() => {
-                        updateVersionInfoData(pool).then(() => {
-                            updateEffectData(pool, worldData).then(() => {
-                                updateMenuThemeData(pool, worldData).then(() => {
-                                    updateWallpaperData(pool, worldData).then(() => {
-                                        updateBgmTrackData(pool, worldData).then(() => {
-                                            pool.query('UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()', (err) => {
-                                                if (err) console.error(err);
-                                                callback(true);
-                                            });
-                                        }).catch(err => console.error(err));
-                                    }).catch(err => console.error(err));
-                                }).catch(err => console.error(err));
-                            }).catch(err => console.error(err));
-                        }).catch(err => console.error(err));
-                    }).catch(err => console.error(err));
-                }).catch(err => console.error(err));
-            }).catch(err => console.error(err));
-        } else {
-            pool.query('SELECT lastUpdate FROM updates', (err, rows) => {
-                if (err) console.error(err);
-                if (rows && rows.length) {
-                    getWorldData(pool, true).then(worldData => {
-                        checkUpdateMapData(pool, worldData, rows[0].lastUpdate).then(() => {
-                            checkUpdateAuthorInfoData(pool, rows[0].lastUpdate).then(() => {
-                                checkUpdateVersionInfoData(pool, rows[0].lastUpdate).then(() => {
-                                    checkUpdateEffectData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                        checkUpdateMenuThemeData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                            checkUpdateWallpaperData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                                checkUpdateBgmTrackData(pool, worldData, rows[0].lastUpdate).then(() => {
-                                                    pool.query('UPDATE updates SET lastUpdate=NOW()', err => {
-                                                        if (err) console.error(err);
-                                                        callback(true);
-                                                    });
-                                                }).catch(err => console.error(err));
-                                            }).catch(err => console.error(err));
-                                        }).catch(err => console.error(err));
-                                    }).catch(err => console.error(err));
-                                }).catch(err => console.error(err));
-                            }).catch(err => console.error(err));
-                        }).catch(err => console.error(err));
-                    }).catch(err => console.error(err));
-                } else
-                    callback(false);
-            });
-        }
+if (isMainThread) {
+    app.use(express.static('public'));
+    app.use(express.json());
+    app.use(express.urlencoded({ extended: true }));
+    app.use((req, res, next) => {
+        if (req.get('Host').indexOf('herokuapp') > -1)
+            return res.redirect(301, 'https://2kki.app' + req.originalUrl);
+        return next();
     });
-});
+
+    app.get('/', (_, res) => res.sendFile('index.html', { root: '.' }));
+
+    app.get('/help', (_, res) => res.sendFile('README.md', { root: '.' }));
+
+    app.get('/data', function(req, res) {
+        getConnPool().then(pool => {
+            getData(req, pool)
+                .then(data => res.json(data))
+                .catch(err => console.error(err))
+                .finally(() => pool.end());
+        }).catch(err => console.error(err));
+    });
+
+    app.post('/checkUpdateData', function(_req, res) {
+        getConnPool().then(pool => {
+            const callback = function (update) {
+                res.json({
+                    update: update
+                });
+                pool.end();
+            };
+            pool.query('SELECT lastFullUpdate FROM updates WHERE DATE_ADD(lastFullUpdate, INTERVAL 1 WEEK) < NOW()', (err, rows) => {
+                if (err) console.error(err);
+                if (rows && rows.length)
+                    callback('reset');
+                else {
+                    pool.query('SELECT lastUpdate FROM updates WHERE DATE_ADD(lastUpdate, INTERVAL 1 HOUR) < NOW()', (err, rows) => {
+                        if (err) console.error(err);
+                        callback(rows && rows.length);
+                    });
+                }
+            });
+        }).catch(err => console.error(err));
+    });
+
+    app.post('/updateData', function(req, res) {
+        if (!updating) {
+            updateWorker.postMessage({ reset: req.body.reset });
+            updating = true;
+        }
+
+        res.end();
+    });
+
+    app.post('/pollUpdate', function (_req, res) {
+        res.json({
+            done: !updating
+        });
+    });
+
+    updateWorker.on('message', success => {
+        if (!success)
+            console.warn(req.body.reset ? 'Data reset failed' : 'Data update failed');
+        updating = false;
+    });
+
+    updateWorker.on('error', err => {
+        console.error(err);
+        updating = false;
+    });
+
+    updateWorker.on('exit', code => {
+        if (code)
+            console.error(new Error(`Update thread exited code ${code}`));
+        updating = false;
+    })
+}
 
 function getData(req, pool) {
     const excludeRemovedContent = !req.query.hasOwnProperty('includeRemovedContent') || !req.query.includeRemovedContent;
@@ -3515,54 +3466,56 @@ function decodeHtml(html) {
     return html.replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(dec));
 }
 
-app.post('/updateBgmTrackWorldImageOrdinal', function(req, res) {
-    if (req.body.hasOwnProperty('bgmTrackId') && req.body.hasOwnProperty('ordinal')) {
-        getConnPool().then(pool => {
-            pool.query(`UPDATE bgm_tracks SET worldImageOrdinal=${req.body.ordinal} WHERE id=${req.body.bgmTrackId}`, (err, _) => {
-                if (err) console.error(err);
-                res.json({
-                    success: !err
-                });
-                pool.end();
-            });
-        });
-    }
-});
-
-app.post('/updateLocationVersions', function(req, res) {
-    if (req.body.hasOwnProperty('adminKey') && req.body.adminKey === appConfig.ADMIN_KEY && req.body.hasOwnProperty('version') && req.body.hasOwnProperty('entries')) {
-        const entries = req.body.entries;
-        const getPageContent = [];
-        const updateEntries = [];
-        const updatedLocations = [];
-
-        const request = superagent.agent();
-
-        getCsrfToken(request).then(csrfToken => {
-            for (let e = 0; e < entries.length; e++) {
-                const entry = entries[e];
-                getPageContent.push(
-                    getLocationPageContent(entry.location).then(content => {
-                        updateEntries.push(updateLocationPageVersionInfo(request, entry, content, req.body.version, req.body.user || 'Anonymous', csrfToken)
-                            .then(success => success && updatedLocations.push(entry.location))
-                            .catch(err => console.error(err)));
-                    }).catch(err => console.error(err))
-                );
-            }
-            Promise.allSettled(getPageContent).finally(() => {
-                Promise.allSettled(updateEntries).finally(() => {
+if (isMainThread) {
+    app.post('/updateBgmTrackWorldImageOrdinal', function(req, res) {
+        if (req.body.hasOwnProperty('bgmTrackId') && req.body.hasOwnProperty('ordinal')) {
+            getConnPool().then(pool => {
+                pool.query(`UPDATE bgm_tracks SET worldImageOrdinal=${req.body.ordinal} WHERE id=${req.body.bgmTrackId}`, (err, _) => {
+                    if (err) console.error(err);
                     res.json({
-                        success: true,
-                        updatedLocations: updatedLocations
+                        success: !err
+                    });
+                    pool.end();
+                });
+            });
+        }
+    });
+
+    app.post('/updateLocationVersions', function(req, res) {
+        if (req.body.hasOwnProperty('adminKey') && req.body.adminKey === appConfig.ADMIN_KEY && req.body.hasOwnProperty('version') && req.body.hasOwnProperty('entries')) {
+            const entries = req.body.entries;
+            const getPageContent = [];
+            const updateEntries = [];
+            const updatedLocations = [];
+
+            const request = superagent.agent();
+
+            getCsrfToken(request).then(csrfToken => {
+                for (let e = 0; e < entries.length; e++) {
+                    const entry = entries[e];
+                    getPageContent.push(
+                        getLocationPageContent(entry.location).then(content => {
+                            updateEntries.push(updateLocationPageVersionInfo(request, entry, content, req.body.version, req.body.user || 'Anonymous', csrfToken)
+                                .then(success => success && updatedLocations.push(entry.location))
+                                .catch(err => console.error(err)));
+                        }).catch(err => console.error(err))
+                    );
+                }
+                Promise.allSettled(getPageContent).finally(() => {
+                    Promise.allSettled(updateEntries).finally(() => {
+                        res.json({
+                            success: true,
+                            updatedLocations: updatedLocations
+                        });
                     });
                 });
+            }).catch(err => console.error(err));
+        } else
+            res.json({
+                success: false
             });
-        }).catch(err => console.error(err));
-    } else
-        res.json({
-            success: false
-        });
-});
+    });
+}
 
 function getLocationPageContent(location) {
     return new Promise((resolve, reject) => {
@@ -3744,35 +3697,37 @@ function dec(str) {
     return ret;
 }
 
-app.get('/getMapLocationNames', function(req, res) {
-    const mapId = req.query.mapId;
-    const prevMapId = req.query.prevMapId;
-    const prevLocationName = req.query.prevLocationName;
-    let prevLocationNames = req.query.prevLocationNames;
-    if (!prevLocationNames)
-        prevLocationNames = [];
-    else if (!Array.isArray(prevLocationNames))
-        prevLocationNames = [prevLocationNames];
-    if (prevLocationName)
-        prevLocationNames.push(prevLocationName);
-    const mapIdPattern = /^\d{4}$/;
-    res.setHeader('Access-Control-Allow-Origin', 'https://ynoproject.net');
-    if (mapId && mapIdPattern.test(mapId) && (!prevMapId || mapIdPattern.test(prevMapId))) {
-        getConnPool().then(pool => {
-            getMapLocationNames(mapId, prevMapId, prevLocationNames, pool)
-                .then(data => res.json(data))
-                .catch(err => {
-                    console.error(err);
-                    res.json({ error: 'Failed to query map location names', err_code: 'QUERY_FAILED' });
-                })
-                .finally(() => pool.end());
-        }).catch(err => {
-            console.error(err);
-            res.json({ error: 'Failed to connect to database', err_code: 'DB_CONN_FAILED' });
-        });
-    } else
-        res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
-});
+if (isMainThread) {
+    app.get('/getMapLocationNames', function(req, res) {
+        const mapId = req.query.mapId;
+        const prevMapId = req.query.prevMapId;
+        const prevLocationName = req.query.prevLocationName;
+        let prevLocationNames = req.query.prevLocationNames;
+        if (!prevLocationNames)
+            prevLocationNames = [];
+        else if (!Array.isArray(prevLocationNames))
+            prevLocationNames = [prevLocationNames];
+        if (prevLocationName)
+            prevLocationNames.push(prevLocationName);
+        const mapIdPattern = /^\d{4}$/;
+        res.setHeader('Access-Control-Allow-Origin', 'https://ynoproject.net');
+        if (mapId && mapIdPattern.test(mapId) && (!prevMapId || mapIdPattern.test(prevMapId))) {
+            getConnPool().then(pool => {
+                getMapLocationNames(mapId, prevMapId, prevLocationNames, pool)
+                    .then(data => res.json(data))
+                    .catch(err => {
+                        console.error(err);
+                        res.json({ error: 'Failed to query map location names', err_code: 'QUERY_FAILED' });
+                    })
+                    .finally(() => pool.end());
+            }).catch(err => {
+                console.error(err);
+                res.json({ error: 'Failed to connect to database', err_code: 'DB_CONN_FAILED' });
+            });
+        } else
+            res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
+    });
+}
 
 function getMapLocationNames(mapId, prevMapId, prevLocationNames, pool) {
     return new Promise((resolve, reject) => {
@@ -3820,28 +3775,30 @@ function getMapLocationNames(mapId, prevMapId, prevLocationNames, pool) {
     });
 }
 
-app.get('/getConnectedLocations', function(req, res) {
-    const locationName = req.query.locationName;
-    let connLocationNames = req.query.connLocationNames;
-    res.setHeader('Access-Control-Allow-Origin', 'https://ynoproject.net');
-    if (locationName && connLocationNames) {
-        if (!Array.isArray(connLocationNames))
-            connLocationNames =  [ connLocationNames ];
-        getConnPool().then(pool => {
-            getConnectedLocations(locationName, connLocationNames, pool)
-                .then(data => res.json(data))
-                .catch(err => {
-                    console.error(err);
-                    res.json({ error: 'Failed to query connected locations', err_code: 'QUERY_FAILED' });
-                })
-                .finally(() => pool.end());
-        }).catch(err => {
-            console.error(err);
-            res.json({ error: 'Failed to connect to database', err_code: 'DB_CONN_FAILED' });
-        });
-    } else
-        res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
-});
+if (isMainThread) {
+    app.get('/getConnectedLocations', function(req, res) {
+        const locationName = req.query.locationName;
+        let connLocationNames = req.query.connLocationNames;
+        res.setHeader('Access-Control-Allow-Origin', 'https://ynoproject.net');
+        if (locationName && connLocationNames) {
+            if (!Array.isArray(connLocationNames))
+                connLocationNames =  [ connLocationNames ];
+            getConnPool().then(pool => {
+                getConnectedLocations(locationName, connLocationNames, pool)
+                    .then(data => res.json(data))
+                    .catch(err => {
+                        console.error(err);
+                        res.json({ error: 'Failed to query connected locations', err_code: 'QUERY_FAILED' });
+                    })
+                    .finally(() => pool.end());
+            }).catch(err => {
+                console.error(err);
+                res.json({ error: 'Failed to connect to database', err_code: 'DB_CONN_FAILED' });
+            });
+        } else
+            res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
+    });
+}
 
 function getConnectedLocations(locationName, connLocationNames, pool) {
     return new Promise((resolve, reject) => {
@@ -3868,32 +3825,34 @@ function getConnectedLocations(locationName, connLocationNames, pool) {
     });
 }
 
-app.get('/getLocationMaps', function(req, res) {
-    const locationName = req.query.locationName;
-    let locationNames = req.query.locationNames;
-    if (!locationNames)
-        locationNames = [];
-    else if (!Array.isArray(locationNames))
-        locationNames = [locationNames];
-    if (locationName)
-        locationNames.push(locationName);
-    res.setHeader('Access-Control-Allow-Origin', 'https://ynoproject.net');
-    if (locationNames.length) {
-        getConnPool().then(pool => {
-            getLocationMaps(locationNames, pool)
-                .then(data => res.json(data))
-                .catch(err => {
-                    console.error(err);
-                    res.json({ error: 'Failed to query location maps', err_code: 'QUERY_FAILED' });
-                })
-                .finally(() => pool.end());
-        }).catch(err => {
-            console.error(err);
-            res.json({ error: 'Failed to connect to database', err_code: 'DB_CONN_FAILED' });
-        });
-    } else
-        res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
-});
+if (isMainThread) {
+    app.get('/getLocationMaps', function(req, res) {
+        const locationName = req.query.locationName;
+        let locationNames = req.query.locationNames;
+        if (!locationNames)
+            locationNames = [];
+        else if (!Array.isArray(locationNames))
+            locationNames = [locationNames];
+        if (locationName)
+            locationNames.push(locationName);
+        res.setHeader('Access-Control-Allow-Origin', 'https://ynoproject.net');
+        if (locationNames.length) {
+            getConnPool().then(pool => {
+                getLocationMaps(locationNames, pool)
+                    .then(data => res.json(data))
+                    .catch(err => {
+                        console.error(err);
+                        res.json({ error: 'Failed to query location maps', err_code: 'QUERY_FAILED' });
+                    })
+                    .finally(() => pool.end());
+            }).catch(err => {
+                console.error(err);
+                res.json({ error: 'Failed to connect to database', err_code: 'DB_CONN_FAILED' });
+            });
+        } else
+            res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
+    });
+}
 
 function getLocationMaps(locationNames, pool) {
     return new Promise((resolve, reject) => {
@@ -3922,25 +3881,27 @@ function getLocationMaps(locationNames, pool) {
     });
 }
 
-app.get('/getLocationColors', function(req, res) {
-    const locationName = req.query.locationName;
-    res.setHeader('Access-Control-Allow-Origin', 'https://ynoproject.net');
-    if (locationName) {
-        getConnPool().then(pool => {
-            getLocationColors(locationName, pool)
-                .then(data => res.json(data))
-                .catch(err => {
-                    console.error(err);
-                    res.json({ error: 'Failed to query location maps', err_code: 'QUERY_FAILED' });
-                })
-                .finally(() => pool.end());
-        }).catch(err => {
-            console.error(err);
-            res.json({ error: 'Failed to connect to database', err_code: 'DB_CONN_FAILED' });
-        });
-    } else
-        res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
-});
+if (isMainThread) {
+    app.get('/getLocationColors', function(req, res) {
+        const locationName = req.query.locationName;
+        res.setHeader('Access-Control-Allow-Origin', 'https://ynoproject.net');
+        if (locationName) {
+            getConnPool().then(pool => {
+                getLocationColors(locationName, pool)
+                    .then(data => res.json(data))
+                    .catch(err => {
+                        console.error(err);
+                        res.json({ error: 'Failed to query location maps', err_code: 'QUERY_FAILED' });
+                    })
+                    .finally(() => pool.end());
+            }).catch(err => {
+                console.error(err);
+                res.json({ error: 'Failed to connect to database', err_code: 'DB_CONN_FAILED' });
+            });
+        } else
+            res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
+    });
+}
 
 function getLocationColors(locationName, pool) {
     return new Promise((resolve, reject) => {
@@ -3959,34 +3920,36 @@ function getLocationColors(locationName, pool) {
     });
 }
 
-app.get('/getRandomLocations', function(req, res) {
-    let count = req.query.count ? Math.min(parseInt(req.query.count), 10) : 1;
-    if (isNaN(count))
-        count = 1;
-    let minDepth = req.query.minDepth ? parseInt(req.query.minDepth) : 0;
-    if (isNaN(minDepth))
-        minDepth = 0;
-    let maxDepth = req.query.maxDepth ? parseInt(req.query.maxDepth) : 25;
-    if (isNaN(maxDepth))
-        maxDepth = 25;
-    if (count > 0 && minDepth >= 0 && maxDepth >= minDepth) {
-        const includeRemoved = req.query.includeRemoved === '1';
-        const ignoreSecret = req.query.ignoreSecret === '1';
-        getConnPool().then(pool => {
-            getRandomLocations(count, minDepth, maxDepth, includeRemoved, ignoreSecret, pool)
-                .then(data => res.json(data))
-                .catch(err => {
-                    console.error(err);
-                    res.json({ error: 'Failed to query random locations', err_code: 'QUERY_FAILED' });
-                })
-                .finally(() => pool.end());
-        }).catch(err => {
-            console.error(err);
-            res.json({ error: 'Failed to connect to database', err_code: 'DB_CONN_FAILED' });
-        });
-    } else
-        res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
-});
+if (isMainThread) {
+    app.get('/getRandomLocations', function(req, res) {
+        let count = req.query.count ? Math.min(parseInt(req.query.count), 10) : 1;
+        if (isNaN(count))
+            count = 1;
+        let minDepth = req.query.minDepth ? parseInt(req.query.minDepth) : 0;
+        if (isNaN(minDepth))
+            minDepth = 0;
+        let maxDepth = req.query.maxDepth ? parseInt(req.query.maxDepth) : 25;
+        if (isNaN(maxDepth))
+            maxDepth = 25;
+        if (count > 0 && minDepth >= 0 && maxDepth >= minDepth) {
+            const includeRemoved = req.query.includeRemoved === '1';
+            const ignoreSecret = req.query.ignoreSecret === '1';
+            getConnPool().then(pool => {
+                getRandomLocations(count, minDepth, maxDepth, includeRemoved, ignoreSecret, pool)
+                    .then(data => res.json(data))
+                    .catch(err => {
+                        console.error(err);
+                        res.json({ error: 'Failed to query random locations', err_code: 'QUERY_FAILED' });
+                    })
+                    .finally(() => pool.end());
+            }).catch(err => {
+                console.error(err);
+                res.json({ error: 'Failed to connect to database', err_code: 'DB_CONN_FAILED' });
+            });
+        } else
+            res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
+    });
+}
 
 function getRandomLocations(count, minDepth, maxDepth, includeRemoved, ignoreSecret, pool) {
     return new Promise((resolve, reject) => {
@@ -4036,4 +3999,113 @@ function getRandomLocations(count, minDepth, maxDepth, includeRemoved, ignoreSec
     });
 }
 
-app.listen(port, () => console.log(`Yume 2kki Explorer app listening on port ${port}`));
+if (isMainThread) {
+    app.listen(port, () => console.log(`Yume 2kki Explorer app listening on port ${port}`));
+} else {
+    function updateWorldData(reset) {
+        return new Promise((resolve, reject) => {
+            getConnPool().then(pool => {
+                const callback = function (success) {
+                    pool.end();
+                    resolve(success);
+                };
+                if (reset === 'true')
+                    populateWorldData(pool).then(() => callback(true)).catch(err => reject(err));
+                else {
+                    pool.query('SELECT lastUpdate FROM updates', (err, rows) => {
+                        if (err)
+                            reject(err);
+                        if (rows && rows.length) {
+                            getWorldData(pool, true).then(worldData => {
+                                getUpdatedWorldNames(worldData.map(w => w.title), rows[0].lastUpdate)
+                                    .then(updatedWorldNames => populateWorldData(pool, worldData, updatedWorldNames).then(() => callback(true)))
+                                    .catch(err => reject(err)).catch(err => reject(err));
+                                }).catch(err => reject(err));
+                        } else
+                            callback(false);
+                    });
+                }
+            }).catch(err => reject(err));
+        });
+    }
+
+    function updateMiscData(reset) {
+        return new Promise((resolve, reject) => {
+            getConnPool().then(pool => {
+                const callback = function (success) {
+                    pool.end();
+                    resolve(success);
+                };
+
+                if (reset === 'true') {
+                    getWorldData(pool, true).then(worldData => {
+                        updateMapData(pool, worldData).then(() => {
+                            updateAuthorInfoData(pool).then(() => {
+                                updateVersionInfoData(pool).then(() => {
+                                    updateEffectData(pool, worldData).then(() => {
+                                        updateMenuThemeData(pool, worldData).then(() => {
+                                            updateWallpaperData(pool, worldData).then(() => {
+                                                updateBgmTrackData(pool, worldData).then(() => {
+                                                    pool.query('UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()', (err) => {
+                                                        if (err)
+                                                            reject(err);
+                                                        callback(true);
+                                                    });
+                                                }).catch(err => reject(err));
+                                            }).catch(err => reject(err));
+                                        }).catch(err => reject(err));
+                                    }).catch(err => reject(err));
+                                }).catch(err => reject(err));
+                            }).catch(err => reject(err));
+                        }).catch(err => reject(err));
+                    }).catch(err => reject(err));
+                } else {
+                    pool.query('SELECT lastUpdate FROM updates', (err, rows) => {
+                        if (err)
+                            reject(err);
+                        if (rows && rows.length) {
+                            getWorldData(pool, true).then(worldData => {
+                                checkUpdateMapData(pool, worldData, rows[0].lastUpdate).then(() => {
+                                    checkUpdateAuthorInfoData(pool, rows[0].lastUpdate).then(() => {
+                                        checkUpdateVersionInfoData(pool, rows[0].lastUpdate).then(() => {
+                                            checkUpdateEffectData(pool, worldData, rows[0].lastUpdate).then(() => {
+                                                checkUpdateMenuThemeData(pool, worldData, rows[0].lastUpdate).then(() => {
+                                                    checkUpdateWallpaperData(pool, worldData, rows[0].lastUpdate).then(() => {
+                                                        checkUpdateBgmTrackData(pool, worldData, rows[0].lastUpdate).then(() => {
+                                                            pool.query('UPDATE updates SET lastUpdate=NOW()', err => {
+                                                                if (err) reject(err);
+                                                                callback(true);
+                                                            });
+                                                        }).catch(err => reject(err));
+                                                    }).catch(err => reject(err));
+                                                }).catch(err => reject(err));
+                                            }).catch(err => reject(err));
+                                        }).catch(err => reject(err));
+                                    }).catch(err => reject(err));
+                                }).catch(err => reject(err));
+                            }).catch(err => reject(err));
+                        } else
+                            callback(false);
+                    });
+                }
+            });
+        });
+    }
+
+    parentPort.on('message', value => {
+        updateWorldData(value.reset).then(success => {
+            if (success) {
+                updateMiscData(value.reset)
+                    .then(success => parentPort.postMessage(success))
+                    .catch(err => {
+                        console.error(err);
+                        parentPort.postMessage(false);
+                    });
+            } else
+                parentPort.postMessage(false);
+        }).catch(err => {
+            console.error(err);
+            parentPort.postMessage(false);
+        });
+    });
+}
