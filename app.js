@@ -323,7 +323,7 @@ if (isMainThread) {
 
     updateWorker.on('message', success => {
         if (!success)
-            console.warn(req.body.reset ? 'Data reset failed' : 'Data update failed');
+            console.warn('Data update failed');
         updating = false;
     });
 
