@@ -1,4 +1,4 @@
-// Version 4.6.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 5.0.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -109256,6 +109256,8 @@ function InsertStackElement(node, body) {
 	    }
 	}
 
+	let updateTask;
+
 	function loadData(update, onSuccess, onFail) {
 	    let queryString = '';
 	    if (config$1.removedContentMode === 1)
@@ -109271,14 +109273,16 @@ function InsertStackElement(node, body) {
 	                    const pollTimer = setInterval(() => {
 	                        jquery.post('/pollUpdate').done(res => {
 	                            if (res.done) {
+	                                updateTask = null;
 	                                loadData();
 	                                clearInterval(pollTimer);
-	                            }
+	                            } else if (res.task)
+	                                updateTask = res.task;
 	                        }).fail(() => {
 	                            onFail();
 	                            clearInterval(pollTimer);
 	                        });
-	                    }, 1200);
+	                    }, 300);
 	                }).fail(onFail);
 	        } else
 	            loadData();
@@ -109381,6 +109385,8 @@ function InsertStackElement(node, body) {
 	let raycaster, mousePos = { x: 0, y: 0 };
 
 	let localizedConns;
+
+	let localizedUpdateTasks;
 
 	let effectsJP;
 
@@ -111729,7 +111735,7 @@ function InsertStackElement(node, body) {
 	        callback: function (data, defaultCallback) {
 	            if (config$1.lang === 'ja' || config$1.lang === 'ru')
 	                massageLocalizedValues(data, true);
-	            data.footer.about = data.footer.about.replace("{VERSION}", "4.6.1");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "5.0.0");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            localizedSeparator = data.separator;
@@ -111738,6 +111744,7 @@ function InsertStackElement(node, body) {
 	            localizedBraces = data.braces;
 	            localizedNA = data.na;
 	            localizedConns = data.conn;
+	            localizedUpdateTasks = data.updateTask;
 	            if (exports.worldData)
 	                initContextMenu(data.contextMenu);
 	            localizedNodeLabel = getLocalizedNodeLabel(data.nodeLabel);
@@ -111882,8 +111889,6 @@ function InsertStackElement(node, body) {
 	            if (isUI && value.indexOf(" ") > -1)
 	                return value.split(/ +/g).map(v => `<span class="jp-word-break">${v}</span>`).join("");
 	            break;
-	        case "ru":
-	            return value.replace(/([\u0400-\u04FF]+)/g, '<span class="ru-spacing-fix">$1</span>');
 	    }
 	    return value;
 	}
@@ -112111,7 +112116,7 @@ function InsertStackElement(node, body) {
 	function openWorldWikiPage(worldId, newWindow) {
 	    const world = exports.worldData[worldId];
 	    window.open(!world.titleJP || world.removed || getLangUsesEn(config$1.lang)
-	        ? 'https://yume2kki.fandom.com/wiki/' + world.title
+	        ? 'https://yume.wiki/2kki/' + world.title
 	        : ('https://wikiwiki.jp/yume2kki-t/' + (world.titleJP.indexOf("：") > -1 ? world.titleJP.slice(0, world.titleJP.indexOf("：")) : world.titleJP)),
 	        "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
 	}
@@ -113239,13 +113244,15 @@ function InsertStackElement(node, body) {
 	        const loadingTextSpaceChar = getLangUsesEn(config$1.lang) ? " " : "　";
 	        for (let i = 0; i < 3; i++)
 	            loadingTextAppend += i < loadingFrameCount ? loadingTextAppendChar : loadingTextSpaceChar;
+	        if (updateTask && localizedUpdateTasks)
+	            $loadingContainer.find(".loading-container__text__main").text(localizedUpdateTasks[updateTask]);
 	        $loadingContainer.find(".loading-container__text__append").text(loadingTextAppend);
 	        loadingFrameCount += loadingFrameCount < 3 ? 1 : -3;
 	    };
 	    updateLoadingText();
 	    const loadingTimer = window.setInterval(updateLoadingText, 300);
 
-	    return function (request, status, error) {
+	    return function (_request, _status, error) {
 	        if (error) {
 	            window.clearInterval(loadingTimer);
 	            $loadingContainer.find(".loading-container__text--loading").hide();

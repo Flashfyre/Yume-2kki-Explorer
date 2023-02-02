@@ -8,8 +8,15 @@
     src: url('/fonts/MS Yahei.ttf');
 }
 
+@font-face {
+    font-family: 'Verdana-Cyrillic';
+    src: local('Verdana');
+    size-adjust: 84%;
+    unicode-range: U+0400-04FF, U+0500-052F, U+2DE0-2DFF, U+A640-A69F;
+}
+
 body {
-    font-family: 'MS Gothic';
+    font-family: 'Verdana-Cyrillic', 'MS Gothic';
     margin: 0;
     background: url(https://img2.wikia.nocookie.net/__cb20140715140243/yume2kki/images/5/50/Wiki-background) top left repeat;
     background-blend-mode: screen;
@@ -38,11 +45,6 @@ h1 {
 
 .jp-word-break {
     white-space: nowrap;
-}
-
-.ru-spacing-fix {
-    letter-spacing: -6px !important;
-    padding-right: 2px;
 }
 
 .content {
@@ -244,7 +246,7 @@ button {
     margin: 8px;
     padding: 4px;
     cursor: pointer;
-    font-family: 'MS Gothic';
+    font-family: 'Verdana-Cyrillic', 'MS Gothic';
     font-size: 18px;
     border: 6px solid transparent;
 }
@@ -255,7 +257,7 @@ a {
 
 a:not(.no-border) {
     padding: 4px;
-    font-family: 'MS Gothic';
+    font-family: 'Verdana-Cyrillic', 'MS Gothic';
     font-size: 18px;
     border: 6px solid transparent;
 }
@@ -267,7 +269,7 @@ a.icon-link {
 input[type='text'], select, .slider {
     margin: 8px;
     padding: 4px;
-    font-family: 'MS Gothic';
+    font-family: 'Verdana-Cyrillic', 'MS Gothic';
     font-size: 18px;
     border: 6px solid transparent;
 }
@@ -626,7 +628,7 @@ a.close-modal {
 }
 
 .collectable-entry__name, .collectable-entry__name--shadow {
-    font-family: 'MS Gothic';
+    font-family: 'Verdana-Cyrillic', 'MS Gothic';
 }
 
 .collectable-entry__name--shadow {
@@ -763,7 +765,7 @@ a.close-modal {
 }
 
 .graph-tooltip, .scene-tooltip {
-    font-family: 'MS Gothic' !important;
+    font-family: 'Verdana-Cyrillic', 'MS Gothic' !important;
     font-size: 16px !important;
     padding: 4px;
     border: 6px solid transparent;

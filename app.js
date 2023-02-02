@@ -8,27 +8,28 @@ const superagent = require('superagent');
 const fs = require('fs');
 const download = require('image-downloader');
 const mysql = require('mysql');
+const { performance } = require('perf_hooks');
 const ConnType = require('./src/conn-type').ConnType;
 const versionUtils = require('./src/version-utils');
-const { resolve } = require('path');
 const appConfig = process.env.ADMIN_KEY ?
     {
         ADMIN_KEY: process.env.ADMIN_KEY,
         BOT_USERNAME: process.env.BOT_USERNAME,
         BOT_PASSWORD: process.env.BOT_PASSWORD
     } : require('./config/app.config.js');
-const apiUrl = 'https://yume2kki.fandom.com/api.php';
+const apiUrl = 'https://yume.wiki/api.php';
+const apiTitlePrefix = 'Yume 2kki:';
 const isRemote = Boolean(process.env.DATABASE_URL);
 const defaultPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT;
 const minDepthPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED;
-const worldImageWidthThreshold = 960;
 const startLocation = "Urotsuki's Room";
-const batchSize = 20;
 
 let dbInitialized = false;
 
 let updateWorker = isMainThread ? new Worker('./app.js') : null;
 let updating = false;
+let updateTask = null;
+var updateTaskStartTime;
 
 function initConnPool() {
     let ret;
@@ -297,7 +298,7 @@ if (isMainThread) {
                 if (rows && rows.length)
                     callback('reset');
                 else {
-                    pool.query('SELECT lastUpdate FROM updates WHERE DATE_ADD(lastUpdate, INTERVAL 1 HOUR) < NOW()', (err, rows) => {
+                    pool.query('SELECT lastUpdate FROM updates WHERE DATE_ADD(lastUpdate, INTERVAL 6 HOUR) < NOW()', (err, rows) => {
                         if (err) console.error(err);
                         callback(rows && rows.length);
                     });
@@ -309,6 +310,7 @@ if (isMainThread) {
     app.post('/updateData', function(req, res) {
         if (!updating) {
             updateWorker.postMessage({ reset: req.body.reset });
+            setUpdateTask('init');
             updating = true;
         }
 
@@ -317,25 +319,32 @@ if (isMainThread) {
 
     app.post('/pollUpdate', function (_req, res) {
         res.json({
+            task: updateTask,
             done: !updating
         });
     });
 
-    updateWorker.on('message', success => {
-        if (!success)
-            console.warn('Data update failed');
-        updating = false;
+    updateWorker.on('message', message => {
+        if (message.hasOwnProperty('success')) {
+            if (!message.success)
+                console.warn('Data update failed');
+            updating = false;
+            setUpdateTask(null);
+        } else if (message.hasOwnProperty('updateTask'))
+            setUpdateTask(message.updateTask);
     });
 
     updateWorker.on('error', err => {
         console.error(err);
         updating = false;
+        setUpdateTask(null);
     });
 
     updateWorker.on('exit', code => {
         if (code)
             console.error(new Error(`Update thread exited code ${code}`));
         updating = false;
+        setUpdateTask(null);
     })
 }
 
@@ -674,8 +683,10 @@ function populateRecentChanges(recentChanges, lastUpdate) {
                 if (err) return reject(err);
                 const data = JSON.parse(res.text);
                 const changes = data.query.recentchanges;
-                for (let change of changes)
-                    recentChanges.push(change);
+                for (let change of changes) {
+                    if (change.title.startsWith(apiTitlePrefix))
+                        recentChanges.push(change);
+                }
                 if (!changes.length || changes.length < 500)
                     resolve();
                 else {
@@ -690,7 +701,7 @@ function populateRecentChanges(recentChanges, lastUpdate) {
 function checkUpdatePage(pageTitle, lastUpdate) {
     return new Promise((resolve, reject) => {
         superagent.get(apiUrl)
-            .query({ action: 'query', titles: pageTitle, prop: 'revisions', format: 'json' })
+            .query({ action: 'query', titles: `${apiTitlePrefix}${pageTitle}`, prop: 'revisions', format: 'json' })
             .end((err, res) => {
                 if (err) return reject(err);
                 const data = JSON.parse(res.text);
@@ -793,218 +804,164 @@ function checkUpdateBgmTrackData(pool, worldData, lastUpdate) {
     });
 }
 
-function populateWorldData(pool, worldData, updatedWorldNames, continueKey, worlds) {
+function populateWorldData(pool, worldData, updatedWorldNames) {
     if (!worldData)
         worldData = [];
     return new Promise((resolve, reject) => {
-        const query = { action: 'query', list: 'categorymembers', cmtitle: 'Category:Locations', cmlimit: 500, format: 'json' };
-        if (continueKey)
-            query.cmcontinue = continueKey;
-        superagent.get(apiUrl)
-            .query(query)
-            .end((err, res) => {
+        setUpdateTask('fetchWorldData');
+        superagent.get('https://wrapper.yume.wiki/locations?game=2kki', (err, res) => {
             if (err) return reject(err);
-            const data = JSON.parse(res.text);
-            const locations = data.query.categorymembers;
+            const locationData = JSON.parse(res.text);
 
-            worlds = worlds ? worlds.concat(locations) : locations;
+            for (let l of locationData) {
+                let filename = l.locationImage;
 
-            if (data.continue)
-                populateWorldData(pool, worldData, updatedWorldNames, data.continue.cmcontinue, worlds).then(wd => resolve(wd)).catch(err => reject(err));
-            else {
-                const newWorldNames = [];
-                const batches = [];
-                for (let b = 0; b * batchSize < worlds.length; b++)
-                    batches.push(populateWorldDataSub(pool, worldData, worlds, b, updatedWorldNames, newWorldNames));
-                Promise.all(batches).then(() => {
-                    const worldDataByName = _.keyBy(worldData, w => w.title);
-                    const callback = function (updatedWorldData) {
-                        updateConns(pool, _.keyBy(worldData, w => w.title)).then(() => {
-                            updateConnTypeParams(pool, worldData).then(() => {
-                                updateWorldImages(pool, worldData, updatedWorldNames).then(() => {
-                                    updateWorldDepths(pool, _.sortBy(worldData, [ 'id' ])).then(() => {
-                                        deleteRemovedWorlds(pool).then(() => resolve(worldData)).catch(err => reject(err));
-                                    }).catch(err => reject(err));
+                if (!isRemote && filename) {
+                    const ext = filename.slice(filename.lastIndexOf('.'));
+                    const localFilename = `${l.title}${ext}`;
+                    filename = `${localFilename}|${filename}`;
+                    try {
+                        if (!fs.existsSync(`./public/images/worlds/${localFilename}`))
+                            downloadImage(l.locationImage, localFilename)
+                                .catch(err => reject(err));
+                    } catch (err) {
+                        reject(err);
+                    }
+                }
+
+                worldData.push({
+                    title: l.title,
+                    titleJP: l.originalName,
+                    connections: [],
+                    filename: filename,
+                    author: l.primaryAuthor,
+                    bgColor: l.backgroundColor,
+                    fgColor: l.fontColor,
+                    bgmUrl: l.bgms.length ? l.bgms.map(b => b.path).join('|') : null,
+                    bgmLabel: l.bgms.length ? l.bgms.map(b => `${b.title || ''}^${b.label || ''}`).join('|') : null,
+                    mapUrl: l.locationMaps.length ? l.locationMaps.map(l => l.path).join('|') : null,
+                    mapLabel: l.locationMaps.length ? l.locationMaps.map(l => l.caption).join('|') : null,
+                    verAdded: l.versionAdded,
+                    verUpdated: l.versionUpdated,
+                    verGaps: l.versionGaps.length ? l.versionGaps.join(',') : null,
+                    verRemoved: l.versionRemoved || null,
+                    removed: !!l.versionRemoved
+                });
+            }
+
+            populateWorldConnData(worldData).then(() => {
+                updateWorlds(pool, worldData).then(() => {
+                    updateConns(pool, _.keyBy(worldData, w => w.title)).then(() => {
+                        updateConnTypeParams(pool, worldData).then(() => {
+                            updateWorldImages(pool, worldData, updatedWorldNames).then(() => {
+                                updateWorldDepths(pool, _.sortBy(worldData, [ 'id' ])).then(() => {
+                                    deleteRemovedWorlds(pool).then(() => resolve(worldData)).catch(err => reject(err));
                                 }).catch(err => reject(err));
                             }).catch(err => reject(err));
                         }).catch(err => reject(err));
-                    };
-                    if (newWorldNames.length) {
-                        const newWorldBatches = [];
-                        const newWorldConnWorldNames = [];
-                        for (let newWorldName of newWorldNames) {
-                            const newWorld = worldDataByName[newWorldName];
-                            const newWorldConns = newWorld.connections;
-                            for (let newWorldConn of newWorldConns) {
-                                const newWorldConnTargetName = newWorldConn.location;
-                                if (updatedWorldNames.indexOf(newWorldConnTargetName) === -1 && newWorldConnWorldNames.indexOf(newWorldConnTargetName) === -1)
-                                    newWorldConnWorldNames.push(newWorldConnTargetName);
-                            }
-                        }
-                        for (let b = 0; b * batchSize < worlds.length; b++)
-                            newWorldBatches.push(populateWorldDataSub(pool, worldData, worlds, b, newWorldConnWorldNames, []));
-                        Promise.all(newWorldBatches).then(() => {
-                            const allUpdatedWorldNames = updatedWorldNames.concat(newWorldConnWorldNames);
-                            callback(worldData.filter(w => allUpdatedWorldNames.indexOf(w.title) > -1));
-                        }).catch(err => reject(err));
-                    } else
-                        callback(updatedWorldNames ? worldData.filter(w => updatedWorldNames.indexOf(w.title) > -1) : worldData);
+                    }).catch(err => reject(err));
                 }).catch(err => reject(err));
-            }
+            }).catch(err => reject(err));
         });
     });
 }
 
-function populateWorldDataSub(pool, worldData, worlds, batchIndex, updatedWorldNames, updatedNewWorldNames) {
-    const existingWorldNames = worldData.map(w => w.title);
+function populateWorldConnData(worldData) {
+    const worldDataByName = _.keyBy(worldData, w => w.title);
     return new Promise((resolve, reject) => {
-        const worldsKeyed = _.keyBy(worlds.slice(batchIndex * batchSize, Math.min((batchIndex + 1) * batchSize, worlds.length)).filter(w => !updatedWorldNames || (updatedWorldNames.indexOf(w.title) > -1) || existingWorldNames.indexOf(w.title) === -1), w => w.pageid);
-        if (!Object.keys(worldsKeyed).length)
-            return resolve();
-        getBaseWorldData(worldsKeyed).then(data => {
-            const worldDataByName = _.keyBy(worldData, w => w.title);
-            const newWorldsByName = _.keyBy(Object.values(data), w => w.title);
-            const updatedWorlds = [];
-            const worldNames = Object.keys(newWorldsByName);
-            for (let d in data) {
-                const world = data[d];
-                let newWorld;
-                if (!updatedWorldNames || (newWorld = (existingWorldNames.indexOf(world.title) === -1))) {
-                    worldData.push(world);
-                    if (newWorld)
-                        updatedNewWorldNames.push(world.title);
-                } else {
-                    const existingWorld = worldDataByName[world.title];
-                    existingWorld.titleJP = world.titleJP;
-                    existingWorld.author = world.author;
-                    existingWorld.connections = world.connections;
-                    existingWorld.filename = world.filename;
-                    existingWorld.mapUrl = world.mapUrl;
-                    existingWorld.mapLabel = world.mapLabel;
-                    existingWorld.bgmUrl = world.bgmUrl;
-                    existingWorld.bgmLabel = world.bgmLabel;
-                    existingWorld.removed = world.removed;
-                }
-            }
-            pool.query('SELECT id, title, titleJP, author, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, fgColor, bgColor, removed FROM worlds', (err, rows) => {
-                if (err) return reject(err);
-                for (let row of rows) {
-                    const worldName = row.title;
-                    if (worldNames.indexOf(worldName) > -1) {
-                        const world = newWorldsByName[worldName];
-                        world.id = row.id;
-                        if (row.titleJP !== world.titleJP || row.author !== world.author || row.filename !== world.filename ||
-                            row.mapUrl !== world.mapUrl || row.mapLabel !== world.mapLabel ||
-                            row.bgmUrl !== world.bgmUrl || row.bgmLabel !== world.bgmLabel ||
-                            row.verAdded !== world.verAdded || row.verRemoved !== world.verRemoved ||
-                            row.verUpdated !== world.verUpdated || row.verGaps !== world.verGaps ||
-                            row.fgColor !== world.fgColor || row.bgColor !== world.bgColor || row.removed !== world.removed)
-                            updatedWorlds.push(world);
-                    }
-                    delete newWorldsByName[worldName];
-                }
-                const insertCallback = function() {
-                    if (updatedWorlds.length) {
-                        const updateWorlds = [];
-                        for (let updatedWorld of updatedWorlds)
-                            updateWorlds.push(updateWorldInfo(pool, updatedWorld).catch(err => console.error(err)));
-                        Promise.allSettled(updateWorlds).finally(() => resolve());
-                    } else
-                        resolve();
-                };
-                const newWorldNames = Object.keys(newWorldsByName);
-                if (newWorldNames.length) {
-                    let i = 0;
-                    let worldsQuery = 'INSERT INTO worlds (title, titleJP, author, depth, minDepth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, fgColor, bgColor, removed, secret) VALUES ';
-                    for (const w in newWorldsByName) {
-                        const newWorld = newWorldsByName[w];
-                        if (i++)
-                            worldsQuery += ", ";
-                        const title = newWorld.title.replace(/'/g, "''");
-                        const titleJPValue = newWorld.titleJP ? `'${newWorld.titleJP}'` : 'NULL';
-                        const authorValue = newWorld.author ? `'${newWorld.author}'` : 'NULL';
-                        const mapUrlValue = newWorld.mapUrl ? `'${newWorld.mapUrl}'` : 'NULL';
-                        const mapLabelValue = newWorld.mapLabel ? `'${newWorld.mapLabel.replace(/'/g, "''")}'` : 'NULL';
-                        const bgmUrlValue = newWorld.bgmUrl ? `'${newWorld.bgmUrl}'` : 'NULL';
-                        const bgmLabelValue = newWorld.bgmLabel ? `'${newWorld.bgmLabel.replace(/'/g, "''")}'` : 'NULL';
-                        const verAddedValue = newWorld.verAdded ? `'${newWorld.verAdded}'` : 'NULL';
-                        const verRemovedValue = newWorld.verRemoved ? `'${newWorld.verRemoved}'` : 'NULL';
-                        const verUpdatedValue = newWorld.verUpdated ? `'${newWorld.verUpdated}'` : 'NULL';
-                        const verGapsValue = newWorld.verGaps ? `'${newWorld.verGaps}'` : 'NULL';
-                        const fgColorValue = newWorld.fgColor ? `'${newWorld.fgColor}'` : 'NULL';
-                        const bgColorValue = newWorld.bgColor ? `'${newWorld.bgColor}'` : 'NULL';
-                        const removedValue = newWorld.removed ? '1' : '0';
-                        worldsQuery += `('${title}', ${titleJPValue}, ${authorValue}, 0, 0, '${newWorld.filename.replace(/'/g, "''")}', ${mapUrlValue}, ${mapLabelValue}, ${bgmUrlValue}, ${bgmLabelValue}, ${verAddedValue}, ${verRemovedValue}, ${verUpdatedValue}, ${verGapsValue}, ${fgColorValue}, ${bgColorValue}, ${removedValue}, 0)`;
-                    }
-                    pool.query(worldsQuery, (err, _) => {
-                        if (err) return reject(err);
-                        const worldRowIdsQuery = `SELECT r.id FROM (SELECT id FROM worlds WHERE title IN ('${newWorldNames.map(w => w.replace(/'/g, "''")).join("', '")}') ORDER BY id DESC) r ORDER BY 1`;
-                        pool.query(worldRowIdsQuery, (err, rows) => {
-                            if (err) return reject(err);
-                            for (let r in rows)
-                                newWorldsByName[newWorldNames[r]].id = rows[r].id;
-                            insertCallback();
-                        });
-                    });
-                } else
-                    insertCallback();
-            });
-        }).catch(err => reject(err));
-    });
-}
-
-function getBaseWorldData(worlds) {
-    return new Promise((resolve, reject) => {
-        const pageIds = Object.keys(worlds);
-        superagent.get(apiUrl)
-            .query({ action: 'query', pageids: pageIds.join("|"), prop: "categories", cllimit: 100, format: "json" })
-            .end((err, res) => {
+        setUpdateTask('fetchConnData');
+        superagent.get('https://wrapper.yume.wiki/connections?game=2kki', (err, res) => {
             if (err) return reject(err);
-            const query = JSON.parse(res.text).query;
-            if (!query)
-                reject("Query results are empty");
-            worlds = query.pages;
-            const getWorldsBaseWorldData = [];
-            for (let pageId of pageIds)
-                getWorldsBaseWorldData.push(getWorldBaseWorldData(worlds, parseInt(pageId)).catch(err => { }));
-            Promise.allSettled(getWorldsBaseWorldData).finally(() => resolve(worlds));
+            const connData = JSON.parse(res.text);
+            
+            for (let conn of connData) {
+                if (worldDataByName[conn.origin] && !conn.isRemoved)
+                    worldDataByName[conn.origin].connections.push(parseWorldConn(conn));
+            }
+
+            resolve();
         });
     });
 }
 
-function getWorldBaseWorldData(worlds, pageId) {
-    return new Promise((resolve, reject) => {
-        let world = worlds[parseInt(pageId)];
-        const categories = world.categories;
-        let skip = false;
-        if (world.title.indexOf("Board Thread") > -1 || world.title === "Dream Worlds")
-            skip = true;
-        else if (categories)
-            world.removed = !!categories.find(c => c.title ===  "Category:Removed Content");
-        else
-            skip = true;
-        if (skip) {
-            delete worlds[pageId];
-            return reject(`World ${world.title} was removed`);
+function parseWorldConn(conn) {
+    const ret = {
+        location: conn.destination,
+        type: 0,
+        typeParams: {}
+    };
+
+    for (let attr of conn.attributes) {
+        switch (attr) {
+            case "No Return":
+                ret.type |= ConnType.ONE_WAY;
+                break;
+            case "No Entry":
+                ret.type |= ConnType.NO_ENTRY;
+                break;
+            case "Unlockable":
+                ret.type |= ConnType.UNLOCK;
+                break;
+            case "Locked":
+                ret.type |= ConnType.LOCKED;
+                break;
+            case "Conditional":
+                ret.type |= ConnType.LOCKED_CONDITION;
+                let conditionText = conn.unlockCondition.replace(/^Require(s|d) (to )?/, "").replace(/\.$/, "");
+                conditionText = conditionText.substring(0, 1).toUpperCase() + conditionText.slice(1);
+                ret.typeParams[ConnType.LOCKED_CONDITION] = { params: conditionText };
+                break;
+            case "Shortcut":
+                ret.type |= ConnType.SHORTCUT;
+                break;
+            case "Exit Point":
+                ret.type |= ConnType.EXIT_POINT;
+                break;
+            case "Dead End":
+                ret.type |= ConnType.DEAD_END;
+                break;
+            case "Needs Effect":
+                ret.type |= ConnType.EFFECT;
+                ret.typeParams[ConnType.EFFECT] = { params: conn.effectsNeeded.join(',') };
+                break;
+            case "Chance":
+                ret.type |= ConnType.CHANCE;
+                // TODO: Implement chanceDescription
+                ret.typeParams[ConnType.CHANCE] = { params: conn.chancePercentage };
+                break;
+            case "Seasonal":
+                ret.type |= ConnType.SEASONAL;
+                const connSeason = conn.seasonAvailable;
+                let connSeasonJP;
+                switch (conn.seasonAvailable) {
+                    case "Spring":
+                        connSeasonJP = "春";
+                        break;
+                    case "Summer":
+                        connSeasonJP = "夏";
+                        break;
+                    case "Fall":
+                        connSeasonJP = "秋";
+                        break;
+                    case "Winter":
+                        connSeasonJP = "冬";
+                        break;
+                }
+                ret.typeParams[ConnType.SEASONAL] = { params: connSeason, paramsJP: connSeasonJP };
+                break;
         }
-        delete world.pageid;
-        delete world.categories;
-        delete world.ns;
-        getWorldInfo(world.title).then(worldInfo => {
-            world = _.extend(world, worldInfo);
-            worlds[pageId] = world;
-            resolve();
-        }).catch(err => reject(err));
-    });
+    }
+
+    return ret;
 }
 
 function updateWorldInfo(pool, world) {
     return new Promise((resolve, reject) => {
         const titleJPValue = world.titleJP ? `'${world.titleJP}'` : 'NULL';
         const authorValue = world.author ? `'${world.author}'` : 'NULL';
-        const mapUrlValue = world.mapUrl ? `'${world.mapUrl}'` : 'NULL';
+        const mapUrlValue = world.mapUrl ? `'${world.mapUrl.replace(/'/g, "''")}'` : 'NULL';
         const mapLabelValue = world.mapLabel ? `'${world.mapLabel.replace(/'/g, "''")}'` : 'NULL';
-        const bgmUrlValue = world.bgmUrl ? `'${world.bgmUrl}'` : 'NULL';
+        const bgmUrlValue = world.bgmUrl ? `'${world.bgmUrl.replace(/'/g, "''")}'` : 'NULL';
         const bgmLabelValue = world.bgmLabel ? `'${world.bgmLabel.replace(/'/g, "''")}'` : 'NULL';
         const verAddedValue = world.verAdded ? `'${world.verAdded}'` : 'NULL';
         const verRemovedValue = world.verRemoved ? `'${world.verRemoved}'` : 'NULL';
@@ -1024,8 +981,82 @@ function updateWorldInfo(pool, world) {
     });
 }
 
+function updateWorlds(pool, worldData) {
+    const newWorldsByName = _.keyBy(Object.values(worldData), w => w.title);
+    const updatedWorlds = [];
+    const worldNames = Object.keys(newWorldsByName);
+
+    return new Promise((resolve, reject) => {
+        setUpdateTask('updateWorldData');
+        pool.query('SELECT id, title, titleJP, author, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, fgColor, bgColor, removed FROM worlds', (err, rows) => {
+            if (err) return reject(err);
+            for (let row of rows) {
+                const worldName = row.title;
+                if (worldNames.indexOf(worldName) > -1) {
+                    const world = newWorldsByName[worldName];
+                    world.id = row.id;
+                    if (row.titleJP !== world.titleJP || row.author !== world.author || row.filename !== world.filename ||
+                        row.mapUrl !== world.mapUrl || row.mapLabel !== world.mapLabel ||
+                        row.bgmUrl !== world.bgmUrl || row.bgmLabel !== world.bgmLabel ||
+                        row.verAdded !== world.verAdded || row.verRemoved !== world.verRemoved ||
+                        row.verUpdated !== world.verUpdated || row.verGaps !== world.verGaps ||
+                        row.fgColor !== world.fgColor || row.bgColor !== world.bgColor || row.removed !== world.removed)
+                        updatedWorlds.push(world);
+                }
+                delete newWorldsByName[worldName];
+            }
+            const insertCallback = function() {
+                if (updatedWorlds.length) {
+                    const updateWorlds = [];
+                    for (let updatedWorld of updatedWorlds)
+                        updateWorlds.push(updateWorldInfo(pool, updatedWorld).catch(err => console.error(err)));
+                    Promise.allSettled(updateWorlds).finally(() => resolve());
+                } else
+                    resolve();
+            };
+            const newWorldNames = Object.keys(newWorldsByName);
+            if (newWorldNames.length) {
+                let i = 0;
+                let worldsQuery = 'INSERT INTO worlds (title, titleJP, author, depth, minDepth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, fgColor, bgColor, removed, secret) VALUES ';
+                for (const w in newWorldsByName) {
+                    const newWorld = newWorldsByName[w];
+                    if (i++)
+                        worldsQuery += ", ";
+                    const title = newWorld.title.replace(/'/g, "''");
+                    const titleJPValue = newWorld.titleJP ? `'${newWorld.titleJP}'` : 'NULL';
+                    const authorValue = newWorld.author ? `'${newWorld.author}'` : 'NULL';
+                    const mapUrlValue = newWorld.mapUrl ? `'${newWorld.mapUrl.replace(/'/g, "''")}'` : 'NULL';
+                    const mapLabelValue = newWorld.mapLabel ? `'${newWorld.mapLabel.replace(/'/g, "''")}'` : 'NULL';
+                    const bgmUrlValue = newWorld.bgmUrl ? `'${newWorld.bgmUrl.replace(/'/g, "''")}'` : 'NULL';
+                    const bgmLabelValue = newWorld.bgmLabel ? `'${newWorld.bgmLabel.replace(/'/g, "''")}'` : 'NULL';
+                    const verAddedValue = newWorld.verAdded ? `'${newWorld.verAdded}'` : 'NULL';
+                    const verRemovedValue = newWorld.verRemoved ? `'${newWorld.verRemoved}'` : 'NULL';
+                    const verUpdatedValue = newWorld.verUpdated ? `'${newWorld.verUpdated}'` : 'NULL';
+                    const verGapsValue = newWorld.verGaps ? `'${newWorld.verGaps}'` : 'NULL';
+                    const fgColorValue = newWorld.fgColor ? `'${newWorld.fgColor}'` : 'NULL';
+                    const bgColorValue = newWorld.bgColor ? `'${newWorld.bgColor}'` : 'NULL';
+                    const removedValue = newWorld.removed ? '1' : '0';
+                    worldsQuery += `('${title}', ${titleJPValue}, ${authorValue}, 0, 0, '${newWorld.filename.replace(/'/g, "''")}', ${mapUrlValue}, ${mapLabelValue}, ${bgmUrlValue}, ${bgmLabelValue}, ${verAddedValue}, ${verRemovedValue}, ${verUpdatedValue}, ${verGapsValue}, ${fgColorValue}, ${bgColorValue}, ${removedValue}, 0)`;
+                }
+                pool.query(worldsQuery, (err, _) => {
+                    if (err) return reject(err);
+                    const worldRowIdsQuery = `SELECT r.id FROM (SELECT id FROM worlds WHERE title IN ('${newWorldNames.map(w => w.replace(/'/g, "''")).join("', '")}') ORDER BY id DESC) r ORDER BY 1`;
+                    pool.query(worldRowIdsQuery, (err, rows) => {
+                        if (err) return reject(err);
+                        for (let r in rows)
+                            newWorldsByName[newWorldNames[r]].id = rows[r].id;
+                        insertCallback();
+                    });
+                });
+            } else
+                insertCallback();
+        });
+    });
+}
+
 function updateConns(pool, worldDataByName) {
     return new Promise((resolve, reject) => {
+        setUpdateTask('updateConns');
         const newConnsByKey = {};
         const existingUpdatedConns = [];
         const removedConnIds = [];
@@ -1144,6 +1175,7 @@ function updateConnTypeParams(pool, worldData) {
     const updatedConnTypeParams = [];
     const removedConnTypeParamIds = [];
     return new Promise((resolve, reject) => {
+        setUpdateTask('updateConnTypeParams');
         pool.query('SELECT id, connId, type, params, paramsJP FROM conn_type_params', (err, rows) => {
             if (err) return reject(err);
             for (let row of rows) {
@@ -1232,6 +1264,7 @@ function deleteRemovedConnTypeParams(pool, removedConnTypeParamIds) {
 function updateWorldImages(pool, worldData, updatedWorldNames) {
     return new Promise((resolve, reject) => {
         getAllWorldImageData(worldData, updatedWorldNames).then(worldImageData => {
+            setUpdateTask('updateWorldImageData');
             pool.query('SELECT wi.id, wi.worldId, w.title, wi.filename, wi.ordinal FROM world_images wi JOIN worlds w ON w.id = wi.worldId', (err, rows) => {
                 if (err) return reject(err);
                 const worldImageDataByWorldImageId = _.keyBy(worldImageData, wi => `${wi.worldId}_${wi.filename}`);
@@ -1301,77 +1334,42 @@ function updateWorldImages(pool, worldData, updatedWorldNames) {
 }
 
 function getAllWorldImageData(worldData, updatedWorldNames) {
+    const worldDataByName = _.keyBy(worldData, w => w.title);
     return new Promise((resolve) => {
-        const worldImageData = [];
-        const downscaleSuffix = `/revision/latest/scale-to-width-down/${worldImageWidthThreshold}`;
+        setUpdateTask('fetchWorldImageData');
+        superagent.get('https://wrapper.yume.wiki/images?game=2kki', (err, res) => {
+            if (err) return reject(err);
+            const worldImageData = [];
+            const data = JSON.parse(res.text);
 
-        const getAndPushWorldImageData = worldData.filter(w => !updatedWorldNames || updatedWorldNames.indexOf(w.title) > -1).map(w => getWorldImageUrls(w.title).then(urls => {
-            let i = 0;
-            for (let url of urls) {
-                const checkUrl = url.endsWith(downscaleSuffix) ? url.slice(0, downscaleSuffix.length * -1) : url;
-                if (checkUrl !== (w.filename.indexOf('|') === -1 ? w.filename : w.filename.slice(w.filename.indexOf('|') + 1)))
+            for (let location of data) {
+                if (updatedWorldNames && updatedWorldNames.indexOf(location.title) === -1)
+                    continue;
+                const world = worldDataByName[location.title];
+                if (!world)
+                    continue;
+                let i = 0;
+                for (let locationImage of location.images) {
+                    let filename = world.filename;
+                    if (filename.indexOf('|') > -1)
+                        filename = filename.slice(filename.indexOf('|') + 1);
+                    if (locationImage.url === filename)
+                        continue;
+                    const aspectRatio = locationImage.width / locationImage.height;
+                    if (aspectRatio < 1.25 || aspectRatio > 1.4)
+                        continue;
+                    
                     worldImageData.push({
-                        worldId: w.id,
+                        worldId: worldDataByName[location.title].id,
                         ordinal: ++i,
-                        filename: url
+                        filename: locationImage.url
                     });
-            }
-        }).catch(err => console.error(err)));
-
-        Promise.allSettled(getAndPushWorldImageData).finally(() => resolve(worldImageData));
-    });
-}
-
-function getWorldImageUrls(worldTitle) {
-    return new Promise((resolve, reject) => {
-        const query = { action: 'query', titles: worldTitle, prop: 'images', imlimit: 50, format: 'json' };
-        superagent.get(apiUrl)
-            .query(query)
-            .end((err, res) => {
-                if (err) return reject(err);
-                const ret = [];
-                const data = JSON.parse(res.text);
-                const pages = data.query.pages;
-                const images = pages[Object.keys(pages)[0]].images;
-                const getAndSetWorldImageUrls = [];
-                for (let i in images) {
-                    const index = i;
-                    ret.push(null);
-                    getAndSetWorldImageUrls.push(getWorldImageInfo(images[i].title).then(imageInfo => {
-                        const aspectRatio = imageInfo.width / imageInfo.height;
-                        if (aspectRatio >= 1.25 && aspectRatio <= 1.4)
-                            ret[index] = imageInfo.url;
-                    }).catch(err => console.error(err)));
                 }
-                Promise.allSettled(getAndSetWorldImageUrls).finally(() => resolve(ret.filter(url => url)));
-            });
-        });
-}
+            }
 
-function getWorldImageInfo(imageTitle) {
-    return new Promise((resolve, reject) => {
-        const query = { action: 'query', titles: imageTitle, prop: 'imageinfo', iiprop: 'url|size', format: 'json' };
-        superagent.get(apiUrl)
-            .query(query)
-            .end((err, res) => {
-                if (err) return reject(err);
-                const revisionText = "/revision/latest";
-                const data = JSON.parse(res.text);
-                const pages = data.query.pages;
-                const imageInfo = pages[Object.keys(pages)[0]].imageinfo[0];
-                const fullUrl = imageInfo.url;
-                const revisionIndex = fullUrl.indexOf(revisionText);
-                if (revisionIndex === -1)
-                    reject();
-                const exceedsWidthThreshold = imageInfo.width > worldImageWidthThreshold;
-                const widthLimitString = exceedsWidthThreshold ? `/scale-to-width-down/${worldImageWidthThreshold}` : '';
-                resolve({
-                    width: imageInfo.width,
-                    height: imageInfo.height,
-                    url: `${fullUrl.slice(0, revisionIndex + (exceedsWidthThreshold ? revisionText.length : 0))}${widthLimitString}`
-                });
-            });
+            resolve(worldImageData);
         });
+    });
 }
 
 function updateWorldImage(pool, worldImage) {
@@ -1405,6 +1403,8 @@ function deleteRemovedWorldImages(pool, removedWorldImageIds) {
 
 function updateWorldDepths(pool, worldData) {
     return new Promise((resolve, reject) => {
+        setUpdateTask('updateWorldDepths');
+
         const depthMap = {};
         const minDepthMap = {};
 
@@ -1542,6 +1542,7 @@ function updateWorldsOfDepth(pool, depth, worlds, isMinDepth) {
 
 function deleteRemovedWorlds(pool) {
     return new Promise((resolve, reject) => {
+        setUpdateTask('cleanupWorldData');
         pool.query('DELETE w FROM worlds w WHERE NOT EXISTS(SELECT c.id FROM conns c WHERE w.id IN (c.sourceId, c.targetId))', (err, _) => {
             if (err) return reject(err);
             resolve();
@@ -1620,9 +1621,11 @@ function updateMapData(pool, worldData) {
 function getMapData(worldData, url) {
     const root = !url;
     if (root)
-        url = 'https://yume2kki.fandom.com/wiki/Map_IDs/0000-0400';
+        url = 'https://yume.wiki/2kki/Map_IDs/0000-0400';
 
     return new Promise((resolve, reject) => {
+        if (root)
+            setUpdateTask('fetchMapData');
         superagent.get(url, function (err, res) {
             if (err) return reject(err);
             if (root)
@@ -1640,7 +1643,7 @@ function getMapData(worldData, url) {
                     const map = {};
                     map.mapId = m[0].slice(0, 4);
                     m[2].split('<br />').map(w => {
-                        const worldNameStartIndex = w.indexOf('<a href="/wiki/') + 15;
+                        const worldNameStartIndex = w.indexOf('<a href="/2kki/') + 15;
                         if (worldNameStartIndex > -1) {
                             const worldNameEndIndex = w.indexOf('"', worldNameStartIndex);
                             const worldName = sanitizeWorldName(w.slice(worldNameStartIndex, worldNameEndIndex));
@@ -1657,7 +1660,7 @@ function getMapData(worldData, url) {
             if (root)
             {
                 const getTabMapData = [];
-                let cursor = res.text.indexOf('<a href="/wiki/Map_IDs/') + 23;
+                let cursor = res.text.indexOf('<a href="/2kki/Map_IDs/') + 23;
 
                 while (cursor >= 23) {
                     const tabUrl = `${url.slice(0, -9)}${sliceHtml(res.text, cursor, res.text.indexOf('"', cursor))}`;
@@ -1665,7 +1668,7 @@ function getMapData(worldData, url) {
                         getTabMapData.push(getMapData(worldData, tabUrl)
                             .then(tabMapData => tabMapData.forEach(map => mapData.push(map)))
                             .catch(err => console.error(err)));
-                    cursor = res.text.indexOf('<a href="/wiki/Map_IDs/', cursor) + 23;
+                    cursor = res.text.indexOf('<a href="/2kki/Map_IDs/', cursor) + 23;
                 }
 
                 if (getTabMapData.length)
@@ -1680,6 +1683,7 @@ function getMapData(worldData, url) {
 
 function updateMaps(pool, mapData) {
     return new Promise((resolve, reject) => {
+        setUpdateTask('updateMapData');
         pool.query('SELECT id, mapId, width, height FROM maps', (err, rows) => {
             if (err) return reject(err);
             const mapDataByMapId = _.keyBy(mapData, m => m.mapId);
@@ -1797,7 +1801,8 @@ function updateAuthorInfoData(pool) {
 
 function getAuthorInfoWikiData() {
     return new Promise((resolve, reject) => {
-        superagent.get('https://yume2kki.fandom.com/wiki/Authors', function (err, res) {
+        setUpdateTask('fetchAuthorInfoData');
+        superagent.get('https://yume.wiki/2kki/Authors', function (err, res) {
             if (err) return reject(err);
             const authorSectionsHtml = res.text.split('data-jp-name="');
             const authorInfo = [];
@@ -1826,6 +1831,7 @@ function getAuthorInfoWikiData() {
 
 function updateAuthorInfo(pool, authorInfo) {
     return new Promise((resolve, reject) => {
+        setUpdateTask('updateAuthorInfoData');
         pool.query('SELECT id, name, nameJP FROM author_info', (err, rows) => {
             if (err) return reject(err);
             const authorInfoByName = _.keyBy(authorInfo, a => a.name);
@@ -1927,9 +1933,11 @@ function updateVersionInfoData(pool) {
 function getVersionInfoWikiData(url) {
     const root = !url;
     if (root)
-        url = 'https://yume2kki.fandom.com/wiki/Version_History';
+        url = 'https://yume.wiki/2kki/Version_History';
     
     return new Promise((resolve, reject) => {
+        if (root)
+            setUpdateTask('fetchVersionInfoData');
         superagent.get(url, function (err, res) {
             if (err) return reject(err);
             const versionSectionsHtml = res.text.split('article-table');
@@ -1989,11 +1997,11 @@ function getVersionInfoWikiData(url) {
             if (root)
             {
                 const populateOldVersionInfo = [];
-                let cursor = versionSectionsHtml[0].indexOf('<a href="/wiki/Version_History/') + 30;
+                let cursor = versionSectionsHtml[0].indexOf('<a href="/2kki/Version_History/') + 30;
 
                 while (cursor >= 30) {
                     populateOldVersionInfo.push(getVersionInfoWikiData(`${url}${versionSectionsHtml[0].slice(cursor, versionSectionsHtml[0].indexOf('"', cursor))}`).then(oldVersionInfo => oldVersionInfo.forEach(vi => versionInfo.push(vi))).catch(err => console.error(err)));
-                    cursor = versionSectionsHtml[0].indexOf('<a href="/wiki/Version_History/', cursor) + 30;
+                    cursor = versionSectionsHtml[0].indexOf('<a href="/2kki/Version_History/', cursor) + 30;
                 }
 
                 if (populateOldVersionInfo.length)
@@ -2008,6 +2016,7 @@ function getVersionInfoWikiData(url) {
 
 function updateVersionInfo(pool, versionInfo) {
     return new Promise((resolve, reject) => {
+        setUpdateTask('updateVersionInfoData');
         pool.query('SELECT id, name, authors, releaseDate FROM version_info', (err, rows) => {
             if (err) return reject(err);
             const versionInfoByName = _.keyBy(versionInfo, a => a.name);
@@ -2104,6 +2113,7 @@ function deleteRemovedVersionInfo(pool, removedVersionInfoIds) {
 function updateEffectData(pool, worldData) {
     return new Promise((resolve, reject) => {
         getEffectWikiData(worldData).then(effectData => {
+            setUpdateTask('updateEffectData');
             pool.query('SELECT id, name, nameJP, worldId, ordinal, filename, method, methodJP FROM effects', (err, rows) => {
                 if (err) return reject(err);
                 const effectDataByName = _.keyBy(effectData, e => e.name);
@@ -2177,7 +2187,8 @@ function updateEffectData(pool, worldData) {
 
 function getEffectWikiData(worldData) {
     return new Promise((resolve, reject) => {
-        superagent.get('https://yume2kki.fandom.com/wiki/Effects', function (err, res) {
+        setUpdateTask('fetchEffectData');
+        superagent.get('https://yume.wiki/2kki/Effects', function (err, res) {
             if (err) return reject(err);
             const effectSectionsHtml = res.text.split('<h3>');
             const effectData = [];
@@ -2192,15 +2203,15 @@ function getEffectWikiData(worldData) {
                 const effectName = nameMatch[1];
                 if (effectName === 'Instructions')
                     break;
-                const filenameMatch = /(https:\/\/static.wikia.nocookie.net\/yume2kki\/images\/.*?)\/revision\/latest/.exec(section);
+                const filenameMatch = /(\/images\/.*?\.png)"/i.exec(section);
                 if (!filenameMatch)
                     continue;
-                const filename = filenameMatch[1];
+                const filename = `https://yume.wiki${filenameMatch[1]}`;
                 const nameJPMatch = /（([^）]+)）/.exec(section);
                 const effectNameJP = nameJPMatch ? nameJPMatch[1] : null;
                 const methodMatch = /<b>Location:<\/b>(.*)/.exec(section);
                 const method = methodMatch ? methodMatch[1].replace(/&#160;/, ' ').trim() : null;
-                const worldNameMatch = method ? /<a .*?href="\/wiki\/([^"]+)"/.exec(method) : null;
+                const worldNameMatch = method ? /<a .*?href="\/2kki\/([^"]+)"/.exec(method) : null;
                 const worldName = worldNameMatch ? sanitizeWorldName(worldNameMatch[1]).trim() : null;
                 const worldMatches = worldName ? worldData.filter(w => w.title === worldName) : [];
                 const worldId = worldMatches.length ? worldMatches[0].id : null;
@@ -2216,6 +2227,7 @@ function getEffectWikiData(worldData) {
                 });
             }
 
+            setUpdateTask('fetchEffectDataJP');
             const addEffectDataJPMethods = effectData.filter(e => e.nameJP).map(e => addEffectDataJPMethod(e).catch(err => console.error(err)));
             Promise.allSettled(addEffectDataJPMethods).finally(() => resolve(effectData));
         });
@@ -2373,7 +2385,8 @@ function updateMenuThemeData(pool, worldData) {
 
 function getMenuThemeWikiData(worldData) {
     return new Promise((resolve, reject) => {
-        superagent.get('https://yume2kki.fandom.com/wiki/Menu_Themes', function (err, res) {
+        setUpdateTask('fetchMenuThemeData');
+        superagent.get('https://yume.wiki/2kki/Menu_Themes', function (err, res) {
             if (err) return reject(err);
             const worldDataByName = _.keyBy(worldData, w => w.title);
             const menuThemeTablesHtml = sliceHtml(res.text, res.text.indexOf('<table '), res.text.lastIndexOf('</table>'));
@@ -2381,12 +2394,16 @@ function getMenuThemeWikiData(worldData) {
             const rawMenuThemeData = [];
             let removedIndex = 999;
             for (let m = 0; m < menuThemeDataRows.length; m++) {
-                const ret = menuThemeDataRows[m].replace(/\n/g, '').split('</td><td>').slice(0, 4);
-                if (ret[3].indexOf('</table>') > -1 && m < menuThemeDataRows.length - 1) {
-                    removedIndex = m;
-                    m++;
+                const ret = menuThemeDataRows[m].replace(/\n/g, '').split(/<\/td><td(?:>| rowspan="\d">)/).slice(0, 4);
+                if (ret.length === 4) {
+                    if (ret[3].indexOf('</table>') > -1 && m < menuThemeDataRows.length - 1) {
+                        removedIndex = m;
+                        m++;
+                    }
+                    ret[3] = ret[3].slice(0, ret[3].indexOf('</td>'));
                 }
-                ret[3] = ret[3].slice(0, ret[3].indexOf('</td>'));
+                for (let r = ret.length; r < 4; r++)
+                    ret[r] = rawMenuThemeData[rawMenuThemeData.length - 1][r];
                 rawMenuThemeData.push(ret);
             }
             const menuThemeData = [];
@@ -2400,7 +2417,7 @@ function getMenuThemeWikiData(worldData) {
                     filename: null,
                     removed: m >= removedIndex
                 };
-                const worldNameStartIndex = data[1].indexOf('<a href="/wiki/') + 15;
+                const worldNameStartIndex = data[1].indexOf('<a href="/2kki/') + 15;
                 if (worldNameStartIndex > -1) {
                     const worldNameEndIndex = data[1].indexOf('"', worldNameStartIndex);
                     const worldName = sanitizeWorldName(data[1].slice(worldNameStartIndex, worldNameEndIndex));
@@ -2413,7 +2430,7 @@ function getMenuThemeWikiData(worldData) {
                         ? data[3].indexOf(' data-src="', locationImageIndex) + 11
                         : data[3].indexOf(' src="', locationImageIndex) + 6;
                     const locationImageUrl = data[3].slice(locationImageSrcIndex, data[3].indexOf('"', locationImageSrcIndex));
-                    location.filename = locationImageUrl.slice(0, locationImageUrl.indexOf("/", locationImageUrl.lastIndexOf(".")));
+                    location.filename = `https://yume.wiki${locationImageUrl.slice(0, locationImageUrl.lastIndexOf("/")).replace('thumb/', '')}`;
                 }
 
                 const keyWorldId = location.worldId != null ? location.worldId : '';
@@ -2439,7 +2456,7 @@ function getMenuThemeWikiData(worldData) {
                         const imageUrl = data[0].slice(imageSrcIndex, data[0].indexOf('"', imageSrcIndex));
                         menuTheme = {
                             menuThemeId: menuThemeId,
-                            filename: imageUrl.slice(0, imageUrl.indexOf("/", imageUrl.lastIndexOf("."))),
+                            filename: `https://yume.wiki${imageUrl}`,
                             locations: []
                         };
                         menuThemeData.push(menuTheme);
@@ -2495,6 +2512,7 @@ function addMenuThemeDataJPMethods(menuThemeData, removed) {
 
 function updateMenuThemes(pool, menuThemeData) {
     return new Promise((resolve, reject) => {
+        setUpdateTask('updateMenuThemeData');
         pool.query('SELECT id, menuThemeId, filename FROM menu_themes', (err, rows) => {
             if (err) return reject(err);
             const menuThemeDataByMenuThemeId = _.keyBy(menuThemeData, m => m.menuThemeId);
@@ -2616,6 +2634,7 @@ function deleteRemovedMenuThemeLocations(pool, removedMenuThemeLocationIds) {
 function updateWallpaperData(pool, worldData) {
     return new Promise((resolve, reject) => {
         getWallpaperWikiData(worldData).then(wallpaperData => {
+            setUpdateTask('updateWallpaperData');
             pool.query('SELECT id, wallpaperId, name, nameJP, worldId, filename, method, methodJP, removed FROM wallpapers', (err, rows) => {
                 if (err) return reject(err);
                 const wallpaperDataByWpId = _.keyBy(wallpaperData, wp => wp.wallpaperId);
@@ -2691,23 +2710,24 @@ function updateWallpaperData(pool, worldData) {
 
 function getWallpaperWikiData(worldData) {
     return new Promise((resolve, reject) => {
-        superagent.get('https://yume2kki.fandom.com/wiki/Wallpaper_Guide', function (err, res) {
+        setUpdateTask('fetchWallpaperData');
+        superagent.get('https://yume.wiki/2kki/Wallpaper_Guide', function (err, res) {
             if (err) return reject(err);
             const specHtml = sliceHtml(res.text, res.text.indexOf('id="Specifications"'), res.text.indexOf('id="Removed_or_modified_wallpapers"'));
-            const wallpaperSectionsHtml = res.text.split('"wikia-gallery-item"');
-            const wallpaperRegex = /<img .*?src="(.*?)\/revision\/latest[^"]+".*?#(\d+)(?: \- "([^"]+)"|<\/b>).*? \- (.*?)<\/div>/;
-            const removedWallpaperRegex = /<img .*?src="(.*?)\/revision\/latest[^"]+".*<b>.*?"(.*?)".*? \- (.*?[^#]+#(\d+).*?)<\/div>/;
+            const wallpaperSectionsHtml = res.text.split('"gallerybox"');
+            const wallpaperRegex = /<img .*?src="(\/images\/thumb\/.*?)\/\d+px\-.*?\.png".*?#(\d+)(?: \- "([^"]+)"|<\/b>).*? \- (.*?)<\/p>/i;
+            const removedWallpaperRegex = /<img .*?src="(\/images\/thumb\/.*?)\/\d+px\-.*?\.png".*?<b>.*?"(.*?)".*? \- (.*?[^#]+#(\d+).*?)<\/div>/i;
             const wallpaperData = [];
             let removedFlag = false;
 
             for (let wp = 1; wp < wallpaperSectionsHtml.length - 1; wp++) {
-                const section = wallpaperSectionsHtml[wp];
+                const section = wallpaperSectionsHtml[wp].replace(/\n/g, '');
+                let wallpaperId;
                 let name = null;
                 let filename;
                 let method;
                 const removed = removedFlag;
                 if (!removed) {
-                    
                     if (section.indexOf('id="Removed_or_modified_wallpapers"') > 1)
                         removedFlag = true;
                     
@@ -2717,7 +2737,7 @@ function getWallpaperWikiData(worldData) {
                     
                     wallpaperId = parseInt(wallpaperMatch[2]);
                     name = wallpaperMatch[3] ? wallpaperMatch[3].trim() : null;
-                    filename = wallpaperMatch[1];
+                    filename = `https://yume.wiki${wallpaperMatch[1].replace('/thumb', '')}`;
                     method = wallpaperMatch[4].trim();
                 } else {
                     const removedWallpaperMatch = removedWallpaperRegex.exec(section);
@@ -2726,11 +2746,11 @@ function getWallpaperWikiData(worldData) {
 
                     wallpaperId = parseInt(removedWallpaperMatch[4]) + 1000;
                     name = removedWallpaperMatch[2];
-                    filename = removedWallpaperMatch[1];
+                    filename = `https://yume.wiki${removedWallpaperMatch[1].replace('/thumb', '')}`;
                     method = removedWallpaperMatch[3].replace(/<a id="notetext\_.*?<\/a>/g, '').trim();
                 }
 
-                const worldLinkRegex = /"\/wiki\/([^"]+)"/g;
+                const worldLinkRegex = /"\/2kki\/([^"]+)"/g;
                 let worldLinkMatch;
                 let worldId = null;
 
@@ -2831,6 +2851,7 @@ function deleteRemovedWallpapers(pool, removedWallpaperIds) {
 function updateBgmTrackData(pool, worldData) {
     return new Promise((resolve, reject) => {
         getBgmTrackWikiData(worldData).then(bgmTrackData => {
+            setUpdateTask('updateBgmTrackData');
             pool.query('SELECT id, trackNo, variant, name, location, locationJP, worldId, url, notes, notesJP, removed FROM bgm_tracks', (err, rows) => {
                 if (err) return reject(err);
                 const bgmTrackDataByTrackId = _.keyBy(bgmTrackData, t => `${t.trackNo}${t.variant}`);
@@ -2875,7 +2896,7 @@ function updateBgmTrackData(pool, worldData) {
                             const location = newBgmTrack.location ? `'${newBgmTrack.location.replace(/'/g, "''").replace(/&#160;/, ' ')}'` : 'NULL';
                             const locationJP = newBgmTrack.locationJP ? `'${newBgmTrack.locationJP}'` : 'NULL';
                             const worldId = newBgmTrack.worldId != null ? `${newBgmTrack.worldId}` : 'NULL';
-                            const url = newBgmTrack.url ? `'${newBgmTrack.url}'` : 'NULL';
+                            const url = newBgmTrack.url ? `'${newBgmTrack.url.replace(/'/g, "''")}'` : 'NULL';
                             const notes = newBgmTrack.notes ? `'${newBgmTrack.notes.replace(/'/g, "''")}'` : 'NULL';
                             const notesJP = newBgmTrack.notesJP ? `'${newBgmTrack.notesJP}'` : 'NULL';
                             const removed = newBgmTrack.removed ? '1' : '0';
@@ -2908,9 +2929,11 @@ function updateBgmTrackData(pool, worldData) {
 function getBgmTrackWikiData(worldData, url) {
     const root = !url;
     if (root)
-        url = 'https://yume2kki.fandom.com/wiki/Soundtrack/001-100';
+        url = 'https://yume.wiki/2kki/Soundtrack/001-100';
         
     return new Promise((resolve, reject) => {
+        if (root)
+            setUpdateTask('fetchBgmTrackData');
         superagent.get(url, function (err, res) {
             if (err) return reject(err);
             const tableRowRegex = /<tr>[.\s\S]*?<\/tr>/g;
@@ -2919,7 +2942,7 @@ function getBgmTrackWikiData(worldData, url) {
             const unusedIndex = tablesHtml.indexOf('id="Unused_Tracks"');
             const bgmTrackRegexTrackNoPart = '<td>(\\d{3})(?: ([A-Z]))?<\\/td>';
             const bgmTrackRegexSkippableTextPart = '<td(?: colspan="\\d+")?(?: rowspan="(\\d+)")?(?: colspan="\\d+")?>(.*?)<\\/td>';
-            const bgmTrackRegexSkippableUrlPart = '<td(?: colspan="\\d+")?(?: rowspan="(\\d+)")?(?: colspan="\\d+")?>(?:<a href="([^"]+)"[^>]*>Listen<\\/a>)?<\\/td>';
+            const bgmTrackRegexSkippableUrlPart = '<td(?: colspan="\\d+")?(?: rowspan="(\\d+)")?(?: colspan="\\d+")?>(?:.*?<source src="(.*?)"[^>]*>)?.*?<\\/td>';
             const bgmTrackRegexSkippedPart = '()()';
             const bgmTrackRegexes = [];
             for (let f = 0; f < 32; f++) {
@@ -2984,7 +3007,7 @@ function getBgmTrackWikiData(worldData, url) {
                         if (location) {
                             let worldLinkMatch;
                                 
-                            const worldLinkRegex = /"\/wiki\/([^"#]+)(?:#[^"]+)?"/g;
+                            const worldLinkRegex = /"\/2kki\/([^"#]+)(?:#[^"]+)?"/g;
                             while ((worldLinkMatch = worldLinkRegex.exec(location))) {
                                 const worldName = sanitizeWorldName(worldLinkMatch[1]);
                                 const worldMatches = worldName ? worldData.filter(w => w.title === worldName) : [];
@@ -3005,6 +3028,8 @@ function getBgmTrackWikiData(worldData, url) {
                         urlColSkip--;
                     else {
                         bgmUrl = trackDataMatch[8] ? decodeURI(trackDataMatch[8]) : null;
+                        if (bgmUrl && bgmUrl.startsWith('/'))
+                            bgmUrl = `https://yume.wiki${bgmUrl}`;
                         if (newUrlColSkip)
                             urlColSkip = newUrlColSkip;
                     }
@@ -3046,7 +3071,7 @@ function getBgmTrackWikiData(worldData, url) {
             if (root)
             {
                 const getTabBgmTrackData = [];
-                let cursor = res.text.indexOf('<a href="/wiki/Soundtrack/') + 26;
+                let cursor = res.text.indexOf('<a href="/2kki/Soundtrack/') + 26;
                 while (cursor >= 26) {
                     const tabUrl = `${url.slice(0, url.lastIndexOf('/') + 1)}${sliceHtml(res.text, cursor, res.text.indexOf('"', cursor))}`;
                     if (tabUrl !== url) {
@@ -3054,12 +3079,12 @@ function getBgmTrackWikiData(worldData, url) {
                             .then(tabBgmTrackData => tabBgmTrackData.forEach(bgmTrack => bgmTrackData.push(bgmTrack)))
                             .catch(err => console.error(err)));
                     }
-                    cursor = res.text.indexOf('<a href="/wiki/Soundtrack/', cursor) + 26;
+                    cursor = res.text.indexOf('<a href="/2kki/Soundtrack/', cursor) + 26;
                 }
 
                 if (getTabBgmTrackData.length)
                     Promise.allSettled(getTabBgmTrackData).finally(() => {
-                        const updateIndirectBgmTrackUrls = bgmTrackData.filter(t => t.url && t.url.startsWith('/wiki/'))
+                        const updateIndirectBgmTrackUrls = bgmTrackData.filter(t => t.url && t.url.startsWith('/2kki/'))
                             .map(t => getIndirectBgmTrackUrl(t).then(u => t.url = u)
                                 .catch(err => {
                                     if (err)
@@ -3082,7 +3107,7 @@ function getBgmTrackWikiData(worldData, url) {
 
 function getIndirectBgmTrackUrl(bgmTrack) {
     return new Promise((resolve, reject) => {
-        const indirectUrlMatch = /\/wiki\/(File:.*)/.exec(bgmTrack.url);
+        const indirectUrlMatch = /\/2kki\/(File:.*)/.exec(bgmTrack.url);
         if (!indirectUrlMatch)
             reject();
         const query = { action: 'query', titles: indirectUrlMatch[1], prop: 'imageinfo', iiprop: 'url', format: 'json' };
@@ -3142,7 +3167,7 @@ function updateBgmTrack(pool, bgmTrack) {
         const location = bgmTrack.location ? `'${bgmTrack.location.replace(/'/g, "''")}'` : 'NULL';
         const locationJP = bgmTrack.locationJP ? `'${bgmTrack.locationJP}'` : 'NULL';
         const worldId = bgmTrack.worldId != null ? `${bgmTrack.worldId}` : 'NULL';
-        const url = bgmTrack.url ? `'${bgmTrack.url}'` : 'NULL';
+        const url = bgmTrack.url ? `'${bgmTrack.url.replace(/'/g, "''")}'` : 'NULL';
         const notes = bgmTrack.notes ? `'${bgmTrack.notes.replace(/'/g, "''")}'` : 'NULL';
         const notesJP = bgmTrack.notesJP ? `'${bgmTrack.notesJP}'` : 'NULL';
         const removed = bgmTrack.removed ? '1' : '0';
@@ -3170,300 +3195,20 @@ function deleteRemovedBgmTracks(pool, removedBgmTrackIds) {
     });
 }
 
-function getWorldInfo(worldName) {
-    return new Promise((resolve, reject) => {
-        superagent.get('https://yume2kki.fandom.com/wiki/' + encodeURI(worldName), function (err, res) {
-            if (err) return reject(err);
-            worldName = worldName.replace(/\_/g, ' ');
-            const html = res.text;
-            const imageUrlIndex = html.indexOf('<a href="https://static.wikia.nocookie.net') + 9;
-            const imageUrl = sliceHtml(html, imageUrlIndex, html.indexOf('"', imageUrlIndex));
-            const ext = imageUrl.slice(imageUrl.lastIndexOf("."), imageUrl.indexOf("/", imageUrl.lastIndexOf(".")));
-            let filename = imageUrl.slice(0, imageUrl.indexOf("/", imageUrl.lastIndexOf(".")));
-            if (!isRemote) {
-                const localFilename = `${worldName}${ext}`;
-                try {
-                    if (!fs.existsSync(`./public/images/worlds/${localFilename}`))
-                        downloadImage(imageUrl, localFilename);
-                } catch (err) {
-                    console.error(err)
-                }
-                filename = `${localFilename}|${filename}`;
-            }
-            const mapUrlAndLabel = getMapUrlAndLabel(html);
-            const bgmUrlAndLabel = getBgmUrlAndLabel(html);
-            const worldColors = getWorldColors(html);
-            resolve({
-                titleJP: getTitleJP(html),
-                connections: getConnections(html),
-                author: getAuthor(html),
-                filename: filename,
-                mapUrl: mapUrlAndLabel && mapUrlAndLabel.mapUrl,
-                mapLabel: mapUrlAndLabel && mapUrlAndLabel.mapLabel,
-                bgmUrl: bgmUrlAndLabel.bgmUrl,
-                bgmLabel: bgmUrlAndLabel.bgmLabel,
-                verAdded: getVerAdded(html),
-                verRemoved: getVerRemoved(html),
-                verUpdated: getVerUpdated(html),
-                verGaps: getVerGaps(html),
-                fgColor: worldColors.fgColor,
-                bgColor: worldColors.bgColor
-            });
-        });
-    });
-}
-
 function downloadImage(imageUrl, filename) {
-    options = {
-        url: imageUrl,
-        dest: 'public/images/worlds/' + filename
-    };
-    
-    download.image(options)
-        .then(({ filename, image }) => console.log('Saved to', filename))
-        .catch((err) => console.error(err));
-}
-
-function getTitleJP(html) {
-    const jpNameIndex = html.indexOf("data-jp-name=\"");
-    if (jpNameIndex === -1)
-        return null;
-    return sliceHtml(html, jpNameIndex + 14, html.indexOf("\"", jpNameIndex + 14));
-}
-
-function getAuthor(html) {
-    let authorLabelIndex = html.indexOf("<b>Author</b>");
-    if (authorLabelIndex === -1)
-        authorLabelIndex = html.indexOf("<b>Primary Author</b>");
-    if (authorLabelIndex === -1)
-        return null;
-    const authorIndex = html.indexOf(">", html.indexOf("<a ", authorLabelIndex)) + 1;
-    const ret = sliceHtml(html, authorIndex, html.indexOf("</a>", authorIndex));
-    if (ret === 'Author Unknown')
-        return null;
-    return ret;
-}
-
-function getMapUrlAndLabel(html) {
-    const mapUrls = [];
-    const mapLabels = [];
-    const revisionText = "/revision/latest";
-    let figureIndex = html.indexOf("<figure");
-    
-    while (figureIndex > -1) {
-        const figureHtml = sliceHtml(html, figureIndex, html.indexOf("</figure", figureIndex));
-        const figCaptionIndex = figureHtml.indexOf("<figcaption");
-        if (figCaptionIndex > -1) {
-            const captionIndex = figureHtml.indexOf("<p ", figCaptionIndex);
-            const labelIndex = figureHtml.indexOf(">", captionIndex) + 1;
-            const label = figureHtml.slice(labelIndex, figureHtml.indexOf("</p>", labelIndex));
-            if (/map/gi.test(label)) {
-                const urlIndex = figureHtml.indexOf("https://static.wikia.nocookie.net/");
-                if (urlIndex > -1) {
-                    const revisionIndex = figureHtml.indexOf(revisionText, urlIndex);
-                    if (revisionIndex > -1) {
-                        mapUrls.push(figureHtml.slice(urlIndex, revisionIndex));
-                        mapLabels.push(label);
-                    }
-                }
-            }
-        }
-        figureIndex = html.indexOf("<figure", figureIndex + 1);
-    }
-
-    return mapUrls.length ? { mapUrl: mapUrls.join("|"), mapLabel: mapLabels.join("|") } : null;
-}
-
-function getBgmUrlAndLabel(html) {
-    const bgmUrls = [];
-    const bgmLabels = [];
-    const revisionText = "/revision/latest";
-    const bgmIndex = html.indexOf("<b>BGM</b>");
-
-    if (bgmIndex > -1) {
-        const bgmSection = sliceHtml(html, html.indexOf("<p>", bgmIndex) + 3, html.indexOf("</p>", bgmIndex));
-        const bgmEntries = bgmSection.split(/<br *\/?>/g);
+    return new Promise((resolve, reject) => {
+        const options = {
+            url: imageUrl,
+            dest: 'public/images/worlds/' + filename
+        };
         
-        for (let entry of bgmEntries) {
-            let url = null;
-            let track = "";
-            let area = "";
-            const urlMatch = /https:\/\/(?:static\.wikia\.nocookie\.net|vignette[0-9]?\.wikia\.nocookie\.net|images\.wikia\.com)\//.exec(entry);
-            const urlIndex = urlMatch ? urlMatch.index : -1;
-            let areaIndex;
-            if (urlIndex > -1) {
-                const revisionIndex = entry.indexOf(revisionText, urlIndex);
-                const trackStartIndex = entry.indexOf(">", urlIndex) + 1;
-                const trackEndIndex = entry.indexOf("</a>", trackStartIndex);
-                url = revisionIndex > -1 ? entry.slice(urlIndex, revisionIndex) : entry.slice(urlIndex, entry.indexOf('"', urlIndex));
-                areaIndex = entry.indexOf("(", trackEndIndex + 1) + 1;
-                track = entry.slice(trackStartIndex, trackEndIndex).trim();
-            } else {
-                areaIndex = entry.indexOf("(") + 1;
-                track = (areaIndex ? entry.slice(0, areaIndex - 1) : entry).trim();
-            }
-            if (areaIndex)
-                area = entry.slice(areaIndex, entry.indexOf(")", areaIndex)).trim();
-            bgmUrls.push(url);
-            bgmLabels.push(`${track}^${area}`);
-        }
-    }
-
-    return bgmUrls.length ? { bgmUrl: bgmUrls.join("|"), bgmLabel: bgmLabels.join("|") } : null;
-}
-
-function getConnections(html) {
-    const ret = [];
-    html = sliceHtml(html, html.indexOf("<b>Connecting Areas</b>"), html.indexOf("<b>BGM</b>"));
-    const areas = html.split(/(?:<p>|<br \/>)<a href="/);
-    let removed = false;
-
-    if (areas.length > 1) {
-        for (let a = 0; a < areas.length; a++) {
-            const areaText = areas[a];
-            if (a) {
-                let connType = 0;
-                const urlIndex = areaText.indexOf("/wiki/") + 6;
-                let params = {};
-                if (areaText.indexOf(">NoReturn<") > -1)
-                    connType |= ConnType.ONE_WAY;
-                else if (areaText.indexOf(">NoEntry<") > -1)
-                    connType |= ConnType.NO_ENTRY;
-                if (areaText.indexOf(">Unlock<") > -1)
-                    connType |= ConnType.UNLOCK;
-                else if (areaText.indexOf(">Locked<") > -1)
-                    connType |= ConnType.LOCKED;
-                if (areaText.indexOf(">LockedCondition<") > -1) {
-                    connType |= ConnType.LOCKED_CONDITION;
-                    if (areaText.indexOf("data-lock-params=\"") > -1) {
-                        const paramsIndex = areaText.indexOf("data-lock-params=\"") + 18;
-                        let paramsText = decodeHtml(areaText.slice(paramsIndex, areaText.indexOf("\"", paramsIndex)));
-                        if (paramsText === "{{{3}}}")
-                            paramsText = "";
-                        else {
-                            paramsText = paramsText.replace(/^Require(s|d) (to )?/, "").replace(/\.$/, "");
-                            paramsText = paramsText.substring(0, 1).toUpperCase() + paramsText.slice(1);
-                        }
-                        if (paramsText) {
-                            params[ConnType.LOCKED_CONDITION] = { params: paramsText };
-                            if (areaText.indexOf("data-lock-params-jp=\"") > -1) {
-                                const paramsJPIndex = areaText.indexOf("data-lock-params-jp=\"") + 21;
-                                params[ConnType.LOCKED_CONDITION].paramsJP = decodeHtml(areaText.slice(paramsJPIndex, areaText.indexOf("\"", paramsJPIndex)));
-                            }
-                        }
-                    }
-                }
-                if (areaText.indexOf(">Shortcut<") > -1)
-                    connType |= ConnType.SHORTCUT;
-                else if (areaText.indexOf(">ExitPoint<") > -1)
-                    connType |= ConnType.EXIT_POINT;
-                if (areaText.indexOf(">DeadEnd<") > -1)
-                    connType |= ConnType.DEAD_END;
-                else if (areaText.indexOf(">Return<") > -1)
-                    connType |= ConnType.ISOLATED;
-                if (areaText.indexOf("✨") > -1) {
-                    connType |= ConnType.EFFECT;
-                    if (areaText.indexOf("data-effect-params=\"") > -1) {
-                        const paramsIndex = areaText.indexOf("data-effect-params=\"") + 20;
-                        params[ConnType.EFFECT] = { params: areaText.slice(paramsIndex, areaText.indexOf("\"", paramsIndex)).replace(/<br ?\/>|(?:,|;)(?: ?(?:and|or) )?| (?:and|or) /g, ",") };
-                    }
-                }
-                if (areaText.indexOf(">Chance<") > -1) {
-                    connType |= ConnType.CHANCE;
-                    if (areaText.indexOf("data-chance-params=\"") > -1) {
-                        const paramsIndex = areaText.indexOf("data-chance-params=\"") + 20;
-                        let paramsText = areaText.slice(paramsIndex, areaText.indexOf("\"", paramsIndex)).trim();
-                        if (paramsText.indexOf("%") > -1)
-                            paramsText = paramsText.slice(0, paramsText.indexOf("%"));
-                        if (/^[\d\.]+ ?(?:[\-\~]{1} ?[\d\.]+)?$/.test(paramsText))
-                            params[ConnType.CHANCE] = { params: paramsText + "%" };
-                    }
-                }
-                if (areaText.indexOf(">Seasonal<") > -1) {
-                    connType |= ConnType.SEASONAL;
-                    if (areaText.indexOf("data-season-params=\"") > -1) {
-                        const paramsIndex = areaText.indexOf("data-season-params=\"") + 20;
-                        let paramsText = areaText.slice(paramsIndex, areaText.indexOf("\"", paramsIndex)).trim();
-                        let paramsTextJP = null;
-                        if (/^(?:spring|summer|fall|autumn|winter)$/i.test(paramsText)) {
-                            paramsText = paramsText.substring(0, 1).toUpperCase() + paramsText.slice(1).toLowerCase();
-                            switch (paramsText) {
-                                case "Spring":
-                                    paramsTextJP = "春";
-                                    break;
-                                case "Summer":
-                                    paramsTextJP = "夏";
-                                    break;
-                                case "Autumn":
-                                    paramsText = "Fall";
-                                case "Fall":
-                                    paramsTextJP = "秋";
-                                    break;
-                                case "Winter":
-                                    paramsTextJP = "冬";
-                                    break;
-                            }
-                            params[ConnType.SEASONAL] = { params: paramsText, paramsJP: paramsTextJP };
-                        }
-                    }
-                }
-                if (removed)
-                    connType |= ConnType.INACCESSIBLE;
-                ret.push({
-                    location: unescape(decodeURI(areaText.slice(urlIndex, areaText.indexOf('"', urlIndex)).replace(/\_/g, " ").replace(/#.*/, ""))),
-                    type: connType,
-                    typeParams: params
-                });
-            }
-            if (!removed && areaText.indexOf("<b>Removed Connections</b>") > -1)
-                removed = true;
-        }
-    }
-    
-    return ret;
-}
-
-function getVerAdded(html) {
-    const verAddedIndex = html.indexOf("data-ver-added=\"");
-    if (verAddedIndex === -1)
-        return null;
-    const ret = sliceHtml(html, verAddedIndex + 16, html.indexOf("\"", verAddedIndex + 16));
-    return ret !== "x.x" ? ret : null;
-}
-
-function getVerRemoved(html) {
-    const verRemovedIndex = html.indexOf("data-ver-removed=\"");
-    if (verRemovedIndex === -1)
-        return null;
-    return sliceHtml(html, verRemovedIndex + 18, html.indexOf("\"", verRemovedIndex + 18));
-}
-
-function getVerUpdated(html) {
-    const verUpdatedIndex = html.indexOf("data-ver-updated=\"");
-    if (verUpdatedIndex === -1)
-        return null;
-    return versionUtils.validateVersionsUpdated(sliceHtml(html, verUpdatedIndex + 18, html.indexOf("\"", verUpdatedIndex + 18)).replace(/, +/g, ","));
-}
-
-function getVerGaps(html) {
-    const verGapsIndex = html.indexOf("data-ver-gaps=\"");
-    if (verGapsIndex === -1)
-        return null;
-    return versionUtils.validateVersionGaps(sliceHtml(html, verGapsIndex + 15, html.indexOf("\"", verGapsIndex + 15)).replace(/, +/g, ","));
-}
-
-function getWorldColors(html) {
-    const infoboxIndex = html.indexOf("infobox");
-    const fgColorIndex = html.indexOf(' color:', infoboxIndex) + 7;
-    const bgColorIndex = html.indexOf(' background-color:', infoboxIndex) + 18;
-    return {
-        fgColor: fgColorIndex > -1 ? sliceHtml(html, fgColorIndex, html.indexOf(';', fgColorIndex)) : null,
-        bgColor: bgColorIndex > -1 ? sliceHtml(html, bgColorIndex, html.indexOf(';', bgColorIndex)) : null
-    };
-}
-
-function decodeHtml(html) {
-    return html.replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(dec));
+        return download.image(options)
+            .then(({ filename }) => {
+                console.log('Saved to', filename);
+                resolve();
+            })
+            .catch((err) => reject(err));
+    });
 }
 
 if (isMainThread) {
@@ -3519,7 +3264,7 @@ if (isMainThread) {
 
 function getLocationPageContent(location) {
     return new Promise((resolve, reject) => {
-        const query = { action: 'query', titles: location, prop: 'revisions', rvslots: '*', rvprop: 'content', formatversion: 2, format: 'json' };
+        const query = { action: 'query', titles: `${apiTitlePrefix}${location}`, prop: 'revisions', rvslots: '*', rvprop: 'content', formatversion: 2, format: 'json' };
         superagent.get(apiUrl)
             .query(query)
             .end((err, res) => {
@@ -3535,7 +3280,7 @@ function updateLocationPageVersionInfo(request, entry, content, version, user, c
         const versionUpdatedContent = getVersionUpdatedLocationContent(entry, content);
         const data = {
             action: 'edit',
-            title: entry.location,
+            title: `${apiTitlePrefix}${entry.location}`,
             summary: `Yume 2kki Explorer admin update for version ${version} on behalf of ${user}`,
             minor: true,
             bot: true,
@@ -3695,6 +3440,20 @@ function dec(str) {
     for (let c = 0; c < str.length; c += 5)
         ret += String.fromCharCode(str.slice(c, c + 5));
     return ret;
+}
+
+function setUpdateTask(task) {
+    if (isMainThread) {
+        if (updateTaskStartTime)
+            console.log(`Task ${updateTask} took ${Math.floor(performance.now() - updateTaskStartTime)}ms`);
+        updateTask = task;
+        if (task) {
+            console.log(`Task ${updateTask} started`);
+            updateTaskStartTime = performance.now();
+        } else
+            updateTaskStartTime = null;
+    } else
+        parentPort.postMessage({ updateTask: task });
 }
 
 if (isMainThread) {
@@ -4016,10 +3775,11 @@ if (isMainThread) {
                         if (err)
                             reject(err);
                         if (rows && rows.length) {
+                            setUpdateTask('prepareWorldData');
                             getWorldData(pool, true).then(worldData => {
                                 getUpdatedWorldNames(worldData.map(w => w.title), rows[0].lastUpdate)
                                     .then(updatedWorldNames => populateWorldData(pool, worldData, updatedWorldNames).then(() => callback(true)))
-                                    .catch(err => reject(err)).catch(err => reject(err));
+                                    .catch(err => reject(err));
                                 }).catch(err => reject(err));
                         } else
                             callback(false);
@@ -4038,6 +3798,7 @@ if (isMainThread) {
                 };
 
                 if (reset === 'true') {
+                    setUpdateTask('prepareWorldData');
                     getWorldData(pool, true).then(worldData => {
                         updateMapData(pool, worldData).then(() => {
                             updateAuthorInfoData(pool).then(() => {
@@ -4064,6 +3825,7 @@ if (isMainThread) {
                         if (err)
                             reject(err);
                         if (rows && rows.length) {
+                            setUpdateTask('prepareWorldData');
                             getWorldData(pool, true).then(worldData => {
                                 checkUpdateMapData(pool, worldData, rows[0].lastUpdate).then(() => {
                                     checkUpdateAuthorInfoData(pool, rows[0].lastUpdate).then(() => {
@@ -4096,16 +3858,16 @@ if (isMainThread) {
         updateWorldData(value.reset).then(success => {
             if (success) {
                 updateMiscData(value.reset)
-                    .then(success => parentPort.postMessage(success))
+                    .then(success => parentPort.postMessage({ success: success }))
                     .catch(err => {
                         console.error(err);
-                        parentPort.postMessage(false);
+                        parentPort.postMessage({ success: false });
                     });
             } else
-                parentPort.postMessage(false);
+                parentPort.postMessage({ success: false });
         }).catch(err => {
             console.error(err);
-            parentPort.postMessage(false);
+            parentPort.postMessage({ success: false });
         });
     });
 }

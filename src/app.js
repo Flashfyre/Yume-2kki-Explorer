@@ -1360,6 +1360,8 @@ function closeModals() {
     }
 }
 
+let updateTask;
+
 export function loadData(update, onSuccess, onFail) {
     let queryString = '';
     if (config.removedContentMode === 1)
@@ -1375,14 +1377,16 @@ export function loadData(update, onSuccess, onFail) {
                     const pollTimer = setInterval(() => {
                         $.post('/pollUpdate').done(res => {
                             if (res.done) {
+                                updateTask = null;
                                 loadData();
                                 clearInterval(pollTimer)
-                            }
+                            } else if (res.task)
+                                updateTask = res.task;
                         }).fail(() => {
                             onFail();
                             clearInterval(pollTimer)
                         });
-                    }, 1200);
+                    }, 300);
                 }).fail(onFail);
         } else
             loadData();
@@ -1487,6 +1491,8 @@ let iconLabel;
 let raycaster, mousePos = { x: 0, y: 0 };
 
 let localizedConns;
+
+let localizedUpdateTasks;
 
 let effectsJP;
 
@@ -3835,7 +3841,7 @@ function initLocalization(isInitial) {
         callback: function (data, defaultCallback) {
             if (config.lang === 'ja' || config.lang === 'ru')
                 massageLocalizedValues(data, true);
-            data.footer.about = data.footer.about.replace("{VERSION}", "4.6.1");
+            data.footer.about = data.footer.about.replace("{VERSION}", "5.0.0");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             localizedSeparator = data.separator;
@@ -3844,6 +3850,7 @@ function initLocalization(isInitial) {
             localizedBraces = data.braces;
             localizedNA = data.na;
             localizedConns = data.conn;
+            localizedUpdateTasks = data.updateTask;
             if (worldData)
                 initContextMenu(data.contextMenu);
             localizedNodeLabel = getLocalizedNodeLabel(data.nodeLabel);
@@ -3988,8 +3995,6 @@ function getMassagedLocalizedValue(value, isUI) {
             if (isUI && value.indexOf(" ") > -1)
                 return value.split(/ +/g).map(v => `<span class="jp-word-break">${v}</span>`).join("");
             break;
-        case "ru":
-            return value.replace(/([\u0400-\u04FF]+)/g, '<span class="ru-spacing-fix">$1</span>');
     }
     return value;
 }
@@ -4217,7 +4222,7 @@ function initContextMenu(localizedContextMenu) {
 function openWorldWikiPage(worldId, newWindow) {
     const world = worldData[worldId];
     window.open(!world.titleJP || world.removed || getLangUsesEn(config.lang)
-        ? 'https://yume2kki.fandom.com/wiki/' + world.title
+        ? 'https://yume.wiki/2kki/' + world.title
         : ('https://wikiwiki.jp/yume2kki-t/' + (world.titleJP.indexOf("：") > -1 ? world.titleJP.slice(0, world.titleJP.indexOf("：")) : world.titleJP)),
         "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
 }
@@ -5347,13 +5352,15 @@ function displayLoadingAnim($container) {
         const loadingTextSpaceChar = getLangUsesEn(config.lang) ? " " : "　";
         for (let i = 0; i < 3; i++)
             loadingTextAppend += i < loadingFrameCount ? loadingTextAppendChar : loadingTextSpaceChar;
+        if (updateTask && localizedUpdateTasks)
+            $loadingContainer.find(".loading-container__text__main").text(localizedUpdateTasks[updateTask]);
         $loadingContainer.find(".loading-container__text__append").text(loadingTextAppend);
         loadingFrameCount += loadingFrameCount < 3 ? 1 : -3;
     };
     updateLoadingText();
     const loadingTimer = window.setInterval(updateLoadingText, 300);
 
-    return function (request, status, error) {
+    return function (_request, _status, error) {
         if (error) {
             window.clearInterval(loadingTimer);
             $loadingContainer.find(".loading-container__text--loading").hide();
