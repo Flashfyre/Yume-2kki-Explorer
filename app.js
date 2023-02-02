@@ -809,60 +809,67 @@ function populateWorldData(pool, worldData, updatedWorldNames) {
         worldData = [];
     return new Promise((resolve, reject) => {
         setUpdateTask('fetchWorldData');
-        superagent.get('https://wrapper.yume.wiki/locations?game=2kki', (err, res) => {
-            if (err) return reject(err);
-            const locationData = JSON.parse(res.text);
+        const fetchWorldData = continueKey => {
+            superagent.get(`https://wrapper.yume.wiki/locations?game=2kki${continueKey ? `&continueKey=${continueKey}` : ''}`, (err, res) => {
+                if (err) return reject(err);
+                const data = JSON.parse(res.text);
 
-            for (let l of locationData) {
-                let filename = l.locationImage;
+                for (let l of data.locations) {
+                    let filename = l.locationImage;
 
-                if (!isRemote && filename) {
-                    const ext = filename.slice(filename.lastIndexOf('.'));
-                    const localFilename = `${l.title}${ext}`;
-                    filename = `${localFilename}|${filename}`;
-                    try {
-                        if (!fs.existsSync(`./public/images/worlds/${localFilename}`))
-                            downloadImage(l.locationImage, localFilename)
-                                .catch(err => reject(err));
-                    } catch (err) {
-                        reject(err);
+                    if (!isRemote && filename) {
+                        const ext = filename.slice(filename.lastIndexOf('.'));
+                        const localFilename = `${l.title}${ext}`;
+                        filename = `${localFilename}|${filename}`;
+                        try {
+                            if (!fs.existsSync(`./public/images/worlds/${localFilename}`))
+                                downloadImage(l.locationImage, localFilename)
+                                    .catch(err => reject(err));
+                        } catch (err) {
+                            reject(err);
+                        }
                     }
+
+                    worldData.push({
+                        title: l.title,
+                        titleJP: l.originalName,
+                        connections: [],
+                        filename: filename,
+                        author: l.primaryAuthor,
+                        bgColor: l.backgroundColor,
+                        fgColor: l.fontColor,
+                        bgmUrl: l.bgms.length ? l.bgms.map(b => b.path).join('|') : null,
+                        bgmLabel: l.bgms.length ? l.bgms.map(b => `${b.title || ''}^${b.label || ''}`).join('|') : null,
+                        mapUrl: l.locationMaps.length ? l.locationMaps.map(l => l.path).join('|') : null,
+                        mapLabel: l.locationMaps.length ? l.locationMaps.map(l => l.caption).join('|') : null,
+                        verAdded: l.versionAdded,
+                        verUpdated: l.versionUpdated,
+                        verGaps: l.versionGaps.length ? l.versionGaps.join(',') : null,
+                        verRemoved: l.versionRemoved || null,
+                        removed: !!l.versionRemoved
+                    });
                 }
 
-                worldData.push({
-                    title: l.title,
-                    titleJP: l.originalName,
-                    connections: [],
-                    filename: filename,
-                    author: l.primaryAuthor,
-                    bgColor: l.backgroundColor,
-                    fgColor: l.fontColor,
-                    bgmUrl: l.bgms.length ? l.bgms.map(b => b.path).join('|') : null,
-                    bgmLabel: l.bgms.length ? l.bgms.map(b => `${b.title || ''}^${b.label || ''}`).join('|') : null,
-                    mapUrl: l.locationMaps.length ? l.locationMaps.map(l => l.path).join('|') : null,
-                    mapLabel: l.locationMaps.length ? l.locationMaps.map(l => l.caption).join('|') : null,
-                    verAdded: l.versionAdded,
-                    verUpdated: l.versionUpdated,
-                    verGaps: l.versionGaps.length ? l.versionGaps.join(',') : null,
-                    verRemoved: l.versionRemoved || null,
-                    removed: !!l.versionRemoved
-                });
-            }
-
-            populateWorldConnData(worldData).then(() => {
-                updateWorlds(pool, worldData).then(() => {
-                    updateConns(pool, _.keyBy(worldData, w => w.title)).then(() => {
-                        updateConnTypeParams(pool, worldData).then(() => {
-                            updateWorldImages(pool, worldData, updatedWorldNames).then(() => {
-                                updateWorldDepths(pool, _.sortBy(worldData, [ 'id' ])).then(() => {
-                                    deleteRemovedWorlds(pool).then(() => resolve(worldData)).catch(err => reject(err));
+                if (data.continueKey)
+                    fetchWorldData(data.continueKey);
+                else {
+                    populateWorldConnData(worldData).then(() => {
+                        updateWorlds(pool, worldData).then(() => {
+                            updateConns(pool, _.keyBy(worldData, w => w.title)).then(() => {
+                                updateConnTypeParams(pool, worldData).then(() => {
+                                    updateWorldImages(pool, worldData, updatedWorldNames).then(() => {
+                                        updateWorldDepths(pool, _.sortBy(worldData, [ 'id' ])).then(() => {
+                                            deleteRemovedWorlds(pool).then(() => resolve(worldData)).catch(err => reject(err));
+                                        }).catch(err => reject(err));
+                                    }).catch(err => reject(err));
                                 }).catch(err => reject(err));
                             }).catch(err => reject(err));
                         }).catch(err => reject(err));
                     }).catch(err => reject(err));
-                }).catch(err => reject(err));
-            }).catch(err => reject(err));
-        });
+                }
+            });
+        };
+        fetchWorldData();
     });
 }
 
@@ -870,17 +877,23 @@ function populateWorldConnData(worldData) {
     const worldDataByName = _.keyBy(worldData, w => w.title);
     return new Promise((resolve, reject) => {
         setUpdateTask('fetchConnData');
-        superagent.get('https://wrapper.yume.wiki/connections?game=2kki', (err, res) => {
-            if (err) return reject(err);
-            const connData = JSON.parse(res.text);
-            
-            for (let conn of connData) {
-                if (worldDataByName[conn.origin] && !conn.isRemoved)
-                    worldDataByName[conn.origin].connections.push(parseWorldConn(conn));
-            }
+        const fetchConnData = continueKey => {
+            superagent.get(`https://wrapper.yume.wiki/connections?game=2kki${continueKey ? `&continueKey=${continueKey}` : ''}`, (err, res) => {
+                if (err) return reject(err);
+                const data = JSON.parse(res.text);
+                
+                for (let conn of data.connections) {
+                    if (worldDataByName[conn.origin] && !conn.isRemoved)
+                        worldDataByName[conn.origin].connections.push(parseWorldConn(conn));
+                }
 
-            resolve();
-        });
+                if (data.continueKey)
+                    fetchConnData(data.continueKey);
+                else
+                    resolve();
+            });
+        };
+        fetchConnData();
     });
 }
 
@@ -1337,38 +1350,44 @@ function getAllWorldImageData(worldData, updatedWorldNames) {
     const worldDataByName = _.keyBy(worldData, w => w.title);
     return new Promise((resolve) => {
         setUpdateTask('fetchWorldImageData');
-        superagent.get('https://wrapper.yume.wiki/images?game=2kki', (err, res) => {
-            if (err) return reject(err);
-            const worldImageData = [];
-            const data = JSON.parse(res.text);
+        const fetchWorldImageData = continueKey => {
+            superagent.get(`https://wrapper.yume.wiki/images?game=2kki${continueKey ? `&continueKey=${continueKey}` : ''}`, (err, res) => {
+                if (err) return reject(err);
+                const worldImageData = [];
+                const data = JSON.parse(res.text);
 
-            for (let location of data) {
-                if (updatedWorldNames && updatedWorldNames.indexOf(location.title) === -1)
-                    continue;
-                const world = worldDataByName[location.title];
-                if (!world)
-                    continue;
-                let i = 0;
-                for (let locationImage of location.images) {
-                    let filename = world.filename;
-                    if (filename.indexOf('|') > -1)
-                        filename = filename.slice(filename.indexOf('|') + 1);
-                    if (locationImage.url === filename)
+                for (let locationImage of data.locationImages) {
+                    if (updatedWorldNames && updatedWorldNames.indexOf(locationImage.title) === -1)
                         continue;
-                    const aspectRatio = locationImage.width / locationImage.height;
-                    if (aspectRatio < 1.25 || aspectRatio > 1.4)
+                    const world = worldDataByName[locationImage.title];
+                    if (!world)
                         continue;
-                    
-                    worldImageData.push({
-                        worldId: worldDataByName[location.title].id,
-                        ordinal: ++i,
-                        filename: locationImage.url
-                    });
+                    let i = 0;
+                    for (let image of locationImage.images) {
+                        let filename = world.filename;
+                        if (filename.indexOf('|') > -1)
+                            filename = filename.slice(filename.indexOf('|') + 1);
+                        if (image.url === filename)
+                            continue;
+                        const aspectRatio = image.width / image.height;
+                        if (aspectRatio < 1.25 || aspectRatio > 1.4)
+                            continue;
+                        
+                        worldImageData.push({
+                            worldId: worldDataByName[locationImage.title].id,
+                            ordinal: ++i,
+                            filename: image.url
+                        });
+                    }
                 }
-            }
 
-            resolve(worldImageData);
-        });
+                if (data.continueKey)
+                    fetchWorldImageData(data.continueKey);
+                else
+                    resolve(worldImageData);
+            });
+        };
+        fetchWorldImageData();
     });
 }
 
