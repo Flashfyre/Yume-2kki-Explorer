@@ -1,6 +1,6 @@
 {
   "name": "yume-2kki-explorer",
-  "version": "5.0.1",
+  "version": "5.0.2",
   "description": "A visualization of maps in Yume 2kki that scrapes the wiki for data",
   "main": "app.js",
   "dependencies": {
@@ -47,8 +47,8 @@
     "compile": "rollup --config rollup.config.js"
   },
   "engines": {
-    "node": "12.22.1",
-    "yarn": "1.22.4"
+    "node": "12.22.12",
+    "yarn": "1.22.19"
   },
   "repository": "git+https://github.com/Flashfyre/Yume-2kki-Explorer.git",
   "author": "Samuel Harbord (FlashfyreDev)",

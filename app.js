@@ -2,7 +2,7 @@ const { Worker, isMainThread, parentPort } = require('worker_threads');
 
 const express = require('express');
 const app = isMainThread ? express() : null;
-const port = process.env.PORT || 5000;
+const port = 5000;
 const _ = require('lodash');
 const superagent = require('superagent');
 const fs = require('fs');
@@ -19,7 +19,7 @@ const appConfig = process.env.ADMIN_KEY ?
     } : require('./config/app.config.js');
 const apiUrl = 'https://yume.wiki/api.php';
 const apiTitlePrefix = 'Yume 2kki:';
-const isRemote = Boolean(process.env.DATABASE_URL);
+const isRemote = Boolean(process.env.DATABASE_NAME || process.env.DATABASE_URL);
 const defaultPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT;
 const minDepthPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED;
 const startLocation = "Urotsuki's Room";
@@ -34,18 +34,28 @@ var updateTaskStartTime;
 function initConnPool() {
     let ret;
     if (isRemote) {
-        const dbUrl = process.env.DATABASE_URL.slice(process.env.DATABASE_URL.indexOf("mysql://") + 8);
-        const user = dbUrl.slice(0, dbUrl.indexOf(":"));
-        const password = dbUrl.slice(dbUrl.indexOf(":") + 1, dbUrl.indexOf("@"));
-        const host = dbUrl.slice(dbUrl.indexOf("@") + 1, dbUrl.indexOf("/"));
-        const database = dbUrl.slice(dbUrl.indexOf("/") + 1, dbUrl.indexOf("?") > -1 ? dbUrl.indexOf("?") : dbUrl.length);
-        ret = mysql.createPool({
-            host: host,
-            user: user,
-            password: password,
-            database: database,
-            typeCast: handleTypeCasting
-        });
+        if (process.platform === 'linux') {
+            ret = mysql.createPool({
+                socketPath: '/run/mysqld/mysqld.sock',
+                user: process.env.DATABASE_USER,
+                password: process.env.DATABASE_PASS,
+                database: process.env.DATABASE_NAME,
+                typeCast: handleTypeCasting
+            });
+        } else {
+            const dbUrl = process.env.DATABASE_URL.slice(process.env.DATABASE_URL.indexOf("mysql://") + 8);
+            const user = dbUrl.slice(0, dbUrl.indexOf(":"));
+            const password = dbUrl.slice(dbUrl.indexOf(":") + 1, dbUrl.indexOf("@"));
+            const host = dbUrl.slice(dbUrl.indexOf("@") + 1, dbUrl.indexOf("/"));
+            const database = dbUrl.slice(dbUrl.indexOf("/") + 1, dbUrl.indexOf("?") > -1 ? dbUrl.indexOf("?") : dbUrl.length);
+            ret = mysql.createPool({
+                host: host,
+                user: user,
+                password: password,
+                database: database,
+                typeCast: handleTypeCasting
+            });
+        }
     } else {
         const dbConfig = require("./config/db.config.js");
     
@@ -266,11 +276,6 @@ if (isMainThread) {
     app.use(express.static('public'));
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
-    app.use((req, res, next) => {
-        if (req.get('Host').indexOf('herokuapp') > -1)
-            return res.redirect(301, 'https://2kki.app' + req.originalUrl);
-        return next();
-    });
 
     app.get('/', (_, res) => res.sendFile('index.html', { root: '.' }));
 
@@ -3778,7 +3783,14 @@ function getRandomLocations(count, minDepth, maxDepth, includeRemoved, ignoreSec
 }
 
 if (isMainThread) {
-    app.listen(port, () => console.log(`Yume 2kki Explorer app listening on port ${port}`));
+    if (process.platform === 'linux') {
+        fs.unlinkSync('./explorer.sock');
+        app.listen('./explorer.sock', () => {
+            fs.chmod('./explorer.sock', 0o777, () => {});
+            console.log('Yume 2kki Explorer app listening on explorer.sock');
+        });
+    } else
+        app.listen(port, () => console.log(`Yume 2kki Explorer app listening on port ${port}`));
 } else {
     function updateWorldData(reset) {
         return new Promise((resolve, reject) => {
