@@ -1355,10 +1355,11 @@ function getAllWorldImageData(worldData, updatedWorldNames) {
     const worldDataByName = _.keyBy(worldData, w => w.title);
     return new Promise((resolve) => {
         setUpdateTask('fetchWorldImageData');
-        const fetchWorldImageData = continueKey => {
+        const fetchWorldImageData = (worldImageData, continueKey) => {
             superagent.get(`https://wrapper.yume.wiki/images?game=2kki${continueKey ? `&continueKey=${continueKey}` : ''}`, (err, res) => {
                 if (err) return reject(err);
-                const worldImageData = [];
+                if (!worldImageData)
+                    worldImageData = [];
                 const data = JSON.parse(res.text);
 
                 for (let locationImage of data.locationImages) {
@@ -1387,7 +1388,7 @@ function getAllWorldImageData(worldData, updatedWorldNames) {
                 }
 
                 if (data.continueKey)
-                    fetchWorldImageData(data.continueKey);
+                    fetchWorldImageData(worldImageData, data.continueKey);
                 else
                     resolve(worldImageData);
             });
@@ -2489,7 +2490,7 @@ function getMenuThemeWikiData(worldData) {
                     menuThemeLocationKeys.push(key);
                 }
             }
-            addMenuThemeDataJPMethods(menuThemeData).then(() => resolve(menuThemeData)).catch(err => reject(err));
+            addMenuThemeDataJPMethods(menuThemeData).catch(err => console.error(err)).finally(() => resolve(menuThemeData));
         });
     });
 }
@@ -2529,7 +2530,7 @@ function addMenuThemeDataJPMethods(menuThemeData, removed) {
             if (removed)
                 resolve();
             else
-                addMenuThemeDataJPMethods(menuThemeData, true).then(() => resolve()).catch(err => reject(err));
+                addMenuThemeDataJPMethods(menuThemeData, true).catch(err => reject(err)).finally(() => resolve());
         });
     });
 }
