@@ -1373,7 +1373,8 @@ function getAllWorldImageData(worldData, updatedWorldNames) {
                         let filename = world.filename;
                         if (filename.indexOf('|') > -1)
                             filename = filename.slice(filename.indexOf('|') + 1);
-                        if (image.url === filename)
+                        const baseImageUrl = image.url.slice(0, /\.png/i.exec(image.url).index + 4).replace('/thumb', '');
+                        if (baseImageUrl === filename)
                             continue;
                         const aspectRatio = image.width / image.height;
                         if (aspectRatio < 1.25 || aspectRatio > 1.4)
