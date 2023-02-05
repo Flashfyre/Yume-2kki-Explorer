@@ -1,37 +1,37 @@
 {
-    "title": "Yume 2kki Explorer",
+    "title": "유메2키 익스플로러",
     "loading": {
         "label": "로딩 중",
         "space": "   ",
         "error": "오류가 발생했습니다. : 새로 고침을 눌러 다시 접속해 주세요."
     },
     "updateTask": {
-        "init": "Initializing data refresh",
-        "prepareWorldData": "Preparing world data",
-        "fetchWorldData": "Fetching worlds",
-        "fetchConnData": "Fetching connections",
-        "updateWorldData": "Updating world data",
-        "updateConns": "Updating connection data",
-        "updateConnTypeParams": "Updating connection parameters",
-        "fetchWorldImageData": "Fetching world images",
-        "updateWorldImageData": "Updating world images",
-        "updateWorldDepths": "Updating world depths",
-        "cleanupWorldData": "Cleaning up world data",
-        "fetchMapData": "Fetching map data",
-        "updateMapData": "Updating map data",
-        "fetchAuthorInfoData": "Fetching author info",
-        "updateAuthorInfoData": "Updating author info",
-        "fetchVersionInfoData": "Fetching version info",
-        "updateVersionInfoData": "Updating version info",
-        "fetchEffectData": "Fetching effect data",
-        "updateEffectData": "Updating effect data",
-        "fetchEffectDataJP": "Fetching Japanese effect data",
-        "fetchMenuThemeData": "Fetching menu theme data",
-        "updateMenuThemeData": "Updating menu theme data",
-        "fetchWallpaperData": "Fetching wallpaper data",
-        "updateWallpaperData": "Updating wallpaper data",
-        "fetchBgmTrackData": "Fetching BGM track data",
-        "updateBgmTrackData": "Updating BGM track data"
+        "init": "데이터 새로고침 초기화 중",
+        "prepareWorldData": "월드 데이터 준비 중",
+        "fetchWorldData": "월드 불러오는 중",
+        "fetchConnData": "월드 연결 정보 불러오는 중",
+        "updateWorldData": "월드 데이터 업데이트 중",
+        "updateConns": "월드 연결 정보 업데이트 중",
+        "updateConnTypeParams": "월드 연결 파라미터 업데이트 중",
+        "fetchWorldImageData": "월드 이미지 불러오는 중",
+        "updateWorldImageData": "월드 이미지 업데이트 중",
+        "updateWorldDepths": "월드 깊이 업데이트 중",
+        "cleanupWorldData": "월드 데이터 최적화 중",
+        "fetchMapData": "맵 데이터 불러오는 중",
+        "updateMapData": "맵 데이터 업데이트 중",
+        "fetchAuthorInfoData": "제작자 정보 불러오는 중",
+        "updateAuthorInfoData": "제작자 정보 업데이트 중",
+        "fetchVersionInfoData": "버전 정보 불러오는 중",
+        "updateVersionInfoData": "버전 정보 업데이트 중",
+        "fetchEffectData": "이펙트 정보 불러오는 중",
+        "updateEffectData": "이펙트 데이터 업데이트 중",
+        "fetchEffectDataJP": "일본어 이펙트 데이터 불러오는 중",
+        "fetchMenuThemeData": "메뉴타입 데이터 불러오는 중",
+        "updateMenuThemeData": "메뉴타입 데이터 업데이트 중",
+        "fetchWallpaperData": "배경화면 데이터 불러오는 중",
+        "updateWallpaperData": "배경화면 데이터 업데이트 중",
+        "fetchBgmTrackData": "사운드룸 트랙 데이터 불러오는 중",
+        "updateBgmTrackData": "사운드룸 트랙 데이터 업데이트 중"
     },
     "controls": {
         "search": {
@@ -89,12 +89,12 @@
         "uiTheme": {
             "name": "UI 테마:",
             "values": {
-                "Default_Custom": "Default (Custom)",
-                "Default": "Default",
-                "Default_2": "Default 2",
-                "Default_3": "Default 3",
-                "Default_4": "Default 4",
-                "Default_5": "Default 5",
+                "Default_Custom": "기본 (커스텀)",
+                "Default": "기본",
+                "Default_2": "기본 2",
+                "Default_3": "기본 3",
+                "Default_4": "기본 4",
+                "Default_5": "기본 5",
                 "Developer_Room": "Developer Room",
                 "Glitch_Ending": "Bleak Future",
                 "Glitch_Ending_2": "Bleak Future 2",
@@ -139,7 +139,7 @@
                 "Saturated_Eyeball_Zone": "Saturated Eyeball Zone",
                 "NES_Glitch_Tunnel": "NES Glitch Tunnel",
                 "Shop_Ruins": "Shop Ruins",
-                "Yume_Nikki": "Yume Nikki"
+                "Yume_Nikki": "유메닛키"
             }
         },
         "fontStyle": {
@@ -339,7 +339,7 @@
         "reportBug": "버그 제보하기"
     },
     "footer": {
-        "about": "Yume 2kki Explorer {VERSION} 버전 by FlashfyreDev",
+        "about": "유메2키 익스플로러 {VERSION} 버전 by FlashfyreDev",
         "lastUpdate": "{LAST_UPDATE}에 데이터 업데이트 함",
         "lastFullUpdate": "{LAST_FULL_UPDATE}에 데이터 리셋 함"
     },
