@@ -167,7 +167,7 @@ function initDb(pool) {
                 worldId INT NULL,
                 ordinal SMALLINT NOT NULL,
                 filename VARCHAR(255) NOT NULL,
-                method VARCHAR(1000) NULL,
+                method VARCHAR(2000) NULL,
                 methodJP VARCHAR(1000) NULL,
                 FOREIGN KEY (worldId)
                     REFERENCES worlds (id)
@@ -864,12 +864,12 @@ function populateWorldData(pool, worldData, updatedWorldNames) {
                                 updateConnTypeParams(pool, worldData).then(() => {
                                     updateWorldImages(pool, worldData, updatedWorldNames).then(() => {
                                         updateWorldDepths(pool, _.sortBy(worldData, [ 'id' ])).then(() => {
-                                            deleteRemovedWorlds(pool).then(() => resolve(worldData)).catch(err => reject(err));
-                                        }).catch(err => reject(err));
-                                    }).catch(err => reject(err));
-                                }).catch(err => reject(err));
-                            }).catch(err => reject(err));
-                        }).catch(err => reject(err));
+                                            deleteRemovedWorlds(pool).then(() => resolve(worldData));
+                                        });
+                                    });
+                                });
+                            });
+                        });
                     }).catch(err => reject(err));
                 }
             });
@@ -1188,7 +1188,8 @@ function deleteRemovedConns(pool, removedConnIds) {
 function updateConnTypeParams(pool, worldData) {
     const newConnTypeParams = {};
     worldData.map(w => w.connections).flat().forEach(c => {
-        newConnTypeParams[c.id] = c.typeParams;
+        if (c.id)
+            newConnTypeParams[c.id] = c.typeParams;
     });
     const updatedConnTypeParams = [];
     const removedConnTypeParamIds = [];
@@ -3803,19 +3804,24 @@ if (isMainThread) {
                     pool.end();
                     resolve(success);
                 };
+                const errCallback = function (err) {
+                    pool.end();
+                    reject(err);
+                };
+
                 if (reset === 'true')
-                    populateWorldData(pool).then(() => callback(true)).catch(err => reject(err));
+                    populateWorldData(pool).then(() => callback(true)).catch(err => errCallback(err));
                 else {
                     pool.query('SELECT lastUpdate FROM updates', (err, rows) => {
                         if (err)
-                            reject(err);
-                        if (rows && rows.length) {
+                            errCallback(err);
+                        else if (rows && rows.length) {
                             setUpdateTask('prepareWorldData');
                             getWorldData(pool, true).then(worldData => {
                                 getUpdatedWorldNames(worldData.map(w => w.title), rows[0].lastUpdate)
                                     .then(updatedWorldNames => populateWorldData(pool, worldData, updatedWorldNames).then(() => callback(true)))
-                                    .catch(err => reject(err));
-                                }).catch(err => reject(err));
+                                    .catch(err => errCallback(err));
+                                }).catch(err => errCallback(err));
                         } else
                             callback(false);
                     });
@@ -3831,6 +3837,10 @@ if (isMainThread) {
                     pool.end();
                     resolve(success);
                 };
+                const errCallback = function (err) {
+                    pool.end();
+                    reject(err);
+                };
 
                 if (reset === 'true') {
                     setUpdateTask('prepareWorldData');
@@ -3842,24 +3852,24 @@ if (isMainThread) {
                                         updateMenuThemeData(pool, worldData).then(() => {
                                             updateWallpaperData(pool, worldData).then(() => {
                                                 updateBgmTrackData(pool, worldData).then(() => {
-                                                    pool.query('UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()', (err) => {
+                                                    pool.query('UPDATE updates SET lastUpdate=NOW(), lastFullUpdate=NOW()', err => {
                                                         if (err)
-                                                            reject(err);
+                                                            return errCallback(err);
                                                         callback(true);
                                                     });
-                                                }).catch(err => reject(err));
-                                            }).catch(err => reject(err));
-                                        }).catch(err => reject(err));
-                                    }).catch(err => reject(err));
-                                }).catch(err => reject(err));
-                            }).catch(err => reject(err));
-                        }).catch(err => reject(err));
-                    }).catch(err => reject(err));
+                                                });
+                                            });
+                                        });
+                                    });
+                                });
+                            });
+                        });
+                    }).catch(err => errCallback(err));
                 } else {
                     pool.query('SELECT lastUpdate FROM updates', (err, rows) => {
                         if (err)
-                            reject(err);
-                        if (rows && rows.length) {
+                            errCallback(err);
+                        else if (rows && rows.length) {
                             setUpdateTask('prepareWorldData');
                             getWorldData(pool, true).then(worldData => {
                                 checkUpdateMapData(pool, worldData, rows[0].lastUpdate).then(() => {
@@ -3870,17 +3880,18 @@ if (isMainThread) {
                                                     checkUpdateWallpaperData(pool, worldData, rows[0].lastUpdate).then(() => {
                                                         checkUpdateBgmTrackData(pool, worldData, rows[0].lastUpdate).then(() => {
                                                             pool.query('UPDATE updates SET lastUpdate=NOW()', err => {
-                                                                if (err) reject(err);
+                                                                if (err)
+                                                                    return errCallback(err);
                                                                 callback(true);
                                                             });
-                                                        }).catch(err => reject(err));
-                                                    }).catch(err => reject(err));
-                                                }).catch(err => reject(err));
-                                            }).catch(err => reject(err));
-                                        }).catch(err => reject(err));
-                                    }).catch(err => reject(err));
-                                }).catch(err => reject(err));
-                            }).catch(err => reject(err));
+                                                        });
+                                                    });
+                                                });
+                                            });
+                                        });
+                                    });
+                                });
+                            }).catch(err => errCallback(err));
                         } else
                             callback(false);
                     });

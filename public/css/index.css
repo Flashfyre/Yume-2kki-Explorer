@@ -322,8 +322,6 @@ select:not(.temp-select) > option.temp-select-only {
 }
 
 .slider::-moz-range-thumb {
-    width: 25px;
-    height: 25px;
     width: 24px;
     height: 38px;
     border: 6px solid transparent;
