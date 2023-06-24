@@ -1,4 +1,4 @@
-// Version 5.0.6 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 5.0.7 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -108136,7 +108136,7 @@ function InsertStackElement(node, body) {
 
 	    const authorEntryHtmlTemplate = '<div class="author-entry collectable-entry collectable noselect"></div>';
 	    const authorEntryImageContainerHtmlTemplate = '<div class="author-entry__image-container collectable-entry__image-container"></div>';
-	    const authorEntryImageHtmlTemplate = '<img src="{FILENAME}" referrerpolicy="no-referrer" />';
+	    const authorEntryImageHtmlTemplate = '<img src="{FILENAME}" />';
 	    const authorsByName = {};
 
 	    for (let a of authorData) {
@@ -108229,7 +108229,7 @@ function InsertStackElement(node, body) {
 
 	    const versionEntryHtmlTemplate = '<div class="js--version-entry version-entry collectable-entry collectable noselect"></div>';
 	    const versionEntryImageContainerHtmlTemplate = '<div class="version-entry__image-container collectable-entry__image-container"></div>';
-	    const versionEntryImageHtmlTemplate = '<img src="{FILENAME}" referrerpolicy="no-referrer" />';
+	    const versionEntryImageHtmlTemplate = '<img src="{FILENAME}" />';
 	    const versionsByIndex = {};
 
 	    const versionIndexAddedWorldIds = {};
@@ -108544,7 +108544,7 @@ function InsertStackElement(node, body) {
 
 	    for (let e of effectData) {
 	        const worldIdAttribute = e.worldId != null ? ` data-id="${e.worldId}"` : '';
-	        const effectImageHtml = `<div class="effect collectable noselect"><img src="${e.filename}" referrerpolicy="no-referrer" /></div>`;
+	        const effectImageHtml = `<div class="effect collectable noselect"><img src="${e.filename}" /></div>`;
 	        const effectLinkHtml = `<a href="javascript:void(0);" class="js--effect effect collectable--border noselect" data-effect-id="${e.id}"${worldIdAttribute}></a>`;
 	        e.method = e.method.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
 	        e.methodJP = e.methodJP ? e.methodJP.replace(/<span .*?>(.*?)<\/ *span>/ig, '$1').replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>') : '';
@@ -108602,7 +108602,7 @@ function InsertStackElement(node, body) {
 	        for (let l of m.locations) {
 	            const removedCollectableClass = l.removed ? ' removed-collectable' : '';
 	            const worldIdAttribute = l.worldId != null ? ` data-id="${l.worldId}"` : '';
-	            const menuThemeImageHtml = `<div class="menu-theme collectable${removedCollectableClass} noselect"><img src="${m.filename}" referrerpolicy="no-referrer" /></div>`;
+	            const menuThemeImageHtml = `<div class="menu-theme collectable${removedCollectableClass} noselect"><img src="${m.filename}" /></div>`;
 	            const menuThemeLinkHtml = `<a href="javascript:void(0);" class="js--menu-theme menu-theme collectable--border noselect" data-location-id="${l.id}"${worldIdAttribute}></a>`;
 	            l.method = l.method.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
 	            if (l.methodJP)
@@ -108660,7 +108660,7 @@ function InsertStackElement(node, body) {
 	        const censoredClass = wp.wallpaperId === 1149 ? ' censored' : '';
 	        const worldIdAttribute = wp.worldId != null ? ` data-id="${wp.worldId}"` : '';
 	        const removedAttribute = wp.removed ? ' data-removed="true"' : '';
-	        const wallpaperImageHtml = `<div class="wallpaper collectable${censoredClass}${removedCollectableClass} noselect"><img src="${wp.filename}" referrerpolicy="no-referrer" /></div>`;
+	        const wallpaperImageHtml = `<div class="wallpaper collectable${censoredClass}${removedCollectableClass} noselect"><img src="${wp.filename}" /></div>`;
 	        const wallpaperLinkHtml = `<a href="javascript:void(0);" class="js--wallpaper wallpaper collectable--border noselect" data-wallpaper-id="${wp.id}"${worldIdAttribute}${removedAttribute}></a>`;
 	        wp.method = wp.method.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
 	        if (wp.methodJP)
@@ -108744,7 +108744,7 @@ function InsertStackElement(node, body) {
 	        const removedAttribute = t.removed ? ' data-removed="true"' : '';
 	        const favButtonClass = config$1.bgmTrackInput.hasOwnProperty(t.id) ? config$1.bgmTrackInput[t.id] ? ' on' : ' inactive' : '';
 	        const ignoreButtonClass = config$1.bgmTrackInput.hasOwnProperty(t.id) ? !config$1.bgmTrackInput[t.id] ? ' on' : ' inactive' : '';
-	        const bgmTrackImageHtml = `<div class="js--bgm-track-image--container bgm-track collectable-entry collectable${removedCollectableClass} noselect"><img src="${imageUrl}" class="js--bgm-track-image" referrerpolicy="no-referrer" /></div>`;
+	        const bgmTrackImageHtml = `<div class="js--bgm-track-image--container bgm-track collectable-entry collectable${removedCollectableClass} noselect"><img src="${imageUrl}" class="js--bgm-track-image" /></div>`;
 	        const bgmTrackNameHtml = t.trackNo < 1000 ? `
             <div class="collectable-entry__name--container">
                 <h1 class="bgm-track__name--shadow collectable-entry__name--shadow">${trackId}</h1>
@@ -109031,7 +109031,7 @@ function InsertStackElement(node, body) {
 	    let i = 0;
 
 	    for (let bti of world.images) {
-	        const bgmTrackImageImageHtml = `<div class="bgm-track-image collectable noselect"><img src="${bti}" referrerpolicy="no-referrer" /></div>`;
+	        const bgmTrackImageImageHtml = `<div class="bgm-track-image collectable noselect"><img src="${bti}" /></div>`;
 	        const bgmTrackImageLinkHtml = `<a href="javascript:void(0);" class="js--bgm-track-image bgm-track-image collectable--border noselect" data-id="${i++}"></a>`;
 	        jquery(bgmTrackImageImageHtml).appendTo($bgmTrackImagesContainerItems);
 	        jquery(bgmTrackImageLinkHtml).appendTo($bgmTrackImagesContainerBorders);
@@ -111735,7 +111735,7 @@ function InsertStackElement(node, body) {
 	        callback: function (data, defaultCallback) {
 	            if (config$1.lang === 'ja' || config$1.lang === 'ru')
 	                massageLocalizedValues(data, true);
-	            data.footer.about = data.footer.about.replace("{VERSION}", "5.0.6");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "5.0.7");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            localizedSeparator = data.separator;
@@ -112010,7 +112010,7 @@ function InsertStackElement(node, body) {
 	            callback: function () {
 	                const world = exports.worldData[contextWorldId];
 	                if (world.mapUrl.indexOf('|') === -1) {
-	                    const handle = window.open(world.mapUrl, '_blank', 'noreferrer');
+	                    const handle = window.open(world.mapUrl, '_blank');
 	                    if (handle)
 	                        handle.focus();
 	                }
@@ -112037,7 +112037,7 @@ function InsertStackElement(node, body) {
 	                        const worldName = getLocalizedLabel(world.title, world.titleJP);
 	                        playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel), world.filename, world.id);
 	                    } else {
-	                        const handle = window.open(world.bgmUrl, '_blank', 'noreferrer');
+	                        const handle = window.open(world.bgmUrl, '_blank');
 	                        if (handle)
 	                            handle.focus();
 	                    }
@@ -112072,7 +112072,7 @@ function InsertStackElement(node, body) {
 	                mapSubItems[`map${worldId}_${mapIndex + 1}`] = {
 	                    name: mapLabels[mapIndex],
 	                    callback: function () {
-	                        const handle = window.open(mapUrls[mapIndex], '_blank', 'noreferrer');
+	                        const handle = window.open(mapUrls[mapIndex], '_blank');
 	                        if (handle)
 	                            handle.focus();
 	                    },
@@ -112094,7 +112094,7 @@ function InsertStackElement(node, body) {
 	                        if (!isCtrl) {
 	                            playBgm(bgmUrl, getBgmLabel(worldName, world.bgmLabel.split('|')[bgmIndex]), world.filename, world.id);
 	                        } else {
-	                            const handle = window.open(bgmUrl, '_blank', 'noreferrer');
+	                            const handle = window.open(bgmUrl, '_blank');
 	                            if (handle)
 	                                handle.focus();
 	                        }
@@ -112215,10 +112215,7 @@ function InsertStackElement(node, body) {
 	        $playBtn.removeClass('display--none');
 	    });
 
-	    const requestObj = new Request(url, {
-	        method: 'GET',
-	        referrerPolicy: 'no-referrer'
-	    });
+	    const requestObj = new Request(url, { method: 'GET' });
 	    
 	    audioPlayer.player.volume = config$1.audioVolume;
 	    audioPlayer.player.addEventListener('volumechange', function() {
@@ -112513,7 +112510,7 @@ function InsertStackElement(node, body) {
 	    const $playlistItem = jquery(`
         <div class="js--playlist-item playlist-item" data-bgm-track-id="${bgmTrackId}">
             <div class="playlist-item__image-container">
-                <img class="js--playlist-item__image playlist-item__image noselect" src="${imageUrl}" referrerpolicy="no-referrer" />
+                <img class="js--playlist-item__image playlist-item__image noselect" src="${imageUrl}" />
             </div>
             <a href="javascript:void(0);" class="js--remove-playlist-item playlist-item__remove-btn noselect">✖</a>
             ${trackLabelHtml}

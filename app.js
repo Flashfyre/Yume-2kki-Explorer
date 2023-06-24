@@ -2971,7 +2971,7 @@ function getBgmTrackWikiData(worldData, url) {
             const unusedIndex = tablesHtml.indexOf('id="Unused_Tracks"');
             const bgmTrackRegexTrackNoPart = '<td>(\\d{3})(?: ([A-Z]))?<\\/td>';
             const bgmTrackRegexSkippableTextPart = '<td(?: colspan="\\d+")?(?: rowspan="(\\d+)")?(?: colspan="\\d+")?>(.*?)<\\/td>';
-            const bgmTrackRegexSkippableUrlPart = '<td(?: colspan="\\d+")?(?: rowspan="(\\d+)")?(?: colspan="\\d+")?>(?:.*?<source src="(.*?)"[^>]*>)?.*?<\\/td>';
+            const bgmTrackRegexSkippableUrlPart = '<td(?: colspan="\\d+")?(?: rowspan="(\\d+)")?(?: colspan="\\d+")?>(?:.*?<audio src="(.*?)"[^>]*>)?.*?<\\/td>';
             const bgmTrackRegexSkippedPart = '()()';
             const bgmTrackRegexes = [];
             for (let f = 0; f < 32; f++) {
