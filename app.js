@@ -477,15 +477,19 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
 
                     pool.query('SELECT wi.id, wi.worldId, wi.filename FROM world_images wi ' + (excludeRemovedContent ? ' JOIN worlds w ON w.id = wi.worldId AND w.removed = 0 ' : '') + 'ORDER BY wi.worldId, wi.ordinal', (err, rows) => {
                         if (err) return reject(err);
-                        for (let row of rows)
-                            worldDataById[row.worldId].images.push(row.filename);
+                        for (let row of rows) {
+                            if (worldDataById[row.worldId])
+                                worldDataById[row.worldId].images.push(row.filename);
+                        }
 
                         pool.query('SELECT w.id, ROUND(SUM((m.width * m.height) / mwm.worldCount)) AS size FROM world_maps wm JOIN worlds w ON w.id = wm.worldId' + (excludeRemovedContent ? ' AND w.removed = 0' : '')
                             + ' JOIN maps m ON m.id = wm.mapId JOIN (SELECT mw.mapId, COUNT(DISTINCT mw.worldId) worldCount FROM world_maps mw JOIN worlds mww ON mww.id = mw.worldId' + (excludeRemovedContent ? ' WHERE mww.removed = 0' : '')
                             + ' GROUP BY mw.mapId) mwm ON mwm.mapId = m.id GROUP BY w.id', (err, rows) => {
                             if (err) return reject(err);
-                            for (let row of rows)
-                                worldDataById[row.id].size = row.size;
+                            for (let row of rows) {
+                                if (worldDataById[row.id])
+                                    worldDataById[row.id].size = row.size;
+                            }
                             const missingMapWorlds = worldData.filter(w => !w.size);
                             if (missingMapWorlds.length) {
                                 pool.query('SELECT ROUND(AVG(width)) * ROUND(AVG(height)) size FROM maps', (err, rows) => {
