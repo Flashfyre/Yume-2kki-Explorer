@@ -1,0 +1,54 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title data-localize="title">Yume 2kki Explorer</title>
+        <meta content="Yume 2kki Explorer" property="og:title" />
+        <meta content="A tool for visualizing and exploring the content of Yume 2kki" property="og:description" />
+        <link rel="shortcut icon" href="/favicon.ico">
+        <link rel="stylesheet" href="/css/index.css" />
+        <style class="js--theme-styles">
+            body {
+                background-color: #000000; /*basebg*/
+            }
+
+            label, h1, h2, h3, h4, p, .loading-container .loading-container__text {
+                background-image: linear-gradient(to bottom, rgba(216, 216, 216, 1) 0% 100%) !important; /*base*/
+                -webkit-background-clip: text;
+	            -webkit-text-fill-color: transparent;
+                background-clip: text;
+                filter: drop-shadow(1.5px 1.5px black /*shadow*/);
+            }
+
+            .alt-highlight {
+                color: rgba(255, 255, 157, 1); /*alt*/
+            }
+
+            .context-menu-item, .graph-tooltip, .scene-tooltip:not(:empty) {
+                border-image: url(/images/ui/Default_Custom/border.png) 8 round !important;
+                background-color: rgba(45, 17, 23, 1) !important; /*basebg*/
+                image-rendering: crisp-edges;
+                image-rendering: pixelated;
+            }
+
+            .context-menu-item, .graph-tooltip, .scene-tooltip:not(:empty) {
+                background-image: url(/images/ui/Default_Custom/containerbg.png) !important;
+                color: rgba(216, 216, 216, 1) !important; /*base*/
+                text-shadow: 1.5px 1.5px black; /*shadow*/
+            }
+
+            .context-menu-item.context-menu-hover {
+                color: rgba(255, 255, 157, 1) !important; /*alt*/
+            }
+        </style>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.9.0/jquery.contextMenu.min.css" />
+        <script src="/js/yume-2kki-explorer.js?locationMode=true"></script>
+    </head>
+    <body>
+        <div class="content">
+            <div id="graphContainer" class="graph-container">
+                <div id="graph" class="graph"></div>
+            </div>
+        </div>
+    </body>
+</html>

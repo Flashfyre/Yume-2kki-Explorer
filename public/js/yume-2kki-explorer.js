@@ -1,4 +1,4 @@
-// Version 5.0.7 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 5.1.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -107844,6 +107844,10 @@ function InsertStackElement(node, body) {
 	    return true;
 	}
 
+	function isVersionNew(version) {
+	    return version && Math.floor((new Date().getTime() - version.releaseDate) / (24 * 3600 * 1000)) < 7;
+	}
+
 	function getVersionEntries(version, worldData) {
 	    const addEntries = [];
 	    const updateEntries = [];
@@ -107892,6 +107896,7 @@ function InsertStackElement(node, body) {
 	        getVersionNameJP,
 	        getMissingVersion,
 	        getUniqueWorldVersionNames,
+	        isVersionNew,
 	        isWorldInVersion,
 	        getVersionEntries,
 	        getVersionEntry
@@ -107912,9 +107917,15 @@ function InsertStackElement(node, body) {
 	var versionUtils_13 = versionUtils.getVersionNameJP;
 	var versionUtils_14 = versionUtils.getMissingVersion;
 	var versionUtils_15 = versionUtils.getUniqueWorldVersionNames;
-	var versionUtils_16 = versionUtils.isWorldInVersion;
-	var versionUtils_17 = versionUtils.getVersionEntries;
-	var versionUtils_18 = versionUtils.getVersionEntry;
+	var versionUtils_16 = versionUtils.isVersionNew;
+	var versionUtils_17 = versionUtils.isWorldInVersion;
+	var versionUtils_18 = versionUtils.getVersionEntries;
+	var versionUtils_19 = versionUtils.getVersionEntry;
+
+	const urlSearchParams = new URLSearchParams(window.location.search);
+
+	const locationMode = urlSearchParams.has('locations') && document.currentScript.src.split('?')[1].startsWith('locationMode=true');
+	const locationModeLocations = locationMode ? urlSearchParams.get('locations').split('|') : undefined;
 
 	jquery(document).on("keydown", function (event) {
 	    if (event.which === 16)
@@ -107930,7 +107941,6 @@ function InsertStackElement(node, body) {
 	        isCtrl = false;
 	});
 
-	const urlSearchParams = new URLSearchParams(window.location.search);
 	const helpLangs = ['en', 'ja', 'ko', 'ru'];
 	let isDebug = false;
 	let isShift = false;
@@ -107940,6 +107950,7 @@ function InsertStackElement(node, body) {
 	let is2d;
 	let graphCanvas;
 	let graphContext;
+	let maxWorldDepth;
 	const nodeImgDimensions = { x: 320, y: 240 };
 	const nodeIconImgDimensions = { x: nodeImgDimensions.x / 4, y: nodeImgDimensions.y / 4 };
 	let nodeObjectMaterial;
@@ -108090,8 +108101,10 @@ function InsertStackElement(node, body) {
 	                newVer.authors = vi.authors.split(',');
 	            if (vi.releaseDate) {
 	                const releaseDate = new Date(vi.releaseDate);
-	                if (!isNaN(releaseDate))
+	                if (!isNaN(releaseDate)) {
 	                    newVer.releaseDate = releaseDate;
+	                    newVer.isNew = versionUtils_16(newVer);
+	                }
 	            }
 	            versionsByName[vi.name] = newVer;
 	            authoredVersionData.push(newVer);
@@ -108246,8 +108259,10 @@ function InsertStackElement(node, body) {
 	                        v.authors = vi.authors.split(',');
 	                    if (vi.releaseDate) {
 	                        const releaseDate = new Date(vi.releaseDate);
-	                        if (!isNaN(releaseDate))
+	                        if (!isNaN(releaseDate)) {
 	                            v.releaseDate = releaseDate;
+	                            v.isNew = versionUtils_16(v);
+	                        }
 	                    }
 	                    break;
 	                }
@@ -109260,11 +109275,14 @@ function InsertStackElement(node, body) {
 
 	function loadData(update, onSuccess, onFail) {
 	    let queryString = '';
-	    if (config$1.removedContentMode === 1)
-	        queryString = '?includeRemovedContent=true';
-	    if (urlSearchParams.has("adminKey"))
-	        queryString += `${queryString.length ? "&" : "?"}adminKey=${urlSearchParams.get("adminKey")}`;
-	    const loadData = () => jquery.get(`/data${queryString}`).done(data => onSuccess(data)).fail(onFail);
+	    if (!locationMode) {
+	        if (config$1.removedContentMode === 1)
+	            queryString = '?includeRemovedContent=true';
+	        if (urlSearchParams.has("adminKey"))
+	            queryString += `${queryString.length ? "&" : "?"}adminKey=${urlSearchParams.get("adminKey")}`;
+	    } else
+	        queryString += `?locationNames=${locationModeLocations.join('|')}`;
+	    const loadData = () => jquery.get(`/${locationMode ? 'locationData' : 'data'}${queryString}`).done(data => onSuccess(data)).fail(onFail);
 	    const loadOrUpdateData = update => {
 	        if (update) {
 	            const req = { reset: update === 'reset' };
@@ -109289,22 +109307,26 @@ function InsertStackElement(node, body) {
 	    };
 	    if (update)
 	        loadOrUpdateData(update);
-	    else
-	        jquery.post('/checkUpdateData')
-	            .done(function (data) {
-	                if (document.fonts.check("12px MS Gothic")) {
-	                    fontsLoaded = true;
-	                    loadOrUpdateData(data.update);
-	                } else {
-	                    document.fonts.onloadingdone = _ => fontsLoaded = true;
-	                    const fontsLoadedCheck = window.setInterval(function () {
-	                        if (fontsLoaded) {
-	                            window.clearInterval(fontsLoadedCheck);
-	                            loadOrUpdateData(data.update);
-	                        }
-	                    }, 100);
-	                }
-	            }).fail(onFail);
+	    else {
+	        const onSuccess = data => {
+	            if (document.fonts.check("12px MS Gothic")) {
+	                fontsLoaded = true;
+	                loadOrUpdateData(data.update);
+	            } else {
+	                document.fonts.onloadingdone = _ => fontsLoaded = true;
+	                const fontsLoadedCheck = window.setInterval(function () {
+	                    if (fontsLoaded) {
+	                        window.clearInterval(fontsLoadedCheck);
+	                        loadOrUpdateData(data.update);
+	                    }
+	                }, 100);
+	            }
+	        };
+	        if (!locationMode)
+	            jquery.post('/checkUpdateData').done(onSuccess).fail(onFail);
+	        else
+	            onSuccess({ update: false });
+	    }
 	}
 
 	function reloadData(update) {
@@ -109414,6 +109436,11 @@ function InsertStackElement(node, body) {
 	    playlistBgmTrackIds: []
 	};
 
+	if (locationMode) {
+	    config$1.labelMode = 3;
+	    config$1.displayMode = 4;
+	}
+
 	let lastUpdate, lastFullUpdate;
 
 	let audioPlayer;
@@ -109439,8 +109466,8 @@ function InsertStackElement(node, body) {
 	    iconTexts = [];
 
 	    for (let w of exports.worldData) {
-	        worldScales[w.id] = 1 + (Math.round((w.size - minSize) / (maxSize - minSize) * 10 * (config$1.sizeDiff - 1)) / 10);
-	        worldIsNew[w.id] = (w.verAdded && w.verAdded.index === versionData.length - (missingVersionIndex >= 0 ? 1 : 0));
+	        worldScales[w.id] = 1 + (Math.round((w.size - minSize) / Math.max(maxSize - minSize, 1) * 10 * (config$1.sizeDiff - 1)) / 10);
+	        worldIsNew[w.id] = w.verAdded && w.verAdded.isNew;
 	        worldRemoved[w.id] = w.removed;
 	    }
 
@@ -109605,7 +109632,7 @@ function InsertStackElement(node, body) {
 	    } else {
 	        visibleWorldIds = exports.worldData.map(w => w.id);
 
-	        maxDepth = lodash.max(exports.worldData.map(w => w.depth));
+	        maxDepth = maxWorldDepth || lodash.max(exports.worldData.map(w => w.depth));
 	        
 	        for (let w of visibleWorldIds) {
 	            const world = exports.worldData[w];
@@ -110016,33 +110043,41 @@ function InsertStackElement(node, body) {
 	                tempSelectVersion(0);
 	            highlightWorldSelection();
 	        })
-	        .cooldownTicks(400)
-	        // Deactivate existing forces
-	        // Add collision and bounding box forces
-	        .d3Force('collide', forceCollide(node => radius * worldScales[node.id]))
-	        .d3Force('box', () => {
+	        .cooldownTicks(400);
+	    
+	    if (!locationMode) {
+	        exports.graph = exports.graph
+	            // Deactivate existing forces
+	            // Add collision and bounding box forces
+	            .d3Force('collide', forceCollide(node => radius * worldScales[node.id]))
+	            .d3Force('box', () => {
 
-	            gData.nodes.forEach(node => {
-	                const x = node.x || 0, y = node.y || 0;
+	                gData.nodes.forEach(node => {
+	                    const x = node.x || 0, y = node.y || 0;
 
-	                // bounce on box walls
-	                if (Math.abs(x) > radius)
-	                    node.vx += 0.1 * (x > 0 ? -1 : 1);
-	                if (Math.abs(y) > radius)
-	                    node.vy += 0.1 * (y > 0 ? -1 : 1);
+	                    // bounce on box walls
+	                    if (Math.abs(x) > radius)
+	                        node.vx += 0.1 * (x > 0 ? -1 : 1);
+	                    if (Math.abs(y) > radius)
+	                        node.vy += 0.1 * (y > 0 ? -1 : 1);
 
-	                if (!is2d) {
-	                    const z = node.z || 0;
-	                    if (Math.abs(z) > radius)
-	                        node.vz += 0.1 * (z > 0 ? -1 : 1);
-	                }
+	                    if (!is2d) {
+	                        const z = node.z || 0;
+	                        if (Math.abs(z) > radius)
+	                            node.vz += 0.1 * (z > 0 ? -1 : 1);
+	                    }
+	                });
 	            });
-	        })
+	    }
+
+	    exports.graph = exports.graph
 	        .graphData(gData);
 
-	    document.querySelector(".controls-bottom--container--tab").style.display = '';
-	    document.querySelector(".controls-collectables--container--tab").style.display = '';
-	    document.querySelector(".controls-playlist--container--tab").style.display = '';
+	    if (!locationMode) {
+	        document.querySelector(".controls-bottom--container--tab").style.display = '';
+	        document.querySelector(".controls-collectables--container--tab").style.display = '';
+	        document.querySelector(".controls-playlist--container--tab").style.display = '';
+	    }
 
 	    document.removeEventListener('mousemove', onDocumentMouseMove, false);
 	    document.querySelector('#graph canvas').removeEventListener('wheel', clearTweens, false);
@@ -110952,7 +110987,7 @@ function InsertStackElement(node, body) {
 	    const author = tempSelectedAuthor || selectedAuthor;
 	    const versionIndex = tempSelectedVersionIndex || selectedVersionIndex;
 	    const filterForAuthor = author != null && exports.worldData[id].author !== author;
-	    const filterForVersion = versionIndex && !versionUtils_16(exports.worldData[id], versionIndex, missingVersionIndex, tempSelectedVersionIndex);
+	    const filterForVersion = versionIndex && !versionUtils_17(exports.worldData[id], versionIndex, missingVersionIndex, tempSelectedVersionIndex);
 	    const opacity = ((selectedWorldId == null && !filterForAuthor && !filterForVersion)
 	        || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1)
 	        ? 1
@@ -110969,7 +111004,7 @@ function InsertStackElement(node, body) {
 	    const id = node.id;
 	    const author = tempSelectedAuthor || selectedAuthor;
 	    const versionIndex = tempSelectedVersionIndex || selectedVersionIndex;
-	    const grayscale = id === selectedWorldId || (versionIndex && !versionUtils_16(exports.worldData[id], versionIndex, missingVersionIndex, tempSelectedVersionIndex))
+	    const grayscale = id === selectedWorldId || (versionIndex && !versionUtils_17(exports.worldData[id], versionIndex, missingVersionIndex, tempSelectedVersionIndex))
 	        ? 0
 	        : id === hoverWorldId || (author != null && exports.worldData[id].author === author)
 	            || (searchWorldIds.length && searchWorldIds.indexOf(id) > -1) || (selectedWorldId != null && exports.worldData[selectedWorldId].connections.find(c => c.targetId === id))
@@ -111182,7 +111217,7 @@ function InsertStackElement(node, body) {
 	        const sourceId = link.source.id !== undefined ? link.source.id : link.source;
 	        const targetId = link.target.id !== undefined ? link.target.id : link.target;
 	        const filterForAuthor = author != null && (exports.worldData[sourceId].author !== author || exports.worldData[targetId].author !== author);
-	        const filterForVersion = versionIndex && (!versionUtils_16(exports.worldData[sourceId], versionIndex, missingVersionIndex, tempSelectedVersionIndex) || !versionUtils_16(exports.worldData[targetId], versionIndex, missingVersionIndex, tempSelectedVersionIndex));
+	        const filterForVersion = versionIndex && (!versionUtils_17(exports.worldData[sourceId], versionIndex, missingVersionIndex, tempSelectedVersionIndex) || !versionUtils_17(exports.worldData[targetId], versionIndex, missingVersionIndex, tempSelectedVersionIndex));
 	        if (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)) {
 	            opacity = 1.0;
 	            color = colorLinkSelected;
@@ -111249,7 +111284,7 @@ function InsertStackElement(node, body) {
 	    const author = tempSelectedAuthor || selectedAuthor;
 	    const versionIndex = tempSelectedVersionIndex || selectedVersionIndex;
 	    const filterForAuthor = author != null && (exports.worldData[sourceId].author !== author || exports.worldData[targetId].author !== author);
-	    const filterForVersion = versionIndex && (!versionUtils_16(exports.worldData[sourceId], versionIndex, missingVersionIndex, tempSelectedVersionIndex) || !versionUtils_16(exports.worldData[targetId], versionIndex, missingVersionIndex, tempSelectedVersionIndex));
+	    const filterForVersion = versionIndex && (!versionUtils_17(exports.worldData[sourceId], versionIndex, missingVersionIndex, tempSelectedVersionIndex) || !versionUtils_17(exports.worldData[targetId], versionIndex, missingVersionIndex, tempSelectedVersionIndex));
 	    return ((selectedWorldId == null && !filterForAuthor && !filterForVersion) || (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)))
 	        && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)
 	        ? 1
@@ -111272,7 +111307,7 @@ function InsertStackElement(node, body) {
 	    return sourceId === selectedWorldId || targetId === selectedWorldId
 	        ? 0
 	        : (sourceId === hoverWorldId || targetId === hoverWorldId) || (author != null && (sourceWorld.author === author || targetWorld.author === author))
-	            || (versionIndex && versionUtils_16(sourceWorld, versionIndex, missingVersionIndex, tempSelectedVersionIndex) && versionUtils_16(targetWorld, versionIndex, missingVersionIndex, tempSelectedVersionIndex))
+	            || (versionIndex && versionUtils_17(sourceWorld, versionIndex, missingVersionIndex, tempSelectedVersionIndex) && versionUtils_17(targetWorld, versionIndex, missingVersionIndex, tempSelectedVersionIndex))
 	            || (searchWorldIds.length && (searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1))
 	        ? 0.375
 	        : 0.85;
@@ -111409,6 +111444,22 @@ function InsertStackElement(node, body) {
 	                trySelectNode(node, true, true);
 	            }, 2000);
 	        }
+	    } else if (locationMode) {
+	        const camera = exports.graph.camera();
+	        camera.zoom = 10;
+	        camera.updateProjectionMatrix();
+	        const locationWorldIds = locationModeLocations.map(l => exports.worldData.find(w => w.title === l)).filter(l => l).map(l => l.id);
+	        const locationNodes = exports.graph.graphData().nodes.filter(n => locationWorldIds.indexOf(n.id) > -1);
+	        window.setTimeout(function () {
+	            const avgPos = locationNodes.reduce((sumPos, node) => {
+	                sumPos.x += node.x;
+	                sumPos.y += node.y;
+	                return sumPos;
+	            }, { x: 0, y: 0 });
+	            avgPos.x /= locationNodes.length;
+	            avgPos.y /= locationNodes.length;
+	            exports.graph.cameraPosition({ x: avgPos.x, y: avgPos.y, z: 1000 }, locationNodes[0], 1000);
+	        }, 100);
 	    }
 	}
 
@@ -111735,7 +111786,7 @@ function InsertStackElement(node, body) {
 	        callback: function (data, defaultCallback) {
 	            if (config$1.lang === 'ja' || config$1.lang === 'ru')
 	                massageLocalizedValues(data, true);
-	            data.footer.about = data.footer.about.replace("{VERSION}", "5.0.7");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "5.1.0");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            localizedSeparator = data.separator;
@@ -111988,23 +112039,31 @@ function InsertStackElement(node, body) {
 	        wiki: {
 	            name: () => localizedContextMenu.items.wiki,
 	            callback: () => openWorldWikiPage(contextWorldId)
-	        },
-	        start: {
-	            name: () => localizedContextMenu.items.start,
-	            callback: function () {
-	                const world = exports.worldData[contextWorldId];
-	                const worldName = getLocalizedLabel(world.title, world.titleJP);
-	                jquery('.js--start-world').val(worldName).trigger('change').devbridgeAutocomplete().select(0);
+	        }
+	    };
+
+	    if (!locationMode) {
+	        Object.assign(menuItems, {
+	            start: {
+	                name: () => localizedContextMenu.items.start,
+	                callback: function () {
+	                    const world = exports.worldData[contextWorldId];
+	                    const worldName = getLocalizedLabel(world.title, world.titleJP);
+	                    jquery('.js--start-world').val(worldName).trigger('change').devbridgeAutocomplete().select(0);
+	                }
+	            },
+	            end: {
+	                name: () => localizedContextMenu.items.end,
+	                callback: function () {
+	                    const world = exports.worldData[contextWorldId];
+	                    const worldName = getLocalizedLabel(world.title, world.titleJP);
+	                    jquery('.js--end-world').val(worldName).trigger('change').devbridgeAutocomplete().select(0);
+	                }
 	            }
-	        },
-	        end: {
-	            name: () => localizedContextMenu.items.end,
-	            callback: function () {
-	                const world = exports.worldData[contextWorldId];
-	                const worldName = getLocalizedLabel(world.title, world.titleJP);
-	                jquery('.js--end-world').val(worldName).trigger('change').devbridgeAutocomplete().select(0);
-	            }
-	        },
+	        });
+	    }
+
+	    Object.assign(menuItems, {
 	        map: {
 	            name: () => localizedContextMenu.items.map,
 	            callback: function () {
@@ -112027,37 +112086,42 @@ function InsertStackElement(node, body) {
 	                return world.mapUrl && world.mapUrl.indexOf('|') > -1;
 	            },
 	            items: mapSubItems
-	        },
-	        bgm: {
-	            name: () => localizedContextMenu.items.bgm.name,
-	            callback: function () {
-	                const world = exports.worldData[contextWorldId];
-	                if (world.bgmUrl.indexOf('|') === -1) {
-	                    if (!isCtrl) {
-	                        const worldName = getLocalizedLabel(world.title, world.titleJP);
-	                        playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel), world.filename, world.id);
-	                    } else {
-	                        const handle = window.open(world.bgmUrl, '_blank');
-	                        if (handle)
-	                            handle.focus();
-	                    }
-	                }
-	            },
-	            visible: function () {
-	                const world = exports.worldData[contextWorldId];
-	                return world.bgmUrl && world.bgmUrl.indexOf('|') === -1;
-	            },
-	            disabled: () => !exports.worldData[contextWorldId].bgmUrl
-	        },
-	        bgms: {
-	            name: () => localizedContextMenu.items.bgm.name,
-	            visible: function () {
-	                const world = exports.worldData[contextWorldId];
-	                return world.bgmUrl && world.bgmUrl.indexOf('|') > -1;
-	            },
-	            items: bgmSubItems
 	        }
-	    };
+	    });
+
+	    if (!locationMode) {
+	        Object.assign(menuItems, {
+	            bgm: {
+	                name: () => localizedContextMenu.items.bgm.name,
+	                callback: function () {
+	                    const world = exports.worldData[contextWorldId];
+	                    if (world.bgmUrl.indexOf('|') === -1) {
+	                        if (!isCtrl) {
+	                            const worldName = getLocalizedLabel(world.title, world.titleJP);
+	                            playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel), world.filename, world.id);
+	                        } else {
+	                            const handle = window.open(world.bgmUrl, '_blank');
+	                            if (handle)
+	                                handle.focus();
+	                        }
+	                    }
+	                },
+	                visible: function () {
+	                    const world = exports.worldData[contextWorldId];
+	                    return world.bgmUrl && world.bgmUrl.indexOf('|') === -1;
+	                },
+	                disabled: () => !exports.worldData[contextWorldId].bgmUrl
+	            },
+	            bgms: {
+	                name: () => localizedContextMenu.items.bgm.name,
+	                visible: function () {
+	                    const world = exports.worldData[contextWorldId];
+	                    return world.bgmUrl && world.bgmUrl.indexOf('|') > -1;
+	                },
+	                items: bgmSubItems
+	            }
+	        });
+	    }
 
 	    for (let world of exports.worldData) {
 	        const worldId = world.id;
@@ -113499,7 +113563,7 @@ function InsertStackElement(node, body) {
 	        const match = ver.name.match(versionUtils_3);
 	        if (match.length) {
 
-	            const versionEntries = versionUtils_17(ver, exports.worldData);
+	            const versionEntries = versionUtils_18(ver, exports.worldData);
 
 	            ver.addEntries = versionEntries.filter(v => v.type === versionUtils_1.ADD);
 	            ver.updateEntries = versionEntries.filter(v => v.type === versionUtils_1.UPDATE);
@@ -113975,27 +114039,33 @@ function InsertStackElement(node, body) {
 	/* End Admin */
 
 	jquery(function () {
-	    loadOrInitConfig();
+	    if (!locationMode)
+	        loadOrInitConfig();
 
 	    const loadCallback = displayLoadingAnim(jquery('#graphContainer'));
 
-	    initControls();
+	    if (!locationMode)
+	        initControls();
 
 	    initLocalization(true);
 
 	    loadData(false, function (data) {
 	        initWorldData(data.worldData);
+	        if (data.maxDepth)
+	            maxWorldDepth = data.maxDepth;
 	        initVersionData(data.versionInfoData);
 	        initAuthorData(data.authorInfoData, data.versionInfoData);
-	        initEffectData(data.effectData);
-	        initMenuThemeData(data.menuThemeData);
-	        initWallpaperData(data.wallpaperData);
-	        initBgmTrackData(data.bgmTrackData);
-	        initPlaylist();
+	        if (!locationMode) {
+	            initEffectData(data.effectData);
+	            initMenuThemeData(data.menuThemeData);
+	            initWallpaperData(data.wallpaperData);
+	            initBgmTrackData(data.bgmTrackData);
+	            initPlaylist();
+	        }
 	        lastUpdate = new Date(data.lastUpdate);
 	        lastFullUpdate = new Date(data.lastFullUpdate);
 
-	        if (data.isAdmin) {
+	        if (!locationMode && data.isAdmin) {
 	            initAdminControls();
 	            jquery('.admin-only').removeClass('admin-only');
 	        }

@@ -279,11 +279,22 @@ if (isMainThread) {
 
     app.get('/', (_, res) => res.sendFile('index.html', { root: '.' }));
 
+    app.get('/location', (_, res) => res.sendFile('location.html', { root: '.' }));
+
     app.get('/help', (_, res) => res.sendFile('README.md', { root: '.' }));
 
     app.get('/data', function(req, res) {
         getConnPool().then(pool => {
             getData(req, pool)
+                .then(data => res.json(data))
+                .catch(err => console.error(err))
+                .finally(() => pool.end());
+        }).catch(err => console.error(err));
+    });
+
+    app.get('/locationdata', function(req, res) {
+        getConnPool().then(pool => {
+            getLocationData(req, pool)
                 .then(data => res.json(data))
                 .catch(err => console.error(err))
                 .finally(() => pool.end());
@@ -396,10 +407,41 @@ function getData(req, pool) {
     });
 }
 
+function getLocationData(req, pool) {
+    return new Promise((resolve, reject) => {
+        getLocationWorldData(pool, req.query.locationNames.split(/\|/g).map(l => l.replace(/'/g, "''"))).then(worldData => {
+            getMaxWorldDepth(pool).then(maxDepth => {
+                getAuthorInfoData(pool).then(authorInfoData => {
+                    getVersionInfoData(pool, worldData).then(versionInfoData => {
+                        getEffectData(pool, worldData).then(effectData => {
+                            pool.query('SELECT lastUpdate, lastFullUpdate FROM updates', (err, rows) => {
+                                if (err) reject(err);
+                                const row = rows && rows.length ? rows[0] : null;
+                                const lastUpdate = row ? row.lastUpdate : null;
+                                const lastFullUpdate = row ? row.lastFullUpdate : null;
+                
+                                resolve({
+                                    worldData: worldData,
+                                    maxDepth: maxDepth,
+                                    authorInfoData: authorInfoData,
+                                    versionInfoData: versionInfoData,
+                                    effectData: effectData,
+                                    lastUpdate: lastUpdate,
+                                    lastFullUpdate: lastFullUpdate
+                                });
+                            });
+                        }).catch(err => reject(err));
+                    }).catch(err => reject(err));
+                }).catch(err => reject(err));
+            }).catch(err => reject(err));
+        }).catch(err => reject(err));
+    });
+}
+
 function getWorldData(pool, preserveIds, excludeRemovedContent) {
     return new Promise((resolve, reject) => {
         const worldDataById = {};
-        pool.query('SELECT id, title, titleJP, author, depth, minDepth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, removed FROM worlds' + (excludeRemovedContent ? ' where removed = 0' : ''), (err, rows) => {
+        pool.query('SELECT id, title, titleJP, author, depth, minDepth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, removed FROM worlds' + (excludeRemovedContent ? ' WHERE removed = 0' : ''), (err, rows) => {
             if (err) return reject(err);
             for (let row of rows) {
                 worldDataById[row.id] = {
@@ -443,8 +485,6 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
             pool.query('SELECT id, sourceId, targetId, type FROM conns', (err, rows) => {
                 if (err) return reject(err);
                 const connsById = {};
-                const connSourceIds = {};
-                const connTargetIds = {};
                 for (let row of rows) {
                     if (excludeRemovedContent && row.type & ConnType.INACCESSIBLE)
                         continue;
@@ -458,8 +498,6 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
                         typeParams: {}
                     };
                     connsById[row.id] = conn;
-                    connSourceIds[row.id] = row.sourceId;
-                    connTargetIds[row.id] = row.targetId;
                     sourceWorld.connections.push(conn);
                 }
 
@@ -507,6 +545,125 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
                     });
                 });
             });
+        });
+    });
+}
+
+function getLocationWorldData(pool, locationNames) {
+    return new Promise((resolve, reject) => {
+        const worldDataById = {};
+        pool.query(`SELECT id, title, titleJP, author, depth, minDepth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, removed FROM worlds WHERE title IN ('${locationNames.join(`', '`)}') AND removed = 0`, (err, rows) => {
+            if (err) return reject(err);
+            if (!rows.length) {
+                resolve([]);
+                return;
+            }
+
+            const getWorldFromRow = row => {
+                return {
+                    id: row.id,
+                    title: row.title,
+                    titleJP: row.titleJP,
+                    author: row.author,
+                    depth: row.depth,
+                    minDepth: row.minDepth,
+                    filename: row.filename,
+                    mapUrl: row.mapUrl,
+                    mapLabel: row.mapLabel,
+                    bgmUrl: row.bgmUrl,
+                    bgmLabel: row.bgmLabel,
+                    verAdded: row.verAdded,
+                    verRemoved: row.verRemoved,
+                    verUpdated: row.verUpdated,
+                    verGaps: row.verGaps,
+                    removed: !!row.removed,
+                    connections: [],
+                    images: [],
+                    size: 1,
+                    noMaps: true
+                };
+            };
+
+            for (let row of rows)
+                worldDataById[row.id] = getWorldFromRow(row);
+
+            const worldIdsClause = Object.keys(worldDataById).join(', ');
+
+            pool.query(`SELECT w.id, w.title, w.titleJP, w.author, w.depth, w.minDepth, w.filename, w.mapUrl, w.mapLabel, w.bgmUrl, w.bgmLabel, w.verAdded, w.verRemoved, w.verUpdated, w.verGaps, w.removed
+                FROM worlds w
+                JOIN conns c ON c.targetId = w.id AND c.sourceId IN (${worldIdsClause})
+                WHERE w.removed = 0`, (err, rows) => {
+                if (err) return reject(err);
+
+                for (let row of rows)
+                    worldDataById[row.id] = getWorldFromRow(row);
+
+                const worldData = Object.values(worldDataById);
+
+                 for (let d in worldData) {
+                    const world = worldData[d];
+                    world.id = parseInt(d);
+                    if (!world.author)
+                        world.author = '';
+                    if (world.verUpdated)
+                        world.verUpdated = versionUtils.parseVersionsUpdated(world.verUpdated);
+                    if (world.verGaps)
+                        world.verGaps = versionUtils.parseVersionGaps(world.verGaps);
+                    if (!isRemote)
+                        world.filename = `./images/worlds/${world.filename.slice(0, world.filename.indexOf('|'))}`;
+                }
+
+                pool.query(`SELECT c.id, c.sourceId, c.targetId, c.type
+                    FROM conns c
+                    WHERE c.sourceId IN (${worldIdsClause}) OR c.targetId IN (${worldIdsClause})`, (err, rows) => {
+                    if (err) return reject(err);
+                    const connsById = {};
+                    for (let row of rows) {
+                        if (row.type & ConnType.INACCESSIBLE)
+                            continue;
+                        const sourceWorld = worldDataById[row.sourceId];
+                        const targetWorld = worldDataById[row.targetId];
+                        if (sourceWorld == null || targetWorld == null)
+                            continue;
+                        const conn = {
+                            targetId: targetWorld.id,
+                            type: row.type,
+                            typeParams: {}
+                        };
+                        connsById[row.id] = conn;
+                        sourceWorld.connections.push(conn);
+                    }
+
+                    pool.query(`SELECT ctp.connId, ctp.type, ctp.params, ctp.paramsJP FROM conn_type_params ctp JOIN conns c ON c.id = ctp.connId WHERE c.sourceId IN (${worldIdsClause}) OR c.targetId IN (${worldIdsClause})`, (err, rows) => {
+                        if (err) return reject(err);
+                        for (let row of rows) {
+                            const conn = connsById[row.connId];
+                            if (!conn)
+                                continue;
+                            conn.typeParams[row.type] = {
+                                params: row.params,
+                                paramsJP: row.paramsJP
+                            };
+                        }
+
+                        resolve(worldData);
+                    });
+                });
+            });
+        });
+    });
+}
+
+function getMaxWorldDepth(pool) {
+    return new Promise((resolve, reject) => {
+        pool.query('SELECT MAX(depth) AS maxDepth FROM worlds WHERE removed = 0', (err, rows) => {
+            if (err) return reject(err);
+            if (rows.length) {
+                resolve(rows[0].maxDepth);
+                return;
+            }
+            
+            resolve(0);
         });
     });
 }

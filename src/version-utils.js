@@ -203,6 +203,10 @@ function isWorldInVersion(world, versionIndex, missingVersionIndex, limitVersion
     return true;
 }
 
+function isVersionNew(version) {
+    return version && Math.floor((new Date().getTime() - version.releaseDate) / (24 * 3600 * 1000)) < 7;
+}
+
 function getVersionEntries(version, worldData) {
     const addEntries = [];
     const updateEntries = [];
@@ -252,6 +256,7 @@ if (typeof exports === "object")
         getVersionNameJP,
         getMissingVersion,
         getUniqueWorldVersionNames,
+        isVersionNew,
         isWorldInVersion,
         getVersionEntries,
         getVersionEntry

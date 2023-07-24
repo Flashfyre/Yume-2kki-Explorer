@@ -18,6 +18,11 @@ import { updateConfig } from './config.js';
 import { ConnType } from './conn-type.js';
 import * as versionUtils from './version-utils.js';
 
+const urlSearchParams = new URLSearchParams(window.location.search);
+
+const locationMode = urlSearchParams.has('locations') && document.currentScript.src.split('?')[1].startsWith('locationMode=true');
+const locationModeLocations = locationMode ? urlSearchParams.get('locations').split('|') : undefined;
+
 $(document).on("keydown", function (event) {
     if (event.which === 16)
         isShift = true;
@@ -32,7 +37,6 @@ $(document).on("keyup", function (event) {
         isCtrl = false;
 });
 
-const urlSearchParams = new URLSearchParams(window.location.search);
 const helpLangs = ['en', 'ja', 'ko', 'ru'];
 let isDebug = false;
 let isShift = false;
@@ -42,6 +46,7 @@ let isWebGL2;
 let is2d;
 let graphCanvas;
 let graphContext;
+let maxWorldDepth;
 const nodeImgDimensions = { x: 320, y: 240 };
 const nodeIconImgDimensions = { x: nodeImgDimensions.x / 4, y: nodeImgDimensions.y / 4 };
 let nodeObjectMaterial;
@@ -194,8 +199,10 @@ function initAuthorData(authorInfoData, versionInfoData) {
                 newVer.authors = vi.authors.split(',');
             if (vi.releaseDate) {
                 const releaseDate = new Date(vi.releaseDate);
-                if (!isNaN(releaseDate))
+                if (!isNaN(releaseDate)) {
                     newVer.releaseDate = releaseDate;
+                    newVer.isNew = versionUtils.isVersionNew(newVer);
+                }
             }
             versionsByName[vi.name] = newVer;
             authoredVersionData.push(newVer);
@@ -350,8 +357,10 @@ function initVersionData(versionInfoData) {
                         v.authors = vi.authors.split(',');
                     if (vi.releaseDate) {
                         const releaseDate = new Date(vi.releaseDate);
-                        if (!isNaN(releaseDate))
+                        if (!isNaN(releaseDate)) {
                             v.releaseDate = releaseDate;
+                            v.isNew = versionUtils.isVersionNew(v);
+                        }
                     }
                     break;
                 }
@@ -1364,11 +1373,14 @@ let updateTask;
 
 export function loadData(update, onSuccess, onFail) {
     let queryString = '';
-    if (config.removedContentMode === 1)
-        queryString = '?includeRemovedContent=true';
-    if (urlSearchParams.has("adminKey"))
-        queryString += `${queryString.length ? "&" : "?"}adminKey=${urlSearchParams.get("adminKey")}`;
-    const loadData = () => $.get(`/data${queryString}`).done(data => onSuccess(data)).fail(onFail);
+    if (!locationMode) {
+        if (config.removedContentMode === 1)
+            queryString = '?includeRemovedContent=true';
+        if (urlSearchParams.has("adminKey"))
+            queryString += `${queryString.length ? "&" : "?"}adminKey=${urlSearchParams.get("adminKey")}`;
+    } else
+        queryString += `?locationNames=${locationModeLocations.join('|')}`;
+    const loadData = () => $.get(`/${locationMode ? 'locationData' : 'data'}${queryString}`).done(data => onSuccess(data)).fail(onFail);
     const loadOrUpdateData = update => {
         if (update) {
             const req = { reset: update === 'reset' };
@@ -1393,22 +1405,26 @@ export function loadData(update, onSuccess, onFail) {
     };
     if (update)
         loadOrUpdateData(update);
-    else
-        $.post('/checkUpdateData')
-            .done(function (data) {
-                if (document.fonts.check("12px MS Gothic")) {
-                    fontsLoaded = true;
-                    loadOrUpdateData(data.update);
-                } else {
-                    document.fonts.onloadingdone = _ => fontsLoaded = true;
-                    const fontsLoadedCheck = window.setInterval(function () {
-                        if (fontsLoaded) {
-                            window.clearInterval(fontsLoadedCheck);
-                            loadOrUpdateData(data.update);
-                        }
-                    }, 100);
-                }
-            }).fail(onFail);
+    else {
+        const onSuccess = data => {
+            if (document.fonts.check("12px MS Gothic")) {
+                fontsLoaded = true;
+                loadOrUpdateData(data.update);
+            } else {
+                document.fonts.onloadingdone = _ => fontsLoaded = true;
+                const fontsLoadedCheck = window.setInterval(function () {
+                    if (fontsLoaded) {
+                        window.clearInterval(fontsLoadedCheck);
+                        loadOrUpdateData(data.update);
+                    }
+                }, 100);
+            }
+        };
+        if (!locationMode)
+            $.post('/checkUpdateData').done(onSuccess).fail(onFail);
+        else
+            onSuccess({ update: false });
+    }
 }
 
 function reloadData(update) {
@@ -1520,6 +1536,11 @@ let config = {
     playlistBgmTrackIds: []
 };
 
+if (locationMode) {
+    config.labelMode = 3;
+    config.displayMode = 4;
+}
+
 let lastUpdate, lastFullUpdate;
 
 let audioPlayer;
@@ -1545,8 +1566,8 @@ function initGraph(renderMode, displayMode, paths) {
     iconTexts = [];
 
     for (let w of worldData) {
-        worldScales[w.id] = 1 + (Math.round((w.size - minSize) / (maxSize - minSize) * 10 * (config.sizeDiff - 1)) / 10);
-        worldIsNew[w.id] = (w.verAdded && w.verAdded.index === versionData.length - (missingVersionIndex >= 0 ? 1 : 0));
+        worldScales[w.id] = 1 + (Math.round((w.size - minSize) / Math.max(maxSize - minSize, 1) * 10 * (config.sizeDiff - 1)) / 10);
+        worldIsNew[w.id] = w.verAdded && w.verAdded.isNew;
         worldRemoved[w.id] = w.removed;
     }
 
@@ -1711,7 +1732,7 @@ function initGraph(renderMode, displayMode, paths) {
     } else {
         visibleWorldIds = worldData.map(w => w.id);
 
-        maxDepth = _.max(worldData.map(w => w.depth));
+        maxDepth = maxWorldDepth || _.max(worldData.map(w => w.depth));
         
         for (let w of visibleWorldIds) {
             const world = worldData[w];
@@ -2122,33 +2143,41 @@ function initGraph(renderMode, displayMode, paths) {
                 tempSelectVersion(0);
             highlightWorldSelection();
         })
-        .cooldownTicks(400)
-        // Deactivate existing forces
-        // Add collision and bounding box forces
-        .d3Force('collide', forceCollide(node => radius * worldScales[node.id]))
-        .d3Force('box', () => {
+        .cooldownTicks(400);
+    
+    if (!locationMode) {
+        graph = graph
+            // Deactivate existing forces
+            // Add collision and bounding box forces
+            .d3Force('collide', forceCollide(node => radius * worldScales[node.id]))
+            .d3Force('box', () => {
 
-            gData.nodes.forEach(node => {
-                const x = node.x || 0, y = node.y || 0;
+                gData.nodes.forEach(node => {
+                    const x = node.x || 0, y = node.y || 0;
 
-                // bounce on box walls
-                if (Math.abs(x) > radius)
-                    node.vx += 0.1 * (x > 0 ? -1 : 1);
-                if (Math.abs(y) > radius)
-                    node.vy += 0.1 * (y > 0 ? -1 : 1);
+                    // bounce on box walls
+                    if (Math.abs(x) > radius)
+                        node.vx += 0.1 * (x > 0 ? -1 : 1);
+                    if (Math.abs(y) > radius)
+                        node.vy += 0.1 * (y > 0 ? -1 : 1);
 
-                if (!is2d) {
-                    const z = node.z || 0;
-                    if (Math.abs(z) > radius)
-                        node.vz += 0.1 * (z > 0 ? -1 : 1);
-                }
+                    if (!is2d) {
+                        const z = node.z || 0;
+                        if (Math.abs(z) > radius)
+                            node.vz += 0.1 * (z > 0 ? -1 : 1);
+                    }
+                });
             });
-        })
+    }
+
+    graph = graph
         .graphData(gData);
 
-    document.querySelector(".controls-bottom--container--tab").style.display = '';
-    document.querySelector(".controls-collectables--container--tab").style.display = '';
-    document.querySelector(".controls-playlist--container--tab").style.display = '';
+    if (!locationMode) {
+        document.querySelector(".controls-bottom--container--tab").style.display = '';
+        document.querySelector(".controls-collectables--container--tab").style.display = '';
+        document.querySelector(".controls-playlist--container--tab").style.display = '';
+    }
 
     document.removeEventListener('mousemove', onDocumentMouseMove, false);
     document.querySelector('#graph canvas').removeEventListener('wheel', clearTweens, false)
@@ -3515,6 +3544,22 @@ function reloadGraph() {
                 trySelectNode(node, true, true);
             }, 2000);
         }
+    } else if (locationMode) {
+        const camera = graph.camera();
+        camera.zoom = 10;
+        camera.updateProjectionMatrix();
+        const locationWorldIds = locationModeLocations.map(l => worldData.find(w => w.title === l)).filter(l => l).map(l => l.id);
+        const locationNodes = graph.graphData().nodes.filter(n => locationWorldIds.indexOf(n.id) > -1);
+        window.setTimeout(function () {
+            const avgPos = locationNodes.reduce((sumPos, node) => {
+                sumPos.x += node.x;
+                sumPos.y += node.y;
+                return sumPos;
+            }, { x: 0, y: 0 });
+            avgPos.x /= locationNodes.length;
+            avgPos.y /= locationNodes.length;
+            graph.cameraPosition({ x: avgPos.x, y: avgPos.y, z: 1000 }, locationNodes[0], 1000);
+        }, 100);
     }
 }
 
@@ -3841,7 +3886,7 @@ function initLocalization(isInitial) {
         callback: function (data, defaultCallback) {
             if (config.lang === 'ja' || config.lang === 'ru')
                 massageLocalizedValues(data, true);
-            data.footer.about = data.footer.about.replace("{VERSION}", "5.0.7");
+            data.footer.about = data.footer.about.replace("{VERSION}", "5.1.0");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             localizedSeparator = data.separator;
@@ -4094,23 +4139,31 @@ function initContextMenu(localizedContextMenu) {
         wiki: {
             name: () => localizedContextMenu.items.wiki,
             callback: () => openWorldWikiPage(contextWorldId)
-        },
-        start: {
-            name: () => localizedContextMenu.items.start,
-            callback: function () {
-                const world = worldData[contextWorldId];
-                const worldName = getLocalizedLabel(world.title, world.titleJP);
-                $('.js--start-world').val(worldName).trigger('change').devbridgeAutocomplete().select(0);
+        }
+    };
+
+    if (!locationMode) {
+        Object.assign(menuItems, {
+            start: {
+                name: () => localizedContextMenu.items.start,
+                callback: function () {
+                    const world = worldData[contextWorldId];
+                    const worldName = getLocalizedLabel(world.title, world.titleJP);
+                    $('.js--start-world').val(worldName).trigger('change').devbridgeAutocomplete().select(0);
+                }
+            },
+            end: {
+                name: () => localizedContextMenu.items.end,
+                callback: function () {
+                    const world = worldData[contextWorldId];
+                    const worldName = getLocalizedLabel(world.title, world.titleJP);
+                    $('.js--end-world').val(worldName).trigger('change').devbridgeAutocomplete().select(0);
+                }
             }
-        },
-        end: {
-            name: () => localizedContextMenu.items.end,
-            callback: function () {
-                const world = worldData[contextWorldId];
-                const worldName = getLocalizedLabel(world.title, world.titleJP);
-                $('.js--end-world').val(worldName).trigger('change').devbridgeAutocomplete().select(0);
-            }
-        },
+        });
+    }
+
+    Object.assign(menuItems, {
         map: {
             name: () => localizedContextMenu.items.map,
             callback: function () {
@@ -4133,37 +4186,42 @@ function initContextMenu(localizedContextMenu) {
                 return world.mapUrl && world.mapUrl.indexOf('|') > -1;
             },
             items: mapSubItems
-        },
-        bgm: {
-            name: () => localizedContextMenu.items.bgm.name,
-            callback: function () {
-                const world = worldData[contextWorldId];
-                if (world.bgmUrl.indexOf('|') === -1) {
-                    if (!isCtrl) {
-                        const worldName = getLocalizedLabel(world.title, world.titleJP);
-                        playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel), world.filename, world.id);
-                    } else {
-                        const handle = window.open(world.bgmUrl, '_blank');
-                        if (handle)
-                            handle.focus();
-                    }
-                }
-            },
-            visible: function () {
-                const world = worldData[contextWorldId];
-                return world.bgmUrl && world.bgmUrl.indexOf('|') === -1;
-            },
-            disabled: () => !worldData[contextWorldId].bgmUrl
-        },
-        bgms: {
-            name: () => localizedContextMenu.items.bgm.name,
-            visible: function () {
-                const world = worldData[contextWorldId];
-                return world.bgmUrl && world.bgmUrl.indexOf('|') > -1;
-            },
-            items: bgmSubItems
         }
-    };
+    });
+
+    if (!locationMode) {
+        Object.assign(menuItems, {
+            bgm: {
+                name: () => localizedContextMenu.items.bgm.name,
+                callback: function () {
+                    const world = worldData[contextWorldId];
+                    if (world.bgmUrl.indexOf('|') === -1) {
+                        if (!isCtrl) {
+                            const worldName = getLocalizedLabel(world.title, world.titleJP);
+                            playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel), world.filename, world.id);
+                        } else {
+                            const handle = window.open(world.bgmUrl, '_blank');
+                            if (handle)
+                                handle.focus();
+                        }
+                    }
+                },
+                visible: function () {
+                    const world = worldData[contextWorldId];
+                    return world.bgmUrl && world.bgmUrl.indexOf('|') === -1;
+                },
+                disabled: () => !worldData[contextWorldId].bgmUrl
+            },
+            bgms: {
+                name: () => localizedContextMenu.items.bgm.name,
+                visible: function () {
+                    const world = worldData[contextWorldId];
+                    return world.bgmUrl && world.bgmUrl.indexOf('|') > -1;
+                },
+                items: bgmSubItems
+            }
+        });
+    }
 
     for (let world of worldData) {
         const worldId = world.id;
@@ -6083,27 +6141,33 @@ function initAdminControls() {
 /* End Admin */
 
 $(function () {
-    loadOrInitConfig();
+    if (!locationMode)
+        loadOrInitConfig();
 
     const loadCallback = displayLoadingAnim($('#graphContainer'));
 
-    initControls();
+    if (!locationMode)
+        initControls();
 
     initLocalization(true);
 
     loadData(false, function (data) {
         initWorldData(data.worldData);
+        if (data.maxDepth)
+            maxWorldDepth = data.maxDepth;
         initVersionData(data.versionInfoData);
         initAuthorData(data.authorInfoData, data.versionInfoData);
-        initEffectData(data.effectData);
-        initMenuThemeData(data.menuThemeData);
-        initWallpaperData(data.wallpaperData);
-        initBgmTrackData(data.bgmTrackData);
-        initPlaylist();
+        if (!locationMode) {
+            initEffectData(data.effectData);
+            initMenuThemeData(data.menuThemeData);
+            initWallpaperData(data.wallpaperData);
+            initBgmTrackData(data.bgmTrackData);
+            initPlaylist();
+        }
         lastUpdate = new Date(data.lastUpdate);
         lastFullUpdate = new Date(data.lastFullUpdate);
 
-        if (data.isAdmin) {
+        if (!locationMode && data.isAdmin) {
             initAdminControls();
             $('.admin-only').removeClass('admin-only');
         }
