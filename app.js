@@ -292,7 +292,7 @@ if (isMainThread) {
         }).catch(err => console.error(err));
     });
 
-    app.get('/locationdata', function(req, res) {
+    app.get('/locationData', function(req, res) {
         getConnPool().then(pool => {
             getLocationData(req, pool)
                 .then(data => res.json(data))
@@ -409,7 +409,7 @@ function getData(req, pool) {
 
 function getLocationData(req, pool) {
     return new Promise((resolve, reject) => {
-        getLocationWorldData(pool, req.query.locationNames.split(/\|/g).map(l => l.replace(/'/g, "''"))).then(worldData => {
+        getLocationWorldData(pool, (req.query.locationNames || '').split(/\|/g).map(l => l.replace(/'/g, "''"))).then(worldData => {
             getMaxWorldDepth(pool).then(maxDepth => {
                 getAuthorInfoData(pool).then(authorInfoData => {
                     getVersionInfoData(pool, worldData).then(versionInfoData => {
@@ -3824,6 +3824,74 @@ function getLocationMaps(locationNames, pool) {
                     for (let m = 0; m < mapCount; m++)
                         ret.push({ url: urls[m], label: labels[m] })
                 }
+            }
+            resolve(ret);
+        });
+    });
+}
+
+if (isMainThread) {
+    app.get('/getLocationInfo', function(req, res) {
+        const locationName = req.query.locationName;
+        res.setHeader('Access-Control-Allow-Origin', 'https://ynoproject.net');
+        if (locationName) {
+            const includeRemoved = req.query.includeRemoved === '1';
+            const ignoreSecret = req.query.ignoreSecret === '1';
+            getConnPool().then(pool => {
+                getLocationInfo(locationName, includeRemoved, ignoreSecret, pool)
+                    .then(data => res.json(data))
+                    .catch(err => {
+                        console.error(err);
+                        res.json({ error: 'Failed to query location info', err_code: 'QUERY_FAILED' });
+                    })
+                    .finally(() => pool.end());
+            }).catch(err => {
+                console.error(err);
+                res.json({ error: 'Failed to connect to database', err_code: 'DB_CONN_FAILED' });
+            });
+        } else
+            res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
+    });
+}
+
+function getLocationInfo(locationName, includeRemoved, ignoreSecret, pool) {
+    return new Promise((resolve, reject) => {
+        let query =  `
+            SELECT w.title,
+                w.titleJP,
+                w.author,
+                w.depth,
+                w.minDepth,
+                m.mapId
+            FROM maps m
+            JOIN world_maps wm ON wm.mapId = m.id
+            JOIN
+                (SELECT w.id,
+                        w.title,
+                        w.titleJP,
+                        w.author,
+                        w.depth,
+                        w.minDepth
+                FROM worlds w
+                WHERE w.title = '${locationName.replace(/'/g, "''")}'
+                    ${includeRemoved ? '' : 'AND w.removed = 0'}
+                    ${ignoreSecret ? 'AND w.secret = 0' : ''}
+            ) w ON w.id = wm.worldId`;
+        queryWithRetry(pool, query, (err, rows) => {
+            if (err) return reject(err);
+            let ret;
+            for (let row of rows) {
+                if (!ret) {
+                    ret = {
+                        title: row.title,
+                        titleJP: row.titleJP,
+                        author: row.author,
+                        depth: row.depth,
+                        minDepth: row.minDepth,
+                        mapIds: []
+                    };
+                }
+                ret.mapIds.push(row.mapId);
             }
             resolve(ret);
         });
