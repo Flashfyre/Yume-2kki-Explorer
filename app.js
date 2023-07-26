@@ -409,7 +409,7 @@ function getData(req, pool) {
 
 function getLocationData(req, pool) {
     return new Promise((resolve, reject) => {
-        getLocationWorldData(pool, (req.query.locationNames || '').split(/\|/g).map(l => l.replace(/'/g, "''"))).then(worldData => {
+        getLocationWorldData(pool, (req.query.locationNames || '').split('|').map(l => l.replace(/'/g, "''")), (req.query.hiddenConnLocationNames || '').split('|').map(l => l.replace(/'/g, "''"))).then(worldData => {
             getMaxWorldDepth(pool).then(maxDepth => {
                 getAuthorInfoData(pool).then(authorInfoData => {
                     getVersionInfoData(pool, worldData).then(versionInfoData => {
@@ -549,7 +549,7 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
     });
 }
 
-function getLocationWorldData(pool, locationNames) {
+function getLocationWorldData(pool, locationNames, hiddenConnLocationNames) {
     return new Promise((resolve, reject) => {
         const worldDataById = {};
         pool.query(`SELECT id, title, titleJP, author, depth, minDepth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, removed FROM worlds WHERE title IN ('${locationNames.join(`', '`)}') AND removed = 0`, (err, rows) => {
@@ -580,7 +580,8 @@ function getLocationWorldData(pool, locationNames) {
                     connections: [],
                     images: [],
                     size: 1,
-                    noMaps: true
+                    noMaps: true,
+                    hidden: false
                 };
             };
 
@@ -595,8 +596,12 @@ function getLocationWorldData(pool, locationNames) {
                 WHERE w.removed = 0`, (err, rows) => {
                 if (err) return reject(err);
 
-                for (let row of rows)
-                    worldDataById[row.id] = getWorldFromRow(row);
+                for (let row of rows) {
+                    const connWorld = getWorldFromRow(row);
+                    if (hiddenConnLocationNames.indexOf(connWorld.title) > -1)
+                        connWorld.hidden = true;
+                    worldDataById[row.id] = connWorld;
+                }
 
                 const worldData = Object.values(worldDataById);
 
@@ -609,7 +614,7 @@ function getLocationWorldData(pool, locationNames) {
                         world.verUpdated = versionUtils.parseVersionsUpdated(world.verUpdated);
                     if (world.verGaps)
                         world.verGaps = versionUtils.parseVersionGaps(world.verGaps);
-                    if (!isRemote)
+                    if (!isRemote && world.filename.indexOf('|') > -1)
                         world.filename = `./images/worlds/${world.filename.slice(0, world.filename.indexOf('|'))}`;
                 }
 
@@ -3729,8 +3734,8 @@ if (isMainThread) {
         const locationName = req.query.locationName;
         let connLocationNames = req.query.connLocationNames;
         res.setHeader('Access-Control-Allow-Origin', 'https://ynoproject.net');
-        if (locationName && connLocationNames) {
-            if (!Array.isArray(connLocationNames))
+        if (locationName) {
+            if (connLocationNames && !Array.isArray(connLocationNames))
                 connLocationNames =  [ connLocationNames ];
             getConnPool().then(pool => {
                 getConnectedLocations(locationName, connLocationNames, pool)
@@ -3758,11 +3763,12 @@ function getConnectedLocations(locationName, connLocationNames, pool) {
                 ON c.sourceId = w.id OR c.targetId = w.id
             JOIN worlds cw
                 ON cw.id <> w.id AND (cw.id = c.sourceId OR cw.id = c.targetId)
-            WHERE w.title = '${locationName.replace(/'/g, "''")}'
-                AND cw.title `;
-        query += connLocationNames.length === 1
-            ? `= '${connLocationNames[0].replace(/'/g, "''")}'`
-            : `IN ('${connLocationNames.map(l => l.replace(/'/g, "''")).join("', '")}')`;
+            WHERE w.title = '${locationName.replace(/'/g, "''")}'`;
+        if (connLocationNames) {
+            query += `AND cw.title ${connLocationNames.length === 1
+                ? `= '${connLocationNames[0].replace(/'/g, "''")}'`
+                : `IN ('${connLocationNames.map(l => l.replace(/'/g, "''")).join("', '")}')`}`;
+        }
         query += ' ORDER BY cw.depth';
         queryWithRetry(pool, query, (err, rows) => {
             if (err) return reject(err);

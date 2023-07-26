@@ -221,6 +221,7 @@
             }
         }
     },
+    "hiddenLabel": "Undiscovered Location",
     "nodeLabel": {
         "depth": "깊이: ",
         "author": "제작자: ",

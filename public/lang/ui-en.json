@@ -222,6 +222,7 @@
             }
         }
     },
+    "hiddenLabel": "Undiscovered Location",
     "nodeLabel": {
         "depth": "Depth: ",
         "author": "Author: ",

@@ -221,6 +221,7 @@
             }
         }
     },
+    "hiddenLabel": "Undiscovered Location",
     "nodeLabel": {
         "depth": "Глубина: ",
         "author": "Автор: ",

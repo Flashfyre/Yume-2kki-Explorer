@@ -23,6 +23,8 @@ const urlSearchParams = new URLSearchParams(window.location.search);
 const locationMode = urlSearchParams.has('locations') && document.currentScript.src.split('?')[1].startsWith('locationMode=true');
 const locationModeLocations = locationMode ? urlSearchParams.get('locations').split('|') : undefined;
 
+const hiddenWorldImageUrl = './images/unknown.png';
+
 $(document).on("keydown", function (event) {
     if (event.which === 16)
         isShift = true;
@@ -121,7 +123,7 @@ function initWorldData(data) {
     for (let w in worldData) {
         const world = worldData[w];
         world.id = parseInt(w);
-        world.images.unshift(world.filename);
+        world.images.unshift(!world.hidden ? world.filename : hiddenWorldImageUrl);
         if (world.verAdded) {
             world.verAdded = versionData[versionNames.indexOf(world.verAdded)];
             world.verAdded.addedWorldIds.push(world.id);
@@ -1378,8 +1380,11 @@ export function loadData(update, onSuccess, onFail) {
             queryString = '?includeRemovedContent=true';
         if (urlSearchParams.has("adminKey"))
             queryString += `${queryString.length ? "&" : "?"}adminKey=${urlSearchParams.get("adminKey")}`;
-    } else
+    } else {
         queryString += `?locationNames=${locationModeLocations.join('|')}`;
+        if (urlSearchParams.has('hiddenConnLocations'))
+            queryString += `&hiddenConnLocationNames=${urlSearchParams.get('hiddenConnLocations')}`;
+    }
     const loadData = () => $.get(`/${locationMode ? 'locationData' : 'data'}${queryString}`).done(data => onSuccess(data)).fail(onFail);
     const loadOrUpdateData = update => {
         if (update) {
@@ -1488,6 +1493,7 @@ let localizedNodeLabelVersionLastUpdated;
 let localizedNodeLabelVersionLastUpdatedWithUpdateType;
 let localizedNodeLabelVersionRemoved;
 let localizedNodeLabelVersionUpdateTypes;
+let localizedHiddenLabel;
 let localizedAuthorLabel;
 let localizedVersionLabel;
 let localizedEffectLabel;
@@ -1537,7 +1543,7 @@ let config = {
 };
 
 if (locationMode) {
-    config.labelMode = 3;
+    config.connMode = 1;
     config.displayMode = 4;
 }
 
@@ -1560,6 +1566,7 @@ function initGraph(renderMode, displayMode, paths) {
 
     const worldDepths = {};
     const worldMinDepths = {};
+    const worldHidden = {};
     const worldIsNew = {};
     const worldRemoved = {};
 
@@ -1567,6 +1574,7 @@ function initGraph(renderMode, displayMode, paths) {
 
     for (let w of worldData) {
         worldScales[w.id] = 1 + (Math.round((w.size - minSize) / Math.max(maxSize - minSize, 1) * 10 * (config.sizeDiff - 1)) / 10);
+        worldHidden[w.id] = !!w.hidden;
         worldIsNew[w.id] = w.verAdded && w.verAdded.isNew;
         worldRemoved[w.id] = w.removed;
     }
@@ -1701,6 +1709,7 @@ function initGraph(renderMode, displayMode, paths) {
                     link.hidden = true;
                     link.connTypeCheck = 'after';
                 }
+                link.worldHidden = world.hidden || connWorld.hidden;
                 if (addedLinks.indexOf(reverseLinkId) === -1) {
                     const reverseLink = {
                         key: reverseLinkId,
@@ -1716,6 +1725,7 @@ function initGraph(renderMode, displayMode, paths) {
                         typeParams: reverseConn ? reverseConn.typeParams : {},
                         icons: [],
                         hidden: !hidden,
+                        worldHidden: worldHidden,
                         defaultColor: link.defaultColor,
                         connTypeCheck: hidden ? 'replace' : 'after'
                     };
@@ -1764,6 +1774,7 @@ function initGraph(renderMode, displayMode, paths) {
                     typeParams: conn.typeParams,
                     icons: [],
                     hidden: hidden,
+                    worldHidden: world.hidden || connWorld.hidden,
                     defaultColor: hueToRGBA(hue, 1),
                     connTypeCheck: hidden ? 'after' : 'replace'
                 };
@@ -1807,10 +1818,10 @@ function initGraph(renderMode, displayMode, paths) {
     });
 
     const images = (paths ? worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1) : worldData).map(d => {
-        const img = imageLoader.load(d.filename);
+        const img = imageLoader.load(!d.hidden ? d.filename : hiddenWorldImageUrl);
         img.id = d.id;
         img.rId = d.rId;
-        img.title = getLocalizedLabel(d.title, d.titleJP);
+        img.title = !d.hidden ? getLocalizedLabel(d.title, d.titleJP) : localizedHiddenLabel;
         return img;
     });
     
@@ -1826,9 +1837,10 @@ function initGraph(renderMode, displayMode, paths) {
         const id = parseInt(img.id);
         const rId = parseInt(img.rId);
         const scale = worldScales[id];
+        const hidden = worldHidden[id];
         const isNew = worldIsNew[id];
         const removed = worldRemoved[id];
-        const ret = { id, rId, index: n++, img, scale: scale, isNew: isNew, removed: removed };
+        const ret = { id, rId, index: n++, img, scale: scale, hidden: hidden, isNew: isNew, removed: removed };
         ret.depth = worldDepths[id];
         ret.depthColor = depthColors[ret.depth];
         if (paths)
@@ -1921,7 +1933,8 @@ function initGraph(renderMode, displayMode, paths) {
             }
 
             if (!(isWebGL2 && is2d)) {
-                const worldName = getLocalizedLabel(world.title, world.titleJP);
+                const worldName = !world.hidden ? getLocalizedLabel(world.title, world.titleJP) : localizedHiddenLabel;
+
                 const text = new SpriteText(worldName, 1.5, node.removed ? getNodeTextColor(node, ret.material.grayscale) : 'white');
                 text.fontFace = 'MS Gothic';
                 text.fontSize = 80;
@@ -2059,7 +2072,7 @@ function initGraph(renderMode, displayMode, paths) {
         .nodeLabel(node => {
             const world = worldData[node.id];
             let ret = (node.hasOwnProperty('minDepth') && node.depth !== node.minDepth ? localizedMinDepthNodeLabel : localizedNodeLabel)
-                .replace('{WORLD}', node.img.title).replace('{DEPTH}', node.depth).replace('{DEPTH_COLOR}', node.depthColor).replace('{AUTHOR}', world.author ? getAuthorDisplayName(world.author, true) : localizedNA)
+                .replace('{WORLD}', !world.hidden ? node.img.title : localizedHiddenLabel).replace('{DEPTH}', node.depth).replace('{DEPTH_COLOR}', node.depthColor).replace('{AUTHOR}', world.author ? getAuthorDisplayName(world.author, true) : localizedNA)
                 .replace('{VERSION_ADDED}', world.verAdded ? (getLocalizedLabel(world.verAdded.name, world.verAdded.nameJP, true)) : localizedNA);
             if (node.hasOwnProperty('minDepth'))
                 ret = ret.replace('{MIN_DEPTH}', node.minDepth).replace('{MIN_DEPTH_COLOR}', node.minDepthColor);
@@ -2122,17 +2135,19 @@ function initGraph(renderMode, displayMode, paths) {
         })
         .onNodeClick(node => {
             ['x', 'y'].concat(is2d ? [] : ['z']).forEach(d => node[`f${d}`] = node[d]);
-            if (isCtrl || isShift)
+            if (!node.hidden && (isCtrl || isShift))
                 openWorldWikiPage(node.id, isShift);
             else
                 trySelectNode(node);
         })
         .onNodeRightClick((node, ev) => {
-            contextWorldId = node.id;
-            $('.graph canvas').contextMenu({
-                x: ev.x,
-                y: ev.y
-            });
+            if (!node.hidden) {
+                contextWorldId = node.id;
+                $('.graph canvas').contextMenu({
+                    x: ev.x,
+                    y: ev.y
+                });
+            }
         })
         .onBackgroundClick(node => {
             $('.js--search-world').removeClass('selected').val('');
@@ -2692,7 +2707,7 @@ function initNodeObjectMaterial() {
     });
 
     const filenames = [];
-    worldData.forEach(world => filenames.push(worldData[world.id].filename));
+    worldData.forEach(world => filenames.push(!world.hidden ? worldData[world.id].filename : hiddenWorldImageUrl));
 
     return new Promise((resolve, reject) => {
         Promise.all(getImageRawData(filenames))
@@ -2719,7 +2734,7 @@ function initNodeObjectMaterial() {
                     nodeObjectMaterial.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
                     const worldId = index;
                     const world = worldData[worldId];
-                    const worldName = getLocalizedLabel(world.title, world.titleJP);
+                    const worldName = !world.hidden ? getLocalizedLabel(world.title, world.titleJP) : localizedHiddenLabel;
 
                     if (world.removed)
                         ctx.save();
@@ -3150,7 +3165,7 @@ function makeLinkIcons(is2d) {
                     if (link.source.x > link.target.x)
                         text.material.map.repeat.x = -1;
                 }
-                if (!config.connMode && link.hidden)
+                if ((!config.connMode && link.hidden) || link.worldHidden)
                     text.visible = false;
                 linkIcons.push(text);
                 graph.scene().add(text);
@@ -3886,7 +3901,7 @@ function initLocalization(isInitial) {
         callback: function (data, defaultCallback) {
             if (config.lang === 'ja' || config.lang === 'ru')
                 massageLocalizedValues(data, true);
-            data.footer.about = data.footer.about.replace("{VERSION}", "5.1.1");
+            data.footer.about = data.footer.about.replace("{VERSION}", "5.1.2");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             localizedSeparator = data.separator;
@@ -3898,6 +3913,7 @@ function initLocalization(isInitial) {
             localizedUpdateTasks = data.updateTask;
             if (worldData)
                 initContextMenu(data.contextMenu);
+            localizedHiddenLabel = data.hiddenLabel;
             localizedNodeLabel = getLocalizedNodeLabel(data.nodeLabel);
             localizedMinDepthNodeLabel = getLocalizedNodeLabel(data.nodeLabel, true)
             localizedNodeLabelVersionLastUpdated = getLocalizedNodeLabelVersionLastUpdated(data.nodeLabel);
@@ -4864,7 +4880,7 @@ function updateConnectionModeIcons(links) {
             for (let icon of link.icons) {
                 opacities[icon.id] = linkOpacity;
                 grayscales[icon.id] = linkGrayscale;
-                if (config.connMode === 0 && link.hidden)
+                if ((config.connMode === 0 && link.hidden) || link.worldHidden)
                     opacities[icon.id] = 0;
             }
         }
@@ -4881,7 +4897,7 @@ function updateConnectionModeIcons(links) {
                     icon.visible = true;
                     icon.material.opacity = linkOpacity;
                     icon.material.grayScale = linkGrayscale;
-                    if (config.connMode === 0 && link.hidden)
+                    if ((config.connMode === 0 && link.hidden) || link.worldHidden)
                         icon.visible = false;
                 }
             }

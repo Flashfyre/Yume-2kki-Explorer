@@ -1,4 +1,4 @@
-// Version 5.1.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 5.1.2 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -107927,6 +107927,8 @@ function InsertStackElement(node, body) {
 	const locationMode = urlSearchParams.has('locations') && document.currentScript.src.split('?')[1].startsWith('locationMode=true');
 	const locationModeLocations = locationMode ? urlSearchParams.get('locations').split('|') : undefined;
 
+	const hiddenWorldImageUrl = './images/unknown.png';
+
 	jquery(document).on("keydown", function (event) {
 	    if (event.which === 16)
 	        isShift = true;
@@ -108023,7 +108025,7 @@ function InsertStackElement(node, body) {
 	    for (let w in exports.worldData) {
 	        const world = exports.worldData[w];
 	        world.id = parseInt(w);
-	        world.images.unshift(world.filename);
+	        world.images.unshift(!world.hidden ? world.filename : hiddenWorldImageUrl);
 	        if (world.verAdded) {
 	            world.verAdded = versionData[versionNames.indexOf(world.verAdded)];
 	            world.verAdded.addedWorldIds.push(world.id);
@@ -109280,8 +109282,11 @@ function InsertStackElement(node, body) {
 	            queryString = '?includeRemovedContent=true';
 	        if (urlSearchParams.has("adminKey"))
 	            queryString += `${queryString.length ? "&" : "?"}adminKey=${urlSearchParams.get("adminKey")}`;
-	    } else
+	    } else {
 	        queryString += `?locationNames=${locationModeLocations.join('|')}`;
+	        if (urlSearchParams.has('hiddenConnLocations'))
+	            queryString += `&hiddenConnLocationNames=${urlSearchParams.get('hiddenConnLocations')}`;
+	    }
 	    const loadData = () => jquery.get(`/${locationMode ? 'locationData' : 'data'}${queryString}`).done(data => onSuccess(data)).fail(onFail);
 	    const loadOrUpdateData = update => {
 	        if (update) {
@@ -109388,6 +109393,7 @@ function InsertStackElement(node, body) {
 	let localizedNodeLabelVersionLastUpdatedWithUpdateType;
 	let localizedNodeLabelVersionRemoved;
 	let localizedNodeLabelVersionUpdateTypes;
+	let localizedHiddenLabel;
 	let localizedAuthorLabel;
 	let localizedVersionLabel;
 	let localizedEffectLabel;
@@ -109437,7 +109443,7 @@ function InsertStackElement(node, body) {
 	};
 
 	if (locationMode) {
-	    config$1.labelMode = 3;
+	    config$1.connMode = 1;
 	    config$1.displayMode = 4;
 	}
 
@@ -109460,6 +109466,7 @@ function InsertStackElement(node, body) {
 
 	    const worldDepths = {};
 	    const worldMinDepths = {};
+	    const worldHidden = {};
 	    const worldIsNew = {};
 	    const worldRemoved = {};
 
@@ -109467,6 +109474,7 @@ function InsertStackElement(node, body) {
 
 	    for (let w of exports.worldData) {
 	        worldScales[w.id] = 1 + (Math.round((w.size - minSize) / Math.max(maxSize - minSize, 1) * 10 * (config$1.sizeDiff - 1)) / 10);
+	        worldHidden[w.id] = !!w.hidden;
 	        worldIsNew[w.id] = w.verAdded && w.verAdded.isNew;
 	        worldRemoved[w.id] = w.removed;
 	    }
@@ -109601,6 +109609,7 @@ function InsertStackElement(node, body) {
 	                    link.hidden = true;
 	                    link.connTypeCheck = 'after';
 	                }
+	                link.worldHidden = world.hidden || connWorld.hidden;
 	                if (addedLinks.indexOf(reverseLinkId) === -1) {
 	                    const reverseLink = {
 	                        key: reverseLinkId,
@@ -109616,6 +109625,7 @@ function InsertStackElement(node, body) {
 	                        typeParams: reverseConn ? reverseConn.typeParams : {},
 	                        icons: [],
 	                        hidden: !hidden,
+	                        worldHidden: worldHidden,
 	                        defaultColor: link.defaultColor,
 	                        connTypeCheck: hidden ? 'replace' : 'after'
 	                    };
@@ -109664,6 +109674,7 @@ function InsertStackElement(node, body) {
 	                    typeParams: conn.typeParams,
 	                    icons: [],
 	                    hidden: hidden,
+	                    worldHidden: world.hidden || connWorld.hidden,
 	                    defaultColor: hueToRGBA(hue, 1),
 	                    connTypeCheck: hidden ? 'after' : 'replace'
 	                };
@@ -109707,10 +109718,10 @@ function InsertStackElement(node, body) {
 	    });
 
 	    const images = (paths ? exports.worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1) : exports.worldData).map(d => {
-	        const img = imageLoader.load(d.filename);
+	        const img = imageLoader.load(!d.hidden ? d.filename : hiddenWorldImageUrl);
 	        img.id = d.id;
 	        img.rId = d.rId;
-	        img.title = getLocalizedLabel(d.title, d.titleJP);
+	        img.title = !d.hidden ? getLocalizedLabel(d.title, d.titleJP) : localizedHiddenLabel;
 	        return img;
 	    });
 	    
@@ -109726,9 +109737,10 @@ function InsertStackElement(node, body) {
 	        const id = parseInt(img.id);
 	        const rId = parseInt(img.rId);
 	        const scale = worldScales[id];
+	        const hidden = worldHidden[id];
 	        const isNew = worldIsNew[id];
 	        const removed = worldRemoved[id];
-	        const ret = { id, rId, index: n++, img, scale: scale, isNew: isNew, removed: removed };
+	        const ret = { id, rId, index: n++, img, scale: scale, hidden: hidden, isNew: isNew, removed: removed };
 	        ret.depth = worldDepths[id];
 	        ret.depthColor = depthColors[ret.depth];
 	        if (paths)
@@ -109821,7 +109833,8 @@ function InsertStackElement(node, body) {
 	            }
 
 	            if (!(isWebGL2 && is2d)) {
-	                const worldName = getLocalizedLabel(world.title, world.titleJP);
+	                const worldName = !world.hidden ? getLocalizedLabel(world.title, world.titleJP) : localizedHiddenLabel;
+
 	                const text = new _default(worldName, 1.5, node.removed ? getNodeTextColor(node, ret.material.grayscale) : 'white');
 	                text.fontFace = 'MS Gothic';
 	                text.fontSize = 80;
@@ -109959,7 +109972,7 @@ function InsertStackElement(node, body) {
 	        .nodeLabel(node => {
 	            const world = exports.worldData[node.id];
 	            let ret = (node.hasOwnProperty('minDepth') && node.depth !== node.minDepth ? localizedMinDepthNodeLabel : localizedNodeLabel)
-	                .replace('{WORLD}', node.img.title).replace('{DEPTH}', node.depth).replace('{DEPTH_COLOR}', node.depthColor).replace('{AUTHOR}', world.author ? getAuthorDisplayName(world.author, true) : localizedNA)
+	                .replace('{WORLD}', !world.hidden ? node.img.title : localizedHiddenLabel).replace('{DEPTH}', node.depth).replace('{DEPTH_COLOR}', node.depthColor).replace('{AUTHOR}', world.author ? getAuthorDisplayName(world.author, true) : localizedNA)
 	                .replace('{VERSION_ADDED}', world.verAdded ? (getLocalizedLabel(world.verAdded.name, world.verAdded.nameJP, true)) : localizedNA);
 	            if (node.hasOwnProperty('minDepth'))
 	                ret = ret.replace('{MIN_DEPTH}', node.minDepth).replace('{MIN_DEPTH_COLOR}', node.minDepthColor);
@@ -110022,17 +110035,19 @@ function InsertStackElement(node, body) {
 	        })
 	        .onNodeClick(node => {
 	            ['x', 'y'].concat(is2d ? [] : ['z']).forEach(d => node[`f${d}`] = node[d]);
-	            if (isCtrl || isShift)
+	            if (!node.hidden && (isCtrl || isShift))
 	                openWorldWikiPage(node.id, isShift);
 	            else
 	                trySelectNode(node);
 	        })
 	        .onNodeRightClick((node, ev) => {
-	            contextWorldId = node.id;
-	            jquery('.graph canvas').contextMenu({
-	                x: ev.x,
-	                y: ev.y
-	            });
+	            if (!node.hidden) {
+	                contextWorldId = node.id;
+	                jquery('.graph canvas').contextMenu({
+	                    x: ev.x,
+	                    y: ev.y
+	                });
+	            }
 	        })
 	        .onBackgroundClick(node => {
 	            jquery('.js--search-world').removeClass('selected').val('');
@@ -110592,7 +110607,7 @@ function InsertStackElement(node, body) {
 	    });
 
 	    const filenames = [];
-	    exports.worldData.forEach(world => filenames.push(exports.worldData[world.id].filename));
+	    exports.worldData.forEach(world => filenames.push(!world.hidden ? exports.worldData[world.id].filename : hiddenWorldImageUrl));
 
 	    return new Promise((resolve, reject) => {
 	        Promise.all(getImageRawData(filenames))
@@ -110619,7 +110634,7 @@ function InsertStackElement(node, body) {
 	                    nodeObjectMaterial.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
 	                    const worldId = index;
 	                    const world = exports.worldData[worldId];
-	                    const worldName = getLocalizedLabel(world.title, world.titleJP);
+	                    const worldName = !world.hidden ? getLocalizedLabel(world.title, world.titleJP) : localizedHiddenLabel;
 
 	                    if (world.removed)
 	                        ctx.save();
@@ -111050,7 +111065,7 @@ function InsertStackElement(node, body) {
 	                    if (link.source.x > link.target.x)
 	                        text.material.map.repeat.x = -1;
 	                }
-	                if (!config$1.connMode && link.hidden)
+	                if ((!config$1.connMode && link.hidden) || link.worldHidden)
 	                    text.visible = false;
 	                linkIcons.push(text);
 	                exports.graph.scene().add(text);
@@ -111786,7 +111801,7 @@ function InsertStackElement(node, body) {
 	        callback: function (data, defaultCallback) {
 	            if (config$1.lang === 'ja' || config$1.lang === 'ru')
 	                massageLocalizedValues(data, true);
-	            data.footer.about = data.footer.about.replace("{VERSION}", "5.1.1");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "5.1.2");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config$1.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config$1.lang, true));
 	            localizedSeparator = data.separator;
@@ -111798,6 +111813,7 @@ function InsertStackElement(node, body) {
 	            localizedUpdateTasks = data.updateTask;
 	            if (exports.worldData)
 	                initContextMenu(data.contextMenu);
+	            localizedHiddenLabel = data.hiddenLabel;
 	            localizedNodeLabel = getLocalizedNodeLabel(data.nodeLabel);
 	            localizedMinDepthNodeLabel = getLocalizedNodeLabel(data.nodeLabel, true);
 	            localizedNodeLabelVersionLastUpdated = getLocalizedNodeLabelVersionLastUpdated(data.nodeLabel);
@@ -112764,7 +112780,7 @@ function InsertStackElement(node, body) {
 	            for (let icon of link.icons) {
 	                opacities[icon.id] = linkOpacity;
 	                grayscales[icon.id] = linkGrayscale;
-	                if (config$1.connMode === 0 && link.hidden)
+	                if ((config$1.connMode === 0 && link.hidden) || link.worldHidden)
 	                    opacities[icon.id] = 0;
 	            }
 	        }
@@ -112781,7 +112797,7 @@ function InsertStackElement(node, body) {
 	                    icon.visible = true;
 	                    icon.material.opacity = linkOpacity;
 	                    icon.material.grayScale = linkGrayscale;
-	                    if (config$1.connMode === 0 && link.hidden)
+	                    if ((config$1.connMode === 0 && link.hidden) || link.worldHidden)
 	                        icon.visible = false;
 	                }
 	            }

@@ -221,6 +221,7 @@
             }
         }
     },
+    "hiddenLabel": "Undiscovered Location",
     "nodeLabel": {
         "depth": "地图层级：",
         "author": "地图作者：",

@@ -222,6 +222,7 @@
             }
         }
     },
+    "hiddenLabel": "未発見の場所",
     "nodeLabel": {
         "depth": "深度：",
         "author": "ツクラー：",
