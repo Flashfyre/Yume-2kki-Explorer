@@ -1881,9 +1881,6 @@ function initGraph(renderMode, displayMode, paths) {
 
     const elem = document.getElementById('graph');
 
-    if (graph)
-        disposeGraph();
-
     graph = ForceGraph3D({
         rendererConfig: rendererConfig,
         controlType: 'orbit',
@@ -2263,11 +2260,6 @@ function initGraph(renderMode, displayMode, paths) {
     updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
 }
 
-function disposeGraph() {
-    graph.renderer().dispose();
-    graph.scene().dispose();
-}
-
 const clock = new THREE.Clock();
 let time = 0;
 const dashLineSpeed = 20;
@@ -2316,8 +2308,7 @@ function copyImageData(from, to) {
     nodeObject.material.uniforms.diffuse.value.image.data.set(worldImageData.slice(offsetFrom, offsetFrom + dataLength), offsetTo);
 }
 
-const instanceVS = `#version 300 es
-    precision highp float;
+const instanceVS = `precision highp float;
 
     uniform mat4 modelViewMatrix;
     uniform mat4 projectionMatrix;
@@ -2343,8 +2334,7 @@ const instanceVS = `#version 300 es
     }
 `;
 
-const instanceIconVS = `#version 300 es
-    precision highp float;
+const instanceIconVS = `precision highp float;
 
     uniform mat4 modelViewMatrix;
     uniform mat4 projectionMatrix;
@@ -2371,8 +2361,7 @@ const instanceIconVS = `#version 300 es
     }
 `;
 
-const instanceNodeIconVS = `#version 300 es
-    precision highp float;
+const instanceNodeIconVS = `precision highp float;
 
     uniform mat4 modelViewMatrix;
     uniform mat4 projectionMatrix;
@@ -2392,8 +2381,7 @@ const instanceNodeIconVS = `#version 300 es
     }
 `;
 
-const instanceFS = `#version 300 es
-    precision highp float;
+const instanceFS = `precision highp float;
     precision highp int;
     precision highp sampler2DArray;
 
@@ -2418,8 +2406,7 @@ const instanceFS = `#version 300 es
     }
 `;
 
-const instanceIconFS = `#version 300 es
-    precision highp float;
+const instanceIconFS = `precision highp float;
     precision highp int;
     precision highp sampler2DArray;
 
@@ -2444,8 +2431,7 @@ const instanceIconFS = `#version 300 es
     }
 `;
 
-const instanceNodeIconFS = `#version 300 es
-    precision highp float;
+const instanceNodeIconFS = `precision highp float;
     precision highp int;
     precision highp sampler2DArray;
     
@@ -2530,7 +2516,7 @@ function makeIconObject(is2d) {
     context.fillText(getConnTypeChar(ConnType.ONE_WAY), -canvas.width, 52);
     iconImgData.set(context.getImageData(0, 0, iconImgDimensions.x, iconImgDimensions.y).data, index * dataLength);
 
-    const texture = new THREE.DataTexture2DArray(iconImgData, iconImgDimensions.x, iconImgDimensions.y, amountTextures);
+    const texture = new THREE.DataArrayTexture(iconImgData, iconImgDimensions.x, iconImgDimensions.y, amountTextures);
     texture.format = THREE.RGBAFormat;
     texture.type = THREE.UnsignedByteType;
     const material = new THREE.RawShaderMaterial({
@@ -2541,7 +2527,8 @@ function makeIconObject(is2d) {
         fragmentShader: instanceIconFS,
         transparent: true,
         depthTest: !is2d,
-        depthWrite: false
+        depthWrite: false,
+        glslVersion: THREE.GLSL3
     });
 
     const opacities = [];
@@ -2562,7 +2549,7 @@ function makeIconObject(is2d) {
     unsortedIconGrayscales = grayscales.slice();
     unsortedIconTexIndexes = texIndexes.slice();
 
-    const geometry = new THREE.PlaneBufferGeometry(5, 5);
+    const geometry = new THREE.PlaneGeometry(5, 5);
     geometry.attributes.opacity = new THREE.InstancedBufferAttribute(new Float32Array(opacities), 1);
     geometry.attributes.grayscale = new THREE.InstancedBufferAttribute(new Float32Array(grayscales), 1);
     geometry.attributes.texIndex = new THREE.InstancedBufferAttribute(new Float32Array(texIndexes), 1);
@@ -2693,7 +2680,7 @@ function initNodeObjectMaterial() {
     const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
     
     const buffer = new ArrayBuffer(dataLength * amount * 2 + (dataLength * removedCount * 2));
-    const texture = new THREE.DataTexture2DArray(new Uint8ClampedArray(buffer), nodeImgDimensions.x, nodeImgDimensions.y, amount * 2 + (removedCount * 2));
+    const texture = new THREE.DataArrayTexture(new Uint8ClampedArray(buffer), nodeImgDimensions.x, nodeImgDimensions.y, amount * 2 + (removedCount * 2));
     texture.format = THREE.RGBAFormat;
     texture.type = THREE.UnsignedByteType;
     nodeObjectMaterial = new THREE.RawShaderMaterial({
@@ -2703,7 +2690,8 @@ function initNodeObjectMaterial() {
         vertexShader: instanceVS,
         fragmentShader: instanceFS,
         transparent: true,
-        depthTest: !is2d
+        depthTest: !is2d,
+        glslVersion: THREE.GLSL3
     });
 
     const filenames = [];
@@ -2807,9 +2795,9 @@ function initNodeObject(is2d) {
 
     let geometry;
     if (is2d)
-        geometry = new THREE.PlaneBufferGeometry(1, 1);
+        geometry = new THREE.PlaneGeometry(1, 1);
     else
-        geometry = new THREE.BoxBufferGeometry(1, 1, 1);
+        geometry = new THREE.BoxGeometry(1, 1, 1);
 
     geometry.attributes.opacity = new THREE.InstancedBufferAttribute(new Float32Array(opacities), 1);
     geometry.attributes.grayscale = new THREE.InstancedBufferAttribute(new Float32Array(grayscales), 1);
@@ -2911,7 +2899,8 @@ function makeNodeIconObject() {
     context.fillText(localizedNodeIconNew, nodeIconImgDimensions.x - 4, 2);
     nodeIconImgData.set(context.getImageData(0, 0, nodeIconImgDimensions.x, nodeIconImgDimensions.y).data, 0);
 
-    const texture = new THREE.DataTexture2DArray(nodeIconImgData, nodeIconImgDimensions.x, nodeIconImgDimensions.y, 1);
+    const texture = new THREE.DataArrayTexture(nodeIconImgData, nodeIconImgDimensions.x, nodeIconImgDimensions.y, 1);
+
     texture.format = THREE.RGBAFormat;
     texture.type = THREE.UnsignedByteType;
     const material = new THREE.RawShaderMaterial({
@@ -2923,10 +2912,11 @@ function makeNodeIconObject() {
         fragmentShader: instanceNodeIconFS,
         transparent: true,
         depthTest: !is2d,
-        depthWrite: false
+        depthWrite: false,
+        glslVersion: THREE.GLSL3
     });
 
-    const geometry = new THREE.PlaneBufferGeometry(0.25, 0.25);
+    const geometry = new THREE.PlaneGeometry(0.25, 0.25);
     geometry.attributes.opacity = new THREE.InstancedBufferAttribute(new Float32Array(opacities), 1);
 
     nodeIconObject = new THREE.InstancedMesh(geometry, material, iconCount);
@@ -3901,7 +3891,7 @@ function initLocalization(isInitial) {
         callback: function (data, defaultCallback) {
             if (config.lang === 'ja' || config.lang === 'ru')
                 massageLocalizedValues(data, true);
-            data.footer.about = data.footer.about.replace("{VERSION}", "5.1.2");
+            data.footer.about = data.footer.about.replace("{VERSION}", "5.2.0");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             localizedSeparator = data.separator;
