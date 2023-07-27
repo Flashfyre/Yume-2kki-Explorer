@@ -6,32 +6,32 @@
         "error": "Произошла ошибка: Пожалуйста, повторите позже."
     },
     "updateTask": {
-        "init": "Initializing data refresh",
-        "prepareWorldData": "Preparing world data",
-        "fetchWorldData": "Fetching worlds",
-        "fetchConnData": "Fetching connections",
-        "updateWorldData": "Updating world data",
-        "updateConns": "Updating connection data",
-        "updateConnTypeParams": "Updating connection parameters",
-        "fetchWorldImageData": "Fetching world images",
-        "updateWorldImageData": "Updating world images",
-        "updateWorldDepths": "Updating world depths",
-        "cleanupWorldData": "Cleaning up world data",
-        "fetchMapData": "Fetching map data",
-        "updateMapData": "Updating map data",
-        "fetchAuthorInfoData": "Fetching author info",
-        "updateAuthorInfoData": "Updating author info",
-        "fetchVersionInfoData": "Fetching version info",
-        "updateVersionInfoData": "Updating version info",
-        "fetchEffectData": "Fetching effect data",
-        "updateEffectData": "Updating effect data",
-        "fetchEffectDataJP": "Fetching Japanese effect data",
-        "fetchMenuThemeData": "Fetching menu theme data",
-        "updateMenuThemeData": "Updating menu theme data",
-        "fetchWallpaperData": "Fetching wallpaper data",
-        "updateWallpaperData": "Updating wallpaper data",
-        "fetchBgmTrackData": "Fetching BGM track data",
-        "updateBgmTrackData": "Updating BGM track data"
+        "init": "Инициализация обновления данных",
+        "prepareWorldData": "Подготовка данных миров",
+        "fetchWorldData": "Сбор данных миров",
+        "fetchConnData": "Сбор данных соединений",
+        "updateWorldData": "Обновление данных миров",
+        "updateConns": "Обновление данных о соединениях",
+        "updateConnTypeParams": "Обновление свойств соединений",
+        "fetchWorldImageData": "Сбор изображений миров",
+        "updateWorldImageData": "Обновление изображений миров",
+        "updateWorldDepths": "Обновление глубин миров",
+        "cleanupWorldData": "Очистка данных миров",
+        "fetchMapData": "Сбор данных карт",
+        "updateMapData": "Обновление данных карт",
+        "fetchAuthorInfoData": "Сбор данных об авторах",
+        "updateAuthorInfoData": "Обновление данных об авторах",
+        "fetchVersionInfoData": "Сбор данных о версиях",
+        "updateVersionInfoData": "Обновление данных о версиях",
+        "fetchEffectData": "Сбор данных об эффектах",
+        "updateEffectData": "Обновление данных об эффектах",
+        "fetchEffectDataJP": "Сбор японских данных об эффектах",
+        "fetchMenuThemeData": "Сбор данных о темах меню",
+        "updateMenuThemeData": "Обновление данных о темах меню",
+        "fetchWallpaperData": "Сбор данных об обоях",
+        "updateWallpaperData": "Обновление данных об обоях",
+        "fetchBgmTrackData": "Сбор данных о фоновой музыке",
+        "updateBgmTrackData": "Обновление данных о фоновой музыке"
     },
     "controls": {
         "search": {
@@ -221,7 +221,7 @@
             }
         }
     },
-    "hiddenLabel": "Undiscovered Location",
+    "hiddenLabel": "Неисследованная локация",
     "nodeLabel": {
         "depth": "Глубина: ",
         "author": "Автор: ",
@@ -340,7 +340,7 @@
         "reportBug": "Сообщить об Ошибке"
     },
     "footer": {
-        "about": "Yume 2kki Explorer v{VERSION} от FlashfyreDev",
+        "about": "Yume 2kki Explorer вер. {VERSION} от FlashfyreDev",
         "lastUpdate": "Данные обновлены {LAST_UPDATE}",
         "lastFullUpdate": "Данные перезагружены {LAST_FULL_UPDATE}"
     },
