@@ -2155,7 +2155,8 @@ function initGraph(renderMode, displayMode, paths) {
                 tempSelectVersion(0);
             highlightWorldSelection();
         })
-        .cooldownTicks(400);
+        .cooldownTicks(400)
+        .d3VelocityDecay(0.8);
     
     if (!locationMode) {
         graph = graph
@@ -2180,7 +2181,8 @@ function initGraph(renderMode, displayMode, paths) {
                     }
                 });
             });
-    }
+    } else
+        graph = graph.d3Force('center', () => {});
 
     graph = graph
         .graphData(gData);
@@ -3891,7 +3893,7 @@ function initLocalization(isInitial) {
         callback: function (data, defaultCallback) {
             if (config.lang === 'ja' || config.lang === 'ru')
                 massageLocalizedValues(data, true);
-            data.footer.about = data.footer.about.replace("{VERSION}", "5.2.0");
+            data.footer.about = data.footer.about.replace("{VERSION}", "5.2.1");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             localizedSeparator = data.separator;
