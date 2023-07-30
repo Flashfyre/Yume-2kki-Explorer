@@ -581,7 +581,8 @@ function getLocationWorldData(pool, locationNames, hiddenConnLocationNames) {
                     images: [],
                     size: 1,
                     noMaps: true,
-                    hidden: false
+                    hidden: false,
+                    secret: !!row.secret
                 };
             };
 
