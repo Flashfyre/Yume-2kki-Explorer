@@ -590,7 +590,7 @@ function getLocationWorldData(pool, locationNames, hiddenConnLocationNames) {
 
             const worldIdsClause = Object.keys(worldDataById).join(', ');
 
-            pool.query(`SELECT w.id, w.title, w.titleJP, w.author, w.depth, w.minDepth, w.filename, w.mapUrl, w.mapLabel, w.bgmUrl, w.bgmLabel, w.verAdded, w.verRemoved, w.verUpdated, w.verGaps, w.removed
+            pool.query(`SELECT w.id, w.title, w.titleJP, w.author, w.depth, w.minDepth, w.filename, w.mapUrl, w.mapLabel, w.bgmUrl, w.bgmLabel, w.verAdded, w.verRemoved, w.verUpdated, w.verGaps, w.removed, w.secret
                 FROM worlds w
                 JOIN conns c ON c.targetId = w.id AND c.sourceId IN (${worldIdsClause})
                 WHERE w.removed = 0`, (err, rows) => {
@@ -598,8 +598,11 @@ function getLocationWorldData(pool, locationNames, hiddenConnLocationNames) {
 
                 for (let row of rows) {
                     const connWorld = getWorldFromRow(row);
-                    if (hiddenConnLocationNames.indexOf(connWorld.title) > -1)
+                    if (hiddenConnLocationNames.indexOf(connWorld.title) > -1) {
+                        if (connWorld.secret)
+                            continue;
                         connWorld.hidden = true;
+                    }
                     worldDataById[row.id] = connWorld;
                 }
 
@@ -3868,6 +3871,7 @@ function getLocationInfo(locationName, includeRemoved, ignoreSecret, pool) {
                 w.author,
                 w.depth,
                 w.minDepth,
+                w.secret,
                 m.mapId
             FROM maps m
             JOIN world_maps wm ON wm.mapId = m.id
@@ -3877,7 +3881,8 @@ function getLocationInfo(locationName, includeRemoved, ignoreSecret, pool) {
                         w.titleJP,
                         w.author,
                         w.depth,
-                        w.minDepth
+                        w.minDepth,
+                        w.secret
                 FROM worlds w
                 WHERE w.title = '${locationName.replace(/'/g, "''")}'
                     ${includeRemoved ? '' : 'AND w.removed = 0'}
@@ -3894,6 +3899,7 @@ function getLocationInfo(locationName, includeRemoved, ignoreSecret, pool) {
                         author: row.author,
                         depth: row.depth,
                         minDepth: row.minDepth,
+                        secret: row.secret,
                         mapIds: []
                     };
                 }
