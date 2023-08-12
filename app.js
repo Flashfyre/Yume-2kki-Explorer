@@ -361,7 +361,7 @@ if (isMainThread) {
             console.error(new Error(`Update thread exited code ${code}`));
         updating = false;
         setUpdateTask(null);
-    })
+    });
 }
 
 function getData(req, pool) {
@@ -990,7 +990,8 @@ function populateWorldData(pool, worldData, updatedWorldNames) {
                 const data = JSON.parse(res.text);
 
                 for (let l of data.locations) {
-                    let filename = l.locationImage;
+                    const encodedFilename = encodeURI(l.locationImage);
+                    let filename = encodedFilename;
 
                     if (!isRemote && filename) {
                         const ext = filename.slice(filename.lastIndexOf('.'));
@@ -998,7 +999,7 @@ function populateWorldData(pool, worldData, updatedWorldNames) {
                         filename = `${localFilename}|${filename}`;
                         try {
                             if (!fs.existsSync(`./public/images/worlds/${localFilename}`))
-                                downloadImage(l.locationImage, localFilename)
+                                downloadImage(encodedFilename, localFilename)
                                     .catch(err => reject(err));
                         } catch (err) {
                             reject(err);
