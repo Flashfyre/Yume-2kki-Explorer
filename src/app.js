@@ -2521,6 +2521,7 @@ function makeIconObject(is2d) {
     const texture = new THREE.DataArrayTexture(iconImgData, iconImgDimensions.x, iconImgDimensions.y, amountTextures);
     texture.format = THREE.RGBAFormat;
     texture.type = THREE.UnsignedByteType;
+    texture.needsUpdate = true;
     const material = new THREE.RawShaderMaterial({
         uniforms: {
             diffuse: { value: texture },
