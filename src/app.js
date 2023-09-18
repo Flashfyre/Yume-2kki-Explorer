@@ -2673,6 +2673,7 @@ function sortIconInstances(instanceObject, unsortedOpacities, unsortedGrayscales
         });
     });
 
+    instanceObject.computeBoundingSphere();
     instanceObject.geometry.attributes.opacity.needsUpdate = true;
     instanceObject.geometry.attributes.grayscale.needsUpdate = true;
     instanceObject.geometry.attributes.texIndex.needsUpdate = true;
