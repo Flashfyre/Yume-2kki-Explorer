@@ -2843,6 +2843,7 @@ function updateNodePositions(is2d) {
         nodeObject.instanceMatrix.needsUpdate = true;
         if (is2d && nodeIconObject)
             nodeIconObject.instanceMatrix.needsUpdate = true;
+        nodeObject.computeBoundingSphere();
     }
 }
 
