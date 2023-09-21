@@ -1,4 +1,4 @@
-// Version 5.2.5 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 5.3.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -92618,620 +92618,6 @@ function InsertStackElement(node, body) {
 	  return obj;
 	}
 
-	var greenAudioPlayer = {exports: {}};
-
-	(function (module, exports) {
-		(function(f){{module.exports=f();}})(function(){return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof commonjsRequire&&commonjsRequire;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t);}return n[i].exports}for(var u="function"==typeof commonjsRequire&&commonjsRequire,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
-
-		module.exports = require('./src/js/main').default;
-
-		},{"./src/js/main":2}],2:[function(require,module,exports){
-
-		Object.defineProperty(exports, "__esModule", {
-		  value: true
-		});
-		exports.default = void 0;
-
-		function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
-
-		function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
-
-		function _iterableToArrayLimit(arr, i) { if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) { return; } var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
-
-		function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
-
-		function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-		function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
-
-		function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
-
-		var GreenAudioPlayer = /*#__PURE__*/function () {
-		  function GreenAudioPlayer(player, options) {
-		    _classCallCheck(this, GreenAudioPlayer);
-
-		    this.audioPlayer = typeof player === 'string' ? document.querySelector(player) : player;
-		    var opts = options || {};
-		    var audioElement = this.audioPlayer.innerHTML;
-		    this.audioPlayer.classList.add('green-audio-player');
-		    this.audioPlayer.innerHTML = GreenAudioPlayer.getTemplate() + audioElement;
-		    this.isDevice = /ipad|iphone|ipod|android/i.test(window.navigator.userAgent.toLowerCase()) && !window.MSStream;
-		    this.playPauseBtn = this.audioPlayer.querySelector('.play-pause-btn');
-		    this.loading = this.audioPlayer.querySelector('.loading');
-		    this.sliders = this.audioPlayer.querySelectorAll('.slider');
-		    this.progress = this.audioPlayer.querySelector('.controls__progress');
-		    this.volumeBtn = this.audioPlayer.querySelector('.volume__button');
-		    this.volumeControls = this.audioPlayer.querySelector('.volume__controls');
-		    this.volumeProgress = this.volumeControls.querySelector('.volume__progress');
-		    this.player = this.audioPlayer.querySelector('audio');
-		    this.currentTime = this.audioPlayer.querySelector('.controls__current-time');
-		    this.totalTime = this.audioPlayer.querySelector('.controls__total-time');
-		    this.speaker = this.audioPlayer.querySelector('.volume__speaker');
-		    this.download = this.audioPlayer.querySelector('.download');
-		    this.downloadLink = this.audioPlayer.querySelector('.download__link');
-		    this.span = this.audioPlayer.querySelectorAll('.message__offscreen');
-		    this.svg = this.audioPlayer.getElementsByTagName('svg');
-		    this.img = this.audioPlayer.getElementsByTagName('img');
-		    this.draggableClasses = ['pin'];
-		    this.currentlyDragged = null;
-		    this.stopOthersOnPlay = opts.stopOthersOnPlay || false;
-		    this.enableKeystrokes = opts.enableKeystrokes || false;
-		    this.showTooltips = opts.showTooltips || false;
-		    var self = this;
-		    this.labels = {
-		      volume: {
-		        open: 'Open Volume Controls',
-		        close: 'Close Volume Controls'
-		      },
-		      pause: 'Pause',
-		      play: 'Play',
-		      download: 'Download'
-		    };
-
-		    if (!this.enableKeystrokes) {
-		      for (var i = 0; i < this.span.length; i++) {
-		        this.span[i].outerHTML = '';
-		      }
-		    } else {
-		      window.addEventListener('keydown', this.pressKb.bind(self), false);
-		      window.addEventListener('keyup', this.unPressKb.bind(self), false);
-		      this.sliders[0].setAttribute('tabindex', 0);
-		      this.sliders[1].setAttribute('tabindex', 0);
-		      this.download.setAttribute('tabindex', -1);
-		      this.downloadLink.setAttribute('tabindex', -1);
-
-		      for (var j = 0; j < this.svg.length; j++) {
-		        this.svg[j].setAttribute('tabindex', 0);
-		        this.svg[j].setAttribute('focusable', true);
-		      }
-
-		      for (var k = 0; k < this.img.length; k++) {
-		        this.img[k].setAttribute('tabindex', 0);
-		      }
-		    }
-
-		    if (this.showTooltips) {
-		      this.playPauseBtn.setAttribute('title', this.labels.play);
-		      this.volumeBtn.setAttribute('title', this.labels.volume.open);
-		      this.downloadLink.setAttribute('title', this.labels.download);
-		    }
-
-		    if (opts.outlineControls || false) {
-		      this.audioPlayer.classList.add('player-accessible');
-		    }
-
-		    if (opts.showDownloadButton || false) {
-		      this.showDownload();
-		    }
-
-		    this.initEvents();
-		    this.directionAware();
-		    this.overcomeIosLimitations();
-
-		    if ('autoplay' in this.player.attributes) {
-		      var promise = this.player.play();
-
-		      if (promise !== undefined) {
-		        promise.then(function () {
-		          var playPauseButton = self.player.parentElement.querySelector('.play-pause-btn__icon');
-		          playPauseButton.attributes.d.value = 'M0 0h6v24H0zM12 0h6v24h-6z';
-		          self.playPauseBtn.setAttribute('aria-label', self.labels.pause);
-		          self.hasSetAttribute(self.playPauseBtn, 'title', self.labels.pause);
-		        }).catch(function () {
-		          // eslint-disable-next-line no-console
-		          console.error('Green Audio Player Error: Autoplay has been prevented, because it is not allowed by this browser.');
-		        });
-		      }
-		    }
-
-		    if ('preload' in this.player.attributes && this.player.attributes.preload.value === 'none') {
-		      this.playPauseBtn.style.visibility = 'visible';
-		      this.loading.style.visibility = 'hidden';
-		    }
-		  }
-
-		  _createClass(GreenAudioPlayer, [{
-		    key: "initEvents",
-		    value: function initEvents() {
-		      var self = this;
-		      self.audioPlayer.addEventListener('mousedown', function (event) {
-		        if (self.isDraggable(event.target)) {
-		          self.currentlyDragged = event.target;
-		          var handleMethod = self.currentlyDragged.dataset.method;
-		          var listener = self[handleMethod].bind(self);
-		          window.addEventListener('mousemove', listener, false);
-
-		          if (self.currentlyDragged.parentElement.parentElement === self.sliders[0]) {
-		            self.paused = self.player.paused;
-		            if (self.paused === false) self.togglePlay();
-		          }
-
-		          window.addEventListener('mouseup', function () {
-		            if (self.currentlyDragged !== false && self.currentlyDragged.parentElement.parentElement === self.sliders[0] && self.paused !== self.player.paused) {
-		              self.togglePlay();
-		            }
-
-		            self.currentlyDragged = false;
-		            window.removeEventListener('mousemove', listener, false);
-		          }, false);
-		        }
-		      }); // for mobile touches
-
-		      self.audioPlayer.addEventListener('touchstart', function (event) {
-		        if (self.isDraggable(event.target)) {
-		          var _event$targetTouches = _slicedToArray(event.targetTouches, 1);
-
-		          self.currentlyDragged = _event$targetTouches[0];
-		          var handleMethod = self.currentlyDragged.target.dataset.method;
-		          var listener = self[handleMethod].bind(self);
-		          window.addEventListener('touchmove', listener, false);
-
-		          if (self.currentlyDragged.parentElement.parentElement === self.sliders[0]) {
-		            self.paused = self.player.paused;
-		            if (self.paused === false) self.togglePlay();
-		          }
-
-		          window.addEventListener('touchend', function () {
-		            if (self.currentlyDragged !== false && self.currentlyDragged.parentElement.parentElement === self.sliders[0] && self.paused !== self.player.paused) {
-		              self.togglePlay();
-		            }
-
-		            self.currentlyDragged = false;
-		            window.removeEventListener('touchmove', listener, false);
-		          }, false);
-		          event.preventDefault();
-		        }
-		      });
-		      this.playPauseBtn.addEventListener('click', this.togglePlay.bind(self));
-		      this.player.addEventListener('timeupdate', this.updateProgress.bind(self));
-		      this.player.addEventListener('volumechange', this.updateVolume.bind(self));
-		      this.player.volume = 0.81;
-		      this.player.addEventListener('loadedmetadata', function () {
-		        self.totalTime.textContent = GreenAudioPlayer.formatTime(self.player.duration);
-		      });
-		      this.player.addEventListener('seeking', this.showLoadingIndicator.bind(self));
-		      this.player.addEventListener('seeked', this.hideLoadingIndicator.bind(self));
-		      this.player.addEventListener('canplay', this.hideLoadingIndicator.bind(self));
-		      this.player.addEventListener('ended', function () {
-		        GreenAudioPlayer.pausePlayer(self.player, 'ended');
-		        self.player.currentTime = 0;
-		        self.playPauseBtn.setAttribute('aria-label', self.labels.play);
-		        self.hasSetAttribute(self.playPauseBtn, 'title', self.labels.play);
-		      });
-		      this.volumeBtn.addEventListener('click', this.showHideVolume.bind(self));
-		      window.addEventListener('resize', self.directionAware.bind(self));
-		      window.addEventListener('scroll', self.directionAware.bind(self));
-
-		      for (var i = 0; i < this.sliders.length; i++) {
-		        var pin = this.sliders[i].querySelector('.pin');
-		        this.sliders[i].addEventListener('click', self[pin.dataset.method].bind(self));
-		      }
-
-		      this.downloadLink.addEventListener('click', this.downloadAudio.bind(self));
-		    }
-		  }, {
-		    key: "overcomeIosLimitations",
-		    value: function overcomeIosLimitations() {
-		      var self = this;
-
-		      if (this.isDevice) {
-		        // iOS does not support "canplay" event
-		        this.player.addEventListener('loadedmetadata', this.hideLoadingIndicator.bind(self)); // iOS does not let "volume" property to be set programmatically
-
-		        this.audioPlayer.querySelector('.volume').style.display = 'none';
-		        this.audioPlayer.querySelector('.controls').style.marginRight = '0';
-		      }
-		    }
-		  }, {
-		    key: "isDraggable",
-		    value: function isDraggable(el) {
-		      var canDrag = false;
-		      if (typeof el.classList === 'undefined') return false; // fix for IE 11 not supporting classList on SVG elements
-
-		      for (var i = 0; i < this.draggableClasses.length; i++) {
-		        if (el.classList.contains(this.draggableClasses[i])) {
-		          canDrag = true;
-		        }
-		      }
-
-		      return canDrag;
-		    }
-		  }, {
-		    key: "inRange",
-		    value: function inRange(event) {
-		      var touch = 'touches' in event; // instanceof TouchEvent may also be used
-
-		      var rangeBox = this.getRangeBox(event);
-		      var sliderPositionAndDimensions = rangeBox.getBoundingClientRect();
-		      var direction = rangeBox.dataset.direction;
-		      var min = null;
-		      var max = null;
-
-		      if (direction === 'horizontal') {
-		        min = sliderPositionAndDimensions.x;
-		        max = min + sliderPositionAndDimensions.width;
-		        var clientX = touch ? event.touches[0].clientX : event.clientX;
-		        if (clientX < min || clientX > max) return false;
-		      } else {
-		        min = sliderPositionAndDimensions.top;
-		        max = min + sliderPositionAndDimensions.height;
-		        var clientY = touch ? event.touches[0].clientY : event.clientY;
-		        if (clientY < min || clientY > max) return false;
-		      }
-
-		      return true;
-		    }
-		  }, {
-		    key: "updateProgress",
-		    value: function updateProgress() {
-		      var current = this.player.currentTime;
-		      var percent = current / this.player.duration * 100;
-		      this.progress.setAttribute('aria-valuenow', percent);
-		      this.progress.style.width = "".concat(percent, "%");
-		      this.currentTime.textContent = GreenAudioPlayer.formatTime(current);
-		    }
-		  }, {
-		    key: "updateVolume",
-		    value: function updateVolume() {
-		      this.volumeProgress.setAttribute('aria-valuenow', this.player.volume * 100);
-		      this.volumeProgress.style.height = "".concat(this.player.volume * 100, "%");
-
-		      if (this.player.volume >= 0.5) {
-		        this.speaker.attributes.d.value = 'M14.667 0v2.747c3.853 1.146 6.666 4.72 6.666 8.946 0 4.227-2.813 7.787-6.666 8.934v2.76C20 22.173 24 17.4 24 11.693 24 5.987 20 1.213 14.667 0zM18 11.693c0-2.36-1.333-4.386-3.333-5.373v10.707c2-.947 3.333-2.987 3.333-5.334zm-18-4v8h5.333L12 22.36V1.027L5.333 7.693H0z';
-		      } else if (this.player.volume < 0.5 && this.player.volume > 0.05) {
-		        this.speaker.attributes.d.value = 'M0 7.667v8h5.333L12 22.333V1L5.333 7.667M17.333 11.373C17.333 9.013 16 6.987 14 6v10.707c2-.947 3.333-2.987 3.333-5.334z';
-		      } else if (this.player.volume <= 0.05) {
-		        this.speaker.attributes.d.value = 'M0 7.667v8h5.333L12 22.333V1L5.333 7.667';
-		      }
-		    }
-		  }, {
-		    key: "getRangeBox",
-		    value: function getRangeBox(event) {
-		      var rangeBox = event.target;
-		      var el = this.currentlyDragged;
-
-		      if (event.type === 'click' && this.isDraggable(event.target)) {
-		        rangeBox = event.target.parentElement.parentElement;
-		      }
-
-		      if (event.type === 'mousemove') {
-		        rangeBox = el.parentElement.parentElement;
-		      }
-
-		      if (event.type === 'touchmove') {
-		        rangeBox = el.target.parentElement.parentElement;
-		      }
-
-		      return rangeBox;
-		    }
-		  }, {
-		    key: "getCoefficient",
-		    value: function getCoefficient(event) {
-		      var touch = 'touches' in event; // instanceof TouchEvent may also be used
-
-		      var slider = this.getRangeBox(event);
-		      var sliderPositionAndDimensions = slider.getBoundingClientRect();
-		      var K = 0;
-
-		      if (slider.dataset.direction === 'horizontal') {
-		        // if event is touch
-		        var clientX = touch ? event.touches[0].clientX : event.clientX;
-		        var offsetX = clientX - sliderPositionAndDimensions.left;
-		        var width = sliderPositionAndDimensions.width;
-		        K = offsetX / width;
-		      } else if (slider.dataset.direction === 'vertical') {
-		        var height = sliderPositionAndDimensions.height;
-		        var clientY = touch ? event.touches[0].clientY : event.clientY;
-		        var offsetY = clientY - sliderPositionAndDimensions.top;
-		        K = 1 - offsetY / height;
-		      }
-
-		      return K;
-		    }
-		  }, {
-		    key: "rewind",
-		    value: function rewind(event) {
-		      if (this.player.seekable && this.player.seekable.length) {
-		        // no seek if not (pre)loaded
-		        if (this.inRange(event)) {
-		          this.player.currentTime = this.player.duration * this.getCoefficient(event);
-		        }
-		      }
-		    }
-		  }, {
-		    key: "showVolume",
-		    value: function showVolume() {
-		      if (this.volumeBtn.getAttribute('aria-attribute') === this.labels.volume.open) {
-		        this.volumeControls.classList.remove('hidden');
-		        this.volumeBtn.classList.add('open');
-		        this.volumeBtn.setAttribute('aria-label', this.labels.volume.close);
-		        this.hasSetAttribute(this.volumeBtn, 'title', this.labels.volume.close);
-		      }
-		    }
-		  }, {
-		    key: "showHideVolume",
-		    value: function showHideVolume() {
-		      this.volumeControls.classList.toggle('hidden');
-
-		      if (this.volumeBtn.getAttribute('aria-label') === this.labels.volume.open) {
-		        this.volumeBtn.setAttribute('aria-label', this.labels.volume.close);
-		        this.hasSetAttribute(this.volumeBtn, 'title', this.labels.volume.close);
-		        this.volumeBtn.classList.add('open');
-		      } else {
-		        this.volumeBtn.setAttribute('aria-label', this.labels.volume.open);
-		        this.hasSetAttribute(this.volumeBtn, 'title', this.labels.volume.open);
-		        this.volumeBtn.classList.remove('open');
-		      }
-		    }
-		  }, {
-		    key: "changeVolume",
-		    value: function changeVolume(event) {
-		      if (this.inRange(event)) {
-		        this.player.volume = Math.round(this.getCoefficient(event) * 50) / 50;
-		      }
-		    }
-		  }, {
-		    key: "preloadNone",
-		    value: function preloadNone() {
-		      var self = this;
-
-		      if (!this.player.duration) {
-		        self.playPauseBtn.style.visibility = 'hidden';
-		        self.loading.style.visibility = 'visible';
-		      }
-		    }
-		  }, {
-		    key: "togglePlay",
-		    value: function togglePlay() {
-		      this.preloadNone();
-
-		      if (this.player.paused) {
-		        if (this.stopOthersOnPlay) {
-		          GreenAudioPlayer.stopOtherPlayers();
-		        }
-
-		        GreenAudioPlayer.playPlayer(this.player);
-		        this.playPauseBtn.setAttribute('aria-label', this.labels.pause);
-		        this.hasSetAttribute(this.playPauseBtn, 'title', this.labels.pause);
-		      } else {
-		        GreenAudioPlayer.pausePlayer(this.player, 'toggle');
-		        this.playPauseBtn.setAttribute('aria-label', this.labels.play);
-		        this.hasSetAttribute(this.playPauseBtn, 'title', this.labels.play);
-		      }
-		    }
-		  }, {
-		    key: "hasSetAttribute",
-		    value: function hasSetAttribute(el, a, v) {
-		      if (this.showTooltips) {
-		        if (el.hasAttribute(a)) {
-		          el.setAttribute(a, v);
-		        }
-		      }
-		    }
-		  }, {
-		    key: "setCurrentTime",
-		    value: function setCurrentTime(time) {
-		      var pos = this.player.currentTime;
-		      var end = Math.floor(this.player.duration);
-
-		      if (pos + time < 0 && pos === 0) {
-		        this.player.currentTime = this.player.currentTime;
-		      } else if (pos + time < 0) {
-		        this.player.currentTime = 0;
-		      } else if (pos + time > end) {
-		        this.player.currentTime = end;
-		      } else {
-		        this.player.currentTime += time;
-		      }
-		    }
-		  }, {
-		    key: "setVolume",
-		    value: function setVolume(volume) {
-		      if (this.isDevice) return;
-		      var vol = this.player.volume;
-
-		      if (vol + volume >= 0 && vol + volume < 1) {
-		        this.player.volume += volume;
-		      } else if (vol + volume <= 0) {
-		        this.player.volume = 0;
-		      } else {
-		        this.player.volume = 1;
-		      }
-		    }
-		  }, {
-		    key: "unPressKb",
-		    value: function unPressKb(event) {
-		      var evt = event || window.event;
-
-		      if (this.seeking && (evt.keyCode === 37 || evt.keyCode === 39)) {
-		        this.togglePlay();
-		        this.seeking = false;
-		      }
-		    }
-		  }, {
-		    key: "pressKb",
-		    value: function pressKb(event) {
-		      var evt = event || window.event;
-
-		      switch (evt.keyCode) {
-		        case 13: // Enter
-
-		        case 32:
-		          // Spacebar
-		          if (document.activeElement.parentNode === this.playPauseBtn) {
-		            this.togglePlay();
-		          } else if (document.activeElement.parentNode === this.volumeBtn || document.activeElement === this.sliders[1]) {
-		            if (document.activeElement === this.sliders[1]) {
-		              try {
-		                // IE 11 not supporting programmatic focus on svg elements
-		                this.volumeBtn.children[0].focus();
-		              } catch (error) {
-		                this.volumeBtn.focus();
-		              }
-		            }
-
-		            this.showHideVolume();
-		          }
-
-		          if (evt.keyCode === 13 && this.showDownload && document.activeElement.parentNode === this.downloadLink) {
-		            this.downloadLink.focus();
-		          }
-
-		          break;
-
-		        case 37:
-		        case 39:
-		          // horizontal Arrows
-		          if (document.activeElement === this.sliders[0]) {
-		            if (evt.keyCode === 37) {
-		              this.setCurrentTime(-5);
-		            } else {
-		              this.setCurrentTime(+5);
-		            }
-
-		            if (!this.player.paused && this.player.seeking) {
-		              this.togglePlay();
-		              this.seeking = true;
-		            }
-		          }
-
-		          break;
-
-		        case 38:
-		        case 40:
-		          // vertical Arrows
-		          if (document.activeElement.parentNode === this.volumeBtn || document.activeElement === this.sliders[1]) {
-		            if (evt.keyCode === 38) {
-		              this.setVolume(0.05);
-		            } else {
-		              this.setVolume(-0.05);
-		            }
-		          }
-
-		          if (document.activeElement.parentNode === this.volumeBtn) {
-		            this.showVolume();
-		          }
-
-		          break;
-		      }
-		    }
-		  }, {
-		    key: "showLoadingIndicator",
-		    value: function showLoadingIndicator() {
-		      this.playPauseBtn.style.visibility = 'hidden';
-		      this.loading.style.visibility = 'visible';
-		    }
-		  }, {
-		    key: "hideLoadingIndicator",
-		    value: function hideLoadingIndicator() {
-		      this.playPauseBtn.style.visibility = 'visible';
-		      this.loading.style.visibility = 'hidden';
-		    }
-		  }, {
-		    key: "showDownload",
-		    value: function showDownload() {
-		      this.download.style.display = 'block';
-		    }
-		  }, {
-		    key: "downloadAudio",
-		    value: function downloadAudio() {
-		      var src = this.player.currentSrc;
-		      var name = src.split('/').reverse()[0];
-		      this.downloadLink.setAttribute('href', src);
-		      this.downloadLink.setAttribute('download', name);
-		    }
-		  }, {
-		    key: "directionAware",
-		    value: function directionAware() {
-		      this.volumeControls.classList.remove('top', 'middle', 'bottom');
-
-		      if (window.innerHeight < 250) {
-		        this.volumeControls.classList.add('middle');
-		      } else if (this.audioPlayer.getBoundingClientRect().top < 180) {
-		        this.volumeControls.classList.add('bottom');
-		      } else {
-		        this.volumeControls.classList.add('top');
-		      }
-		    }
-		  }], [{
-		    key: "init",
-		    value: function init(options) {
-		      var players = document.querySelectorAll(options.selector);
-		      players.forEach(function (player) {
-		        /* eslint-disable no-new */
-		        new GreenAudioPlayer(player, options);
-		      });
-		    }
-		  }, {
-		    key: "getTemplate",
-		    value: function getTemplate() {
-		      return "\n            <div class=\"holder\">\n                <div class=\"loading\">\n                    <div class=\"loading__spinner\"></div>\n                </div>\n\n                <div class=\"play-pause-btn\" aria-label=\"Play\" role=\"button\">\n                    <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"24\" viewBox=\"0 0 18 24\">\n                        <path fill=\"#566574\" fill-rule=\"evenodd\" d=\"M18 12L0 24V0\" class=\"play-pause-btn__icon\"/>\n                    </svg>\n                </div>\n            </div>\n\n            <div class=\"controls\">\n                <span class=\"controls__current-time\" aria-live=\"off\" role=\"timer\">00:00</span>\n                <div class=\"controls__slider slider\" data-direction=\"horizontal\">\n                    <div class=\"controls__progress gap-progress\" aria-label=\"Time Slider\" aria-valuemin=\"0\" aria-valuemax=\"100\" aria-valuenow=\"0\" role=\"slider\">\n                        <div class=\"pin progress__pin\" data-method=\"rewind\"></div>\n                    </div>\n                </div>\n                <span class=\"controls__total-time\">00:00</span>\n            </div>\n\n            <div class=\"volume\">\n                <div class=\"volume__button\" aria-label=\"Open Volume Controls\" role=\"button\">\n                    <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\">\n                        <path class=\"volume__speaker\" fill=\"#566574\" fill-rule=\"evenodd\" d=\"M14.667 0v2.747c3.853 1.146 6.666 4.72 6.666 8.946 0 4.227-2.813 7.787-6.666 8.934v2.76C20 22.173 24 17.4 24 11.693 24 5.987 20 1.213 14.667 0zM18 11.693c0-2.36-1.333-4.386-3.333-5.373v10.707c2-.947 3.333-2.987 3.333-5.334zm-18-4v8h5.333L12 22.36V1.027L5.333 7.693H0z\"/>\n                    </svg>\n                    <span class=\"message__offscreen\">Press Enter or Space to show volume slider.</span>\n                </div>\n                <div class=\"volume__controls hidden\">\n                    <div class=\"volume__slider slider\" data-direction=\"vertical\">\n                        <div class=\"volume__progress gap-progress\" aria-label=\"Volume Slider\" aria-valuemin=\"0\" aria-valuemax=\"100\" aria-valuenow=\"81\" role=\"slider\">\n                            <div class=\"pin volume__pin\" data-method=\"changeVolume\"></div>\n                        </div>\n                        <span class=\"message__offscreen\">Use Up/Down Arrow keys to increase or decrease volume.</span>\n                    </div>\n                </div>\n            </div>\n\n            <div class=\"download\">\n                <a class=\"download__link\" href=\"\" download=\"\" aria-label=\"Download\" role=\"button\">\n                    <svg width=\"24\" height=\"24\" fill=\"#566574\" enable-background=\"new 0 0 29.978 29.978\" version=\"1.1\" viewBox=\"0 0 29.978 29.978\" xml:space=\"preserve\" xmlns=\"http://www.w3.org/2000/svg\">\n                        <path d=\"m25.462 19.105v6.848h-20.947v-6.848h-4.026v8.861c0 1.111 0.9 2.012 2.016 2.012h24.967c1.115 0 2.016-0.9 2.016-2.012v-8.861h-4.026z\"/>\n                        <path d=\"m14.62 18.426l-5.764-6.965s-0.877-0.828 0.074-0.828 3.248 0 3.248 0 0-0.557 0-1.416v-8.723s-0.129-0.494 0.615-0.494h4.572c0.536 0 0.524 0.416 0.524 0.416v8.742 1.266s1.842 0 2.998 0c1.154 0 0.285 0.867 0.285 0.867s-4.904 6.51-5.588 7.193c-0.492 0.495-0.964-0.058-0.964-0.058z\"/>\n                    </svg>\n                </a>\n            </div>\n        ";
-		    }
-		  }, {
-		    key: "formatTime",
-		    value: function formatTime(time) {
-		      var min = Math.floor(time / 60);
-		      var sec = Math.floor(time % 60);
-		      return "".concat(min < 10 ? "0".concat(min) : min, ":").concat(sec < 10 ? "0".concat(sec) : sec);
-		    }
-		  }, {
-		    key: "pausePlayer",
-		    value: function pausePlayer(player) {
-		      var playPauseButton = player.parentElement.querySelector('.play-pause-btn__icon');
-		      playPauseButton.attributes.d.value = 'M18 12L0 24V0';
-		      player.pause();
-		    }
-		  }, {
-		    key: "playPlayer",
-		    value: function playPlayer(player) {
-		      var playPauseButton = player.parentElement.querySelector('.play-pause-btn__icon');
-		      playPauseButton.attributes.d.value = 'M0 0h6v24H0zM12 0h6v24h-6z';
-		      player.play();
-		    }
-		  }, {
-		    key: "stopOtherPlayers",
-		    value: function stopOtherPlayers() {
-		      var players = document.querySelectorAll('.green-audio-player audio');
-
-		      for (var i = 0; i < players.length; i++) {
-		        GreenAudioPlayer.pausePlayer(players[i]);
-		      }
-		    }
-		  }]);
-
-		  return GreenAudioPlayer;
-		}();
-
-		var _default = GreenAudioPlayer;
-		exports.default = _default;
-
-		},{}]},{},[1])(1)
-		}); 
-	} (greenAudioPlayer));
-
-	var greenAudioPlayerExports = greenAudioPlayer.exports;
-	var GreenAudioPlayer = /*@__PURE__*/getDefaultExportFromCjs(greenAudioPlayerExports);
-
 	function checkIsMobile(userAgent) {
 	    return /(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|ipad|iris|kindle|Android|Silk|lge |maemo|midp|mmp|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows (ce|phone)|xda|xiino/i
 	        .test(userAgent)
@@ -94660,8 +94046,8 @@ function InsertStackElement(node, body) {
 	    
 	    $$1('.js--bgm-track-search--container').empty().append($bgmTrackSearch);
 
-	    const playBgmTrackEntry = function (openWorld) {
-	        const bgmTrack = bgmTracksById[$$1(this).data('bgmTrackId')];
+	    /*const playBgmTrackEntry = function (openWorld) {
+	        const bgmTrack = bgmTracksById[$(this).data('bgmTrackId')];
 	        if (bgmTrack.url) {
 	            const playlistIndex = bgmTrackIds.indexOf(bgmTrack.id);
 	            if (!config.playlist && config.playlistIndex === playlistIndex)
@@ -94671,22 +94057,22 @@ function InsertStackElement(node, body) {
 	                updatePlaylistShuffleIndexes(playlistIndex);
 	            }
 	            if (openWorld) {
-	                const worldId = $$1(this).data('worldId');
+	                const worldId = $(this).data('worldId');
 	                if (worldId !== undefined)
 	                    trySelectNode(worldId, true, true);
 	                $tooltip.addClass('display--none');
-	                $$1.modal.close();
+	                $.modal.close();
 	            } else
 	                updateControlsContainer();
 	        }
 	    };
 
-	    $$1('.js--bgm-track[data-id]').on('click', function () { playBgmTrackEntry.apply(this, [ true ]); }).parent()
+	    $('.js--bgm-track[data-id]').on('click', function () { playBgmTrackEntry.apply(this, [ true ]); }).parent()
 	        .children('.js--bgm-track--collectable-entry--input-controls').children().on('click', function () {
-	            const $bgmTrackEntry = $$1(this).parent().parent().children('.js--bgm-track');
+	            const $bgmTrackEntry = $(this).parent().parent().children('.js--bgm-track');
 	            const bgmTrackId = $bgmTrackEntry.data('bgmTrackId');
-	            const isFav = $$1(this).hasClass('js--bgm-track__fav');
-	            const isIgnore = !isFav && $$1(this).hasClass('js--bgm-track__ignore');
+	            const isFav = $(this).hasClass('js--bgm-track__fav');
+	            const isIgnore = !isFav && $(this).hasClass('js--bgm-track__ignore');
 	            if (isFav || isIgnore) {
 	                const hasInput = config.bgmTrackInput.hasOwnProperty(bgmTrackId);
 	                if (!hasInput || !!config.bgmTrackInput[bgmTrackId] === isFav) {
@@ -94701,30 +94087,30 @@ function InsertStackElement(node, body) {
 	                        else
 	                            addFavBgmTrackEntry(bgmTrackId);
 	                    }
-	                    $$1(this).toggleClass('on', !hasInput);
-	                    $$1(this).parent().children(`.js--bgm-track__${isFav ? 'ignore' : 'fav'}`).toggleClass('inactive', !hasInput);
+	                    $(this).toggleClass('on', !hasInput);
+	                    $(this).parent().children(`.js--bgm-track__${isFav ? 'ignore' : 'fav'}`).toggleClass('inactive', !hasInput);
 	                    if (config.playlistIndex > -1) {
 	                        if (bgmTrackId === getPlaylistBgmTrackIds()[config.playlistIndex]) {
-	                            $$1(`.audio-player .${isFav ? 'fav' : 'ignore'}-btn`).toggleClass('on', !hasInput);
-	                            $$1(`.audio-player .${isFav ? 'ignore' : 'fav'}-btn`).toggleClass('inactive', !hasInput);
+	                            $(`.audio-player .${isFav ? 'fav' : 'ignore'}-btn`).toggleClass('on', !hasInput);
+	                            $(`.audio-player .${isFav ? 'ignore' : 'fav'}-btn`).toggleClass('inactive', !hasInput);
 	                        }
 	                    }
 	                }
 	            }
 	        }).parent().parent().children('.js--bgm-track--collectable-entry--play-controls').children().on('click', function () {
-	            const isPlay = $$1(this).hasClass('js--bgm-track__play');
-	            const isPause = !isPlay && $$1(this).hasClass('js--bgm-track__pause');
+	            const isPlay = $(this).hasClass('js--bgm-track__play');
+	            const isPause = !isPlay && $(this).hasClass('js--bgm-track__pause');
 	            if (isPlay || isPause) {
-	                if (!$$1(this).hasClass('pressed')) {
+	                if (!$(this).hasClass('pressed')) {
 	                    if (isPlay)
-	                        playBgmTrackEntry.apply($$1(this).parent().parent().children('.js--bgm-track')[0]);
+	                        playBgmTrackEntry.apply($(this).parent().parent().children('.js--bgm-track')[0]);
 	                    else
 	                        pauseBgm();
-	                    $$1(this).addClass('pressed');
+	                    $(this).addClass('pressed');
 	                }
-	            } else if ($$1(this).hasClass('js--bgm-track__playlist-add'))
-	                addPlaylistBgmTrack($$1(this).parent().parent().children('.js--bgm-track').data('bgmTrackId'));
-	        });
+	            } else if ($(this).hasClass('js--bgm-track__playlist-add'))
+	                addPlaylistBgmTrack($(this).parent().parent().children('.js--bgm-track').data('bgmTrackId'));
+	        });*/
 
 	    $$1('.js--bgm-track__set-image').on('click', function () {
 	        const $bgmTrackEntry = $$1(this).parent().parent().children('.js--bgm-track');
@@ -94812,20 +94198,6 @@ function InsertStackElement(node, body) {
 
 	    if ($favBgmTracksContainerBorders.children().length === 1)
 	        $$1('.js--fav-bgm-tracks--section').removeClass('display--none');
-	}
-
-	function removeFavBgmTrackEntry(bgmTrackId) {
-	    const $favBgmTracksContainerItems = $$1('.js--fav-bgm-tracks-container__items');
-	    const $favBgmTracksContainerBorders = $$1('.js--fav-bgm-tracks-container__borders');
-
-	    const $bgmTrackLinkContainer = $favBgmTracksContainerBorders.find(`.js--bgm-track[data-bgm-track-id=${bgmTrackId}]`).parent();
-	    const $bgmTrackImageContainer = $$1($$1($favBgmTracksContainerItems.children('.js--bgm-track-image--container')[$bgmTrackLinkContainer.index()]));
-	    
-	    $bgmTrackLinkContainer.remove();
-	    $bgmTrackImageContainer.remove();
-
-	    if (!$favBgmTracksContainerBorders.children().length)
-	        $$1('.js--fav-bgm-tracks--section').addClass('display--none');
 	}
 
 	function initBgmTrackImagesModal($bgmTrackEntry, getBgmTrackImageContainer) {
@@ -95244,8 +94616,6 @@ function InsertStackElement(node, body) {
 	}
 
 	let lastUpdate, lastFullUpdate;
-
-	let audioPlayer;
 	let playlistShuffleIndexes = [];
 
 	let worldImageData = [];
@@ -97592,7 +96962,7 @@ function InsertStackElement(node, body) {
 	        callback: function (data, defaultCallback) {
 	            if (config.lang === 'ja' || config.lang === 'ru')
 	                massageLocalizedValues(data, true);
-	            data.footer.about = data.footer.about.replace("{VERSION}", "5.2.5");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "5.3.0");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
 	            localizedSeparator = data.separator;
@@ -97904,8 +97274,8 @@ function InsertStackElement(node, body) {
 	                    const world = exports.worldData[contextWorldId];
 	                    if (world.bgmUrl.indexOf('|') === -1) {
 	                        if (!isCtrl) {
-	                            const worldName = getLocalizedLabel(world.title, world.titleJP);
-	                            playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel), world.filename, world.id);
+	                            getLocalizedLabel(world.title, world.titleJP);
+	                            //playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel), world.filename, world.id);
 	                        } else {
 	                            const handle = window.open(world.bgmUrl, '_blank');
 	                            if (handle)
@@ -97953,7 +97323,7 @@ function InsertStackElement(node, body) {
 	        }
 	        
 	        if (world.bgmUrl && world.bgmUrl.indexOf('|') > -1) {
-	            const worldName = getLocalizedLabel(world.title, world.titleJP);
+	            getLocalizedLabel(world.title, world.titleJP);
 	            const bgmUrls = world.bgmUrl.split('|');
 	            const bgmLabels = getBgmLabels(world.bgmLabel.split('|'), localizedContextMenu.items.bgm);
 	            for (let b = 0; b < bgmUrls.length; b++) {
@@ -97962,9 +97332,7 @@ function InsertStackElement(node, body) {
 	                    name: bgmLabels[bgmIndex],
 	                    callback: function () {
 	                        const bgmUrl = bgmUrls[bgmIndex];
-	                        if (!isCtrl) {
-	                            playBgm(bgmUrl, getBgmLabel(worldName, world.bgmLabel.split('|')[bgmIndex]), world.filename, world.id);
-	                        } else {
+	                        if (!isCtrl) ; else {
 	                            const handle = window.open(bgmUrl, '_blank');
 	                            if (handle)
 	                                handle.focus();
@@ -97993,332 +97361,16 @@ function InsertStackElement(node, body) {
 	}
 
 	function initBgm(url, label, imageUrl, worldId, play, playlistIndex, playlist) {
-	    const loopAttribute = playlistIndex === undefined || playlistIndex === -1 ? ' loop' : '';
-	    const $bgmTrackLink = worldId != null ? $$1(`<a href="javascript:void(0);" class="js--world-node-link no-border" data-world-id="${worldId}"></a>`) : null;
-	    const $bgmTrackImage = $$1(`<img src="${imageUrl}" class="audio-player-image noselect" />`);
-	    $$1('.audio-player-image-container').empty().append(worldId != null ? $bgmTrackLink.append($bgmTrackImage) : $bgmTrackImage);
-	    $$1('.audio-player-player-container').empty().append(`
-        <a href="javascript:void(0);" class="close-audio-player noselect">✖</a>
-        <marquee class="audio-player-marquee" scrollamount="5">
-            <label class="audio-player-label noselect">${label}</label>
-        </marquee>
-    `).append(`
-        <div class="audio-player">
-            <audio class="audio-source" crossorigin preload="none"${loopAttribute}></audio>
-        </div>
-    `);
-	    $$1('.audio-player-container').addClass('open');
-
-	    audioPlayer = new GreenAudioPlayer('.audio-player');
-
-	    const $loadingIndicator = $$1('.audio-player .loading');
-	    const $playBtn = $$1('.audio-player .play-pause-btn');
-	    const $prevBtn = $$1(`
-        <div class="audio-player-playlist-btn prev-btn" aria-label="Previous" role="button">
-            <svg width="18" height="24" viewBox="0 0 18 24" xmlns="http://www.w3.org/2000/svg">
-                <path class="prev-btn__icon" d="m3 10v-10h-3v24h3v-10l13 10v-24" fill-rule="evenodd" />
-            </svg>
-        </div>
-    `);
-	    const $nextBtn = $$1(`
-        <div class="audio-player-playlist-btn next-btn" aria-label="Next" role="button">
-            <svg width="18" height="24" viewBox="0 0 18 24" xmlns="http://www.w3.org/2000/svg">
-                <path class="next-btn__icon" d="m15 10v-10h3v24h-3v-9l-15 9v-24" fill-rule="evenodd" />
-            </svg>
-        </div>
-    `);
-	    const $favBtn = $$1(`
-        <div class="audio-player-playlist-btn fav-btn" aria-label="Favourite" role="button">
-            <svg width="24" height="24" viewBox="0 -1.5 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path class="fav-btn__icon" d="m22.2 2c-2.5-2.7-6.5-2.6-9.1 0.1l-1.1 1.3-1.1-1.3c-2.6-2.7-6.6-2.8-9-0.1h-0.1c-2.4 2.6-2.4 7 0.2 9.7l5.4 5.9 0.1 0.1 4.5 4.8 4.4-4.8h0.1l0.1-0.1 5.4-5.9c2.6-2.7 2.6-7.1 0.2-9.7z" fill-rule="evenodd" />
-            </svg>
-        </div>
-    `);
-	    const $ignoreBtn = $$1(`
-         <div class="audio-player-playlist-btn ignore-btn" aria-label="Ignore" role="button">
-            <svg width="24" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-                <path class="ignore-btn__icon" d="m9 0a9 9 90 1 0 9 9 9 9 90 0 0 -9 -9zm0 2.1a6.9 6.9 90 0 1 4.1 1.3l-9.7 9.7a6.9 6.9 90 0 1 5.6 -11zm0 13.8a6.9 6.9 90 0 1 -4.1 -1.3l9.6-9.6a6.9 6.9 90 0 1 -5.5 10.9z" fill-rule="evenodd"/>
-            </svg>
-        </div>
-    `);
-	    const $shuffleBtn = $$1(`
-        <div class="audio-player-playlist-btn shuffle-btn${config.playlistShuffle ? ' on' : ''}" aria-label="Shuffle" role="button">
-            <svg width="24" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-                <path class="shuffle-btn__icon" d="m0 2h7l5 11h3v-2l3 3.5-3 3.5v-2h-5l-5-11h-5m0 11h7l0.9-2-2-3-0.9 2h-5m10.6-5l1.4-3h3v2l3-3.5-3-3.5v2h-5l-0.9 2" fill-rule="evenodd" />
-            </svg>
-        </div>
-    `);
-	    const $repeatBtn = $$1(`
-        <div class="audio-player-playlist-btn repeat-btn${config.playlistRepeat ? ' on' : ''}" aria-label="Repeat" role="button">
-            <svg width="24" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-                <path class="repeat-btn__icon" d="m0 9v-7h15v-2l3 3.5-3 3.5v-2h-12v4zm18 0v7h-15v2l-3-3.5 3-3.5v2h12v-4z" fill-rule="evenodd"/>
-            </svg>
-        </div>
-    `);
-	    const $playlistAddBtn = $$1(`
-        <div class="audio-player-playlist-btn playlist-add-btn" aria-label="Add to Playlist" role="button">
-            <svg width="24" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-                <path class="playlist-add-btn__icon" d="m18 2h-18v-2h18zm0 5h-18v-2h18zm-11 5h-7v-2h7zm0 5h-7v-2h7zm8 1h-3v-3h-3v-3h3v-3h3v3h3v3h-3z" fill-rule="evenodd" />
-            </svg>
-        </div>
-    `);
-	    const $volume = $$1('.audio-player .volume');
-	    const $mainHolder = $playBtn.parent().addClass('main-holder');
-	    const $leftHolder = $$1('<div class="holder left-holder"></div>');
-	    const $rightHolder = $$1('<div class="holder right-holder"></div>');
-	    
-	    $leftHolder.insertBefore($mainHolder);
-	    $leftHolder.append($favBtn);
-	    $ignoreBtn.insertAfter($favBtn);
-	    $shuffleBtn.insertBefore($loadingIndicator);
-	    $prevBtn.insertAfter($shuffleBtn);
-	    $nextBtn.insertAfter($playBtn);
-	    $repeatBtn.insertAfter($nextBtn);
-	    $volume.wrap($rightHolder);
-	    $playlistAddBtn.insertBefore($volume);
-
-	    $playBtn.addClass('display--none');
-
-	    audioPlayer.showLoadingIndicator();
-
-	    audioPlayer.player.addEventListener('canplay', function() {
-	        $$1('.audio-player .loading').addClass('display--none');
-	        $playBtn.removeClass('display--none');
-	    });
-
-	    const requestObj = new Request(url, { method: 'GET' });
-	    
-	    audioPlayer.player.volume = config.audioVolume;
-	    audioPlayer.player.addEventListener('volumechange', function() {
-	        const currentVolume = audioPlayer.player.volume;
-	        window.setTimeout(function () {
-	            if (audioPlayer.player.volume === currentVolume) {
-	                config.audioVolume = currentVolume;
-	                updateConfig(config);
-	            }
-	        }, 1000);
-	    });
-
-	    if (playlistIndex > -1) {
-	        if (url) {
-	            const bgmTrackId = getPlaylistBgmTrackIds()[playlistIndex];
-	            const $bgmTrackEntry = $$1(`.js--bgm-track[data-bgm-track-id='${bgmTrackId}']`);
-	            const $bgmTrackEntryInputControls = $bgmTrackEntry.parent().children('.js--bgm-track--collectable-entry--input-controls');
-	            const $bgmTrackEntryPlayControls = $bgmTrackEntry.parent().children('.js--bgm-track--collectable-entry--play-controls');
-	            const toggleEntryPlayingInList = function (playing) {
-	                if (!playlist) {
-	                    $bgmTrackEntryPlayControls.children('.js--bgm-track__play').toggleClass('display--none', playing).toggleClass('pressed', playing);
-	                    $bgmTrackEntryPlayControls.children('.js--bgm-track__pause').toggleClass('display--none', !playing).toggleClass('pressed', !playing);
-	                }
-	            };
-
-	            if (config.bgmTrackInput.hasOwnProperty(bgmTrackId)) {
-	                const input = config.bgmTrackInput[bgmTrackId];
-	                $favBtn.addClass(input ? 'on' : 'inactive');
-	                $ignoreBtn.addClass(input ? 'inactive' : 'on');
-	            }
-
-	            $$1('.js--playlist-item.playing').removeClass('playing');
-
-	            $$1('.js--bgm-track__pause:visible').addClass('display--none')
-	                .parent().children('.js--bgm-track__play').removeClass('display--none').removeClass('pressed');
-	            if (playlist)
-	                $$1(`.js--playlist-item:nth(${playlistIndex})`).addClass('playing');
-
-	            config.playlist = !!playlist;
-	            config.playlistIndex = playlistIndex;
-	            updateConfig(config);
-
-	            const updateBgmTrackInput = function() {
-	                const isFav = $$1(this).hasClass('fav-btn');
-	                const hasInput = config.bgmTrackInput.hasOwnProperty(bgmTrackId);
-	                if (!hasInput || !!config.bgmTrackInput[bgmTrackId] === isFav) {
-	                    if (hasInput)
-	                        delete config.bgmTrackInput[bgmTrackId];
-	                    else
-	                        config.bgmTrackInput[bgmTrackId] = isFav ? 1 : 0;
-	                    updateConfig(config);
-	                    if (isFav) {
-	                        if (hasInput)
-	                            removeFavBgmTrackEntry(bgmTrackId);
-	                        else
-	                            addFavBgmTrackEntry(bgmTrackId);
-	                    }
-	                    $$1(this).toggleClass('on', !hasInput);
-	                    (isFav ? $ignoreBtn : $favBtn).toggleClass('inactive', !hasInput);
-	                    $bgmTrackEntryInputControls.find(`.js--bgm-track__${isFav ? 'fav' : 'ignore'}`).toggleClass('on', !hasInput);
-	                    $bgmTrackEntryInputControls.find(`.js--bgm-track__${isFav ? 'ignore' : 'fav'}`).toggleClass('inactive', !hasInput);
-	                }
-	            };
-
-	            const playPrevTrack = function() {
-	                if (getPlaylistBgmTrackIds().length > 1) {
-	                    audioPlayer.player.src = '';
-	                    toggleEntryPlayingInList(false);
-	                    if (playPrevPlaylistBgmTrack(playlistIndex))
-	                        return;
-	                    toggleEntryPlayingInList(true);
-	                    audioPlayer.player.src = url;
-	                }
-	                GreenAudioPlayer.playPlayer(audioPlayer.player);
-	            };
-	            const playNextTrack = function() {
-	                if (getPlaylistBgmTrackIds().length > 1) {
-	                    audioPlayer.player.src = '';
-	                    toggleEntryPlayingInList(false);
-	                    if (playNextPlaylistBgmTrack(playlistIndex))
-	                        return;
-	                    toggleEntryPlayingInList(true);
-	                    audioPlayer.player.src = url;
-	                }
-	                GreenAudioPlayer.playPlayer(audioPlayer.player);
-	            };
-
-	            if (!playlist) {
-	                audioPlayer.player.addEventListener('play', () => toggleEntryPlayingInList(true));
-	                audioPlayer.player.addEventListener('pause', () => toggleEntryPlayingInList(false));
-	            }
-
-	            audioPlayer.player.addEventListener('ended', function () {
-	                if (config.playlistRepeat)
-	                    GreenAudioPlayer.playPlayer(audioPlayer.player);
-	                else
-	                    playNextTrack();
-	            });
-
-	            $prevBtn.on('click', playPrevTrack);
-	            $nextBtn.on('click', playNextTrack);
-	            $favBtn.on('click', updateBgmTrackInput);
-	            $ignoreBtn.on('click', updateBgmTrackInput);
-	            $shuffleBtn.on('click', function() {
-	                const shuffle = (config.playlistShuffle = !config.playlistShuffle);
-	                $$1(this).toggleClass('on', shuffle);
-	                if (shuffle)
-	                    updatePlaylistShuffleIndexes();
-	                updateConfig(config);
-	            });
-	            $repeatBtn.on('click', function() {
-	                const repeat = (config.playlistRepeat = !config.playlistRepeat);
-	                $$1(this).toggleClass('on', repeat);
-	                updateConfig(config);
-	            });
-	            
-	            if (!playlist)
-	                $playlistAddBtn.on('click', () => addPlaylistBgmTrack(bgmTrackId));
-	            else
-	                $playlistAddBtn.addClass('inactive');
-	        } else {
-	            audioPlayer.player.src = '';
-	            playNextPlaylistBgmTrack(playlistIndex);
-	            return;
-	        }
-	    } else {
-	        $$1('.audio-player-playlist-btn').addClass('inactive');
-
-	        if (config.playlist || config.playlistIndex > -1) {
-	            config.playlist = false;
-	            config.playlistIndex = -1;
-	            updateConfig(config);
-	        }
-
-	        if (!url)
-	            return;
-	    }
-
-	    const player = audioPlayer.player;
-
-	    fetch(requestObj).then(function (response) {
-	        if (!response.ok)
-	            $$1('.audio-player-label').text('ERROR');
-	        return response;
-	    }).then(async function (res) {
-	        const blob = await res.blob();
-	        if (player === audioPlayer.player) {
-	            const url = window.URL.createObjectURL(blob);
-	            player.src = url;
-	            $$1('.close-audio-player').on('click', function() {
-	                audioPlayer = null;
-	                config.playlistIndex = -1;
-	                updateConfig(config);
-	                $$1('.audio-player-container').removeClass('open');
-	                $$1('.audio-player-image-container, .audio-player-player-container').empty();
-	                if (!$$1('.controls-playlist').hasClass('visible'))
-	                    updateControlsContainer();
-	            });
-	            if (play)
-	                GreenAudioPlayer.playPlayer(player);
-	        }
-	    }).catch((err) => console.error(err));
+	    return;
 	}
 
 	function initBgmTrack(bgmTrack, play, playlistIndex, playlist) {
 	    const imageUrl = bgmTrack.worldId != null ? exports.worldData[bgmTrack.worldId].images[bgmTrack.worldImageOrdinal] : getMissingBgmTrackUrl(bgmTrack.location);
-	    initBgm(bgmTrack.url, getBgmTrackLabel(bgmTrack), imageUrl, bgmTrack.worldId, play, playlistIndex, playlist);
-	}
-
-	function playBgm(url, label, imageUrl, worldId) {
-	    initBgm(url, label, imageUrl, worldId, true);
+	    initBgm(bgmTrack.url, getBgmTrackLabel(bgmTrack), imageUrl, bgmTrack.worldId);
 	}
 
 	function playBgmTrack(bgmTrack, playlistIndex, playlist) {
-	    initBgmTrack(bgmTrack, true, playlistIndex, playlist);
-	}
-
-	function playPrevPlaylistBgmTrack(lastPlaylistIndex, attempts) {
-	    const wrapIndex = config.playlistShuffle ? lastPlaylistIndex === playlistShuffleIndexes[0] : lastPlaylistIndex <= 0;
-	    if (wrapIndex)
-	        updatePlaylistShuffleIndexes();
-	    const playlistIndex = config.playlistShuffle
-	        ? playlistShuffleIndexes[!wrapIndex ? playlistShuffleIndexes.indexOf(lastPlaylistIndex) - 1 : playlistShuffleIndexes.length - 1]
-	        : !wrapIndex ? lastPlaylistIndex - 1 : getPlaylistBgmTrackIds().length - 1;
-	    const playlistBgmTrackId = getPlaylistBgmTrackIds()[playlistIndex];
-	    const skipTrack = () => playPrevPlaylistBgmTrack(playlistIndex, attempts ? ++attempts : 1);
-	    if (bgmTrackIndexesById.hasOwnProperty(playlistBgmTrackId)) {
-	        const bgmTrack = bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]];
-	        if (bgmTrack.url && (config.playlist || !config.bgmTrackInput.hasOwnProperty(playlistBgmTrackId) || config.bgmTrackInput[playlistBgmTrackId])) {
-	            GreenAudioPlayer.stopOtherPlayers();
-	            playBgmTrack(bgmTrack, playlistIndex, config.playlist);
-	        } else
-	            skipTrack();
-	    } else if (attempts < getPlaylistBgmTrackIds().length)
-	        skipTrack();
-	    else
-	        return false;
-	    return true;
-	}
-
-	function playNextPlaylistBgmTrack(lastPlaylistIndex, attempts) {
-	    const wrapIndex = config.playlistShuffle ? lastPlaylistIndex === playlistShuffleIndexes[playlistShuffleIndexes.length - 1] : lastPlaylistIndex >= getPlaylistBgmTrackIds().length - 1;
-	    if (wrapIndex)
-	        updatePlaylistShuffleIndexes();
-	    const playlistIndex = config.playlistShuffle
-	        ? playlistShuffleIndexes[!wrapIndex ? playlistShuffleIndexes.indexOf(lastPlaylistIndex) + 1 : 0]
-	        : !wrapIndex ? lastPlaylistIndex + 1 : 0;
-	    const playlistBgmTrackId = getPlaylistBgmTrackIds()[playlistIndex];
-	    const skipTrack = () => playNextPlaylistBgmTrack(playlistIndex, attempts ? ++attempts : 1);
-	    if (bgmTrackIndexesById.hasOwnProperty(playlistBgmTrackId)) {
-	        const bgmTrack = bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]];
-	        if (bgmTrack.url && (config.playlist || !config.bgmTrackInput.hasOwnProperty(playlistBgmTrackId) || config.bgmTrackInput[playlistBgmTrackId])) {
-	            GreenAudioPlayer.stopOtherPlayers();
-	            playBgmTrack(bgmTrack, playlistIndex, config.playlist);
-	        } else
-	            skipTrack();
-	    } else if (attempts < getPlaylistBgmTrackIds().length)
-	        skipTrack();
-	    else
-	        return false;
-	    return true;
-	}
-
-	function pauseBgm() {
-	    const audioSources = document.getElementsByClassName('audio-source');
-	    if (audioSources.length)
-	        GreenAudioPlayer.pausePlayer(audioSources[0]);
-	    if (!config.playlist && config.playlistIndex > -1) {
-	        const $bgmTrackEntryControls = $$1(`.js--bgm-track[data-bgm-track-id='${bgmTrackIds[config.playlistIndex]}']`).parent().children('.js--bgm-track--collectable-entry--play-controls');
-	        $bgmTrackEntryControls.children('.js--bgm-track__pause').addClass('display--none');
-	        $bgmTrackEntryControls.children('.js--bgm-track__play').removeClass('display--none').removeClass('pressed');
-	    }
+	    initBgmTrack(bgmTrack);
 	}
 
 	function getPlaylistBgmTrackIds() {
@@ -98356,7 +97408,7 @@ function InsertStackElement(node, body) {
 	            if (config.playlistIndex > -1 && config.playlistIndex < config.playlistBgmTrackIds.length) {
 	                const playlistBgmTrackId = config.playlistBgmTrackIds[config.playlistIndex];
 	                if (bgmTrackIndexesById.hasOwnProperty(playlistBgmTrackId))
-	                    initBgmTrack(bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]], false, config.playlistIndex, true);
+	                    initBgmTrack(bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]], false, config.playlistIndex);
 	            }
 	            updatePlaylistShuffleIndexes(config.playlistIndex);
 	        }
@@ -98391,7 +97443,7 @@ function InsertStackElement(node, body) {
 	    if (bgmTrack)
 	        $playlistItem.on('click', function () {
 	            if (bgmTrackIndexesById.hasOwnProperty(bgmTrackId)) {
-	                playBgmTrack(bgmTrackData[bgmTrackIndexesById[bgmTrackId]], $$1(this).index(), true);
+	                playBgmTrack(bgmTrackData[bgmTrackIndexesById[bgmTrackId]], $$1(this).index());
 	                updatePlaylistShuffleIndexes($$1(this).index());
 	            }
 	        });
@@ -98484,13 +97536,6 @@ function InsertStackElement(node, body) {
 	    }
 
 	    return ret;
-	}
-
-	function getBgmLabel(worldName, bgmLabel) {
-	    const separatorIndex = bgmLabel.indexOf('^');
-	    if (separatorIndex === bgmLabel.length - 1 || !getLangUsesEn(config.lang))
-	        return `${worldName}${localizedSeparator}${bgmLabel.slice(0, separatorIndex)}`;
-	    return `${worldName}${localizedSeparator}${bgmLabel.slice(separatorIndex + 1)}${localizedBraces.replace('{VALUE}', bgmLabel.slice(0, separatorIndex))})`;
 	}
 
 	function getBgmTrackLabel(bgmTrack) {

@@ -12,7 +12,6 @@ import * as THREE from 'three';
 import SpriteText from 'three-spritetext';
 import ForceGraph3D from '3d-force-graph';
 import TWEEN from '@tweenjs/tween.js';
-import GreenAudioPlayer from 'green-audio-player/dist/js/green-audio-player';
 import { checkIsMobile, formatDate, getLocalizedValue, getLangUsesEn, getColorRgba, hueToRGBA, uiThemeFontColors, uiThemeBgColors, getBaseBgColor, getFontColors, getFontShadow, getGradientText, updateSvgGradient, getSvgGradientStop } from './utils';
 import { updateConfig } from './config.js';
 import { ConnType } from './conn-type.js';
@@ -964,7 +963,7 @@ function initBgmTrackData(data) {
     
     $('.js--bgm-track-search--container').empty().append($bgmTrackSearch);
 
-    const playBgmTrackEntry = function (openWorld) {
+    /*const playBgmTrackEntry = function (openWorld) {
         const bgmTrack = bgmTracksById[$(this).data('bgmTrackId')];
         if (bgmTrack.url) {
             const playlistIndex = bgmTrackIds.indexOf(bgmTrack.id);
@@ -1028,7 +1027,7 @@ function initBgmTrackData(data) {
                 }
             } else if ($(this).hasClass('js--bgm-track__playlist-add'))
                 addPlaylistBgmTrack($(this).parent().parent().children('.js--bgm-track').data('bgmTrackId'));
-        });
+        });*/
 
     $('.js--bgm-track__set-image').on('click', function () {
         const $bgmTrackEntry = $(this).parent().parent().children('.js--bgm-track');
@@ -3896,7 +3895,7 @@ function initLocalization(isInitial) {
         callback: function (data, defaultCallback) {
             if (config.lang === 'ja' || config.lang === 'ru')
                 massageLocalizedValues(data, true);
-            data.footer.about = data.footer.about.replace("{VERSION}", "5.2.5");
+            data.footer.about = data.footer.about.replace("{VERSION}", "5.3.0");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             localizedSeparator = data.separator;
@@ -4209,7 +4208,7 @@ function initContextMenu(localizedContextMenu) {
                     if (world.bgmUrl.indexOf('|') === -1) {
                         if (!isCtrl) {
                             const worldName = getLocalizedLabel(world.title, world.titleJP);
-                            playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel), world.filename, world.id);
+                            //playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel), world.filename, world.id);
                         } else {
                             const handle = window.open(world.bgmUrl, '_blank');
                             if (handle)
@@ -4267,7 +4266,7 @@ function initContextMenu(localizedContextMenu) {
                     callback: function () {
                         const bgmUrl = bgmUrls[bgmIndex];
                         if (!isCtrl) {
-                            playBgm(bgmUrl, getBgmLabel(worldName, world.bgmLabel.split('|')[bgmIndex]), world.filename, world.id);
+                            //playBgm(bgmUrl, getBgmLabel(worldName, world.bgmLabel.split('|')[bgmIndex]), world.filename, world.id);
                         } else {
                             const handle = window.open(bgmUrl, '_blank');
                             if (handle)
@@ -4297,6 +4296,7 @@ function openWorldWikiPage(worldId, newWindow) {
 }
 
 function initBgm(url, label, imageUrl, worldId, play, playlistIndex, playlist) {
+    return;
     const loopAttribute = playlistIndex === undefined || playlistIndex === -1 ? ' loop' : '';
     const $bgmTrackLink = worldId != null ? $(`<a href="javascript:void(0);" class="js--world-node-link no-border" data-world-id="${worldId}"></a>`) : null;
     const $bgmTrackImage = $(`<img src="${imageUrl}" class="audio-player-image noselect" />`);
