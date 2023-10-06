@@ -3,35 +3,35 @@
     "loading": {
         "label": "ロード中",
         "space": "　　　",
-        "error": "エラーが起きました。経ってからもう一度お試しください。"
+        "error": "エラーが発生しました。しばらく経ってからもう一度お試しください。"
     },
     "updateTask": {
-        "init": "Initializing data refresh",
-        "prepareWorldData": "Preparing world data",
-        "fetchWorldData": "Fetching worlds",
-        "fetchConnData": "Fetching connections",
-        "updateWorldData": "Updating world data",
-        "updateConns": "Updating connection data",
-        "updateConnTypeParams": "Updating connection parameters",
-        "fetchWorldImageData": "Fetching world images",
-        "updateWorldImageData": "Updating world images",
-        "updateWorldDepths": "Updating world depths",
-        "cleanupWorldData": "Cleaning up world data",
-        "fetchMapData": "Fetching map data",
-        "updateMapData": "Updating map data",
-        "fetchAuthorInfoData": "Fetching author info",
-        "updateAuthorInfoData": "Updating author info",
-        "fetchVersionInfoData": "Fetching version info",
-        "updateVersionInfoData": "Updating version info",
-        "fetchEffectData": "Fetching effect data",
-        "updateEffectData": "Updating effect data",
-        "fetchEffectDataJP": "Fetching Japanese effect data",
-        "fetchMenuThemeData": "Fetching menu theme data",
-        "updateMenuThemeData": "Updating menu theme data",
-        "fetchWallpaperData": "Fetching wallpaper data",
-        "updateWallpaperData": "Updating wallpaper data",
-        "fetchBgmTrackData": "Fetching BGM track data",
-        "updateBgmTrackData": "Updating BGM track data"
+        "init": "データ更新を開始します",
+        "prepareWorldData": "夢の世界を読み込んでいます",
+        "fetchWorldData": "夢の世界の情報を取得しています",
+        "fetchConnData": "夢の世界のつながりを取得しています",
+        "updateWorldData": "夢の世界の情報を更新しています",
+        "updateConns": "夢の世界のつながりを更新しています",
+        "updateConnTypeParams": "夢の世界のつながりの情報を更新しています",
+        "fetchWorldImageData": "夢の世界の画像を取得しています",
+        "updateWorldImageData": "夢の世界の画像を更新しています",
+        "updateWorldDepths": "夢の世界の深さを更新しています",
+        "cleanupWorldData": "夢の世界の情報をまとめています",
+        "fetchMapData": "夢の世界の地図を取得しています",
+        "updateMapData": "夢の世界の地図を更新しています",
+        "fetchAuthorInfoData": "ツクラーの情報を取得しています",
+        "updateAuthorInfoData": "ツクラーの情報を更新しています",
+        "fetchVersionInfoData": "バージョンの情報を取得しています",
+        "updateVersionInfoData": "バージョンの情報を更新しています",
+        "fetchEffectData": "エフェクトの情報を取得しています",
+        "updateEffectData": "エフェクトの情報を更新しています",
+        "fetchEffectDataJP": "エフェクトの日本語の情報を取得しています",
+        "fetchMenuThemeData": "メニュータイプの情報を取得しています",
+        "updateMenuThemeData": "メニュータイプの情報を更新しています",
+        "fetchWallpaperData": "壁紙の情報を取得しています",
+        "updateWallpaperData": "壁紙の情報を更新しています",
+        "fetchBgmTrackData": "SR分室の曲の情報を取得しています",
+        "updateBgmTrackData": "SR分室の曲の情報を更新しています"
     },
     "controls": {
         "search": {
@@ -50,10 +50,10 @@
             }
         },
         "origin": {
-            "name": "原点"
+            "name": "出発地点"
         },
         "destination": {
-            "name": "行先"
+            "name": "目的地"
         },
         "reset": {
             "name": "リセット"
@@ -73,7 +73,7 @@
             "name": "エフェクト"
         },
         "menuThemes": {
-            "name": "メンユー タイプ"
+            "name": "メニュー タイプ"
         },
         "wallpapers": {
             "name": "パソコンの 壁紙"
@@ -87,7 +87,7 @@
             "name": "言語"
         },
         "uiTheme": {
-            "name": "アプリの メニュー タイプ",
+            "name": "アプリのメニュータイプ",
             "values": {
                 "Default_Custom": "デフォルト（カスタム）",
                 "Default": "デフォルト",
@@ -96,14 +96,14 @@
                 "Default_4": "デフォルト４",
                 "Default_5": "デフォルト５",
                 "Developer_Room": "製作者の部屋",
-                "Glitch_Ending": "似非エンディング",
-                "Glitch_Ending_2": "似非エンディング２",
-                "Black_Building": "黒ビル",
-                "Cog_Maze": "歯車",
-                "Square_Square_World": "四角四角",
-                "Verdant_Promenade": "森林公園",
-                "Urotsukis_Dream_Apartments": "うろつき邸",
-                "Sofa_Room": "ソファ",
+                "Glitch_Ending": "夢の夢部屋",
+                "Glitch_Ending_2": "夢の夢部屋２",
+                "Black_Building": "浅瀬",
+                "Cog_Maze": "桟橋の森",
+                "Square_Square_World": "星洞",
+                "Verdant_Promenade": "蒸気工場",
+                "Urotsukis_Dream_Apartments": "光と水面",
+                "Sofa_Room": "夜花草",
                 "Depths": "みなぞこ",
                 "Depths_2": "すいそう",
                 "Guts_World": "コンクリートマンション",
@@ -116,10 +116,10 @@
                 "Blob_Desert": "荒野",
                 "Cipher_Keyboard": "立椅子館",
                 "Viridian_Wetlands": "ビリジアン湿地",
-                "Polluted_Swamp": "機密",
+                "Polluted_Swamp": "生者必滅",
                 "Snowy_Village": "冬の村",
-                "Decrepit_Dwellings": "集合住宅",
-                "Verdant_Promenade_2": "森林公園２",
+                "Decrepit_Dwellings": "森の中の住宅街",
+                "Verdant_Promenade_2": "森林公園",
                 "Black_Ink_World": "黒インク世界",
                 "Forgotten_Megalopolis": "忘れられた街",
                 "Tomb_of_Velleities": "Butterfly",
@@ -128,15 +128,15 @@
                 "Lavender_Waters": "紫湖",
                 "Originator_Garden": "始祖庭",
                 "Fluorescent_Halls": "繁華道",
-                "City_of_Liars": "嘘つきの街",
-                "Misc": "雑多なメンユータイプ",
-                "Monochrome_GB_World": "グレーボーイ",
+                "City_of_Liars": "偽浅瀬の家",
+                "Misc": "メニュータイプ３９",
+                "Monochrome_GB_World": "グレートンネル",
                 "Smiley_Signs_World": "黒白世界",
-                "Lovesick_World": "恋",
+                "Lovesick_World": "恋の家",
                 "Corrupted_Love_World": "恋楔",
-                "Pastel_Chalk_World": "スタッチュ桟橋",
+                "Pastel_Chalk_World": "星の集落",
                 "Luminous_Lake": "夢徨龍リオドリムス",
-                "Monochrome_GB_World_2": "グレーボーイ２",
+                "Monochrome_GB_World_2": "グレーボーイ",
                 "Saturated_Eyeball_Zone": "彩愛蝶",
                 "NES_Glitch_Tunnel": "NESトンネル",
                 "Shop_Ruins": "廃墟商店",
@@ -158,25 +158,25 @@
         "renderMode": {
             "name": "レンダリング モード",
             "values": {
-                "2d": "２Ｄ",
-                "3d": "３Ｄ"
+                "2d": "２Ⅾ",
+                "3d": "３Ⅾ"
             }
         },
         "displayMode": {
             "name": "ディスプレイ モード",
             "values": {
-                "vertical": "垂直",
-                "horizontal": "水平",
+                "vertical": "縦",
+                "horizontal": "横",
                 "radialIn": "内向き",
                 "radialOut": "外向き",
-                "free": "自由"
+                "free": "バラバラ"
             }
         },
         "connMode": {
-            "name": "接続 モード",
+            "name": "接続情報表示",
             "values": {
-                "oneWay": "一方通行",
-                "twoWay": "双方向"
+                "oneWay": "片方向",
+                "twoWay": "両方向"
             }
         },
         "labelMode": {
@@ -184,37 +184,37 @@
             "values": {
                 "never": "なし",
                 "hover": "マウス オーバー",
-                "select": "セレクト",
-                "always": "いつも"
+                "select": "選択時",
+                "always": "常時"
             }
         },
         "removedContentMode": {
-            "name": "旧版 データ",
+            "name": "古いデータ",
             "values": {
-                "hide": "表示 しない",
-                "show": "表示"
+                "hide": "表示しない",
+                "show": "表示する"
             }
         },
         "pathMode": {
             "name": "ルート 表示 モード",
             "values": {
-                "simple": "単純",
-                "normal": "普通",
-                "detailed": "詳しい"
+                "simple": "シンプル",
+                "normal": "通常",
+                "detailed": "詳細"
             }
         },
         "sizeDiff": {
-            "name": "サイズ 差"
+            "name": "サイズ 比"
         },
         "stackSize": {
-            "name": "スタック 限界"
+            "name": "スタック 量"
         }
     },
     "contextMenu": {
         "items": {
             "wiki": "Wikiページを表示",
-            "start": "原点として設定",
-            "end": "行先として設定",
+            "start": "出発地点として設定",
+            "end": "目的地として設定",
             "map": "地図を表示",
             "bgm": {
                 "name": "曲を再生する",
@@ -235,29 +235,29 @@
             "MAJOR_CHANGE": "大きな更新",
             "BUG_FIX": "バグ修正",
             "ADD_CONTENT": "内容追加",
-            "REMOVE_CONTENT": "内容解除",
+            "REMOVE_CONTENT": "内容削除",
             "LAYOUT_CHANGE": "地形変更",
-            "EXPANSION": "拡張",
-            "REDUCTION": "マップサイズ減少",
-            "ADD_SUB_AREA": "副区域追加",
-            "REMOVE_SUB_AREA": "副区域解除",
+            "EXPANSION": "世界拡張",
+            "REDUCTION": "世界縮小",
+            "ADD_SUB_AREA": "サブエリア追加",
+            "REMOVE_SUB_AREA": "サブエリア削除",
             "CONNECTION_CHANGE": "接続変更",
             "ADD_CONNECTION": "接続追加",
             "REMOVE_CONNECTION": "接続解除",
             "BGM_CHANGE": "BGM変更",
-            "EFFECT_CHANGE": "エフェクトに関係変更",
-            "REWORK": "改造"
+            "EFFECT_CHANGE": "エフェクト関連に変更",
+            "REWORK": "リメイク"
         }
     },
     "authorLabel": {
-        "worldCount": "マップ数："
+        "worldCount": "世界数："
     },
     "versionLabel": {
         "authors": "ツクラー：",
-        "releaseDate": "発売日：",
-        "worldCount": "マップ追加数：",
-        "updatedWorldCount": "マップ更新数：",
-        "removedWorldCount": "マップ削除数："
+        "releaseDate": "更新日：",
+        "worldCount": "追加した世界数：",
+        "updatedWorldCount": "更新した世界数：",
+        "removedWorldCount": "削除した世界数："
     },
     "effectLabel": {
         "location": "場所："
@@ -279,19 +279,19 @@
             "MINOR_CHANGE": "{WORLD}が少し更新されました",
             "MAJOR_CHANGE": "{WORLD}が大きく更新されました",
             "BUG_FIX": "{WORLD}でバグが修正されました",
-            "ADD_CONTENT": "{WORLD}で内容が追加されました",
+            "ADD_CONTENT": "{WORLD}で内容に追加がありました",
             "REMOVE_CONTENT": "{WORLD}である内容がなくなりました",
             "LAYOUT_CHANGE": "{WORLD}で地形が変わりました",
             "EXPANSION": "{WORLD}が拡張されました",
-            "REDUCTION": "{WORLD}のマップサイズが小さくなりました",
-            "ADD_SUB_AREA": "{WORLD}で副区域が追加されました",
-            "REMOVE_SUB_AREA": "{WORLD}である副区域がなくなりました",
+            "REDUCTION": "{WORLD}が縮小されました",
+            "ADD_SUB_AREA": "{WORLD}にサブエリアが追加されました",
+            "REMOVE_SUB_AREA": "{WORLD}であるサブエリアがなくなりました",
             "CONNECTION_CHANGE": "{WORLD}で接続が変わりました",
-            "ADD_CONNECTION": "{WORLD}で接続が追加されました",
+            "ADD_CONNECTION": "{WORLD}に接続が追加されました",
             "REMOVE_CONNECTION": "{WORLD}である接続がなくなりました",
             "BGM_CHANGE": "{WORLD}でBGMが変わりました",
-            "EFFECT_CHANGE": "{WORLD}でエフェクトに関係変更がされました",
-            "REWORK": "{WORLD}が改造されました"
+            "EFFECT_CHANGE": "{WORLD}でエフェクト関連に変更が入りました",
+            "REWORK": "{WORLD}がリメイクされました"
         },
         "REMOVE": "{WORLD}がなくなりました"
     },
@@ -300,27 +300,27 @@
         "versionDisplayToggle": {
             "name": "{ENTRY_TYPE}を表示",
             "entryType": {
-                "ADD": "マップ追加",
-                "UPDATE": "マップ更新",
-                "REMOVE": "マップ解除"
+                "ADD": "追加された世界",
+                "UPDATE": "更新された世界",
+                "REMOVE": "削除された世界"
             },
             "entryUpdateType": {
                 "MINOR_CHANGE": "小さな更新",
                 "MAJOR_CHANGE": "大きな更新",
                 "BUG_FIX": "バグ修正",
                 "ADD_CONTENT": "内容追加",
-                "REMOVE_CONTENT": "内容解除",
+                "REMOVE_CONTENT": "内容削除",
                 "LAYOUT_CHANGE": "地形変更",
-                "EXPANSION": "拡張",
-                "REDUCTION": "マップサイズ減少",
-                "ADD_SUB_AREA": "副区域追加",
-                "REMOVE_SUB_AREA": "副区域解除",
+                "EXPANSION": "世界拡張",
+                "REDUCTION": "世界縮小",
+                "ADD_SUB_AREA": "サブエリア追加",
+                "REMOVE_SUB_AREA": "サブエリア削除",
                 "CONNECTION_CHANGE": "接続変更",
                 "ADD_CONNECTION": "接続追加",
                 "REMOVE_CONNECTION": "接続解除",
                 "BGM_CHANGE": "BGM変更",
-                "EFFECT_CHANGE": "エフェクトに関係変更",
-                "REWORK": "改造"
+                "EFFECT_CHANGE": "エフェクト関連に変更",
+                "REWORK": "リメイク"
             }
         }
     },
@@ -328,14 +328,14 @@
         "previousMethods": "前の方法"
     },
     "wallpapersModal": {
-        "removedWallpapers": "前の壁紙"
+        "removedWallpapers": "削除された壁紙"
     },
     "bgmTracksModal": {
         "search": "検索",
         "favBgmTracks": "お気に入りの曲",
         "musicRoomBgmTracks": "SR分室の曲",
         "unnumberedBgmTracks": "番号のない曲",
-        "removedBgmTracks": "前の曲"
+        "removedBgmTracks": "削除された曲"
     },
     "helpModal": {
         "reportBug": "バグを報告"
