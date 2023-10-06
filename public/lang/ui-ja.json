@@ -255,9 +255,9 @@
     "versionLabel": {
         "authors": "ツクラー：",
         "releaseDate": "更新日：",
-        "worldCount": "追加した世界数：",
-        "updatedWorldCount": "更新した世界数：",
-        "removedWorldCount": "削除した世界数："
+        "worldCount": "追加された世界数：",
+        "updatedWorldCount": "更新された世界数：",
+        "removedWorldCount": "削除された世界数："
     },
     "effectLabel": {
         "location": "場所："
