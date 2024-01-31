@@ -2990,7 +2990,7 @@ function getWallpaperWikiData(worldData) {
                 });
             }
 
-            addWallpaperDataJPMethods(wallpaperData).then(() => resolve(wallpaperData)).catch(err => console.error(err));
+            addWallpaperDataJPMethods(wallpaperData).catch(err => console.error(err)).finally(() => resolve(wallpaperData));
         });
     });
 }
@@ -3294,7 +3294,7 @@ function getBgmTrackWikiData(worldData, url) {
                             );
 
                         Promise.allSettled(updateIndirectBgmTrackUrls).finally(() => {
-                            addBgmTrackDataJPLocationsAndNotes(bgmTrackData).then(() => resolve(bgmTrackData)).catch(err => console.error(err));
+                            addBgmTrackDataJPLocationsAndNotes(bgmTrackData).catch(err => console.error(err)).finally(() => resolve(bgmTrackData));
                         });
                     });
                 else
