@@ -93134,7 +93134,7 @@ function InsertStackElement(node, body) {
 	let maxWorldDepth;
 	const nodeImgDimensions = { x: 320, y: 240 };
 	const nodeIconImgDimensions = { x: nodeImgDimensions.x / 4, y: nodeImgDimensions.y / 4 };
-	let nodeObjectMaterial;
+	let nodeObjectMaterials = [];
 	let iconTexts = [];
 	let removedCount;
 	const worldScales = {};
