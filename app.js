@@ -2684,6 +2684,8 @@ function addMenuThemeDataJPMethods(menuThemeData, removed) {
 
             for (let m = 0; m < menuThemeDataRows.length; m++) {
                 const data = menuThemeDataRows[m].split('</td><td').slice(0, 2);
+                if (!data.length || data[0].indexOf('<th') > -1)
+                    continue; // skip the page headers (1ページ目, 2ページ目, etc.)
                 if (data[1].indexOf('</table>') > -1) {
                     m++;
                     endOfTable = true;
