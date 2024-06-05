@@ -93134,7 +93134,7 @@ function InsertStackElement(node, body) {
 	let maxWorldDepth;
 	const nodeImgDimensions = { x: 320, y: 240 };
 	const nodeIconImgDimensions = { x: nodeImgDimensions.x / 4, y: nodeImgDimensions.y / 4 };
-	let nodeObjectMaterial;
+	let nodeObjectMaterials = [];
 	let iconTexts = [];
 	let removedCount;
 	const worldScales = {};
@@ -94518,7 +94518,8 @@ function InsertStackElement(node, body) {
 
 	        if (isWebGL2) {
 	            worldImageData = [];
-	            initNodeObjectMaterial().then(() => {
+	            initWorldTextures().then(() => {
+					initNodeObjectMaterials();
 	                reloadGraph();
 	                loadCallback();
 	            }).catch(err => console.error(err));
@@ -94547,7 +94548,8 @@ function InsertStackElement(node, body) {
 	let linksTwoWayBuffered;
 	let linksOneWayBuffered;
 
-	let nodeObject;
+	let glMaxTextureSize = 1024;
+	let nodeObjects = [];
 	let iconObject;
 	let nodeIconObject;
 
@@ -95159,9 +95161,11 @@ function InsertStackElement(node, body) {
 
 	            if (node) {
 	                hoverWorldId = node.id;
+					let nodeObject = nodeObjects[getNodeChunkId(node)];
+					let indexInChunk = getNodeIndexInChunk(node);
 	                if (nodeObject && node.removed) {
 	                    const nodeGrayscale = getNodeGrayscale(node);
-	                    nodeObject.geometry.attributes.grayscale.array[node.index] = nodeGrayscale;
+	                    nodeObject.geometry.attributes.grayscale.array[indexInChunk] = nodeGrayscale;
 	                    nodeObject.geometry.attributes.grayscale.needsUpdate = true;
 	                }
 	                const removedTwoWayLinks = visibleTwoWayLinks.filter(l => getWorldLinkRemoved(node.id, l, worldRemoved));
@@ -95178,9 +95182,11 @@ function InsertStackElement(node, body) {
 	                hoverWorldId = null;
 
 	            if (prevNode) {
+					let nodeObject = nodeObjects[getNodeChunkId(prevNode)];
+					let indexInChunk = getNodeIndexInChunk(prevNode);
 	                if (nodeObject && prevNode.removed) {
 	                    const nodeGrayscale = getNodeGrayscale(prevNode);
-	                    nodeObject.geometry.attributes.grayscale.array[prevNode.index] = nodeGrayscale;
+	                    nodeObject.geometry.attributes.grayscale.array[indexInChunk] = nodeGrayscale;
 	                    nodeObject.geometry.attributes.grayscale.needsUpdate = true;
 	                }
 	                const removedTwoWayLinks = visibleTwoWayLinks.filter(l => getWorldLinkRemoved(prevNode.id, l, worldRemoved));
@@ -95293,7 +95299,7 @@ function InsertStackElement(node, body) {
 	    })();
 
 	    if (isWebGL2) {
-	        initNodeObject(is2d);
+	        initNodeObjects(nodes.length, is2d);
 	        updateNodeImageData(nodes, paths, is2d);
 	        makeIconObject(is2d);
 	        let index = 0;
@@ -95346,35 +95352,64 @@ function InsertStackElement(node, body) {
 
 	// START WEBGL2.0 SPECIFIC CODE
 	function updateNodeImageData(nodes, isSubset, is2d) {
-	    nodeObject.count = nodes.length;
+		const amount = nodes.length;
+		let nodeChunks = Math.trunc(amount / glMaxTextureSize);
+
+		for(let chunk = 0; chunk <= nodeChunks; chunk++)
+		{
+			let chunkOffset = chunk * glMaxTextureSize;
+			let chunkSize = glMaxTextureSize;
+			if(chunk == nodeChunks)
+				chunkSize = amount % glMaxTextureSize;
+			nodeObjects[chunk].count = chunkSize;
+		}
+
 	    if (isSubset) {
 	        let index = 0;
 	        let rIndex = 0;
 	        const totalNodeCount = nodes.length;
-	        const removedNodeCount = nodes.filter(n => n.removed).length;
-	     
+			let nodeObject = nodeObjects[0];
 	        nodes.forEach(node => {
-	            copyImageData(node.id, index);
+				let chunkId = Math.trunc(index / glMaxTextureSize);
+				let actualIndex = index % glMaxTextureSize;
+				nodeObject = nodeObjects[chunkId];
+
+	            copyImageData(nodeObject, node.id, index, 1);
 	            if (is2d) {
-	                copyImageData(node.id + exports.worldData.length, index + totalNodeCount);
-	                if (node.removed) {
-	                    copyImageData(node.rId + exports.worldData.length * 2, rIndex + totalNodeCount * 2);
-	                    copyImageData(node.rId + exports.worldData.length * 2 + removedCount, rIndex + totalNodeCount * 2 + removedNodeCount);
-	                    rIndex++;
-	                }
+	                copyImageData(nodeObject, node.id + exports.worldData.length, index + totalNodeCount, 1);
 	            }
 	            index++;
 	        });
 	    } else
-	        nodeObject.material.uniforms.diffuse.value.image.data.set(worldImageData, 0);
-	    nodeObject.material.uniforms.diffuse.value.needsUpdate = true;
+		{
+			let id = 0;
+			const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
+			nodeObjects.forEach(obj => {
+				let chunkOffset = id * glMaxTextureSize;
+				let chunkSize = glMaxTextureSize;
+				if(id == (nodeObjects.length - 1))
+					chunkSize = amount % glMaxTextureSize;
+
+				let offsetFrom = chunkOffset * dataLength;
+			    let offsetTo = offsetFrom + chunkSize * dataLength;
+
+		        obj.material.uniforms.diffuse.value.image.data.set(worldImageData.slice(offsetFrom, offsetTo), 0);
+				if(is2d)
+					copyImageData(obj, chunkOffset + amount, chunkSize, chunkSize);
+				id++;
+			});
+		}
+		nodeObjects.forEach(obj => {
+			obj.material.uniforms.diffuse.value.needsUpdate = true;
+		});
+
 	}
 
-	function copyImageData(from, to) {
+	function copyImageData(nodeObject, from, to, amount) {
 	    const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
 	    let offsetFrom = from * dataLength;
 	    let offsetTo = to * dataLength;
-	    nodeObject.material.uniforms.diffuse.value.image.data.set(worldImageData.slice(offsetFrom, offsetFrom + dataLength), offsetTo);
+	    nodeObject.material.uniforms.diffuse.value.image.data.set(worldImageData.slice(offsetFrom, offsetFrom + amount * dataLength), offsetTo);
 	}
 
 	const instanceVS = `precision highp float;
@@ -95746,146 +95781,191 @@ function InsertStackElement(node, body) {
 	    instanceObject.geometry.attributes.texIndex.needsUpdate = true;
 	}
 
-	function initNodeObjectMaterial() {
-	    const amount = exports.worldData.length;
-	    const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
-	    
-	    const buffer = new ArrayBuffer(dataLength * amount * 2 + (dataLength * removedCount * 2));
-	    const texture = new DataArrayTexture(new Uint8ClampedArray(buffer), nodeImgDimensions.x, nodeImgDimensions.y, amount * 2 + (removedCount * 2));
-	    texture.format = RGBAFormat;
-	    texture.type = UnsignedByteType;
-	    nodeObjectMaterial = new RawShaderMaterial({
-	        uniforms: {
-	            diffuse: { value: texture },
-	        },
-	        vertexShader: instanceVS,
-	        fragmentShader: instanceFS,
-	        transparent: true,
-	        depthTest: !is2d,
-	        glslVersion: GLSL3
-	    });
+	function initWorldTextures() {
+		const amount = exports.worldData.length;
+		const filenames = [];
+		exports.worldData.forEach(world => filenames.push(!world.hidden ? exports.worldData[world.id].filename : hiddenWorldImageUrl));
 
-	    const filenames = [];
-	    exports.worldData.forEach(world => filenames.push(!world.hidden ? exports.worldData[world.id].filename : hiddenWorldImageUrl));
+		const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
 
-	    return new Promise((resolve, reject) => {
-	        Promise.all(getImageRawData(filenames))
-	            .then(images => {
-	                const canvas = document.createElement('canvas');
-	                const ctx = canvas.getContext('2d', { alpha: false });
-	                canvas.width = nodeImgDimensions.x;
-	                canvas.height = nodeImgDimensions.y;
-	                const fontSize = 36;
-	                const halfFontSize = fontSize / 2;
-	                let lineYOffset;
-	                ctx.font = fontSize + 'px MS Gothic';
-	                ctx.fillStyle = 'white';
-	                ctx.strokeStyle = 'black';
-	                ctx.lineWidth = 5;
-	                let index = 0;
-	                let rIndex = 0;
-	                const offsetLabels = images.length * dataLength;
-	                images.forEach(img => {
-	                    // stretch to fit
-	                    ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
-	                    let nodeImageData = ctx.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
-	                    let offset = index * dataLength;
-	                    nodeObjectMaterial.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
-	                    const worldId = index;
-	                    const world = exports.worldData[worldId];
-	                    const worldName = !world.hidden ? getLocalizedLabel(world.title, world.titleJP) : localizedHiddenLabel;
+		worldImageData = new Uint8ClampedArray(dataLength * amount * 2 + dataLength);
+		return new Promise((resolve, reject) => {
+		        Promise.all(getImageRawData(filenames))
+		            .then(images => {
+		                const canvas = document.createElement('canvas');
+		                const ctx = canvas.getContext('2d', { alpha: false });
+		                canvas.width = nodeImgDimensions.x;
+		                canvas.height = nodeImgDimensions.y;
+		                const fontSize = 36;
+		                const halfFontSize = fontSize / 2;
+		                let lineYOffset;
+		                ctx.font = fontSize + 'px MS Gothic';
+		                ctx.fillStyle = 'white';
+		                ctx.strokeStyle = 'black';
+		                ctx.lineWidth = 5;
+		                let index = 0;
+		                let rIndex = 0;
+		                const offsetLabels = images.length * dataLength;
+		                images.forEach(img => {
+		                    // stretch to fit
+		                    ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
+		                    let nodeImageData = ctx.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
+							let offset = index * dataLength;
+		                    worldImageData.set(nodeImageData.data, offset);
+		                    const worldId = index;
+		                    const world = exports.worldData[worldId];
+		                    const worldName = !world.hidden ? getLocalizedLabel(world.title, world.titleJP) : localizedHiddenLabel;
 
-	                    if (world.removed)
 	                        ctx.save();
 
-	                    for (let v = 0; v < 3; v++) {
-	                        if (v)
-	                            ctx.restore();
-	                        
-	                        let textLines = worldName.split(" ");
-	                        ctx.fillStyle = nodeTextColors[v];
-	                        for (let l = 0; l < textLines.length; l++) {
-	                            if (ctx.measureText(textLines[l]).width < nodeImgDimensions.x) {
-	                                let mergeIndex = 0;
-	                                for (let l2 = l + 1; l2 < textLines.length; l2++) {
-	                                    const mergedLine = textLines.slice(l, l2 + 1).join(" ");
-	                                    if (ctx.measureText(mergedLine).width < nodeImgDimensions.x)
-	                                        mergeIndex = l2;
-	                                    else
-	                                        break;
-	                                }
-	                                if (mergeIndex)
-	                                    textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
-	                            } else if (textLines[l].indexOf("：") > -1)
-	                                textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
-	                        }
-	                        for (let l in textLines) {
-	                            const textLine = textLines[l];
-	                            const lineWidth = ctx.measureText(textLine).width;
-	                            !lineYOffset && (lineYOffset = ctx.measureText(textLine).actualBoundingBoxAscent / 2);
-	                            const lineX = (nodeImgDimensions.x - lineWidth) / 2;
-	                            const lineY = ((nodeImgDimensions.y / 2) + lineYOffset) - ((textLines.length - 1) * halfFontSize) + l * fontSize;
-	                            ctx.strokeText(textLine, lineX, lineY);
-	                            ctx.fillText(textLine, lineX, lineY);
-	                        }
+		                    for (let v = 0; v < 3; v++) {
+		                        if (v)
+		                            ctx.restore();
 
-	                        nodeImageData = ctx.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
-	                        offset = v
-	                            ? offsetLabels + images.length * dataLength + (removedCount * dataLength * (v - 1)) + rIndex * dataLength
-	                            : offsetLabels + index * dataLength;
-	                        nodeObjectMaterial.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
-
-	                        if (!world.removed)
-	                            break;
-	                    }
-	                    index++;
-	                    if (world.removed)
-	                        rIndex++;
-	                });
-	                canvas.remove();
-	                worldImageData = nodeObjectMaterial.uniforms.diffuse.value.image.data.slice();
-	                nodeObjectMaterial.uniforms.diffuse.value.needsUpdate = true;
-	                resolve();
-	            })
-	            .catch(err => reject(err));
-	    });
+		                        let textLines = worldName.split(" ");
+		                        ctx.fillStyle = nodeTextColors[v];
+		                        for (let l = 0; l < textLines.length; l++) {
+		                            if (ctx.measureText(textLines[l]).width < nodeImgDimensions.x) {
+		                                let mergeIndex = 0;
+		                                for (let l2 = l + 1; l2 < textLines.length; l2++) {
+		                                    const mergedLine = textLines.slice(l, l2 + 1).join(" ");
+		                                    if (ctx.measureText(mergedLine).width < nodeImgDimensions.x)
+		                                        mergeIndex = l2;
+		                                    else
+		                                        break;
+		                                }
+		                                if (mergeIndex)
+		                                    textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
+		                            } else if (textLines[l].indexOf("：") > -1)
+		                                textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
+		                        }
+		                        for (let l in textLines) {
+		                            const textLine = textLines[l];
+		                            const lineWidth = ctx.measureText(textLine).width;
+		                            !lineYOffset && (lineYOffset = ctx.measureText(textLine).actualBoundingBoxAscent / 2);
+		                            const lineX = (nodeImgDimensions.x - lineWidth) / 2;
+		                            const lineY = ((nodeImgDimensions.y / 2) + lineYOffset) - ((textLines.length - 1) * halfFontSize) + l * fontSize;
+		                            ctx.strokeText(textLine, lineX, lineY);
+		                            ctx.fillText(textLine, lineX, lineY);
+		                        }
+		                        nodeImageData = ctx.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
+		                        worldImageData.set(nodeImageData.data, offsetLabels + offset);
+								if (!world.removed)
+		                            break;
+		                    }
+		                    index++;
+		                });
+		                canvas.remove();
+		                resolve();
+		            })
+		            .catch(err => reject(err));
+		});
 	}
 
-	function initNodeObject(is2d) {
-	    const amount = exports.worldData.length;
-	    const opacities = [];
-	    const grayscales = [];
-	    const texIndexes = [];
+	function initNodeObjectMaterials() {
+		const amount = exports.worldData.length;
+		let nodeChunks = Math.trunc(amount / glMaxTextureSize);
 
-	    for (let i = 0; i < amount; i++) {
-	        const world = exports.worldData[i];
-	        opacities[i] = getNodeOpacity(world.id);
-	        grayscales[i] = world.removed ? 1 : 0;
-	        texIndexes[i] = i;
-	    }
+		for(let chunk = 0; chunk <= nodeChunks; chunk++)
+		{
+			let chunkOffset = chunk * glMaxTextureSize;
+			let chunkSize = glMaxTextureSize;
+			if(chunk == nodeChunks)
+				chunkSize = amount % glMaxTextureSize;
 
-	    let geometry;
-	    if (is2d)
-	        geometry = new PlaneGeometry(1, 1);
-	    else
-	        geometry = new BoxGeometry(1, 1, 1);
+			const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
+			const buffer = new ArrayBuffer(dataLength * chunkSize * 2);
+			const texture = new DataArrayTexture(new Uint8ClampedArray(buffer), nodeImgDimensions.x, nodeImgDimensions.y, chunkSize * 2);
+		    texture.format = RGBAFormat;
+		    texture.type = UnsignedByteType;
 
-	    geometry.attributes.opacity = new InstancedBufferAttribute(new Float32Array(opacities), 1);
-	    geometry.attributes.grayscale = new InstancedBufferAttribute(new Float32Array(grayscales), 1);
-	    geometry.attributes.texIndex = new InstancedBufferAttribute(new Float32Array(texIndexes), 1);
-	    nodeObject = new InstancedMesh(geometry, nodeObjectMaterial, amount);
-	    nodeObject.instanceMatrix.setUsage(DynamicDrawUsage);
-	    nodeObject.renderOrder = 1;
-	    exports.graph.scene().add(nodeObject);
+		    let nodeObjectMaterial = new RawShaderMaterial({
+				uniforms: {
+					diffuse: { value: texture },
+				},
+				vertexShader: instanceVS,
+				fragmentShader: instanceFS,
+				transparent: true,
+				depthTest: !is2d,
+				glslVersion: GLSL3
+			});
+			let offsetFrom = chunkOffset * dataLength;
+			let offsetTo = offsetFrom + chunkSize * 2 * dataLength;
+			nodeObjectMaterial.uniforms.diffuse.value.image.data.set(worldImageData.slice(offsetFrom, offsetTo), 0);
+			nodeObjectMaterial.uniforms.diffuse.value.needsUpdate = true;
+			nodeObjectMaterials[chunk] = nodeObjectMaterial;
+		}
+	}
+
+	function removeObject3D(object3D) {
+	    // for better memory management and performance
+	    if (object3D.geometry) object3D.geometry.dispose();
+
+	    object3D.removeFromParent(); // the parent might be the scene or another Object3D, but it is sure to be removed this way
+	    return true;
+	}
+
+	function initNodeObjects(amount, is2d) {
+		nodeObjects.forEach(obj => {
+			removeObject3D(obj);
+		});
+		nodeObjects = [];
+		let nodeChunks = Math.trunc(amount / glMaxTextureSize);
+
+		for(let chunk = 0; chunk <= nodeChunks; chunk++)
+		{
+			let chunkOffset = chunk * glMaxTextureSize;
+			let chunkSize = glMaxTextureSize;
+			if(chunk == nodeChunks)
+				chunkSize = amount % glMaxTextureSize;
+
+			const opacities = [];
+		    const grayscales = [];
+		    const texIndexes = [];
+
+		    for (let i = 0; i < chunkSize; i++) {
+		        const world = exports.worldData[chunkOffset + i];
+		        opacities[i] = getNodeOpacity(world.id);
+		        grayscales[i] = world.removed ? 1 : 0;
+		        texIndexes[i] = i;
+		    }
+
+			let geometry;
+		    if (is2d)
+		        geometry = new PlaneGeometry(1, 1);
+		    else
+		        geometry = new BoxGeometry(1, 1, 1);
+
+		    geometry.attributes.opacity = new InstancedBufferAttribute(new Float32Array(opacities), 1);
+		    geometry.attributes.grayscale = new InstancedBufferAttribute(new Float32Array(grayscales), 1);
+		    geometry.attributes.texIndex = new InstancedBufferAttribute(new Float32Array(texIndexes), 1);
+		    let nodeObject = new InstancedMesh(geometry, nodeObjectMaterials[chunk], amount);
+		    nodeObject.instanceMatrix.setUsage(DynamicDrawUsage);
+		    nodeObject.renderOrder = 1;
+			nodeObjects[chunk] = nodeObject;
+		    exports.graph.scene().add(nodeObjects[chunk]);
+		}
+	}
+
+	function getNodeChunkId(node) {
+		return Math.trunc(node.id / glMaxTextureSize);
+	}
+
+	function getNodeIndexInChunk(node) {
+		return node.id % glMaxTextureSize;
 	}
 
 	function updateNodePositions(is2d) {
 	    const dummy = new Object3D();
-	    if (nodeObject) {
+	    if (nodeObjects) {
 	        let index = 0;
 	        let iconIndex = 0;
+
 	        exports.graph.graphData().nodes.forEach(node => {
-	            nodeObject.getMatrixAt(index, dummy.matrix);
+				let chunkId = Math.trunc(index / glMaxTextureSize);
+				let actualIndex = index % glMaxTextureSize;
+
+	            nodeObjects[chunkId].getMatrixAt(actualIndex, dummy.matrix);
 	            if (!is2d)
 	                dummy.position.set(node.x, node.y, node.z);
 	            else
@@ -95893,9 +95973,10 @@ function InsertStackElement(node, body) {
 	            const scale = worldScales[node.id];
 	            dummy.scale.set(13 * scale, 9.75 * scale, is2d ? 1 : 13 * scale);
 	            dummy.updateMatrix();
-	            nodeObject.setMatrixAt(index, dummy.matrix);
+	            nodeObjects[chunkId].setMatrixAt(actualIndex, dummy.matrix);
+				nodeObjects[chunkId].instanceMatrix.needsUpdate = true;
 	            index++;
-	            
+
 	            if (is2d && nodeIconObject && node.isNew) {
 	                nodeIconObject.getMatrixAt(iconIndex, dummy.matrix);
 	                dummy.position.set(node.x + (dummy.scale.x / 2) - (1.625 + (4 / 13)) * scale, node.y + (dummy.scale.y / 2) - 1.21875 * scale, 0);
@@ -95907,38 +95988,40 @@ function InsertStackElement(node, body) {
 	                iconIndex++;
 	            }
 	        });
-	        nodeObject.instanceMatrix.needsUpdate = true;
+			nodeObjects.forEach(obj => {
+				obj.computeBoundingSphere();
+			});
+
 	        if (is2d && nodeIconObject)
 	            nodeIconObject.instanceMatrix.needsUpdate = true;
-	        nodeObject.computeBoundingSphere();
 	    }
 	}
 
 	function updateNodeLabels2D() {
-	    if (nodeObject) {
+	    if (nodeObjects) {
 	        let index = 0;
-	        let rIndex = 0;
 	        let iconIndex = 0;
 	        const nodes = exports.graph.graphData().nodes;
-	        const totalNodeCount = nodes.length;
-	        const removedNodeCount = nodes.filter(n => n.removed).length;
+
 	        nodes.forEach(node => {
+				let chunkId = getNodeChunkId(node);
+				let nodeObject = nodeObjects[chunkId];
+				let indexInChunk = getNodeIndexInChunk(node);
+				let chunkSize = glMaxTextureSize;
+				if(chunkId == nodeObjects.length-1)
+					chunkSize = nodes.length % glMaxTextureSize;
+
 	            if (isNodeLabelVisible(node)) {
-	                const layerIndex = node.removed
-	                    ? nodeTextColors.indexOf(getNodeTextColor(node))
-	                    : 0;
-	                nodeObject.geometry.attributes.texIndex.array[index] = layerIndex
-	                    ? rIndex + (totalNodeCount * 2) + (layerIndex - 1) * removedNodeCount
-	                    : index + totalNodeCount;
+	                nodeObject.geometry.attributes.texIndex.array[indexInChunk] = indexInChunk + chunkSize;
 	            } else
-	                nodeObject.geometry.attributes.texIndex.array[index] = index;
+	                nodeObject.geometry.attributes.texIndex.array[indexInChunk] = indexInChunk;
 	            index++;
-	            if (node.removed)
-	                rIndex++;
 	            if (nodeIconObject && node.isNew)
 	                nodeIconObject.geometry.attributes.opacity.array[iconIndex++] = getNodeOpacity(node.id);
 	        });
-	        nodeObject.geometry.attributes.texIndex.needsUpdate = true;
+			nodeObjects.forEach(obj => {
+				obj.geometry.attributes.texIndex.needsUpdate = true;
+			});
 	        if (nodeIconObject)
 	            nodeIconObject.geometry.attributes.opacity.needsUpdate = true;
 	    }
@@ -97648,19 +97731,20 @@ function InsertStackElement(node, body) {
 	    exports.graph.graphData().nodes.forEach(node => {
 	        const nodeOpacity = getNodeOpacity(node.id);
 	        const nodeGrayscale = getNodeGrayscale(node);
+			let nodeObject = nodeObjects[getNodeChunkId(node)];
+			let indexInChunk = getNodeIndexInChunk(node);
 	        if (nodeObject) {
-	            nodeObject.geometry.attributes.opacity.array[index] = nodeOpacity;
-	            nodeObject.geometry.attributes.grayscale.array[index] = nodeGrayscale;
+	            nodeObject.geometry.attributes.opacity.array[indexInChunk] = nodeOpacity;
+	            nodeObject.geometry.attributes.grayscale.array[indexInChunk] = nodeGrayscale;
+				nodeObject.geometry.attributes.opacity.needsUpdate = true;
+		        nodeObject.geometry.attributes.grayscale.needsUpdate = true;
 	        } else {
 	            node.__threeObj.material.opacity = nodeOpacity;
 	            node.__threeObj.material.grayscale = nodeGrayscale;
 	        }
 	        index++;
 	    });
-	    if (nodeObject) {
-	        nodeObject.geometry.attributes.opacity.needsUpdate = true;
-	        nodeObject.geometry.attributes.grayscale.needsUpdate = true;
-	    }
+
 	    updateLinkColors(visibleTwoWayLinks, linksTwoWayBuffered);
 	    updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
 	    if (isWebGL2 && is2d)
@@ -97854,6 +97938,7 @@ function InsertStackElement(node, body) {
 	        const loadCallback = displayLoadingAnim($$1("#graphContainer"));
 	        const callback = function () {
 	            if (exports.worldData) {
+					initNodeObjectMaterials();
 	                reloadGraph();
 	                loadCallback();
 	            }
@@ -97865,7 +97950,7 @@ function InsertStackElement(node, body) {
 	        initVersionData();
 
 	        if (isWebGL2)
-	            initNodeObjectMaterial().then(() => callback()).catch(err => console.error(err));
+	            initWorldTextures().then(() => callback()).catch(err => console.error(err));
 	        else if (exports.worldData)
 	            callback();
 	    });
@@ -98933,7 +99018,8 @@ function InsertStackElement(node, body) {
 	        isWebGL2 = graphContext != null;
 
 	        if (isWebGL2) {
-	            initNodeObjectMaterial().then(() => {
+	            initWorldTextures().then(() => {
+					initNodeObjectMaterials();
 	                reloadGraph();
 	                loadCallback();
 	            }).catch(err => console.error(err));
