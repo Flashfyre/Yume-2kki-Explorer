@@ -28,6 +28,7 @@ let dbInitialized = false;
 
 let updateWorker = isMainThread ? new Worker('./app.js') : null;
 let updating = false;
+let workerAlive = false;
 let updateTask = null;
 var updateTaskStartTime;
 
@@ -302,6 +303,7 @@ if (isMainThread) {
     });
 
     app.post('/checkUpdateData', function(_req, res) {
+        if (!workerAlive) return res.json({ update: false });
         getConnPool().then(pool => {
             const callback = function (update) {
                 res.json({
@@ -328,6 +330,9 @@ if (isMainThread) {
             updateWorker.postMessage({ reset: req.body.reset });
             setUpdateTask('init');
             updating = true;
+        } else if (!workerAlive) {
+            // For some reason, the worker died and could not be restarted.
+            updating = false;
         }
 
         res.end();
@@ -345,6 +350,9 @@ if (isMainThread) {
 
         await updateWorker?.terminate();
         updateWorker = new Worker('./app.js');
+        updateWorker.once('online', () => {
+            workerAlive = true;
+        });
         updateWorker.on('message', message => {
             if (message.hasOwnProperty('success')) {
                 if (!message.success) 
@@ -361,6 +369,7 @@ if (isMainThread) {
         });
         updateWorker.on('exit', code => {
             updating = false;
+            workerAlive = false;
             setUpdateTask(null);
             if (code) {
                 console.error(`Update thread exited code ${code}, restarting`);
