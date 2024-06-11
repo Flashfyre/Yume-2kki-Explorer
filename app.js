@@ -92,7 +92,7 @@ function initDb(pool) {
             )`).then(() => queryAsPromise(pool,
             `INSERT INTO updates (lastUpdate, lastFullUpdate)
                 SELECT null, null FROM updates
-                WHERE id NOT IN (SELECT id FROM updates)`
+                WHERE NOT EXISTS (SELECT 1 FROM updates)`
             )).then(() => queryAsPromise(pool,
             `CREATE TABLE IF NOT EXISTS worlds (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -340,28 +340,36 @@ if (isMainThread) {
         });
     });
 
-    updateWorker.on('message', message => {
-        if (message.hasOwnProperty('success')) {
-            if (!message.success)
-                console.warn('Data update failed');
+    async function resetWorker() {
+        if (!isMainThread) return;
+
+        await updateWorker?.terminate();
+        updateWorker = new Worker('./app.js');
+        updateWorker.on('message', message => {
+            if (message.hasOwnProperty('success')) {
+                if (!message.success) 
+                    console.warn(`Data update failed`); 
+                updating = false;
+                setUpdateTask(null);
+            } else if (message.hasOwnProperty('updateTask'))
+                setUpdateTask(message.updateTask);
+        });
+        updateWorker.on('error', err => {
+            console.error(err);
             updating = false;
             setUpdateTask(null);
-        } else if (message.hasOwnProperty('updateTask'))
-            setUpdateTask(message.updateTask);
-    });
+        });
+        updateWorker.on('exit', code => {
+            updating = false;
+            setUpdateTask(null);
+            if (code) {
+                console.error(`Update thread exited code ${code}, restarting`);
+                resetWorker();
+            }
+        });
+    }
 
-    updateWorker.on('error', err => {
-        console.error(err);
-        updating = false;
-        setUpdateTask(null);
-    });
-
-    updateWorker.on('exit', code => {
-        if (code)
-            console.error(new Error(`Update thread exited code ${code}`));
-        updating = false;
-        setUpdateTask(null);
-    });
+    resetWorker();
 }
 
 function getData(req, pool) {
