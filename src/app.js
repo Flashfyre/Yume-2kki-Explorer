@@ -1,5 +1,5 @@
 import $ from 'jquery';
-import 'jquery-localize';
+import './vendor/jquery.localize.js';
 import 'jquery-contextmenu';
 import 'devbridge-autocomplete';
 import 'jquery-modal';
@@ -50,7 +50,7 @@ let graphContext;
 let maxWorldDepth;
 const nodeImgDimensions = { x: 320, y: 240 };
 const nodeIconImgDimensions = { x: nodeImgDimensions.x / 4, y: nodeImgDimensions.y / 4 };
-let nodeObjectMaterial;
+let nodeObjectMaterials = [];
 let iconTexts = [];
 let removedCount;
 const worldScales = {};
@@ -121,6 +121,7 @@ function initWorldData(data) {
 
     for (let w in worldData) {
         const world = worldData[w];
+        if (!world.filename) world.filename = hiddenWorldImageUrl;
         world.id = parseInt(w);
         world.images.unshift(!world.hidden ? world.filename : hiddenWorldImageUrl);
         if (world.verAdded) {
@@ -158,14 +159,13 @@ function initWorldData(data) {
         }
     }
 
-    if (verAddedWorlds.length < worldData.length)
-    {
+    if (verAddedWorlds.length < worldData.length) {
         versionData.push(versionUtils.getMissingVersion(versionData.length + 1));
         missingVersionIndex = versionData.length;
     } else
         missingVersionIndex = -999;
 
-    const worldSizes = worldData.map(w => w.size); 
+    const worldSizes = worldData.map(w => w.size);
 
     minSize = _.min(worldSizes);
     maxSize = _.max(worldSizes);
@@ -189,11 +189,11 @@ function initAuthorData(authorInfoData, versionInfoData) {
     const versionsByAuthorNameLower = {};
 
     authoredVersionData = [];
-    
+
     for (let vi of versionInfoData) {
         if (!vi.authors)
             continue;
-        
+
         if (!versionsByName.hasOwnProperty(vi.name)) {
             const newVer = versionUtils.getEmptyVersion(-1, vi.name);
             if (vi.authors)
@@ -290,7 +290,7 @@ function initAuthorData(authorInfoData, versionInfoData) {
         tempSelectAuthor($(this).data('id'));
         $.modal.close();
     });
-    
+
     $('.js--author-entry').on('mousemove', function (e) {
         $tooltip.css({
             top: e.pageY + 10 + 'px',
@@ -367,7 +367,7 @@ function initVersionData(versionInfoData) {
                 }
             }
         }
-        
+
         let versionAddedWorldIds = v.addedWorldIds.slice(0);
         let versionUpdatedWorldIds = v.updatedWorldIds.slice(0);
         let versionRemovedWorldIds = v.removedWorldIds.slice(0);
@@ -391,8 +391,8 @@ function initVersionData(versionInfoData) {
                 }
 
                 const excludeMinorUpdates = (updateDisplayToggles.MINOR_CHANGE || updateDisplayToggles.BUG_FIX) && (versionAddedWorldIds.length || versionRemovedWorldIds.length || versionUpdatedWorldIds.find(
-                        vuw => worldData[vuw].verUpdated.find(vu => vu.verUpdated.name === v.name && vu.updateType !== versionUtils.VersionEntryUpdateType.MINOR_CHANGE && vu.updateType !== versionUtils.VersionEntryUpdateType.BUG_FIX)
-                    ));
+                    vuw => worldData[vuw].verUpdated.find(vu => vu.verUpdated.name === v.name && vu.updateType !== versionUtils.VersionEntryUpdateType.MINOR_CHANGE && vu.updateType !== versionUtils.VersionEntryUpdateType.BUG_FIX)
+                ));
                 if (excludeMinorUpdates) {
                     versionUpdatedWorldIds = versionUpdatedWorldIds.slice(0);
                     removeVersionUpdatedWorldIdsOfUpdateTypes(v.name, versionUpdatedWorldIds, [versionUtils.VersionEntryUpdateType.MINOR_CHANGE, versionUtils.VersionEntryUpdateType.BUG_FIX]);
@@ -452,7 +452,7 @@ function initVersionData(versionInfoData) {
         `);
 
         const versionDetailsEntries = getVersionDetailsEntries(v);
-        
+
         const $versionEntryContent = $('<div class="js--version-entry--content collectable-entry--content"></div>');
         const $versionEntryContentList = $('<ul class="js--version-entry--content__list collectable-entry--content__list"></ul>');
         for (let vde of versionDetailsEntries)
@@ -464,7 +464,7 @@ function initVersionData(versionInfoData) {
                 <a href="javascript:void(0);" class="tab--arrow tab--right-arrow no-border">&nbsp;</a>
             </button>
         `);
-        
+
         $versionEntry.appendTo($versionEntriesContainerItems);
         $versionEntryLink.appendTo($versionEntriesContainerBorders);
         versionsByIndex[v.index] = v;
@@ -477,7 +477,7 @@ function initVersionData(versionInfoData) {
         tempSelectVersion($(this).data('id'));
         $.modal.close();
     });
-    
+
     $('.js--version-entry-link').on('mousemove', function (e) {
         $tooltip.css({
             top: e.pageY + 10 + 'px',
@@ -535,7 +535,7 @@ function initVersionData(versionInfoData) {
         }
     }
 
-    $('.js--version-entries-modal__entry-type-check').on('change', function() {
+    $('.js--version-entries-modal__entry-type-check').on('change', function () {
         const entryType = $(this).data('entryType');
         if (entryType === 'UPDATE')
             config.versionDisplayToggles[entryType][''] = $(this).prop('checked');
@@ -545,7 +545,7 @@ function initVersionData(versionInfoData) {
         initVersionData(versionInfoData);
     });
 
-    $('.js--version-entries-modal__entry-update-type-check').on('change', function() {
+    $('.js--version-entries-modal__entry-update-type-check').on('change', function () {
         config.versionDisplayToggles[$(this).data('entryType')][$(this).data('entryUpdateType')] = $(this).prop('checked');
         updateConfig(config);
         initVersionData(versionInfoData);
@@ -675,7 +675,7 @@ function initEffectData(data) {
             $.modal.close();
         }
     });
-    
+
     $('.js--effect').on('mousemove', function (e) {
         $tooltip.css({
             top: e.pageY + 10 + 'px',
@@ -735,7 +735,7 @@ function initMenuThemeData(data) {
             $.modal.close();
         }
     });
-    
+
     $('.js--menu-theme').on('mousemove', function (e) {
         $tooltip.css({
             top: e.pageY + 10 + 'px',
@@ -792,7 +792,7 @@ function initWallpaperData(data) {
             $.modal.close();
         }
     });
-    
+
     $('.js--wallpaper').on('mousemove', function (e) {
         $tooltip.css({
             top: e.pageY + 10 + 'px',
@@ -803,10 +803,10 @@ function initWallpaperData(data) {
         const title = getLocalizedLabel(wallpaper.name, wallpaper.nameJP);
         const method = getLocalizedLabel(wallpaper.method, wallpaper.methodJP);
         $tooltip.html(localizedWallpaperLabel
-                .replace('{WALLPAPER_ID}', wallpaper.wallpaperId - (wallpaper.removed ? 1000 : 0))
-                .replace('{TITLE}', title)
-                .replace('{METHOD}', method || ''))
-                .removeClass('display--none');
+            .replace('{WALLPAPER_ID}', wallpaper.wallpaperId - (wallpaper.removed ? 1000 : 0))
+            .replace('{TITLE}', title)
+            .replace('{METHOD}', method || ''))
+            .removeClass('display--none');
         if (!title)
             $tooltip.find('.js--wallpaper-tooltip__title').remove();
         $tooltip.find('.js--wallpaper-tooltip__wallpaper').toggleClass('alone', !method);
@@ -921,18 +921,18 @@ function initBgmTrackData(data) {
     }
 
     const $tooltip = $('<div class="bgm-track-tooltip scene-tooltip display--none"></div>').prependTo('.content');
-    
+
     const getBgmTrackImageContainer = function ($bgmTrackEntry) {
         const $bgmTracksContainer = !$bgmTrackEntry.hasClass('js--fav-bgm-track') ?
             $bgmTrackEntry.data('removed') ? $removedBgmTracksContainerItems : $bgmTrackEntry.data('unnumbered') ? $unnumberedBgmTracksContainerItems : $bgmTracksContainerItems
             : $favBgmTracksContainerItems;
         return $($($bgmTracksContainer.children('.js--bgm-track-image--container')[$bgmTrackEntry.parent().index()]));
     };
-    
-    const $bgmTrackSearch = $('<input type="text" class="js--bgm-track-search" />').on('input', function() {
+
+    const $bgmTrackSearch = $('<input type="text" class="js--bgm-track-search" />').on('input', function () {
         const changeValue = $(this).val().trim();
 
-        window.setTimeout(function() {
+        window.setTimeout(function () {
             if ($bgmTrackSearch.val().trim() === changeValue) {
                 if (changeValue) {
                     const bgmTrackIdMatch = /^(\d+) ?([A-Z])?$/i.exec(changeValue);
@@ -940,14 +940,14 @@ function initBgmTrackData(data) {
                     const variant = bgmTrackIdMatch && bgmTrackIdMatch[2] || null;
                     const changeValueLower = changeValue.toLowerCase();
 
-                    $('.js--bgm-track[data-bgm-track-id]').each(function() {
+                    $('.js--bgm-track[data-bgm-track-id]').each(function () {
                         const bgmTrack = bgmTracksById[$(this).data('bgmTrackId')];
                         const name = bgmTrack.name;
                         const location = getLocalizedLabel(bgmTrack.location, bgmTrack.locationJP);
                         const notes = getLocalizedLabel(bgmTrack.notes, bgmTrack.notesJP);
                         let visible = (name && name.toLowerCase().indexOf(changeValueLower) > -1) ||
-                                        (location && location.toLowerCase().indexOf(changeValueLower) > -1) ||
-                                        (notes && notes.toLowerCase().indexOf(changeValueLower) > -1);
+                            (location && location.toLowerCase().indexOf(changeValueLower) > -1) ||
+                            (notes && notes.toLowerCase().indexOf(changeValueLower) > -1);
 
                         if (!visible && bgmTrackIdMatch)
                             visible = bgmTrack.trackNo === trackNo && (variant === null || bgmTrack.variant === variant);
@@ -956,11 +956,11 @@ function initBgmTrackData(data) {
                         getBgmTrackImageContainer($(this)).toggleClass('display--none', !visible);
                     });
                 } else
-                     $('.js--bgm-track-entry--container, .js--bgm-track-image--container').removeClass('display--none');
+                    $('.js--bgm-track-entry--container, .js--bgm-track-image--container').removeClass('display--none');
             }
         }, 500);
     });
-    
+
     $('.js--bgm-track-search--container').empty().append($bgmTrackSearch);
 
     /*const playBgmTrackEntry = function (openWorld) {
@@ -983,7 +983,7 @@ function initBgmTrackData(data) {
                 updateControlsContainer();
         }
     };
-
+  
     $('.js--bgm-track[data-id]').on('click', function () { playBgmTrackEntry.apply(this, [ true ]); }).parent()
         .children('.js--bgm-track--collectable-entry--input-controls').children().on('click', function () {
             const $bgmTrackEntry = $(this).parent().parent().children('.js--bgm-track');
@@ -1033,7 +1033,7 @@ function initBgmTrackData(data) {
         const $bgmTrackEntry = $(this).parent().parent().children('.js--bgm-track');
         initBgmTrackImagesModal($bgmTrackEntry, getBgmTrackImageContainer);
     });
-    
+
     $('.js--bgm-track').on('mousemove', function (e) {
         $tooltip.css({
             top: e.pageY + 10 + 'px',
@@ -1045,11 +1045,11 @@ function initBgmTrackData(data) {
         const location = getLocalizedLabel(bgmTrack.location, bgmTrack.locationJP);
         const notes = getLocalizedLabel(bgmTrack.notes, bgmTrack.notesJP);
         $tooltip.html(localizedBgmTrackLabel
-                .replace('{BGM_TRACK_ID}', bgmTrack.trackNo < 1000 ? bgmTrack.trackNo + (bgmTrack.variant ? ` ${bgmTrack.variant}` : '') : '')
-                .replace('{NAME}', name)
-                .replace('{LOCATION}', location)
-                .replace('{NOTES}', notes || ''))
-                .removeClass('display--none');
+            .replace('{BGM_TRACK_ID}', bgmTrack.trackNo < 1000 ? bgmTrack.trackNo + (bgmTrack.variant ? ` ${bgmTrack.variant}` : '') : '')
+            .replace('{NAME}', name)
+            .replace('{LOCATION}', location)
+            .replace('{NOTES}', notes || ''))
+            .removeClass('display--none');
         if (bgmTrack.trackNo >= 1000)
             $tooltip.find('.js--bgm-track-tooltip__bgm-track-id').remove();
         if (!location)
@@ -1071,7 +1071,7 @@ function initBgmTrackData(data) {
 function addFavBgmTrackEntry(bgmTrackId) {
     if (!bgmTrackIndexesById.hasOwnProperty(bgmTrackId))
         return;
-    
+
     const bgmTrack = bgmTrackData[bgmTrackIndexesById[bgmTrackId]];
 
     const $bgmTracksContainerItems = $('.js--bgm-tracks-container__items');
@@ -1091,7 +1091,7 @@ function addFavBgmTrackEntry(bgmTrackId) {
 
     let foundPos = false;
 
-    $favBgmTracksContainerBorders.children().each(function() {
+    $favBgmTracksContainerBorders.children().each(function () {
         const trackNo = $(this).data('trackNo');
         if (trackNo > bgmTrack.trackNo || (trackNo === bgmTrack.trackNo && $(this).data('variant') > bgmTrack.variant)) {
             $favBgmTrackImageContainer.insertBefore($favBgmTracksContainerItems.children()[$(this).index()]);
@@ -1105,7 +1105,7 @@ function addFavBgmTrackEntry(bgmTrackId) {
         $favBgmTracksContainerItems.append($favBgmTrackImageContainer);
         $favBgmTracksContainerBorders.append($favBgmTrackLinkContainer);
     }
-    
+
     const $bgmTrackEntryInputControls = $favBgmTrackLinkContainer.children('.js--bgm-track--collectable-entry--input-controls');
     const $bgmTrackEntryPlayControls = $favBgmTrackLinkContainer.children('.js--bgm-track--collectable-entry--play-controls');
     const $setImageBtn = $bgmTrackEntryInputControls.children('.js--bgm-track__set-image');
@@ -1123,7 +1123,7 @@ function removeFavBgmTrackEntry(bgmTrackId) {
 
     const $bgmTrackLinkContainer = $favBgmTracksContainerBorders.find(`.js--bgm-track[data-bgm-track-id=${bgmTrackId}]`).parent();
     const $bgmTrackImageContainer = $($($favBgmTracksContainerItems.children('.js--bgm-track-image--container')[$bgmTrackLinkContainer.index()]));
-    
+
     $bgmTrackLinkContainer.remove();
     $bgmTrackImageContainer.remove();
 
@@ -1157,15 +1157,15 @@ function initBgmTrackImagesModal($bgmTrackEntry, getBgmTrackImageContainer) {
             if (data.success) {
                 const filename = world.images[ordinal];
                 bgmTrack.worldImageOrdinal = ordinal;
-                $(`.js--bgm-track[data-bgm-track-id='${bgmTrackId}']`).each(function() {
+                $(`.js--bgm-track[data-bgm-track-id='${bgmTrackId}']`).each(function () {
                     getBgmTrackImageContainer($(this)).find('.js--bgm-track-image').attr('src', filename);
                 });
                 $(`.js--playlist-item[data-bgm-track-id='${bgmTrackId}'] .playlist-item__image`).attr('src', filename)
                 $.modal.close();
             }
         });
-     });
-    
+    });
+
     $('.js--bgm-track-images-modal').modal({
         closeExisting: false,
         fadeDuration: 100,
@@ -1304,7 +1304,7 @@ function updateControlsContainer(updateTabMargin) {
     const collectableControlsHeight = $(".controls-collectables").outerHeight();
     const collectableControlsWidth = $(".controls-collectables").outerWidth();
     $(".controls-top--container, .controls-bottom--container").css("margin-top", `-${(settingsHeight + 20)}px`);
-    $(".controls-top--container, controls-bottom--container, .controls-bottom--container--tab, .footer").each(function() {
+    $(".controls-top--container, controls-bottom--container, .controls-bottom--container--tab, .footer").each(function () {
         $(this).css("height", `${settingsHeight - ($(this).outerHeight() - parseFloat(window.getComputedStyle(this, null).getPropertyValue("height")))}px`);
     });
     $(".controls-bottom--container--tab").css("left", `calc(50% - ${($(".controls-bottom--container--tab").outerWidth() / 2)}px`);
@@ -1318,7 +1318,7 @@ function updateControlsContainer(updateTabMargin) {
         "margin-top": `${16 + (((collectableControlsHeight + 16) - $(".controls-collectables--container--tab").outerHeight()) / 2)}px`
     });
     $(".controls-playlist").css("max-width", `${window.innerWidth - 72}px`);
-    
+
     const playlistControlsHeight = $(".controls-playlist").outerHeight();
     const playlistControlsWidth = $(".controls-playlist").outerWidth();
     $(".controls-playlist--container--tab").css({
@@ -1448,7 +1448,9 @@ function reloadData(update) {
 
         if (isWebGL2) {
             worldImageData = [];
-            initNodeObjectMaterial().then(() => {
+
+            initWorldTextures().then(() => {
+                initNodeObjectMaterials();
                 reloadGraph();
                 loadCallback();
             }).catch(err => console.error(err));
@@ -1477,7 +1479,8 @@ let hiddenLinks = [];
 let linksTwoWayBuffered;
 let linksOneWayBuffered;
 
-let nodeObject;
+let glMaxTextureSize = 1024;
+let nodeObjects = [];
 let iconObject;
 let nodeIconObject;
 
@@ -1509,7 +1512,8 @@ let localizedNA;
 
 let iconLabel;
 
-let raycaster, mousePos = { x: 0, y: 0 };
+let raycaster = new THREE.Raycaster();
+let mousePos = { x: 0, y: 0 };
 
 let localizedConns;
 
@@ -1619,7 +1623,7 @@ function initGraph(renderMode, displayMode, paths) {
             }
             pathScores[pi] = parseInt(pi) + 3 * ((path.length - 2) - minPathDepth);
         }
-        
+
         maxPathDepth = paths[paths.length - 1].length;
         depthDiff = maxPathDepth - minPathDepth;
         maxPathScore = ((paths.length - 1) + (3 * depthDiff)) * (depthDiff > 0 ? 1 : 2) || 1;
@@ -1672,7 +1676,7 @@ function initGraph(renderMode, displayMode, paths) {
         const nexusWorldId = worldData.find(w => w.title === nexusWorldName).id;
         const nexusShortcutLinks = links.filter(l => l.target === nexusWorldId && l.connType & ConnType.EFFECT && !worldData[l.source].connections.filter(c => c.targetId === nexusWorldId).length);
         const nexusShortcutWorldIds = nexusShortcutLinks.map(l => l.source);
-        
+
         for (let w of visibleWorldIds) {
             const world = worldData[w];
             let connections = world.connections;
@@ -1717,10 +1721,10 @@ function initGraph(renderMode, displayMode, paths) {
                         connType: reverseConn
                             ? reverseConn.type
                             : conn.type & ConnType.ONE_WAY
-                            ? ConnType.NO_ENTRY
-                            : conn.type & ConnType.NO_ENTRY
-                            ? ConnType.ONE_WAY
-                            : 0,
+                                ? ConnType.NO_ENTRY
+                                : conn.type & ConnType.NO_ENTRY
+                                    ? ConnType.ONE_WAY
+                                    : 0,
                         typeParams: reverseConn ? reverseConn.typeParams : {},
                         icons: [],
                         hidden: !hidden,
@@ -1742,7 +1746,7 @@ function initGraph(renderMode, displayMode, paths) {
         visibleWorldIds = worldData.map(w => w.id);
 
         maxDepth = maxWorldDepth || _.max(worldData.map(w => w.depth));
-        
+
         for (let w of visibleWorldIds) {
             const world = worldData[w];
             const connections = world.connections;
@@ -1787,7 +1791,7 @@ function initGraph(renderMode, displayMode, paths) {
     links.forEach(l => {
         const icons = l.icons;
         const connType = l.connType;
-        
+
         if (connType & ConnType.INACCESSIBLE)
             icons.push(getConnTypeIcon(ConnType.INACCESSIBLE));
         if (connType & ConnType.ONE_WAY)
@@ -1823,10 +1827,10 @@ function initGraph(renderMode, displayMode, paths) {
         img.title = !d.hidden ? getLocalizedLabel(d.title, d.titleJP) : localizedHiddenLabel;
         return img;
     });
-    
+
     const depthColors = [];
     const depthHueIncrement = (1 / maxDepth) * 0.6666;
-    
+
     for (let d = 0; d <= maxDepth; d++)
         depthColors.push(hueToRGBA(0.6666 - depthHueIncrement * d, 1));
 
@@ -1968,7 +1972,7 @@ function initGraph(renderMode, displayMode, paths) {
                     } else if (textLines[l].indexOf('：') > -1)
                         textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, '： ').split(' ')).concat(textLines.slice(l + 1));
                 }
-                
+
                 text.text = textLines.join('\n');
                 text.defaultScale = { 'x': text.scale.x, 'y': text.scale.y };
                 text.material.transparent = true;
@@ -1980,7 +1984,7 @@ function initGraph(renderMode, displayMode, paths) {
                 text.scale.y *= scale;
 
                 ret.add(text);
-               
+
                 if (worldIsNew[node.id]) {
                     const iconText = new SpriteText(is2d ? ` ${localizedNodeIconNew} ` : localizedNodeIconNew, 2, 'gold');
                     iconText.__graphObjType = 'label';
@@ -1989,7 +1993,7 @@ function initGraph(renderMode, displayMode, paths) {
                     iconText.strokeWidth = 1;
                     iconText.strokeColor = '#4d4000';
                     iconText.backgroundColor = false;
-    
+
                     if (is2d) {
                         iconText.material.depthTest = false;
                         iconText.renderOrder = world.id;
@@ -2001,21 +2005,21 @@ function initGraph(renderMode, displayMode, paths) {
                         iconText.renderOrder = 2;
                         iconText.material.depthWrite = false;
                     }
-                    
+
                     iconText.defaultScale = { 'x': iconText.scale.x, 'y': iconText.scale.y };
                     iconText.material.transparent = true;
                     iconText.material.opacity = ret.material.opacity;
                     iconText.visible = isNodeLabelVisible(node);
                     iconText.scale.x *= scale;
                     iconText.scale.y *= scale;
-    
+
                     if (is2d) {
                         iconText.position.set(7 * scale, 4.75 * scale, 0);
                         iconText.center.set(1, 1);
                     } else {
                         iconText.center.set(1 - ((6.5 * scale) / iconText.scale.x), 1 - ((4.875 * scale) / iconText.scale.y));
                     }
-    
+
                     ret.add(iconText);
                 }
             }
@@ -2023,8 +2027,8 @@ function initGraph(renderMode, displayMode, paths) {
             return ret;
         })
         .onEngineTick(() => {
-            updateLinkObjects(visibleTwoWayLinks, linksTwoWayBuffered, is2d);
-            updateLinkObjects(visibleOneWayLinks, linksOneWayBuffered, is2d);
+            if (linksTwoWayBuffered) updateLinkObjects(visibleTwoWayLinks, linksTwoWayBuffered, is2d);
+            if (linksOneWayBuffered) updateLinkObjects(visibleOneWayLinks, linksOneWayBuffered, is2d);
             updateLinkDistances();
             if (isWebGL2)
                 updateNodePositions(is2d);
@@ -2091,9 +2095,11 @@ function initGraph(renderMode, displayMode, paths) {
 
             if (node) {
                 hoverWorldId = node.id;
+                let nodeObject = nodeObjects[getNodeChunkId(node)];
+                let indexInChunk = getNodeIndexInChunk(node);
                 if (nodeObject && node.removed) {
                     const nodeGrayscale = getNodeGrayscale(node);
-                    nodeObject.geometry.attributes.grayscale.array[node.index] = nodeGrayscale;
+                    nodeObject.geometry.attributes.grayscale.array[indexInChunk] = nodeGrayscale;
                     nodeObject.geometry.attributes.grayscale.needsUpdate = true;
                 }
                 const removedTwoWayLinks = visibleTwoWayLinks.filter(l => getWorldLinkRemoved(node.id, l, worldRemoved));
@@ -2110,9 +2116,11 @@ function initGraph(renderMode, displayMode, paths) {
                 hoverWorldId = null;
 
             if (prevNode) {
+                let nodeObject = nodeObjects[getNodeChunkId(prevNode)];
+                let indexInChunk = getNodeIndexInChunk(prevNode);
                 if (nodeObject && prevNode.removed) {
                     const nodeGrayscale = getNodeGrayscale(prevNode);
-                    nodeObject.geometry.attributes.grayscale.array[prevNode.index] = nodeGrayscale;
+                    nodeObject.geometry.attributes.grayscale.array[indexInChunk] = nodeGrayscale;
                     nodeObject.geometry.attributes.grayscale.needsUpdate = true;
                 }
                 const removedTwoWayLinks = visibleTwoWayLinks.filter(l => getWorldLinkRemoved(prevNode.id, l, worldRemoved));
@@ -2156,7 +2164,7 @@ function initGraph(renderMode, displayMode, paths) {
         })
         .cooldownTicks(400)
         .d3VelocityDecay(0.8);
-    
+
     if (!locationMode) {
         graph = graph
             // Deactivate existing forces
@@ -2181,7 +2189,7 @@ function initGraph(renderMode, displayMode, paths) {
                 });
             });
     } else
-        graph = graph.d3Force('center', () => {});
+        graph = graph.d3Force('center', () => { });
 
     graph = graph
         .graphData(gData);
@@ -2212,9 +2220,9 @@ function initGraph(renderMode, displayMode, paths) {
 
     controls.update();
 
-     // when the mouse moves, call the given function
-     document.addEventListener('mousemove', onDocumentMouseMove, false);
-     document.querySelector('#graph canvas').addEventListener('wheel', clearTweens, false);
+    // when the mouse moves, call the given function
+    document.addEventListener('mousemove', onDocumentMouseMove, false);
+    document.querySelector('#graph canvas').addEventListener('wheel', clearTweens, false);
 
     (function () {
         let _animationCycle = graph._animationCycle
@@ -2225,7 +2233,8 @@ function initGraph(renderMode, displayMode, paths) {
     })();
 
     if (isWebGL2) {
-        initNodeObject(is2d);
+        initNodeObjectMaterials();
+        initNodeObjects(nodes.length, is2d);
         updateNodeImageData(nodes, paths, is2d);
         makeIconObject(is2d);
         let index = 0;
@@ -2239,9 +2248,6 @@ function initGraph(renderMode, displayMode, paths) {
         }
     } else
         makeLinkIcons(is2d);
-
-    // initialize object to perform world/screen calculations
-    raycaster = new THREE.Raycaster();
 
     graph.graphData().links.forEach(link => {
         if (!link.hidden) {
@@ -2273,40 +2279,67 @@ function onRender(is2d) {
         if (is2d)
             updateNodeIconAnimation(time);
     }
-    updateLinkAnimation(linksOneWayBuffered, time);
+    if (linksOneWayBuffered) updateLinkAnimation(linksOneWayBuffered, time);
 }
 
 // START WEBGL2.0 SPECIFIC CODE
 function updateNodeImageData(nodes, isSubset, is2d) {
-    nodeObject.count = nodes.length;
+    const amount = nodes.length;
+    let nodeChunks = Math.trunc(amount / glMaxTextureSize);
+
+    for (let chunk = 0; chunk <= nodeChunks; chunk++) {
+        let chunkOffset = chunk * glMaxTextureSize;
+        let chunkSize = glMaxTextureSize;
+        if (chunk == nodeChunks)
+            chunkSize = amount % glMaxTextureSize;
+        nodeObjects[chunk].count = chunkSize;
+    }
+
     if (isSubset) {
         let index = 0;
         let rIndex = 0;
         const totalNodeCount = nodes.length;
-        const removedNodeCount = nodes.filter(n => n.removed).length;
-     
+        let nodeObject = nodeObjects[0];
+
         nodes.forEach(node => {
-            copyImageData(node.id, index);
+            let chunkId = Math.trunc(index / glMaxTextureSize);
+            let actualIndex = index % glMaxTextureSize;
+            nodeObject = nodeObjects[chunkId];
+
+            copyImageData(nodeObject, node.id, index, 1);
             if (is2d) {
-                copyImageData(node.id + worldData.length, index + totalNodeCount);
-                if (node.removed) {
-                    copyImageData(node.rId + worldData.length * 2, rIndex + totalNodeCount * 2);
-                    copyImageData(node.rId + worldData.length * 2 + removedCount, rIndex + totalNodeCount * 2 + removedNodeCount);
-                    rIndex++;
-                }
+                copyImageData(nodeObject, node.id + worldData.length, index + totalNodeCount, 1);
             }
             index++;
         });
-    } else
-        nodeObject.material.uniforms.diffuse.value.image.data.set(worldImageData, 0);
-    nodeObject.material.uniforms.diffuse.value.needsUpdate = true;
+    } else {
+        let id = 0;
+        const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
+        nodeObjects.forEach(obj => {
+            let chunkOffset = id * glMaxTextureSize;
+            let chunkSize = glMaxTextureSize;
+            if (id == (nodeObjects.length - 1))
+                chunkSize = amount % glMaxTextureSize;
+
+            let offsetFrom = chunkOffset * dataLength;
+            let offsetTo = offsetFrom + chunkSize * dataLength;
+
+            obj.material.uniforms.diffuse.value.image.data.set(worldImageData.slice(offsetFrom, offsetTo), 0);
+            if (is2d)
+                copyImageData(obj, chunkOffset + amount, chunkSize, chunkSize);
+            id++;
+        });
+    }
+    nodeObjects.forEach(obj => {
+        obj.material.uniforms.diffuse.value.needsUpdate = true;
+    });
 }
 
-function copyImageData(from, to) {
+function copyImageData(nodeObject, from, to, amount) {
     const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
     let offsetFrom = from * dataLength;
     let offsetTo = to * dataLength;
-    nodeObject.material.uniforms.diffuse.value.image.data.set(worldImageData.slice(offsetFrom, offsetFrom + dataLength), offsetTo);
+    nodeObject.material.uniforms.diffuse.value.image.data.set(worldImageData.slice(offsetFrom, offsetFrom + amount * dataLength), offsetTo);
 }
 
 const instanceVS = `precision highp float;
@@ -2496,7 +2529,7 @@ function makeIconObject(is2d) {
     let iconImgData = new Uint8ClampedArray(buffer);
     let index = 0;
     const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
+    const context = canvas.getContext('2d', { willReadFrequently: true });
     canvas.width = iconImgDimensions.x;
     canvas.height = iconImgDimensions.y;
     context.font = '50px MS Gothic';
@@ -2646,14 +2679,14 @@ function sortIconInstances(instanceObject, unsortedOpacities, unsortedGrayscales
     vecArray.sort((a, b) => a.pos.distanceTo(camera.position) > b.pos.distanceTo(camera.position)
         ? -1
         : a.pos.distanceTo(camera.position) < b.pos.distanceTo(camera.position)
-        ? 1
-        : 0
+            ? 1
+            : 0
     );
 
     index = 0;
     vecArray.forEach(item => {
-       sortedIconIds[index] = item.unsortedId;
-       index++;
+        sortedIconIds[index] = item.unsortedId;
+        index++;
     });
 
     index = 0;
@@ -2678,33 +2711,19 @@ function sortIconInstances(instanceObject, unsortedOpacities, unsortedGrayscales
     instanceObject.geometry.attributes.texIndex.needsUpdate = true;
 }
 
-function initNodeObjectMaterial() {
+function initWorldTextures() {
     const amount = worldData.length;
-    const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
-    
-    const buffer = new ArrayBuffer(dataLength * amount * 2 + (dataLength * removedCount * 2));
-    const texture = new THREE.DataArrayTexture(new Uint8ClampedArray(buffer), nodeImgDimensions.x, nodeImgDimensions.y, amount * 2 + (removedCount * 2));
-    texture.format = THREE.RGBAFormat;
-    texture.type = THREE.UnsignedByteType;
-    nodeObjectMaterial = new THREE.RawShaderMaterial({
-        uniforms: {
-            diffuse: { value: texture },
-        },
-        vertexShader: instanceVS,
-        fragmentShader: instanceFS,
-        transparent: true,
-        depthTest: !is2d,
-        glslVersion: THREE.GLSL3
-    });
-
     const filenames = [];
     worldData.forEach(world => filenames.push(!world.hidden ? worldData[world.id].filename : hiddenWorldImageUrl));
 
+    const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
+
+    worldImageData = new Uint8ClampedArray(dataLength * amount * 2 + dataLength);
     return new Promise((resolve, reject) => {
         Promise.all(getImageRawData(filenames))
             .then(images => {
                 const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d', { alpha: false });
+                const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
                 canvas.width = nodeImgDimensions.x;
                 canvas.height = nodeImgDimensions.y;
                 const fontSize = 36;
@@ -2722,18 +2741,17 @@ function initNodeObjectMaterial() {
                     ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
                     let nodeImageData = ctx.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
                     let offset = index * dataLength;
-                    nodeObjectMaterial.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
+                    worldImageData.set(nodeImageData.data, offset);
                     const worldId = index;
                     const world = worldData[worldId];
                     const worldName = !world.hidden ? getLocalizedLabel(world.title, world.titleJP) : localizedHiddenLabel;
 
-                    if (world.removed)
-                        ctx.save();
+                    ctx.save();
 
                     for (let v = 0; v < 3; v++) {
                         if (v)
                             ctx.restore();
-                        
+
                         let textLines = worldName.split(" ");
                         ctx.fillStyle = nodeTextColors[v];
                         for (let l = 0; l < textLines.length; l++) {
@@ -2760,120 +2778,179 @@ function initNodeObjectMaterial() {
                             ctx.strokeText(textLine, lineX, lineY);
                             ctx.fillText(textLine, lineX, lineY);
                         }
-
                         nodeImageData = ctx.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
-                        offset = v
-                            ? offsetLabels + images.length * dataLength + (removedCount * dataLength * (v - 1)) + rIndex * dataLength
-                            : offsetLabels + index * dataLength;
-                        nodeObjectMaterial.uniforms.diffuse.value.image.data.set(nodeImageData.data, offset);
-
+                        worldImageData.set(nodeImageData.data, offsetLabels + offset);
                         if (!world.removed)
                             break;
                     }
                     index++;
-                    if (world.removed)
-                        rIndex++;
                 });
                 canvas.remove();
-                worldImageData = nodeObjectMaterial.uniforms.diffuse.value.image.data.slice();
-                nodeObjectMaterial.uniforms.diffuse.value.needsUpdate = true;
                 resolve();
             })
             .catch(err => reject(err));
     });
 }
 
-function initNodeObject(is2d) {
+function initNodeObjectMaterials() {
     const amount = worldData.length;
-    const opacities = [];
-    const grayscales = [];
-    const texIndexes = [];
+    let nodeChunks = Math.trunc(amount / glMaxTextureSize);
 
-    for (let i = 0; i < amount; i++) {
-        const world = worldData[i];
-        opacities[i] = getNodeOpacity(world.id);
-        grayscales[i] = world.removed ? 1 : 0;
-        texIndexes[i] = i;
+    for (let chunk = 0; chunk <= nodeChunks; chunk++) {
+        let chunkOffset = chunk * glMaxTextureSize;
+        let chunkSize = glMaxTextureSize;
+        if (chunk == nodeChunks)
+            chunkSize = amount % glMaxTextureSize;
+
+        const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
+        const buffer = new ArrayBuffer(dataLength * chunkSize * 2);
+        const texture = new THREE.DataArrayTexture(new Uint8ClampedArray(buffer), nodeImgDimensions.x, nodeImgDimensions.y, chunkSize * 2);
+        texture.format = THREE.RGBAFormat;
+        texture.type = THREE.UnsignedByteType;
+
+        let nodeObjectMaterial = new THREE.RawShaderMaterial({
+            uniforms: {
+                diffuse: { value: texture },
+            },
+            vertexShader: instanceVS,
+            fragmentShader: instanceFS,
+            transparent: true,
+            depthTest: !is2d,
+            glslVersion: THREE.GLSL3
+        });
+        let offsetFrom = chunkOffset * dataLength;
+        let offsetTo = offsetFrom + chunkSize * 2 * dataLength;
+        nodeObjectMaterial.uniforms.diffuse.value.image.data.set(worldImageData.slice(offsetFrom, offsetTo), 0);
+        nodeObjectMaterial.uniforms.diffuse.value.needsUpdate = true;
+        nodeObjectMaterials[chunk] = nodeObjectMaterial;
     }
+}
 
-    let geometry;
-    if (is2d)
-        geometry = new THREE.PlaneGeometry(1, 1);
-    else
-        geometry = new THREE.BoxGeometry(1, 1, 1);
+function removeObject3D(object3D) {
+    // for better memory management and performance
+    if (object3D.geometry) object3D.geometry.dispose();
 
-    geometry.attributes.opacity = new THREE.InstancedBufferAttribute(new Float32Array(opacities), 1);
-    geometry.attributes.grayscale = new THREE.InstancedBufferAttribute(new Float32Array(grayscales), 1);
-    geometry.attributes.texIndex = new THREE.InstancedBufferAttribute(new Float32Array(texIndexes), 1);
-    nodeObject = new THREE.InstancedMesh(geometry, nodeObjectMaterial, amount);
-    nodeObject.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    nodeObject.renderOrder = 1;
-    graph.scene().add(nodeObject);
+    object3D.removeFromParent(); // the parent might be the scene or another Object3D, but it is sure to be removed this way
+    return true;
+}
+
+function initNodeObjects(amount, is2d) {
+    nodeObjects.forEach(obj => {
+        removeObject3D(obj);
+    });
+    nodeObjects = [];
+    let nodeChunks = Math.trunc(amount / glMaxTextureSize);
+
+    for (let chunk = 0; chunk <= nodeChunks; chunk++) {
+        let chunkOffset = chunk * glMaxTextureSize;
+        let chunkSize = glMaxTextureSize;
+        if (chunk == nodeChunks)
+            chunkSize = amount % glMaxTextureSize;
+
+        const opacities = [];
+        const grayscales = [];
+        const texIndexes = [];
+
+        for (let i = 0; i < chunkSize; i++) {
+            const world = worldData[chunkOffset + i];
+            opacities[i] = getNodeOpacity(world.id);
+            grayscales[i] = world.removed ? 1 : 0;
+            texIndexes[i] = i;
+        }
+
+        let geometry;
+        if (is2d)
+            geometry = new THREE.PlaneGeometry(1, 1);
+        else
+            geometry = new THREE.BoxGeometry(1, 1, 1);
+
+        geometry.attributes.opacity = new THREE.InstancedBufferAttribute(new Float32Array(opacities), 1);
+        geometry.attributes.grayscale = new THREE.InstancedBufferAttribute(new Float32Array(grayscales), 1);
+        geometry.attributes.texIndex = new THREE.InstancedBufferAttribute(new Float32Array(texIndexes), 1);
+        let nodeObject = new THREE.InstancedMesh(geometry, nodeObjectMaterials[chunk], amount);
+        nodeObject.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        nodeObject.renderOrder = 1;
+        nodeObjects[chunk] = nodeObject;
+        graph.scene().add(nodeObjects[chunk]);
+    }
+}
+
+function getNodeChunkId(node) {
+    return Math.trunc(node.id / glMaxTextureSize);
+}
+
+function getNodeIndexInChunk(node) {
+    return node.id % glMaxTextureSize;
 }
 
 function updateNodePositions(is2d) {
+    if (!nodeObjects.length) return;
     const dummy = new THREE.Object3D();
-    if (nodeObject) {
-        let index = 0;
-        let iconIndex = 0;
-        graph.graphData().nodes.forEach(node => {
-            nodeObject.getMatrixAt(index, dummy.matrix);
-            if (!is2d)
-                dummy.position.set(node.x, node.y, node.z);
-            else
-                dummy.position.set(node.x, node.y, 0);
-            const scale = worldScales[node.id];
+    let index = 0;
+    let iconIndex = 0;
+
+    graph.graphData().nodes.forEach(node => {
+        let chunkId = Math.trunc(index / glMaxTextureSize);
+        let actualIndex = index % glMaxTextureSize;
+
+        nodeObjects[chunkId].getMatrixAt(actualIndex, dummy.matrix);
+        if (!is2d)
+            dummy.position.set(node.x, node.y, node.z);
+        else
+            dummy.position.set(node.x, node.y, 0);
+        const scale = worldScales[node.id];
+        dummy.scale.set(13 * scale, 9.75 * scale, is2d ? 1 : 13 * scale);
+        dummy.updateMatrix();
+
+        nodeObjects[chunkId].setMatrixAt(actualIndex, dummy.matrix);
+        nodeObjects[chunkId].instanceMatrix.needsUpdate = true;
+        index++;
+
+        if (is2d && nodeIconObject && node.isNew) {
+            nodeIconObject.getMatrixAt(iconIndex, dummy.matrix);
+            dummy.position.set(node.x + (dummy.scale.x / 2) - (1.625 + (4 / 13)) * scale, node.y + (dummy.scale.y / 2) - 1.21875 * scale, 0);
             dummy.scale.set(13 * scale, 9.75 * scale, is2d ? 1 : 13 * scale);
+            const x = new THREE.Vector3();
+            x.setFromMatrixScale(dummy.matrix);
             dummy.updateMatrix();
-            nodeObject.setMatrixAt(index, dummy.matrix);
-            index++;
-            
-            if (is2d && nodeIconObject && node.isNew) {
-                nodeIconObject.getMatrixAt(iconIndex, dummy.matrix);
-                dummy.position.set(node.x + (dummy.scale.x / 2) - (1.625 + (4 / 13)) * scale, node.y + (dummy.scale.y / 2) - 1.21875 * scale, 0);
-                dummy.scale.set(13 * scale, 9.75 * scale, is2d ? 1 : 13 * scale);
-                const x = new THREE.Vector3();
-                x.setFromMatrixScale(dummy.matrix);
-                dummy.updateMatrix();
-                nodeIconObject.setMatrixAt(iconIndex, dummy.matrix);
-                iconIndex++;
-            }
-        });
-        nodeObject.instanceMatrix.needsUpdate = true;
-        if (is2d && nodeIconObject)
-            nodeIconObject.instanceMatrix.needsUpdate = true;
-        nodeObject.computeBoundingSphere();
-    }
+            nodeIconObject.setMatrixAt(iconIndex, dummy.matrix);
+            iconIndex++;
+        }
+    });
+
+    nodeObjects.forEach(obj => {
+        obj.computeBoundingSphere();
+    });
+    if (is2d && nodeIconObject)
+        nodeIconObject.instanceMatrix.needsUpdate = true;
 }
 
 function updateNodeLabels2D() {
-    if (nodeObject) {
-        let index = 0;
-        let rIndex = 0;
-        let iconIndex = 0;
-        const nodes = graph.graphData().nodes;
-        const totalNodeCount = nodes.length;
-        const removedNodeCount = nodes.filter(n => n.removed).length;
-        nodes.forEach(node => {
-            if (isNodeLabelVisible(node)) {
-                const layerIndex = node.removed
-                    ? nodeTextColors.indexOf(getNodeTextColor(node))
-                    : 0;
-                nodeObject.geometry.attributes.texIndex.array[index] = layerIndex
-                    ? rIndex + (totalNodeCount * 2) + (layerIndex - 1) * removedNodeCount
-                    : index + totalNodeCount;
-            } else
-                nodeObject.geometry.attributes.texIndex.array[index] = index;
-            index++;
-            if (node.removed)
-                rIndex++;
-            if (nodeIconObject && node.isNew)
-                nodeIconObject.geometry.attributes.opacity.array[iconIndex++] = getNodeOpacity(node.id);
-        });
-        nodeObject.geometry.attributes.texIndex.needsUpdate = true;
-        if (nodeIconObject)
-            nodeIconObject.geometry.attributes.opacity.needsUpdate = true;
-    }
+    if (!nodeObjects.length) return;
+    let index = 0;
+    let iconIndex = 0;
+    const nodes = graph.graphData().nodes;
+    nodes.forEach(node => {
+        let chunkId = getNodeChunkId(node);
+        let nodeObject = nodeObjects[chunkId];
+        let indexInChunk = getNodeIndexInChunk(node);
+        let chunkSize = glMaxTextureSize;
+        if (chunkId == nodeObjects.length - 1)
+            chunkSize = nodes.length % glMaxTextureSize;
+
+        if (isNodeLabelVisible(node) && nodeObject) {
+            nodeObject.geometry.attributes.texIndex.array[indexInChunk] = indexInChunk + chunkSize;
+        } else if (nodeObject)
+            nodeObject.geometry.attributes.texIndex.array[indexInChunk] = indexInChunk;
+        index++;
+        if (nodeIconObject && node.isNew)
+            nodeIconObject.geometry.attributes.opacity.array[iconIndex++] = getNodeOpacity(node.id);
+    });
+    nodeObjects.forEach(obj => {
+        obj.geometry.attributes.texIndex.needsUpdate = true;
+    });
+    if (nodeIconObject)
+        nodeIconObject.geometry.attributes.opacity.needsUpdate = true;
 }
 
 function makeNodeIconObject() {
@@ -2981,7 +3058,7 @@ function getLocalizedVersionDetails(localizedVersionDetails) {
     const ret = {};
     const entryTypeKeys = Object.keys(versionUtils.VersionEntryType);
     const entryUpdateTypeKeys = Object.keys(versionUtils.VersionEntryUpdateType);
-    
+
     const keys = Object.keys(localizedVersionDetails);
 
     for (let k of keys) {
@@ -3068,7 +3145,7 @@ function updateNodeLabels(is2d, time) {
                     text.color = getNodeTextColor(node);
                     text.scale.x = text.defaultScale.x * scale;
                     text.scale.y = text.defaultScale.y * scale;
-                    
+
                     text.visible = true;
                 } else
                     text.visible = false;
@@ -3101,8 +3178,8 @@ function getNodeOpacity(id) {
         || id === selectedWorldId) && (!searchWorldIds.length || searchWorldIds.indexOf(id) > -1)
         ? 1
         : selectedWorldId != null && worldData[selectedWorldId].connections.find(c => c.targetId === id) || (!filterForAuthor && filterForVersion && !tempSelectedVersionIndex && versionIndex !== missingVersionIndex && !worldData[id].verAdded)
-        ? 0.625
-        : 0.1;
+            ? 0.625
+            : 0.1;
     return opacity;
 }
 
@@ -3117,8 +3194,8 @@ function getNodeGrayscale(node) {
         ? 0
         : id === hoverWorldId || (author != null && worldData[id].author === author)
             || (searchWorldIds.length && searchWorldIds.indexOf(id) > -1) || (selectedWorldId != null && worldData[selectedWorldId].connections.find(c => c.targetId === id))
-        ? 0.625
-        : 1;
+            ? 0.625
+            : 1;
     return grayscale;
 }
 
@@ -3309,7 +3386,8 @@ function updateLinkAnimation(bufferedObject, time) {
 }
 
 function updateNodeIconAnimation(time) {
-    nodeIconObject.material.uniforms.time.value = time;
+    if (nodeIconObject)
+        nodeIconObject.material.uniforms.time.value = time;
 }
 
 function updateLinkColors(linkData, bufferedObject, unfilteredLinkData) {
@@ -3365,6 +3443,7 @@ function updateLinkColors(linkData, bufferedObject, unfilteredLinkData) {
 }
 
 function updateLinkDistances() {
+    if (!linksOneWayBuffered) return;
     const actual = linksOneWayBuffered.geometry.attributes.position.array;
     let index = 3;
     let d = 0;
@@ -3398,8 +3477,8 @@ function getLinkOpacity(link) {
         && (!searchWorldIds.length || searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1)
         ? 1
         : (selectedWorldId != null && (selectedWorldId === sourceId || selectedWorldId === targetId)) || (!filterForAuthor && filterForVersion && !tempSelectedVersionIndex && versionIndex !== missingVersionIndex && (!worldData[sourceId].verAdded || !worldData[targetId].verAdded))
-        ? 0.625
-        : 0.1;
+            ? 0.625
+            : 0.1;
 }
 
 function getLinkGrayscale(link) {
@@ -3418,8 +3497,8 @@ function getLinkGrayscale(link) {
         : (sourceId === hoverWorldId || targetId === hoverWorldId) || (author != null && (sourceWorld.author === author || targetWorld.author === author))
             || (versionIndex && versionUtils.isWorldInVersion(sourceWorld, versionIndex, missingVersionIndex, tempSelectedVersionIndex) && versionUtils.isWorldInVersion(targetWorld, versionIndex, missingVersionIndex, tempSelectedVersionIndex))
             || (searchWorldIds.length && (searchWorldIds.indexOf(sourceId) > -1 || searchWorldIds.indexOf(targetId) > -1))
-        ? 0.375
-        : 0.85;
+            ? 0.375
+            : 0.85;
 }
 
 function getConnTypeIcon(connType, typeParams) {
@@ -3595,7 +3674,7 @@ function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
 
     sourcePaths[s] = [{ id: s, connType: null, typeParams: null }];
     targetPaths[t] = [{ id: t, connType: null, typeParams: null }];
-  
+
     while (genIndex <= 20) {
         let sourceWorlds = nextGenSourceWorlds.slice(0);
         let targetWorlds = nextGenTargetWorlds.slice(0);
@@ -3613,7 +3692,7 @@ function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
             const targetConns = traverseConns(checkedTargetNodes, targetPath, nextGenTargetWorlds, targetWorld, ignoreTypeFlags, false);
             $.extend(targetPaths, targetConns);
         }
-        
+
         genIndex++;
 
         /*let checkedSourceIds = Object.keys(sourcePaths).map(id => parseInt(id));
@@ -3637,7 +3716,7 @@ function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
                     targetPath = targetPath.slice(0, targetPathIds.indexOf(loopWorldIds[0]) + 1);
                     //console.log("Loop fixed", worldData[loopWorldIds[0]].title, JSON.stringify(sourcePath.map(function(p) { return worldData[p].title})), JSON.stringify(targetPath.map(function(p) { return worldData[p].title})));
                 }
-                
+
                 const matchPath = sourcePath.concat(targetPath.reverse());
                 const allMatchPaths = existingMatchPaths.concat(matchPaths);
                 for (let p of allMatchPaths) {
@@ -3670,7 +3749,7 @@ function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
     if (!matchPaths.length) {
         if (!tryAddNexusPath(matchPaths, existingMatchPaths, worldData, s, t)) {
             isDebug && console.log("Marking route as inaccessible");
-            matchPaths = [ [ { id: s, connType: ConnType.INACCESSIBLE }, { id: t, connType: null } ] ];
+            matchPaths = [[{ id: s, connType: ConnType.INACCESSIBLE }, { id: t, connType: null }]];
         }
         return matchPaths;
     } else if (isRoot) {
@@ -3680,7 +3759,7 @@ function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
         let ignoreTypes = 0;
         for (let ignoreType of ignoreTypesList)
             ignoreTypes |= ignoreType;
-        matchPaths = _.sortBy(matchPaths, [ 'length' ]);
+        matchPaths = _.sortBy(matchPaths, ['length']);
         isDebug && console.log("Looking for unconditionally accessible path...");
         let accessiblePathIndex = -1;
         for (let it = 0; it <= ignoreTypesList.length; it++) {
@@ -3704,7 +3783,7 @@ function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
                 }
                 let additionalPaths = findPath(s, t, false, ignoreTypeFlags | ignoreTypes, Math.max(1, Math.min(rootLimit, rootLimit - pathCount)), matchPaths);
                 if (additionalPaths.length && !(additionalPaths[0][0].connType & ConnType.INACCESSIBLE)) {
-                    additionalPaths = _.sortBy(additionalPaths, [ 'length' ]);
+                    additionalPaths = _.sortBy(additionalPaths, ['length']);
                     if (isDebug) {
                         const ignoreTypeNames = ["chance", "effect", "locked/locked condition", "phone locked"];
                         console.log("Found", additionalPaths.length, "additional path(s) by ignoring", ignoreType ? ignoreTypeNames.slice(it).join(", ") : "none");
@@ -3739,7 +3818,7 @@ function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
                 if (additionalPaths.length && !(additionalPaths[0][0].connType & ConnType.INACCESSIBLE)) {
                     for (let ap of additionalPaths)
                         matchPaths.push(ap);
-                    matchPaths = _.sortBy(matchPaths, [ 'length' ]);
+                    matchPaths = _.sortBy(matchPaths, ['length']);
                 }
             }
         }
@@ -3748,7 +3827,7 @@ function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
             limit++;
     }
 
-    matchPaths = _.sortBy(matchPaths, [ 'length' ]);
+    matchPaths = _.sortBy(matchPaths, ['length']);
     if (matchPaths.length > limit) {
         isDebug && console.log("Truncating array of", matchPaths.length, "paths to limit of", limit);
         matchPaths = matchPaths.slice(0, limit);
@@ -3859,17 +3938,15 @@ function findRealPathDepth(paths, worldId, pathWorldIds, worldDepthsMap, maxDept
         ignoreTypeFlags ^= ConnType.DEAD_END | ConnType.ISOLATED;
     else
         return minDepth;
-    
-    for (let p in paths)
-    {
+
+    for (let p in paths) {
         if (worldDepthsMap[p] === -1)
-             continue;
+            continue;
 
         const path = paths[p];
         const pathWorldDepth = pathWorldIds[p].indexOf(worldId);
 
-        if (pathWorldDepth)
-        {
+        if (pathWorldDepth) {
             let skipPath = pathWorldDepth > 0 && path.slice(0, pathWorldDepth).find(w => w.connType & ignoreTypeFlags);
             if (skipPath)
                 continue;
@@ -3968,7 +4045,7 @@ function initLocalization(isInitial) {
         });
     } else {
         if (worldsByName) {
-            $(".js--world-input").each(function() {
+            $(".js--world-input").each(function () {
                 const val = $(this).val();
                 if (val && worldNames.indexOf(val) > -1) {
                     const world = worldsByName[worldNames[worldNames.indexOf(val)]];
@@ -4081,7 +4158,7 @@ function initWorldSearch() {
             trySelectNode(graph.graphData().nodes.find(n => n.id === worldId), true, true);
         },
         onHide: function () {
-           if (selectedWorldId != null) {
+            if (selectedWorldId != null) {
                 const selectedWorld = worldData[selectedWorldId];
                 const selectedWorldName = getLocalizedLabel(selectedWorld.title, selectedWorld.titleJP);
                 if ($(this).val() !== selectedWorldName) {
@@ -4254,7 +4331,7 @@ function initContextMenu(localizedContextMenu) {
                 };
             }
         }
-        
+
         if (world.bgmUrl && world.bgmUrl.indexOf('|') > -1) {
             const worldName = getLocalizedLabel(world.title, world.titleJP);
             const bgmUrls = world.bgmUrl.split('|');
@@ -4281,7 +4358,7 @@ function initContextMenu(localizedContextMenu) {
     }
 
     $.contextMenu({
-        selector: '.graph canvas', 
+        selector: '.graph canvas',
         trigger: 'none',
         items: menuItems
     });
@@ -4370,7 +4447,7 @@ function initBgm(url, label, imageUrl, worldId, play, playlistIndex, playlist) {
     const $mainHolder = $playBtn.parent().addClass('main-holder');
     const $leftHolder = $('<div class="holder left-holder"></div>');
     const $rightHolder = $('<div class="holder right-holder"></div>');
-    
+
     $leftHolder.insertBefore($mainHolder);
     $leftHolder.append($favBtn);
     $ignoreBtn.insertAfter($favBtn);
@@ -4385,15 +4462,15 @@ function initBgm(url, label, imageUrl, worldId, play, playlistIndex, playlist) {
 
     audioPlayer.showLoadingIndicator();
 
-    audioPlayer.player.addEventListener('canplay', function() {
+    audioPlayer.player.addEventListener('canplay', function () {
         $('.audio-player .loading').addClass('display--none');
         $playBtn.removeClass('display--none');
     });
 
     const requestObj = new Request(url, { method: 'GET' });
-    
+
     audioPlayer.player.volume = config.audioVolume;
-    audioPlayer.player.addEventListener('volumechange', function() {
+    audioPlayer.player.addEventListener('volumechange', function () {
         const currentVolume = audioPlayer.player.volume;
         window.setTimeout(function () {
             if (audioPlayer.player.volume === currentVolume) {
@@ -4433,7 +4510,7 @@ function initBgm(url, label, imageUrl, worldId, play, playlistIndex, playlist) {
             config.playlistIndex = playlistIndex;
             updateConfig(config);
 
-            const updateBgmTrackInput = function() {
+            const updateBgmTrackInput = function () {
                 const isFav = $(this).hasClass('fav-btn');
                 const hasInput = config.bgmTrackInput.hasOwnProperty(bgmTrackId);
                 if (!hasInput || !!config.bgmTrackInput[bgmTrackId] === isFav) {
@@ -4455,7 +4532,7 @@ function initBgm(url, label, imageUrl, worldId, play, playlistIndex, playlist) {
                 }
             };
 
-            const playPrevTrack = function() {
+            const playPrevTrack = function () {
                 if (getPlaylistBgmTrackIds().length > 1) {
                     audioPlayer.player.src = '';
                     toggleEntryPlayingInList(false);
@@ -4466,7 +4543,7 @@ function initBgm(url, label, imageUrl, worldId, play, playlistIndex, playlist) {
                 }
                 GreenAudioPlayer.playPlayer(audioPlayer.player);
             };
-            const playNextTrack = function() {
+            const playNextTrack = function () {
                 if (getPlaylistBgmTrackIds().length > 1) {
                     audioPlayer.player.src = '';
                     toggleEntryPlayingInList(false);
@@ -4494,19 +4571,19 @@ function initBgm(url, label, imageUrl, worldId, play, playlistIndex, playlist) {
             $nextBtn.on('click', playNextTrack);
             $favBtn.on('click', updateBgmTrackInput);
             $ignoreBtn.on('click', updateBgmTrackInput);
-            $shuffleBtn.on('click', function() {
+            $shuffleBtn.on('click', function () {
                 const shuffle = (config.playlistShuffle = !config.playlistShuffle);
                 $(this).toggleClass('on', shuffle);
                 if (shuffle)
                     updatePlaylistShuffleIndexes();
                 updateConfig(config);
             });
-            $repeatBtn.on('click', function() {
+            $repeatBtn.on('click', function () {
                 const repeat = (config.playlistRepeat = !config.playlistRepeat);
                 $(this).toggleClass('on', repeat);
                 updateConfig(config);
             });
-            
+
             if (!playlist)
                 $playlistAddBtn.on('click', () => addPlaylistBgmTrack(bgmTrackId));
             else
@@ -4540,7 +4617,7 @@ function initBgm(url, label, imageUrl, worldId, play, playlistIndex, playlist) {
         if (player === audioPlayer.player) {
             const url = window.URL.createObjectURL(blob);
             player.src = url;
-            $('.close-audio-player').on('click', function() {
+            $('.close-audio-player').on('click', function () {
                 audioPlayer = null;
                 config.playlistIndex = -1;
                 updateConfig(config);
@@ -4672,7 +4749,7 @@ function initPlaylist() {
             initBgmTrack(bgmTrackData[bgmTrackIndexesById[bgmTrackId]], false, config.playlistIndex);
         updatePlaylistShuffleIndexes(config.playlistIndex);
     }
-    
+
     if (!(config.playlistIndex > -1 && config.playlistIndex < getPlaylistBgmTrackIds().length) || (config.playlist && !config.playlistBgmTrackIds.length))
         updatePlaylistShuffleIndexes();
 }
@@ -4906,19 +4983,20 @@ function highlightWorldSelection() {
     graph.graphData().nodes.forEach(node => {
         const nodeOpacity = getNodeOpacity(node.id);
         const nodeGrayscale = getNodeGrayscale(node);
+        let nodeObject = nodeObjects[getNodeChunkId(node)];
+        let indexInChunk = getNodeIndexInChunk(node);
         if (nodeObject) {
-            nodeObject.geometry.attributes.opacity.array[index] = nodeOpacity;
-            nodeObject.geometry.attributes.grayscale.array[index] = nodeGrayscale;
+            nodeObject.geometry.attributes.opacity.array[indexInChunk] = nodeOpacity;
+            nodeObject.geometry.attributes.grayscale.array[indexInChunk] = nodeGrayscale;
+            nodeObject.geometry.attributes.opacity.needsUpdate = true;
+            nodeObject.geometry.attributes.grayscale.needsUpdate = true;
         } else {
             node.__threeObj.material.opacity = nodeOpacity;
             node.__threeObj.material.grayscale = nodeGrayscale;
         }
         index++;
     });
-    if (nodeObject) {
-        nodeObject.geometry.attributes.opacity.needsUpdate = true;
-        nodeObject.geometry.attributes.grayscale.needsUpdate = true;
-    }
+
     updateLinkColors(visibleTwoWayLinks, linksTwoWayBuffered);
     updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
     if (isWebGL2 && is2d)
@@ -4949,15 +5027,14 @@ function updateRaycast() {
     if (!$(".modal:visible").length) {
         raycaster.setFromCamera(vector, graph.camera());
         // create an array containing all objects in the scene with which the ray intersects
-        if (isWebGL2)
+        if (isWebGL2 && iconObject)
             intersects = raycaster.intersectObject(iconObject);
         else
             intersects = raycaster.intersectObjects(graph.graphData().nodes.map(node => node.__threeObj).filter(o => o).concat(graph.scene().children.filter(o => o.__graphObjType === 'icon' && o.visible)));
     }
 
     // if there are one or more intersections
-    if (intersects.length)
-    {
+    if (intersects.length) {
         if (isWebGL2) {
             const topInstanceId = intersects[0].instanceId;
             if (iconObject.geometry.attributes.opacity.array[topInstanceId] < 1)
@@ -4978,7 +5055,7 @@ function updateRaycast() {
         } else {
             const topObj = intersects[0];
             if (topObj.object.__graphObjType !== "node") {
-                $(".graph .scene-tooltip").css("visibility", "hidden"); 
+                $(".graph .scene-tooltip").css("visibility", "hidden");
                 // update text, if it has a "name" field.
                 if (topObj.object.name) {
                     const viewPortCoords = {
@@ -4993,7 +5070,7 @@ function updateRaycast() {
             }
         }
     }
-    iconLabel.innerHTML = '';
+    if (iconLabel) iconLabel.innerHTML = '';
     $(".graph .scene-tooltip").css("visibility", "visible");
 }
 
@@ -5006,7 +5083,7 @@ function openHelpModal() {
 }
 
 function initControls() {
-    $(".controls-bottom--container--tab__button").on("click", function() {
+    $(".controls-bottom--container--tab__button").on("click", function () {
         if ($(".controls-bottom").hasClass("visible")) {
             const settingsHeight = $(".controls-bottom").outerHeight() + 8;
             $(".controls-bottom").removeClass("visible").animateCss("slideOutDown", 250, function () {
@@ -5029,7 +5106,7 @@ function initControls() {
         updateControlsContainer();
     });
 
-    $(".controls-collectables--container--tab__button").on("click", function() {
+    $(".controls-collectables--container--tab__button").on("click", function () {
         if ($(".controls-collectables").hasClass("visible")) {
             $(".controls-collectables").removeClass("visible").animateCss("slideOutRight", 250, function () {
                 if (!$(this).hasClass("visible"))
@@ -5045,7 +5122,7 @@ function initControls() {
         updateControlsContainer();
     });
 
-    $(".controls-playlist--container--tab__button").on("click", function() {
+    $(".controls-playlist--container--tab__button").on("click", function () {
         if ($(".controls-playlist").hasClass("visible")) {
             $(".controls-playlist").removeClass("visible").animateCss("slideOutLeft", 250, function () {
                 if (!$(this).hasClass("visible"))
@@ -5063,24 +5140,24 @@ function initControls() {
 
     updateControlsContainer(true);
 
-    $(window).on("resize", updateControlsContainer).on("blur", function() {
+    $(window).on("resize", updateControlsContainer).on("blur", function () {
         isShift = false;
         isCtrl = false;
     });
 
-    const onModalShown = function() {
+    const onModalShown = function () {
         const $modalContent = $(this).find(".modal__content");
         $modalContent.css("padding-right", $modalContent[0].scrollHeight > $modalContent[0].clientHeight ? "24px" : null);
     };
 
     $(document).on($.modal.OPEN, ".modal", onModalShown);
 
-    $(document).on("click", ".checkbox-button", function() {
+    $(document).on("click", ".checkbox-button", function () {
         const $checkbox = $(this).prev("input[type=checkbox].checkbox");
         $checkbox.prop("checked", !$checkbox.prop("checked")).trigger("change");
     });
 
-    $(document).on("click", ".js--modal__controls--expand > .js--modal__controls--expand__link", function() {
+    $(document).on("click", ".js--modal__controls--expand > .js--modal__controls--expand__link", function () {
         $(this).parent().next(".js--modal__controls").toggleClass("expanded");
     });
 
@@ -5104,14 +5181,15 @@ function initControls() {
             }
         }
     });
-    
-    $(".js--lang").on("change", function() {
+
+    $(".js--lang").on("change", function () {
         config.lang = $(this).val();
         updateConfig(config);
 
         const loadCallback = displayLoadingAnim($("#graphContainer"));
         const callback = function () {
             if (worldData) {
+                initNodeObjectMaterials();
                 reloadGraph();
                 loadCallback();
             }
@@ -5123,12 +5201,12 @@ function initControls() {
         initVersionData();
 
         if (isWebGL2)
-            initNodeObjectMaterial().then(() => callback()).catch(err => console.error(err));
+            initWorldTextures().then(() => callback()).catch(err => console.error(err));
         else if (worldData)
             callback();
     });
 
-    $(".js--ui-theme").on("change", function() {
+    $(".js--ui-theme").on("change", function () {
         config.uiTheme = $(this).val();
         const themeStyles = $(".js--theme-styles")[0];
         getBaseBgColor(config.uiTheme || (config.uiTheme = "Default_Custom"), function (color) {
@@ -5146,7 +5224,7 @@ function initControls() {
         });
     });
 
-    $(".js--font-style").on("change", function() {
+    $(".js--font-style").on("change", function () {
         config.fontStyle = parseInt($(this).val());
         const themeStyles = $(".js--theme-styles")[0];
         const defaultAltFontStyleIndex = 1;
@@ -5174,14 +5252,14 @@ function initControls() {
         });
     });
 
-    $(".js--render-mode").on("change", function() {
+    $(".js--render-mode").on("change", function () {
         config.renderMode = parseInt($(this).val());
         updateConfig(config);
         if (worldData)
             reloadGraph();
     });
 
-    $(".js--display-mode").on("change", function() {
+    $(".js--display-mode").on("change", function () {
         config.displayMode = parseInt($(this).val());
         updateConfig(config);
         if (worldData)
@@ -5189,13 +5267,13 @@ function initControls() {
         $(".js--stack-size--container").css("display", config.displayMode < 2 ? "flex" : "none");
     });
 
-    $(".js--conn-mode").on("change", function() {
+    $(".js--conn-mode").on("change", function () {
         config.connMode = parseInt($(this).val());
         updateConfig(config);
         updateConnectionModeIcons();
     });
 
-    $(".js--label-mode").on("change", function() {
+    $(".js--label-mode").on("change", function () {
         config.labelMode = parseInt($(this).val());
         updateConfig(config);
         if (isWebGL2 && is2d)
@@ -5213,7 +5291,7 @@ function initControls() {
         }
     });
 
-    $(".js--removed-content-mode").on("change", function() {
+    $(".js--removed-content-mode").on("change", function () {
         config.removedContentMode = parseInt($(this).val());
         $(".js--removed-content").toggleClass("display--none", !config.removedContentMode);
         updateConfig(config);
@@ -5223,28 +5301,28 @@ function initControls() {
         }
     });
 
-    $(".js--path-mode").on("change", function() {
+    $(".js--path-mode").on("change", function () {
         config.pathMode = parseInt($(this).val());
         updateConfig(config);
         if (worldData && startWorldId != null && endWorldId != null)
             reloadGraph();
     });
 
-    $(".js--size-diff").on("change", function() {
+    $(".js--size-diff").on("change", function () {
         config.sizeDiff = parseFloat($(this).val());
         updateConfig(config);
         if (worldData)
             reloadGraph();
     });
 
-    $(".js--stack-size").on("change", function() {
+    $(".js--stack-size").on("change", function () {
         config.stackSize = parseInt($(this).val());
         updateConfig(config);
         if (worldData)
             reloadGraph();
     });
 
-    $(".js--author").on("change", function() {
+    $(".js--author").on("change", function () {
         const val = $(this).val() !== "null" ? $(this).val() || "" : null;
         if (!tempSelectedAuthor || !val) {
             if (tempSelectedAuthor && !val)
@@ -5256,7 +5334,7 @@ function initControls() {
             highlightWorldSelection();
     });
 
-    $(".js--version").on("change", function() {
+    $(".js--version").on("change", function () {
         const val = parseInt($(this).val());
         if (!tempSelectedVersionIndex || !val) {
             if (tempSelectedVersionIndex && !val)
@@ -5268,7 +5346,7 @@ function initControls() {
             highlightWorldSelection();
     });
 
-    $(".js--author-entries").on("click", function() {
+    $(".js--author-entries").on("click", function () {
         if (authorData && authorData.length) {
             if ($(".js--author-entries-modal:visible").length)
                 $.modal.close();
@@ -5281,7 +5359,7 @@ function initControls() {
         }
     });
 
-    $(".js--version-entries").on("click", function() {
+    $(".js--version-entries").on("click", function () {
         if (versionData && versionData.length) {
             if ($(".js--version-entries-modal:visible").length)
                 $.modal.close();
@@ -5294,7 +5372,7 @@ function initControls() {
         }
     });
 
-    $(".js--effects").on("click", function() {
+    $(".js--effects").on("click", function () {
         if (effectData && effectData.length) {
             if ($(".js--effects-modal:visible").length)
                 $.modal.close();
@@ -5307,7 +5385,7 @@ function initControls() {
         }
     });
 
-    $(".js--menu-themes").on("click", function() {
+    $(".js--menu-themes").on("click", function () {
         if (menuThemeData && menuThemeData.length) {
             if ($(".js--menu-themes-modal:visible").length)
                 $.modal.close();
@@ -5320,7 +5398,7 @@ function initControls() {
         }
     });
 
-    $(".js--wallpapers").on("click", function() {
+    $(".js--wallpapers").on("click", function () {
         if (wallpaperData && wallpaperData.length) {
             if ($(".js--wallpapers-modal:visible").length)
                 $.modal.close();
@@ -5333,7 +5411,7 @@ function initControls() {
         }
     });
 
-    $(".js--bgm-tracks").on("click", function() {
+    $(".js--bgm-tracks").on("click", function () {
         if (bgmTrackData && bgmTrackData.length) {
             if ($(".js--bgm-tracks-modal:visible").length)
                 $.modal.close();
@@ -5346,7 +5424,7 @@ function initControls() {
         }
     });
 
-    $(".js--reset").on("click", function() {
+    $(".js--reset").on("click", function () {
         $(".js--world-input").removeClass("selected").val("");
         $(".js--author").val("null");
         startWorldId = null;
@@ -5358,7 +5436,7 @@ function initControls() {
             reloadGraph();
     });
 
-    $(".js--help").on("click", function() {
+    $(".js--help").on("click", function () {
         if ($(".js--help-modal:visible").length)
             $.modal.close();
         else if ($('.js--help-modal__content--localized').text())
@@ -5436,7 +5514,7 @@ function displayLoadingAnim($container) {
             const marginTop = $content.css("marginTop");
             const offsetMarginTop = (($loadingContainer[0].offsetHeight * -1) + (marginTop ? parseInt(marginTop) : 0)) + "px";
             $loadingContainer.animateCss("fadeOut", 250);
-            $content.css("marginTop", offsetMarginTop).removeClass("display--none").animateCss("fadeIn", 250, function() {
+            $content.css("marginTop", offsetMarginTop).removeClass("display--none").animateCss("fadeIn", 250, function () {
                 window.clearInterval(loadingTimer);
                 $content.css("marginTop", marginTop);
                 $loadingContainer.remove();
@@ -5452,7 +5530,7 @@ let username = null;
 function getMissingConnections() {
     const ret = [];
     const connData = {};
-    
+
     for (let w of worldData) {
         connData[w.id] = [];
         worldData[w.id].connections.map(c => worldData[c.targetId]).forEach(c => connData[w.id].push(c.id));
@@ -5483,7 +5561,7 @@ function getInvalidConnectionPairs() {
     const checkedReverseConnIds = [];
     const expectedReverseConnTypes = {};
 
-    const addConnTypePair = function(x, y) {
+    const addConnTypePair = function (x, y) {
         expectedReverseConnTypes[x] = y;
         expectedReverseConnTypes[y] = x;
     };
@@ -5492,7 +5570,7 @@ function getInvalidConnectionPairs() {
     addConnTypePair(ConnType.UNLOCK, ConnType.LOCKED);
     addConnTypePair(ConnType.DEAD_END, ConnType.ISOLATED);
     addConnTypePair(ConnType.SHORTCUT, ConnType.EXIT_POINT);
-    
+
     for (let w of worldData) {
         for (let c of worldData[w.id].connections) {
             const connId = `${w.id}_${c.targetId}`;
@@ -5539,7 +5617,7 @@ function getMissingLocationParams() {
     for (let w of worldData) {
         if (!w.titleJP || w.titleJP === "None")
             ret.push(`${getWorldLinkForAdmin(w)} is missing its Japanese name parameter`);
-            
+
         for (let conn of w.connections) {
             const connWorld = worldData[conn.targetId];
             if (conn.type & ConnType.EFFECT) {
@@ -5577,7 +5655,7 @@ function getMissingBgmUrls() {
 
     for (let w of worldData) {
         if (w.bgmLabel) {
-            const bgmUrls = w.bgmUrl ? w.bgmUrl.split('|') : [ '' ];
+            const bgmUrls = w.bgmUrl ? w.bgmUrl.split('|') : [''];
             const bgmLabels = w.bgmLabel.split('|').map(l => l.endsWith('^') ? l.slice(0, -1) : l.replace(/\^(.*)/, ' ($1)'));
             for (let b of bgmLabels) {
                 const bgmUrl = bgmUrls[b];
@@ -5698,14 +5776,14 @@ function initVersionUpdate() {
                 $versionContainer.append(`<h2><a href="javascript:void(0);" class="js--version-update__version-display-toggle no-border">${match[1] || ''}${match[2]}</a></h2>`);
                 $subVersionContainer = $(`<div class="version-update__sub-version-container"${(v > 0 ? ' style="display: none;"' : '')}></div>`).appendTo($versionContainer);
             }
-            
+
             if (newVersion || (match[3] || null) !== subVersion) {
                 subVersion = match[3] || null;
                 const $subVersionTitle = $('<div class="version-update__sub-version-title"></div>').appendTo($subVersionContainer);
                 $subVersionTitle.append(`<h3>${match[1] || ''}${match[2]}${subVersion || ''}</h3>`);
                 $patchVersionContainer = $('<div class="version-update__patch-version-container"></div>').appendTo($subVersionContainer);
             }
-            
+
             const $ver = $(`<div class="version-update__version" data-ver-index="${ver.authoredIndex}"></div>`).prependTo($patchVersionContainer);
             const $entries = $('<ul class="version-update__version__entries"></ul>').appendTo($ver);
 
@@ -5812,7 +5890,7 @@ function initVersionUpdateEvents() {
             const worldId = $(this).data('worldId');
             const entryType = $(this).data('entryType');
             const entryUpdateType = entryType === versionUtils.VersionEntryType.UPDATE ? $(this).data('entryUpdateType') : null;
-           
+
             $(this).find('.version-update__version__entry-edit__entry-type').val(entryType);
 
             if (worldId !== undefined && worldId != null) {
@@ -5829,7 +5907,7 @@ function initVersionUpdateEvents() {
         const verIndex = $(this).parents('.version-update__version__controls').data('verIndex');
         const $editVer = $(`.version-update__version[data-ver-index=${verIndex}]`);
         const verName = authoredVersionData[verIndex - 1].name;
-        
+
         const versionUpdateEntryUpdateWorldIds = isSave ? [] : null;
         const versionUpdateEntryWorldIds = isSave ? [] : null;
         const versionUpdateEntryUpdateFuncs = [];
@@ -5912,7 +5990,7 @@ function initVersionUpdateEvents() {
                                                     verUpdated: verName,
                                                     updateType: entryUpdateType
                                                 });
-                                            
+
                                                 updateVers.sort(function (vu1, vu2) {
                                                     let ret = versionUtils.compareVersionNames(vu1.verUpdated, vu2.verUpdated);
                                                     if (ret === 0)
@@ -5920,7 +5998,7 @@ function initVersionUpdateEvents() {
                                                     return ret;
                                                 });
                                             }
-                                            
+
                                             worldVerInfo.verUpdated = updateVers.map(vu => `${vu.verUpdated}${(vu.updateType ? '-' : '')}${vu.updateType}`).join(',');
                                             changesMade = true;
                                         }
@@ -6066,7 +6144,7 @@ function onCloseVersionUpdateModalWithChanges() {
 }
 
 function initAdminControls() {
-    $('.js--check-data-issues').on('click', function() {
+    $('.js--check-data-issues').on('click', function () {
         if ($('.js--data-issues-modal:visible').length) {
             $.modal.close();
             return;
@@ -6134,7 +6212,7 @@ function initAdminControls() {
 
     initVersionUpdateEvents();
 
-    $('.js--update-data, .js--reset-data').on('click', function() {
+    $('.js--update-data, .js--reset-data').on('click', function () {
         closeModals();
         const isReset = $(this).hasClass('js--reset-data');
         reloadData(isReset ? 'reset' : true);
@@ -6191,7 +6269,7 @@ $(function () {
         isWebGL2 = graphContext != null;
 
         if (isWebGL2) {
-            initNodeObjectMaterial().then(() => {
+            initWorldTextures().then(() => {
                 reloadGraph();
                 loadCallback();
             }).catch(err => console.error(err));
