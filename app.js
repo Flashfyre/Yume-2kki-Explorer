@@ -2154,27 +2154,32 @@ function getVersionInfoWikiData(url) {
             setUpdateTask('fetchVersionInfoData');
         superagent.get(url, function (err, res) {
             if (err) return reject(err);
-            const versionSectionsHtml = res.text.split('article-table');
+            const versionSectionsHtml = res.text.split('<h3>');
             const versionInfo = [];
             const populateVersionInfo = function () {
-                for (let a = 0; a < versionSectionsHtml.length - 1; a++) {
+                for (let a = 1; a < versionSectionsHtml.length; a++) {
                     const section = versionSectionsHtml[a];
-                    const nextSection = versionSectionsHtml[a + 1].slice(0, versionSectionsHtml[a + 1].indexOf('</table>'));
     
-                    const versionNameSearchIndex = section.lastIndexOf(' class="mw-headline" ');
-                    let versionName = section.slice(section.indexOf('>', versionNameSearchIndex) + 1, section.indexOf('<', versionNameSearchIndex)).replace(/^[^0-9]*/i, '');
+                    const versionNameSearchIndex = section.indexOf(' class="mw-headline" ');
+                    let versionName = section.slice(section.indexOf('>', versionNameSearchIndex) + 1, section.indexOf('<', versionNameSearchIndex))
+                        .replace(/^[^0-9]*/i, '')
+                        .replace('\n', '');
 
                     if (versionName.indexOf('~') > -1)
                         versionName = versionName.slice(versionName.indexOf('~') + 1);
 
-                    const patchSectionsHtml = nextSection.split('Authors:');
+                    if (versionName.indexOf(';') > -1)
+                        versionName = versionName.slice(versionName.indexOf(';') + 1);
+
+                    // const patchSectionsHtml = nextSection.split('Authors:');
+                    const patchSectionsHtml = section.split('Authors:');
 
                     for (let p = 0; p < patchSectionsHtml.length - 1; p++) {
                         const patchSection = patchSectionsHtml[p + 1];
                         const authors = [];
                         let releaseDateIndex = patchSection.search(/release date:/i);
 
-                        const authorsSection = patchSection.slice(0, patchSection.indexOf('</td>'));
+                        const authorsSection = patchSection;
                         let cursor = authorsSection.indexOf('<a ') + 3;
         
                         while (cursor > 2 && cursor < releaseDateIndex) {
@@ -2233,8 +2238,8 @@ function updateVersionInfo(pool, versionInfo) {
         setUpdateTask('updateVersionInfoData');
         pool.query('SELECT id, name, authors, releaseDate FROM version_info', (err, rows) => {
             if (err) return reject(err);
-            const versionInfoByName = _.keyBy(versionInfo, a => a.name);
-            const newVersionInfoByName = _.keyBy(versionInfo, a => a.name);
+            const versionInfoByName = _.keyBy(versionInfo, a => a.name.trim());
+            const newVersionInfoByName = _.keyBy(versionInfo, a => a.name.trim());
             const updatedVersionInfo = [];
             const removedVersionInfoIds = [];
             for (let row of rows) {
