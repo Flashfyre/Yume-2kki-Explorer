@@ -92,8 +92,7 @@ function initDb(pool) {
                 lastFullUpdate DATETIME NULL
             )`).then(() => queryAsPromise(pool,
             `INSERT INTO updates (lastUpdate, lastFullUpdate)
-                SELECT null, null FROM updates
-                WHERE NOT EXISTS (SELECT 1 FROM updates)`
+                SELECT null, null WHERE NOT EXISTS (SELECT 1 FROM updates)`
             )).then(() => queryAsPromise(pool,
             `CREATE TABLE IF NOT EXISTS worlds (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -102,7 +101,7 @@ function initDb(pool) {
                 author VARCHAR(100) NULL,
                 depth INT NOT NULL,
                 minDepth INT NOT NULL,
-                filename VARCHAR(255) NOT NULL,
+                filename VARCHAR(255) NULL,
                 mapUrl VARCHAR(1000) NULL,
                 mapLabel VARCHAR(1000) NULL,
                 bgmUrl VARCHAR(2000) NULL,
@@ -311,7 +310,7 @@ if (isMainThread) {
                 });
                 pool.end();
             };
-            pool.query('SELECT lastFullUpdate FROM updates WHERE DATE_ADD(lastFullUpdate, INTERVAL 1 WEEK) < NOW()', (err, rows) => {
+            pool.query("SELECT lastFullUpdate FROM updates WHERE DATE_ADD(COALESCE(lastFullUpdate, '2007/05/26'), INTERVAL 1 WEEK) < NOW()", (err, rows) => {
                 if (err) console.error(err);
                 if (rows && rows.length)
                     callback('reset');
@@ -494,7 +493,7 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
                         world.verUpdated = versionUtils.parseVersionsUpdated(world.verUpdated);
                     if (world.verGaps)
                         world.verGaps = versionUtils.parseVersionGaps(world.verGaps);
-                    if (!isRemote)
+                    if (!isRemote && world.filename)
                         world.filename = `./images/worlds/${world.filename.slice(0, world.filename.indexOf('|'))}`;
                 }
             }
@@ -921,7 +920,7 @@ function checkUpdatePage(pageTitle, lastUpdate) {
 
 function checkUpdateMapData(pool, worldData, lastUpdate) {
     return new Promise((resolve, reject) => {
-        checkUpdatePage("Map IDs/0000-0400|Map IDs/0401-0800|Map IDs/0801-1200|Map IDs/1201-1600|Map IDs/1601-2000|Map IDs/2001-2400|Map IDs/2401-2800|Map IDs/2801-3200", lastUpdate).then(needsUpdate => {
+        checkUpdatePage("Map IDs/0000-0400|Map IDs/0401-0800|Map IDs/0801-1200|Map IDs/1201-1600|Map IDs/1601-2000|Map IDs/2001-2400|Map IDs/2401-2800|Map IDs/2801-3200|Map IDs/3201-3600", lastUpdate).then(needsUpdate => {
             if (needsUpdate)
                 updateMapData(pool, worldData).then(() => resolve()).catch(err => reject(err));
             else
@@ -1176,14 +1175,12 @@ function updateWorldInfo(pool, world) {
         const fgColorValue = world.fgColor ? `'${world.fgColor}'` : 'NULL';
         const bgColorValue = world.bgColor ? `'${world.bgColor}'` : 'NULL';
         const removedValue = world.removed ? '1' : '0';
-        if (world.filename)
-            pool.query(`UPDATE worlds SET titleJP=${titleJPValue}, author=${authorValue}, filename='${world.filename.replace(/'/g, "''")}', mapUrl=${mapUrlValue}, mapLabel=${mapLabelValue}, bgmUrl=${bgmUrlValue}, bgmLabel=${bgmLabelValue}, verAdded=${verAddedValue}, verRemoved=${verRemovedValue}, verUpdated=${verUpdatedValue}, verGaps=${verGapsValue}, fgColor=${fgColorValue}, bgColor=${bgColorValue}, removed=${removedValue} WHERE id=${world.id}`,
-            (err, _) => {
-                if (err) return reject(err);
-                resolve();
-            });
-        else
-            reject(`Invalid world image URL for world '${world.title}'`);
+        const filename = world.filename ? `'${world.filename.replace(/'/g, "''")}'` : 'NULL';
+        pool.query(`UPDATE worlds SET titleJP=${titleJPValue}, author=${authorValue}, filename=${filename}, mapUrl=${mapUrlValue}, mapLabel=${mapLabelValue}, bgmUrl=${bgmUrlValue}, bgmLabel=${bgmLabelValue}, verAdded=${verAddedValue}, verRemoved=${verRemovedValue}, verUpdated=${verUpdatedValue}, verGaps=${verGapsValue}, fgColor=${fgColorValue}, bgColor=${bgColorValue}, removed=${removedValue} WHERE id=${world.id}`,
+        (err, _) => {
+            if (err) return reject(err);
+            resolve();
+        });
     });
 }
 
@@ -2157,27 +2154,32 @@ function getVersionInfoWikiData(url) {
             setUpdateTask('fetchVersionInfoData');
         superagent.get(url, function (err, res) {
             if (err) return reject(err);
-            const versionSectionsHtml = res.text.split('article-table');
+            const versionSectionsHtml = res.text.split('<h3>');
             const versionInfo = [];
             const populateVersionInfo = function () {
-                for (let a = 0; a < versionSectionsHtml.length - 1; a++) {
+                for (let a = 1; a < versionSectionsHtml.length; a++) {
                     const section = versionSectionsHtml[a];
-                    const nextSection = versionSectionsHtml[a + 1].slice(0, versionSectionsHtml[a + 1].indexOf('</table>'));
     
-                    const versionNameSearchIndex = section.lastIndexOf(' class="mw-headline" ');
-                    let versionName = section.slice(section.indexOf('>', versionNameSearchIndex) + 1, section.indexOf('<', versionNameSearchIndex)).replace(/^[^0-9]*/i, '');
+                    const versionNameSearchIndex = section.indexOf(' class="mw-headline" ');
+                    let versionName = section.slice(section.indexOf('>', versionNameSearchIndex) + 1, section.indexOf('<', versionNameSearchIndex))
+                        .replace(/^[^0-9]*/i, '')
+                        .replace('\n', '');
 
                     if (versionName.indexOf('~') > -1)
                         versionName = versionName.slice(versionName.indexOf('~') + 1);
 
-                    const patchSectionsHtml = nextSection.split('Authors:');
+                    if (versionName.indexOf(';') > -1)
+                        versionName = versionName.slice(versionName.indexOf(';') + 1);
+
+                    // const patchSectionsHtml = nextSection.split('Authors:');
+                    const patchSectionsHtml = section.split('Authors:');
 
                     for (let p = 0; p < patchSectionsHtml.length - 1; p++) {
                         const patchSection = patchSectionsHtml[p + 1];
                         const authors = [];
                         let releaseDateIndex = patchSection.search(/release date:/i);
 
-                        const authorsSection = patchSection.slice(0, patchSection.indexOf('</td>'));
+                        const authorsSection = patchSection;
                         let cursor = authorsSection.indexOf('<a ') + 3;
         
                         while (cursor > 2 && cursor < releaseDateIndex) {
@@ -2236,8 +2238,8 @@ function updateVersionInfo(pool, versionInfo) {
         setUpdateTask('updateVersionInfoData');
         pool.query('SELECT id, name, authors, releaseDate FROM version_info', (err, rows) => {
             if (err) return reject(err);
-            const versionInfoByName = _.keyBy(versionInfo, a => a.name);
-            const newVersionInfoByName = _.keyBy(versionInfo, a => a.name);
+            const versionInfoByName = _.keyBy(versionInfo, a => a.name.trim());
+            const newVersionInfoByName = _.keyBy(versionInfo, a => a.name.trim());
             const updatedVersionInfo = [];
             const removedVersionInfoIds = [];
             for (let row of rows) {
@@ -2606,7 +2608,7 @@ function getMenuThemeWikiData(worldData) {
         superagent.get('https://yume.wiki/2kki/Menu_Themes', function (err, res) {
             if (err) return reject(err);
             const worldDataByName = _.keyBy(worldData, w => w.title);
-            const menuThemeTablesHtml = sliceHtml(res.text, res.text.indexOf('<table '), res.text.lastIndexOf('</table>'));
+            const menuThemeTablesHtml = sliceHtml(res.text, res.text.indexOf('<tbody>'), res.text.lastIndexOf('</table>'));
             const menuThemeDataRows = menuThemeTablesHtml.split('<tr>').slice(2);
             const rawMenuThemeData = [];
             let removedIndex = 999;
@@ -2619,14 +2621,16 @@ function getMenuThemeWikiData(worldData) {
                     }
                     ret[3] = ret[3].slice(0, ret[3].indexOf('</td>'));
                 }
-                for (let r = ret.length; r < 4; r++)
-                    ret[r] = rawMenuThemeData[rawMenuThemeData.length - 1][r];
+                // if (rawMenuThemeData.length)
+                //     for (let r = ret.length; r < 4; r++)
+                //         ret[r] = rawMenuThemeData[rawMenuThemeData.length - 1][r];
                 rawMenuThemeData.push(ret);
             }
             const menuThemeData = [];
             const menuThemeLocationKeys = [];
             for (let m = 0; m < rawMenuThemeData.length; m++) {
                 const data = rawMenuThemeData[m];
+                if (!data || data.length < 4) continue;
                 const location = {
                     worldId: null,
                     method: data[2],
@@ -4050,7 +4054,7 @@ function getRandomLocations(count, minDepth, maxDepth, includeRemoved, ignoreSec
 }
 
 if (isMainThread) {
-    if (process.platform === 'linux') {
+    if (process.platform === 'linux' && !process.env.EXPLORER_DEV) {
         fs.unlinkSync('./explorer.sock');
         app.listen('./explorer.sock', () => {
             fs.chmod('./explorer.sock', 0o777, () => {});
