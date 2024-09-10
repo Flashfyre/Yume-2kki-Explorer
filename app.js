@@ -10,6 +10,7 @@ const download = require('image-downloader');
 const mysql = require('mysql');
 const { performance } = require('perf_hooks');
 const ConnType = require('./src/conn-type').ConnType;
+const { PathFinder }= require('./src/path-finder.js');
 const versionUtils = require('./src/version-utils');
 const appConfig = process.env.ADMIN_KEY ?
     {
@@ -23,6 +24,9 @@ const isRemote = Boolean(process.env.DATABASE_NAME || process.env.DATABASE_URL);
 const defaultPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT;
 const minDepthPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED;
 const startLocation = "Urotsuki's Room";
+
+let worldDataCache;
+let worldNameIdsCache;
 
 let dbInitialized = false;
 
@@ -378,6 +382,11 @@ if (isMainThread) {
     }
 
     resetWorker();
+
+    // Initialize cached world data
+    getConnPool().then(pool => {
+        getWorldData(pool, false, true).then(() => console.log('World data cache initialized'));
+    });
 }
 
 function getData(req, pool) {
@@ -425,7 +434,11 @@ function getData(req, pool) {
 
 function getLocationData(req, pool) {
     return new Promise((resolve, reject) => {
-        getLocationWorldData(pool, (req.query.locationNames || '').split('|').map(l => l.replace(/'/g, "''")), (req.query.hiddenConnLocationNames || '').split('|').map(l => l.replace(/'/g, "''"))).then(worldData => {
+        getLocationWorldData(pool,
+            (req.query.locationNames || '').split('|').map(l => l.replace(/'/g, "''")),
+            (req.query.hiddenConnLocationNames || '').split('|').map(l => l.replace(/'/g, "''")),
+            (req.query.searchConnLocationNames || '').split('|').map(l => l.replace(/'/g, "''"))
+        ).then(worldData => {
             getMaxWorldDepth(pool).then(maxDepth => {
                 getAuthorInfoData(pool).then(authorInfoData => {
                     getVersionInfoData(pool, worldData).then(versionInfoData => {
@@ -457,6 +470,9 @@ function getLocationData(req, pool) {
 function getWorldData(pool, preserveIds, excludeRemovedContent) {
     return new Promise((resolve, reject) => {
         const worldDataById = {};
+        let cachedWorldData = {};
+        const cachedWorldNameIds = {};
+        let cachedWorldIdMap;
         pool.query('SELECT id, title, titleJP, author, depth, minDepth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, removed FROM worlds' + (excludeRemovedContent ? ' WHERE removed = 0' : ''), (err, rows) => {
             if (err) return reject(err);
             for (let row of rows) {
@@ -480,13 +496,33 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
                     connections: [],
                     images: []
                 };
+                if (!row.removed) {
+                    cachedWorldData[row.id] = {
+                        id: row.id,
+                        title: row.title,
+                        depth: row.depth,
+                        minDepth: row.minDepth,
+                        connections: []
+                    };
+                    cachedWorldNameIds[row.title] = row.id;
+                }
             }
 
             const worldData = Object.values(worldDataById);
             if (!preserveIds) {
+                cachedWorldIdMap = {};
+                const newCachedWorldData = {};
                 for (let d in worldData) {
                     const world = worldData[d];
-                    world.id = parseInt(d);
+                    const newId = parseInt(d);
+                    if (!world.removed) {
+                        const cachedWorld = cachedWorldData[world.id];
+                        newCachedWorldData[newId] = cachedWorld;
+                        cachedWorld.id = newId;
+                        cachedWorldNameIds[world.title] = newId;
+                        cachedWorldIdMap[world.id] = newId;
+                    }
+                    world.id = newId;
                     if (!world.author)
                         world.author = '';
                     if (world.verUpdated)
@@ -496,6 +532,7 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
                     if (!isRemote && world.filename)
                         world.filename = `./images/worlds/${world.filename.slice(0, world.filename.indexOf('|'))}`;
                 }
+                cachedWorldData = newCachedWorldData;
             }
             
             pool.query('SELECT id, sourceId, targetId, type FROM conns', (err, rows) => {
@@ -515,6 +552,8 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
                     };
                     connsById[row.id] = conn;
                     sourceWorld.connections.push(conn);
+                    if (!sourceWorld.removed && !targetWorld.removed)
+                        cachedWorldData[cachedWorldIdMap ? cachedWorldIdMap[row.sourceId] : row.sourceId].connections.push(conn);
                 }
 
                 pool.query('SELECT connId, type, params, paramsJP FROM conn_type_params', (err, rows) => {
@@ -528,6 +567,9 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
                             paramsJP: row.paramsJP
                         };
                     }
+
+                    worldDataCache = cachedWorldData;
+                    worldNameIdsCache = cachedWorldNameIds;
 
                     pool.query('SELECT wi.id, wi.worldId, wi.filename FROM world_images wi ' + (excludeRemovedContent ? ' JOIN worlds w ON w.id = wi.worldId AND w.removed = 0 ' : '') + 'ORDER BY wi.worldId, wi.ordinal', (err, rows) => {
                         if (err) return reject(err);
@@ -565,7 +607,7 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
     });
 }
 
-function getLocationWorldData(pool, locationNames, hiddenConnLocationNames) {
+function getLocationWorldData(pool, locationNames, hiddenConnLocationNames, searchConnLocationNames) {
     return new Promise((resolve, reject) => {
         const worldDataById = {};
         pool.query(`SELECT id, title, titleJP, author, depth, minDepth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, removed FROM worlds WHERE title IN ('${locationNames.join(`', '`)}') AND removed = 0`, (err, rows) => {
@@ -615,7 +657,7 @@ function getLocationWorldData(pool, locationNames, hiddenConnLocationNames) {
 
                 for (let row of rows) {
                     const connWorld = getWorldFromRow(row);
-                    if (hiddenConnLocationNames.indexOf(connWorld.title) > -1) {
+                    if (hiddenConnLocationNames.includes(connWorld.title)) {
                         if (connWorld.secret)
                             continue;
                         connWorld.hidden = true;
@@ -655,6 +697,8 @@ function getLocationWorldData(pool, locationNames, hiddenConnLocationNames) {
                             type: row.type,
                             typeParams: {}
                         };
+                        if (searchConnLocationNames.includes(targetWorld.title))
+                            conn.type |= ConnType.SEARCH;
                         connsById[row.id] = conn;
                         sourceWorld.connections.push(conn);
                     }
@@ -4000,6 +4044,25 @@ if (isMainThread) {
                 console.error(err);
                 res.json({ error: 'Failed to connect to database', err_code: 'DB_CONN_FAILED' });
             });
+        } else
+            res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
+    });
+}
+
+function getLocationPaths(originId, destId) {
+    const pathFinder = new PathFinder(worldDataCache, false, defaultPathIgnoreConnTypeFlags, true);
+    return pathFinder.findPath(originId, destId, true, ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.SHORTCUT, 3)
+}
+
+if (isMainThread) {
+    app.get('/getNextLocations', function(req, res) {
+        const originName = req.query.origin;
+        const destName = req.query.dest;
+        res.setHeader('Access-Control-Allow-Origin', 'https://ynoproject.net');
+        if (originName && destName && worldNameIdsCache[originName] && worldNameIdsCache[destName]) {
+            const paths = getLocationPaths(worldNameIdsCache[originName], worldNameIdsCache[destName])
+                .filter(p => p.length > 2 && !(p[0].connType & ConnType.INACCESSIBLE));
+            res.json(paths.map(p => worldDataCache[p[1].id].title));
         } else
             res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
     });

@@ -50,5 +50,9 @@
     "4096": {
         "name": "접근 불가",
         "description": "해당 버전에서 접근할 수 없습니다"
+    },
+    "8192": {
+        "name": "Expedition",
+        "description": "Leads toward your followed expedition location"
     }
 }

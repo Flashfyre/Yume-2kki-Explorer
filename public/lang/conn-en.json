@@ -50,5 +50,9 @@
     "4096": {
         "name": "Inaccessible",
         "description": "Cannot be accessed in the current version of the game"
+    },
+    "8192": {
+        "name": "Expedition",
+        "description": "Leads toward your followed expedition location"
     }
 }

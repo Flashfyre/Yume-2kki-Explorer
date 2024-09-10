@@ -15,6 +15,7 @@ import TWEEN from '@tweenjs/tween.js';
 import { checkIsMobile, formatDate, getLocalizedValue, getLangUsesEn, getColorRgba, hueToRGBA, uiThemeFontColors, uiThemeBgColors, getBaseBgColor, getFontColors, getFontShadow, getGradientText, updateSvgGradient, getSvgGradientStop } from './utils';
 import { updateConfig } from './config.js';
 import { ConnType } from './conn-type.js';
+import { PathFinder } from './path-finder.js';
 import * as versionUtils from './version-utils.js';
 
 const urlSearchParams = new URLSearchParams(window.location.search);
@@ -1383,6 +1384,8 @@ export function loadData(update, onSuccess, onFail) {
         queryString += `?locationNames=${locationModeLocations.join('|')}`;
         if (urlSearchParams.has('hiddenConnLocations'))
             queryString += `&hiddenConnLocationNames=${urlSearchParams.get('hiddenConnLocations')}`;
+        if (urlSearchParams.has('searchConnLocations'))
+            queryString += `&searchConnLocationNames=${urlSearchParams.get('searchConnLocations')}`;
     }
     const loadData = () => $.get(`/${locationMode ? 'locationData' : 'data'}${queryString}`).done(data => onSuccess(data)).fail(onFail);
     const loadOrUpdateData = update => {
@@ -1585,6 +1588,8 @@ function initGraph(renderMode, displayMode, paths) {
     let maxDepth;
 
     if (paths) {
+        const pathFinder = new PathFinder(worldData, isDebug, defaultPathIgnoreConnTypeFlags, false, effectsJP);
+
         visibleWorldIds = _.uniq(_.flatten(paths).map(p => p.id));
 
         const pathScores = [];
@@ -1662,7 +1667,7 @@ function initGraph(renderMode, displayMode, paths) {
             const worldDepthsMap = pathWorldIds.map(p => p.indexOf(w));
             worldDepths[w] = _.max(worldDepthsMap);
             worldMinPathDepths[w] = _.min(worldDepthsMap.filter(d => d > -1));
-            worldMinDepths[w] = findRealPathDepth(paths, w, pathWorldIds, worldDepthsMap, worldDepths[w], worldMinPathDepths[w]);
+            worldMinDepths[w] = pathFinder.findRealPathDepth(paths, w, pathWorldIds, worldDepthsMap, worldDepths[w], worldMinPathDepths[w]);
         }
 
         const depths = Object.values(worldDepths);
@@ -1794,6 +1799,8 @@ function initGraph(renderMode, displayMode, paths) {
 
         if (connType & ConnType.INACCESSIBLE)
             icons.push(getConnTypeIcon(ConnType.INACCESSIBLE));
+        if (connType & ConnType.SEARCH)
+            icons.push(getConnTypeIcon(ConnType.SEARCH));
         if (connType & ConnType.ONE_WAY)
             icons.push(getConnTypeIcon(ConnType.ONE_WAY));
         else if (connType & ConnType.NO_ENTRY)
@@ -2513,7 +2520,8 @@ function makeIconObject(is2d) {
         { type: ConnType.SEASONAL, params: { params: 'Summer' } },
         { type: ConnType.SEASONAL, params: { params: 'Fall' } },
         { type: ConnType.SEASONAL, params: { params: 'Winter' } },
-        ConnType.INACCESSIBLE
+        ConnType.INACCESSIBLE,
+        ConnType.SEARCH
     ];
     const iconImgDimensions = { x: 64, y: 64 };
     const amountTextures = connTypes.length + 1; // 1 reversed one-way arrow
@@ -2633,18 +2641,18 @@ function updateIconPositions(is2d) {
                     iconObject.setMatrixAt(index, dummy.matrix);
                 }
                 const texIndex = unsortedIconTexIndexes[index];
-                if (texIndex == 0 || texIndex == 16) {
+                if (texIndex == 0 || texIndex == 17) {
                     if (is2d) {
                         if (start.x > end.x) {
                             if (texIndex == 0)
-                                unsortedIconTexIndexes[index] = 16;
-                        } else if (texIndex == 16)
+                                unsortedIconTexIndexes[index] = 17;
+                        } else if (texIndex == 17)
                             unsortedIconTexIndexes[index] = 0;
                     } else {
                         if (graph.graph2ScreenCoords(start.x, start.y, start.z).x > graph.graph2ScreenCoords(end.x, end.y, end.z).x) {
                             if (texIndex == 0)
-                                unsortedIconTexIndexes[index] = 16;
-                        } else if (texIndex == 16)
+                                unsortedIconTexIndexes[index] = 17;
+                        } else if (texIndex == 17)
                             unsortedIconTexIndexes[index] = 0;
                     }
                 }
@@ -3591,6 +3599,9 @@ function getConnTypeChar(connType, typeParams) {
         case ConnType.INACCESSIBLE:
             char = "🚫";
             break;
+        case ConnType.SEARCH:
+            char = "🧭";
+            break;
     }
     return char;
 }
@@ -3616,10 +3627,11 @@ function tempSelectVersion(versionIndex, ignoreChange) {
 function reloadGraph() {
     tempSelectAuthor(null, true);
     tempSelectVersion(0, true);
+    const pathFinder = new PathFinder(worldData, isDebug, defaultPathIgnoreConnTypeFlags, false, effectsJP);
     const startWorld = startWorldId != null ? worldData[startWorldId] : null;
     const endWorld = endWorldId != null ? worldData[endWorldId] : null;
     const matchPaths = startWorld && endWorld && startWorld != endWorld
-        ? findPath(startWorld.id, endWorld.id, true, ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.SHORTCUT, config.pathMode === 0 ? 3 : config.pathMode === 1 ? 5 : 10)
+        ? pathFinder.findPath(startWorld.id, endWorld.id, true, ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.SHORTCUT, config.pathMode === 0 ? 3 : config.pathMode === 1 ? 5 : 10)
         : null;
     if (graph)
         graph._destructor();
@@ -3651,314 +3663,6 @@ function reloadGraph() {
     }
 }
 
-function findPath(s, t, isRoot, ignoreTypeFlags, limit, existingMatchPaths) {
-    const startTime = performance.now();
-
-    const checkedSourceNodes = [s];
-    const checkedTargetNodes = [t];
-
-    const source = worldData[s];
-    const target = worldData[t];
-
-    if (!existingMatchPaths)
-        existingMatchPaths = [];
-    let matchPaths = [];
-
-    let sourcePaths = {};
-    let targetPaths = {};
-
-    let nextGenSourceWorlds = [source];
-    let nextGenTargetWorlds = [target];
-
-    let genIndex = 0;
-
-    sourcePaths[s] = [{ id: s, connType: null, typeParams: null }];
-    targetPaths[t] = [{ id: t, connType: null, typeParams: null }];
-
-    while (genIndex <= 20) {
-        let sourceWorlds = nextGenSourceWorlds.slice(0);
-        let targetWorlds = nextGenTargetWorlds.slice(0);
-        nextGenSourceWorlds = [];
-        nextGenTargetWorlds = [];
-        for (let sourceWorld of sourceWorlds) {
-            const sourcePath = sourcePaths[sourceWorld.id];
-            //delete sourcePaths[sourceWorld.id];
-            const sourceConns = traverseConns(checkedSourceNodes, sourcePath, nextGenSourceWorlds, sourceWorld, ignoreTypeFlags, true);
-            $.extend(sourcePaths, sourceConns);
-        }
-        for (let targetWorld of targetWorlds) {
-            const targetPath = targetPaths[targetWorld.id];
-            //delete targetPaths[targetWorld.id];
-            const targetConns = traverseConns(checkedTargetNodes, targetPath, nextGenTargetWorlds, targetWorld, ignoreTypeFlags, false);
-            $.extend(targetPaths, targetConns);
-        }
-
-        genIndex++;
-
-        /*let checkedSourceIds = Object.keys(sourcePaths).map(id => parseInt(id));
-        let checkedTargetIds = Object.keys(targetPaths).map(id => parseInt(id));*/
-
-        $.grep(checkedSourceNodes, id => {
-            const ret = $.inArray(id, checkedTargetNodes) !== -1;
-            if (ret) {
-                let skip = false;
-
-                let sourcePath = _.cloneDeep(sourcePaths[id]);
-                let targetPath = _.cloneDeep(targetPaths[id]);
-
-                if (sourcePath[sourcePath.length - 1].id === id && targetPath[targetPath.length - 1].id === id)
-                    sourcePath = sourcePath.slice(0, -1);
-
-                let loopWorldIds, sourcePathIds, targetPathIds;
-                while ((loopWorldIds = _.intersectionWith((sourcePathIds = sourcePath.map(sp => sp.id)), (targetPathIds = targetPath.map(tp => tp.id)), _.isEqual)).length) {
-                    //console.log("Loop found", worldData[loopWorldIds[0]].title, JSON.stringify(sourcePath.map(function(p) { return worldData[p].title})), JSON.stringify(targetPath.map(function(p) { return worldData[p].title})));
-                    sourcePath = sourcePath.slice(0, sourcePathIds.indexOf(loopWorldIds[0]));
-                    targetPath = targetPath.slice(0, targetPathIds.indexOf(loopWorldIds[0]) + 1);
-                    //console.log("Loop fixed", worldData[loopWorldIds[0]].title, JSON.stringify(sourcePath.map(function(p) { return worldData[p].title})), JSON.stringify(targetPath.map(function(p) { return worldData[p].title})));
-                }
-
-                const matchPath = sourcePath.concat(targetPath.reverse());
-                const allMatchPaths = existingMatchPaths.concat(matchPaths);
-                for (let p of allMatchPaths) {
-                    if (p.length === matchPath.length) {
-                        for (let m = 1; m < matchPath.length; m++) {
-                            const linkId = `${p[m - 1].id}_${p[m].id}`;
-                            const matchLinkId = `${matchPath[m - 1].id}_${matchPath[m].id}`;
-                            if (linkId !== matchLinkId)
-                                break;
-                            if (m === matchPath.length - 1)
-                                skip = true;
-                        }
-                        if (skip)
-                            break;
-                    }
-                }
-                if (skip)
-                    return false;
-                _.remove(nextGenSourceWorlds, w => w.id === id);
-                _.remove(nextGenTargetWorlds, w => w.id === id);
-                matchPaths.push(matchPath);
-            }
-            return ret;
-        });
-    }
-
-    const endTime = performance.now();
-
-    isDebug && console.log("Found", matchPaths.length, "matching path(s) in", Math.round((endTime - startTime) * 10) / 10, "ms");
-    if (!matchPaths.length) {
-        if (!tryAddNexusPath(matchPaths, existingMatchPaths, worldData, s, t)) {
-            isDebug && console.log("Marking route as inaccessible");
-            matchPaths = [[{ id: s, connType: ConnType.INACCESSIBLE }, { id: t, connType: null }]];
-        }
-        return matchPaths;
-    } else if (isRoot) {
-        const rootLimit = Math.min(5, limit);
-        const ignoreTypesList = [ConnType.CHANCE, ConnType.EFFECT, ConnType.LOCKED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT];
-        const pathCount = Math.min(matchPaths.length, rootLimit);
-        let ignoreTypes = 0;
-        for (let ignoreType of ignoreTypesList)
-            ignoreTypes |= ignoreType;
-        matchPaths = _.sortBy(matchPaths, ['length']);
-        isDebug && console.log("Looking for unconditionally accessible path...");
-        let accessiblePathIndex = -1;
-        for (let it = 0; it <= ignoreTypesList.length; it++) {
-            const ignoreType = it < ignoreTypesList.length ? ignoreTypesList[it] : 0;
-            if (matchPaths.slice(0, pathCount).filter(mp => mp.find(p => p.connType && (p.connType & ignoreTypes))).length === pathCount) {
-                if (matchPaths.length > rootLimit) {
-                    for (let mp = rootLimit + 1; mp < matchPaths.length; mp++) {
-                        const path = matchPaths[mp];
-                        if (!path.find(p => p.connType && (p.connType & ignoreTypes))) {
-                            isDebug && console.log("Found unconditionally accessible path at index", mp);
-                            if (mp >= rootLimit) {
-                                isDebug && console.log("Truncating paths to limit of", limit, "with unconditionally accessible path as last element");
-                                matchPaths = matchPaths.slice(0, rootLimit - 1).concat([path]);
-                            }
-                            accessiblePathIndex = rootLimit - 1;
-                            break;
-                        }
-                    }
-                    if (accessiblePathIndex > -1)
-                        break;
-                }
-                let additionalPaths = findPath(s, t, false, ignoreTypeFlags | ignoreTypes, Math.max(1, Math.min(rootLimit, rootLimit - pathCount)), matchPaths);
-                if (additionalPaths.length && !(additionalPaths[0][0].connType & ConnType.INACCESSIBLE)) {
-                    additionalPaths = _.sortBy(additionalPaths, ['length']);
-                    if (isDebug) {
-                        const ignoreTypeNames = ["chance", "effect", "locked/locked condition", "phone locked"];
-                        console.log("Found", additionalPaths.length, "additional path(s) by ignoring", ignoreType ? ignoreTypeNames.slice(it).join(", ") : "none");
-                    }
-                    for (let ap of additionalPaths) {
-                        if (matchPaths.length < rootLimit) {
-                            if (accessiblePathIndex === -1)
-                                accessiblePathIndex = matchPaths.length;
-                            matchPaths.push(ap);
-                        } else if (accessiblePathIndex === -1)
-                            matchPaths = matchPaths.slice(0, rootLimit - 1).concat([ap]);
-                        else
-                            // shouldn't happen
-                            break;
-                    }
-                    break;
-                }
-            } else
-                break;
-            ignoreTypes ^= ignoreType;
-        }
-
-        const addAdditionalPaths = matchPaths.length && limit > rootLimit;
-        if (addAdditionalPaths || matchPaths.length > limit) {
-            if (matchPaths.length > rootLimit) {
-                isDebug && console.log("Truncating array of", matchPaths.length, "paths to root limit of", rootLimit);
-                matchPaths = matchPaths.slice(0, rootLimit);
-            }
-            if (addAdditionalPaths) {
-                isDebug && console.log("Searching for additional paths...");
-                const additionalPaths = findPath(s, t, false, defaultPathIgnoreConnTypeFlags, limit - rootLimit, existingMatchPaths.concat(matchPaths));
-                if (additionalPaths.length && !(additionalPaths[0][0].connType & ConnType.INACCESSIBLE)) {
-                    for (let ap of additionalPaths)
-                        matchPaths.push(ap);
-                    matchPaths = _.sortBy(matchPaths, ['length']);
-                }
-            }
-        }
-
-        if (tryAddNexusPath(matchPaths, existingMatchPaths, worldData, s, t))
-            limit++;
-    }
-
-    matchPaths = _.sortBy(matchPaths, ['length']);
-    if (matchPaths.length > limit) {
-        isDebug && console.log("Truncating array of", matchPaths.length, "paths to limit of", limit);
-        matchPaths = matchPaths.slice(0, limit);
-    }
-
-    return matchPaths;
-}
-
-function traverseConns(checkedNodes, path, nextGenWorlds, world, ignoreTypeFlags, isSource) {
-    const ret = {};
-    const conns = world.connections;
-    for (let conn of conns) {
-        let connType = conn.type;
-        let typeParams = conn.typeParams;
-        if (isSource && connType & ignoreTypeFlags)
-            continue;
-        const connWorld = worldData[conn.targetId];
-        const id = connWorld.id;
-        if (checkedNodes.indexOf(id) === -1) {
-            const connPath = _.cloneDeep(path);
-            // If checking from target
-            if (isSource) {
-                connPath[connPath.length - 1].connType = connType;
-                connPath[connPath.length - 1].typeParams = typeParams;
-                connType = null;
-            } else {
-                const reverseConn = connWorld.connections.find(c => c.targetId === world.id);
-                let reverseConnType = 0;
-                let reverseConnTypeParams = {};
-                if (reverseConn) {
-                    reverseConnType = reverseConn.type;
-                    reverseConnTypeParams = reverseConn.typeParams;
-                } else {
-                    if (connType & ConnType.ONE_WAY)
-                        reverseConnType |= ConnType.NO_ENTRY;
-                    else if (connType & ConnType.NO_ENTRY)
-                        reverseConnType |= ConnType.ONE_WAY;
-                    if (connType & ConnType.LOCKED)
-                        reverseConnType |= ConnType.UNLOCK;
-                    else if (connType & ConnType.UNLOCK)
-                        reverseConnType |= ConnType.LOCKED;
-                    else if (connType & ConnType.EXIT_POINT)
-                        reverseConnType |= ConnType.SHORTCUT;
-                    else if (connType & ConnType.SHORTCUT)
-                        reverseConnType |= ConnType.EXIT_POINT;
-                    if (connType & ConnType.DEAD_END)
-                        reverseConnType |= ConnType.ISOLATED;
-                    else if (connType & ConnType.ISOLATED)
-                        reverseConnType |= ConnType.DEAD_END;
-                }
-                connType = reverseConnType;
-                if (connType & ignoreTypeFlags)
-                    continue;
-                typeParams = reverseConnTypeParams;
-            }
-            connPath.push({
-                id: id,
-                connType: connType,
-                typeParams: typeParams
-            });
-            ret[id] = connPath;
-            checkedNodes.push(id);
-            nextGenWorlds.push(worldData[id]);
-        }
-    }
-    return ret;
-}
-
-function tryAddNexusPath(matchPaths, existingMatchPaths, worldData, sourceId, targetId) {
-    const nexusWorldName = "The Nexus";
-    const nexusWorldId = worldData.find(w => w.title === nexusWorldName).id;
-
-    if (sourceId !== nexusWorldId) {
-        isDebug && console.log("Searching for paths eligible for Eyeball Bomb Nexus shortcut...");
-        const nexusPaths = existingMatchPaths.concat(matchPaths).filter(p => (p.length > targetId !== nexusWorldId ? 2 : 3) && p.find(w => w.id === nexusWorldId));
-        if (nexusPaths.length) {
-            isDebug && console.log("Found", nexusPaths.length, "paths eligible for Eyeball Bomb Nexus shortcut: creating shortcut paths");
-            for (let nexusPath of nexusPaths) {
-                const nexusWorldIndex = nexusPath.indexOf(nexusPath.find(w => w.id === nexusWorldId));
-                const nexusShortcutPath = _.cloneDeep([nexusPath[0]].concat(nexusPath.slice(nexusWorldIndex)));
-                const nexusSource = nexusShortcutPath[0];
-                nexusSource.connType = (nexusWorldIndex > 1 ? ConnType.ONE_WAY : 0) | ConnType.EFFECT;
-                nexusSource.typeParams = {};
-                nexusSource.typeParams[ConnType.EFFECT] = {
-                    params: 'Eyeball Bomb',
-                    paramsJP: effectsJP['Eyeball Bomb']
-                };
-                matchPaths.push(nexusShortcutPath);
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-function findRealPathDepth(paths, worldId, pathWorldIds, worldDepthsMap, maxDepth, minDepth, ignoreTypeFlags) {
-    let ret = -1;
-
-    if (minDepth == maxDepth)
-        return minDepth;
-
-    if (!ignoreTypeFlags)
-        ignoreTypeFlags = defaultPathIgnoreConnTypeFlags;
-    else if (ignoreTypeFlags & ConnType.LOCKED || ignoreTypeFlags & ConnType.LOCKED_CONDITION || ignoreTypeFlags & ConnType.EXIT_POINT)
-        ignoreTypeFlags ^= ConnType.LOCKED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT;
-    else if (ignoreTypeFlags & ConnType.DEAD_END)
-        ignoreTypeFlags ^= ConnType.DEAD_END | ConnType.ISOLATED;
-    else
-        return minDepth;
-
-    for (let p in paths) {
-        if (worldDepthsMap[p] === -1)
-            continue;
-
-        const path = paths[p];
-        const pathWorldDepth = pathWorldIds[p].indexOf(worldId);
-
-        if (pathWorldDepth) {
-            let skipPath = pathWorldDepth > 0 && path.slice(0, pathWorldDepth).find(w => w.connType & ignoreTypeFlags);
-            if (skipPath)
-                continue;
-        }
-
-        if (ret === -1 || pathWorldDepth < ret)
-            ret = pathWorldDepth;
-    }
-
-    return ret > -1 ? ret : findRealPathDepth(paths, worldId, pathWorldIds, worldDepthsMap, maxDepth, minDepth, ignoreTypeFlags);
-}
-
 function initLocalization(isInitial) {
     if (isInitial && urlSearchParams.has("lang")) {
         const urlLang = urlSearchParams.get("lang");
@@ -3972,7 +3676,7 @@ function initLocalization(isInitial) {
         callback: function (data, defaultCallback) {
             if (config.lang === 'ja' || config.lang === 'ru')
                 massageLocalizedValues(data, true);
-            data.footer.about = data.footer.about.replace("{VERSION}", "5.3.1");
+            data.footer.about = data.footer.about.replace("{VERSION}", "5.4.0");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             localizedSeparator = data.separator;

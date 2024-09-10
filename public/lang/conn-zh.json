@@ -50,5 +50,9 @@
   "4096": {
       "name": "无法到达",
       "description": "当前游戏版本无法到达。"
+  },
+  "8192": {
+      "name": "Expedition",
+      "description": "Leads toward your followed expedition location"
   }
 }

@@ -1,11 +1,11 @@
 {
   "name": "yume-2kki-explorer",
-  "version": "5.3.1",
+  "version": "5.4.0",
   "description": "A visualization of maps in Yume 2kki that scrapes the wiki for data",
   "main": "app.js",
   "dependencies": {
-    "3d-force-graph": "https://github.com/Flashfyre/3d-force-graph.git",
     "@tweenjs/tween.js": "^23.1.2",
+    "3d-force-graph": "https://github.com/Flashfyre/3d-force-graph.git",
     "d3-force": "^2.0.1",
     "d3-quadtree": "^1.0.7",
     "devbridge-autocomplete": "^1.4.11",
@@ -29,7 +29,7 @@
     "three-spritetext": "^1.8.1"
   },
   "devDependencies": {
-    "esbuild": "^0.23.0"
+    "esbuild": "^0.23.1"
   },
   "resolutions": {
     "3d-force-graph": "https://github.com/Flashfyre/3d-force-graph.git",

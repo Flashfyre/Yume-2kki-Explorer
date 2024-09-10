@@ -50,5 +50,9 @@
     "4096": {
         "name": "Недоступно",
         "description": "Нельзя сюда попасть в текущей версии игры"
+    },
+    "8192": {
+        "name": "Expedition",
+        "description": "Leads toward your followed expedition location"
     }
 }

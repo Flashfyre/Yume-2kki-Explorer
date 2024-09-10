@@ -11,7 +11,8 @@ const ConnType = {
     SHORTCUT: 512,
     EXIT_POINT: 1024,
     SEASONAL: 2048,
-    INACCESSIBLE: 4096
+    INACCESSIBLE: 4096,
+    SEARCH: 8192
 };
 
 if (typeof exports === "object")
