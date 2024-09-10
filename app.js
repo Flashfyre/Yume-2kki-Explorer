@@ -436,8 +436,8 @@ function getLocationData(req, pool) {
     return new Promise((resolve, reject) => {
         getLocationWorldData(pool,
             (req.query.locationNames || '').split('|').map(l => l.replace(/'/g, "''")),
-            (req.query.hiddenConnLocationNames || '').split('|').map(l => l.replace(/'/g, "''")),
-            (req.query.trackedConnLocationNames || '').split('|').map(l => l.replace(/'/g, "''"))
+            (req.query.hiddenConnLocationNames.toLowerCase() || '').split('|').map(l => l.replace(/'/g, "''")),
+            (req.query.trackedConnLocationNames.toLowerCase() || '').split('|').map(l => l.replace(/'/g, "''"))
         ).then(worldData => {
             getMaxWorldDepth(pool).then(maxDepth => {
                 getAuthorInfoData(pool).then(authorInfoData => {
@@ -659,7 +659,7 @@ function getLocationWorldData(pool, locationNames, hiddenConnLocationNames, trac
 
                 for (let row of rows) {
                     const connWorld = getWorldFromRow(row);
-                    if (hiddenConnLocationNames.includes(connWorld.title)) {
+                    if (hiddenConnLocationNames.includes(connWorld.title.toLowerCase())) {
                         if (connWorld.secret)
                             continue;
                         connWorld.hidden = true;
@@ -699,7 +699,7 @@ function getLocationWorldData(pool, locationNames, hiddenConnLocationNames, trac
                             type: row.type,
                             typeParams: {}
                         };
-                        if (trackedConnLocationNames.includes(targetWorld.title))
+                        if (trackedConnLocationNames.includes(targetWorld.title.toLowerCase()))
                             conn.type |= ConnType.TRACKED;
                         connsById[row.id] = conn;
                         sourceWorld.connections.push(conn);
