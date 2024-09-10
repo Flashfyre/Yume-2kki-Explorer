@@ -12,7 +12,7 @@ const ConnType = {
     EXIT_POINT: 1024,
     SEASONAL: 2048,
     INACCESSIBLE: 4096,
-    SEARCH: 8192
+    TRACKED: 8192
 };
 
 if (typeof exports === "object")

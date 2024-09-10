@@ -53,6 +53,6 @@
     },
     "8192": {
         "name": "Expedition",
-        "description": "Leads toward your followed expedition location"
+        "description": "Leads toward your tracked expedition location"
     }
 }

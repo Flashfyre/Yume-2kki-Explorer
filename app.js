@@ -437,7 +437,7 @@ function getLocationData(req, pool) {
         getLocationWorldData(pool,
             (req.query.locationNames || '').split('|').map(l => l.replace(/'/g, "''")),
             (req.query.hiddenConnLocationNames || '').split('|').map(l => l.replace(/'/g, "''")),
-            (req.query.searchConnLocationNames || '').split('|').map(l => l.replace(/'/g, "''"))
+            (req.query.trackedConnLocationNames || '').split('|').map(l => l.replace(/'/g, "''"))
         ).then(worldData => {
             getMaxWorldDepth(pool).then(maxDepth => {
                 getAuthorInfoData(pool).then(authorInfoData => {
@@ -609,7 +609,7 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
     });
 }
 
-function getLocationWorldData(pool, locationNames, hiddenConnLocationNames, searchConnLocationNames) {
+function getLocationWorldData(pool, locationNames, hiddenConnLocationNames, trackedConnLocationNames) {
     return new Promise((resolve, reject) => {
         const worldDataById = {};
         pool.query(`SELECT id, title, titleJP, author, depth, minDepth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, removed FROM worlds WHERE title IN ('${locationNames.join(`', '`)}') AND removed = 0`, (err, rows) => {
@@ -699,8 +699,8 @@ function getLocationWorldData(pool, locationNames, hiddenConnLocationNames, sear
                             type: row.type,
                             typeParams: {}
                         };
-                        if (searchConnLocationNames.includes(targetWorld.title))
-                            conn.type |= ConnType.SEARCH;
+                        if (trackedConnLocationNames.includes(targetWorld.title))
+                            conn.type |= ConnType.TRACKED;
                         connsById[row.id] = conn;
                         sourceWorld.connections.push(conn);
                     }

@@ -1384,8 +1384,8 @@ export function loadData(update, onSuccess, onFail) {
         queryString += `?locationNames=${locationModeLocations.join('|')}`;
         if (urlSearchParams.has('hiddenConnLocations'))
             queryString += `&hiddenConnLocationNames=${urlSearchParams.get('hiddenConnLocations')}`;
-        if (urlSearchParams.has('searchConnLocations'))
-            queryString += `&searchConnLocationNames=${urlSearchParams.get('searchConnLocations')}`;
+        if (urlSearchParams.has('trackedConnLocations'))
+            queryString += `&trackedConnLocationNames=${urlSearchParams.get('trackedConnLocations')}`;
     }
     const loadData = () => $.get(`/${locationMode ? 'locationData' : 'data'}${queryString}`).done(data => onSuccess(data)).fail(onFail);
     const loadOrUpdateData = update => {
@@ -1799,8 +1799,8 @@ function initGraph(renderMode, displayMode, paths) {
 
         if (connType & ConnType.INACCESSIBLE)
             icons.push(getConnTypeIcon(ConnType.INACCESSIBLE));
-        if (connType & ConnType.SEARCH)
-            icons.push(getConnTypeIcon(ConnType.SEARCH));
+        if (connType & ConnType.TRACKED)
+            icons.push(getConnTypeIcon(ConnType.TRACKED));
         if (connType & ConnType.ONE_WAY)
             icons.push(getConnTypeIcon(ConnType.ONE_WAY));
         else if (connType & ConnType.NO_ENTRY)
@@ -2521,7 +2521,7 @@ function makeIconObject(is2d) {
         { type: ConnType.SEASONAL, params: { params: 'Fall' } },
         { type: ConnType.SEASONAL, params: { params: 'Winter' } },
         ConnType.INACCESSIBLE,
-        ConnType.SEARCH
+        ConnType.TRACKED
     ];
     const iconImgDimensions = { x: 64, y: 64 };
     const amountTextures = connTypes.length + 1; // 1 reversed one-way arrow
@@ -3599,7 +3599,7 @@ function getConnTypeChar(connType, typeParams) {
         case ConnType.INACCESSIBLE:
             char = "🚫";
             break;
-        case ConnType.SEARCH:
+        case ConnType.TRACKED:
             char = "🧭";
             break;
     }
@@ -3676,7 +3676,7 @@ function initLocalization(isInitial) {
         callback: function (data, defaultCallback) {
             if (config.lang === 'ja' || config.lang === 'ru')
                 massageLocalizedValues(data, true);
-            data.footer.about = data.footer.about.replace("{VERSION}", "5.4.1");
+            data.footer.about = data.footer.about.replace("{VERSION}", "5.4.2");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             localizedSeparator = data.separator;
