@@ -473,7 +473,7 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
         let cachedWorldData = {};
         const cachedWorldNameIds = {};
         let cachedWorldIdMap;
-        pool.query('SELECT id, title, titleJP, author, depth, minDepth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, removed FROM worlds' + (excludeRemovedContent ? ' WHERE removed = 0' : ''), (err, rows) => {
+        pool.query('SELECT id, title, titleJP, author, depth, minDepth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, removed, secret FROM worlds' + (excludeRemovedContent ? ' WHERE removed = 0' : ''), (err, rows) => {
             if (err) return reject(err);
             for (let row of rows) {
                 worldDataById[row.id] = {
@@ -493,6 +493,7 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
                     verUpdated: row.verUpdated,
                     verGaps: row.verGaps,
                     removed: !!row.removed,
+                    secret: !!row.secret,
                     connections: [],
                     images: []
                 };
@@ -502,6 +503,7 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
                         title: row.title,
                         depth: row.depth,
                         minDepth: row.minDepth,
+                        secret: !!row.secret,
                         connections: []
                     };
                     cachedWorldNameIds[row.title] = row.id;
@@ -4060,9 +4062,11 @@ if (isMainThread) {
         const destName = req.query.dest;
         res.setHeader('Access-Control-Allow-Origin', 'https://ynoproject.net');
         if (originName && destName && worldNameIdsCache[originName] && worldNameIdsCache[destName]) {
-            const paths = getLocationPaths(worldNameIdsCache[originName], worldNameIdsCache[destName])
-                .filter(p => p.length > 2 && !(p[0].connType & ConnType.INACCESSIBLE));
-            res.json(paths.map(p => worldDataCache[p[1].id].title));
+            const paths = getLocationPaths(worldNameIdsCache[originName], worldNameIdsCache[destName]);
+            let validPaths = paths.filter(p => p.length >= 2 && !(p[0].connType & ConnType.INACCESSIBLE) && !p.find((c, i) => worldDataCache[p[i].id].secret));
+            if (!validPaths.length)
+                validPaths = paths.filter(p => p.length > 2 && !(p[0].connType & ConnType.INACCESSIBLE));
+            res.json(validPaths.map(p => worldDataCache[p[1].id].title));
         } else
             res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
     });
