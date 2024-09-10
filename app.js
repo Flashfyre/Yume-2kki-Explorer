@@ -436,8 +436,8 @@ function getLocationData(req, pool) {
     return new Promise((resolve, reject) => {
         getLocationWorldData(pool,
             (req.query.locationNames || '').split('|').map(l => l.replace(/'/g, "''")),
-            (req.query.hiddenConnLocationNames.toLowerCase() || '').split('|').map(l => l.replace(/'/g, "''")),
-            (req.query.trackedConnLocationNames.toLowerCase() || '').split('|').map(l => l.replace(/'/g, "''"))
+            (req.query.hiddenConnLocationNames || '').toLowerCase().split('|').map(l => l.replace(/'/g, "''")),
+            (req.query.trackedConnLocationNames || '').toLowerCase().split('|').map(l => l.replace(/'/g, "''"))
         ).then(worldData => {
             getMaxWorldDepth(pool).then(maxDepth => {
                 getAuthorInfoData(pool).then(authorInfoData => {
