@@ -501,6 +501,7 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
                     cachedWorldData[row.id] = {
                         id: row.id,
                         title: row.title,
+                        titleJP: row.titleJP,
                         depth: row.depth,
                         minDepth: row.minDepth,
                         secret: !!row.secret,
@@ -4052,7 +4053,7 @@ if (isMainThread) {
 }
 
 function getLocationPaths(originId, destId) {
-    const pathFinder = new PathFinder(worldDataCache, false, defaultPathIgnoreConnTypeFlags, true);
+    const pathFinder = new PathFinder(worldDataCache, false, defaultPathIgnoreConnTypeFlags);
     return pathFinder.findPath(originId, destId, true, ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.SHORTCUT, 3)
 }
 
@@ -4066,7 +4067,16 @@ if (isMainThread) {
             let validPaths = paths.filter(p => p.length >= 2 && !(p[0].connType & ConnType.INACCESSIBLE) && !p.find((c, i) => worldDataCache[p[i].id].secret));
             if (!validPaths.length)
                 validPaths = paths.filter(p => p.length > 2 && !(p[0].connType & ConnType.INACCESSIBLE));
-            res.json(validPaths.map(p => worldDataCache[p[1].id].title));
+            res.json(validPaths.map(p => {
+                const world = worldDataCache[p[1].id];
+                return {
+                    title: world.title,
+                    titleJP: world.titleJP,
+                    connType: p[0].connType,
+                    typeParams: p[0].typeParams,
+                    depth: p.length - 1
+                };
+            }));
         } else
             res.json({ error: 'Invalid request', err_code: 'INVALID_REQUEST' });
     });
