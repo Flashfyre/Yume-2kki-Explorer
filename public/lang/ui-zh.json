@@ -1,18 +1,18 @@
 {
     "title": "梦２记导航",
     "loading": {
-        "label": "正在载入",
+        "label": "载入中",
         "space": "　　　",
-        "error": "载入失败，请重试！"
+        "error": "发生错误，请稍后再试"
     },
     "updateTask": {
         "init": "初始化数据刷新",
         "prepareWorldData": "预备世界数据",
         "fetchWorldData": "获取世界中",
-        "fetchConnData": "获取连接中",
+        "fetchConnData": "获取连接路径中",
         "updateWorldData": "更新世界数据",
-        "updateConns": "更新连接数据",
-        "updateConnTypeParams": "更新连接参数",
+        "updateConns": "更新连接路径数据",
+        "updateConnTypeParams": "更新连接路径参数",
         "fetchWorldImageData": "获取世界图像",
         "updateWorldImageData": "更新世界图像",
         "updateWorldDepths": "更新世界深度",
@@ -35,25 +35,25 @@
     },
     "controls": {
         "search": {
-            "name": "模糊搜索："
+            "name": "搜索："
         },
         "author": {
-            "name": "按地图作者筛选：",
+            "name": "地图作者：",
             "values": {
                 "null": "所有人"
             }
         },
         "version": {
-            "name": "按版本号筛选：",
+            "name": "版本号：",
             "values": {
                 "0": "所有版本"
             }
         },
         "origin": {
-            "name": "输入起点："
+            "name": "起点："
         },
         "destination": {
-            "name": "输入终点："
+            "name": "终点："
         },
         "reset": {
             "name": "重置"
@@ -89,13 +89,13 @@
         "uiTheme": {
             "name": "菜单样式",
             "values": {
-                "Default_Custom": "默认（缺省项）",
+                "Default_Custom": "默认（自定义）",
                 "Default": "默认",
                 "Default_2": "默认２",
                 "Default_3": "默认３",
                 "Default_4": "默认４",
                 "Default_5": "默认５",
-                "Developer_Room": "开发者的房间",
+                "Developer_Room": "开发者房间",
                 "Glitch_Ending": "错误结局",
                 "Glitch_Ending_2": "错误结局２",
                 "Black_Building": "暗黑大楼",
@@ -115,7 +115,7 @@
                 "Constellation_World": "星座世界",
                 "Blob_Desert": "斑点荒漠",
                 "Cipher_Keyboard": "板凳之馆",
-                "Viridian_Wetlands": "深翠绿的湿地",
+                "Viridian_Wetlands": "深翠绿湿地",
                 "Polluted_Swamp": "腐化之地",
                 "Snowy_Village": "冬之村庄",
                 "Decrepit_Dwellings": "集体宿舍",
@@ -162,20 +162,20 @@
             }
         },
         "displayMode": {
-            "name": "显示方式",
+            "name": "陈列方式",
             "values": {
-                "vertical": "纵向平铺",
-                "horizontal": "横向平铺",
-                "radialIn": "向心式",
-                "radialOut": "离心式",
-                "free": "自由式"
+                "vertical": "纵向",
+                "horizontal": "横向",
+                "radialIn": "向内",
+                "radialOut": "向外",
+                "free": "随意"
             }
         },
         "connMode": {
-            "name": "连线方式",
+            "name": "连线模式",
             "values": {
-                "oneWay": "单行方式",
-                "twoWay": "互通方式"
+                "oneWay": "单向",
+                "twoWay": "双向"
             }
         },
         "labelMode": {
@@ -183,7 +183,7 @@
             "values": {
                 "never": "始终隐藏",
                 "hover": "鼠标悬停显示",
-                "select": "选定时显示",
+                "select": "选中时显示",
                 "always": "始终显示"
             }
         },
@@ -198,15 +198,15 @@
             "name": "路径规划模式",
             "values": {
                 "simple": "简洁",
-                "normal": "正常",
-                "detailed": "复杂"
+                "normal": "常规",
+                "detailed": "详细"
             }
         },
         "sizeDiff": {
-            "name": "视图大小"
+            "name": "尺寸差值"
         },
         "stackSize": {
-            "name": "视图比例"
+            "name": "堆叠阈值"
         }
     },
     "contextMenu": {
