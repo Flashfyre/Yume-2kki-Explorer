@@ -172,7 +172,7 @@
             }
         },
         "connMode": {
-            "name": "连线模式",
+            "name": "连线方式",
             "values": {
                 "oneWay": "单向",
                 "twoWay": "双向"
