@@ -52,7 +52,7 @@
       "description": "当前游戏版本无法到达。"
   },
   "8192": {
-      "name": "Expedition",
-      "description": "Leads toward your tracked expedition location"
+      "name": "远征",
+      "description": "行至当前追踪的远征目的地"
   }
 }
