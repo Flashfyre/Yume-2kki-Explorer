@@ -1,62 +1,62 @@
 {
     "title": "梦２记导航",
     "loading": {
-        "label": "正在载入",
+        "label": "载入中",
         "space": "　　　",
-        "error": "载入失败，请重试！"
+        "error": "发生错误，请稍后再试"
     },
     "updateTask": {
-        "init": "Initializing data refresh",
-        "prepareWorldData": "Preparing world data",
-        "fetchWorldData": "Fetching worlds",
-        "fetchConnData": "Fetching connections",
-        "updateWorldData": "Updating world data",
-        "updateConns": "Updating connection data",
-        "updateConnTypeParams": "Updating connection parameters",
-        "fetchWorldImageData": "Fetching world images",
-        "updateWorldImageData": "Updating world images",
-        "updateWorldDepths": "Updating world depths",
-        "cleanupWorldData": "Cleaning up world data",
-        "fetchMapData": "Fetching map data",
-        "updateMapData": "Updating map data",
-        "fetchAuthorInfoData": "Fetching author info",
-        "updateAuthorInfoData": "Updating author info",
-        "fetchVersionInfoData": "Fetching version info",
-        "updateVersionInfoData": "Updating version info",
-        "fetchEffectData": "Fetching effect data",
-        "updateEffectData": "Updating effect data",
-        "fetchEffectDataJP": "Fetching Japanese effect data",
-        "fetchMenuThemeData": "Fetching menu theme data",
-        "updateMenuThemeData": "Updating menu theme data",
-        "fetchWallpaperData": "Fetching wallpaper data",
-        "updateWallpaperData": "Updating wallpaper data",
-        "fetchBgmTrackData": "Fetching BGM track data",
-        "updateBgmTrackData": "Updating BGM track data"
+        "init": "初始化数据刷新",
+        "prepareWorldData": "预备世界数据",
+        "fetchWorldData": "获取世界中",
+        "fetchConnData": "获取连接路径中",
+        "updateWorldData": "更新世界数据",
+        "updateConns": "更新连接路径数据",
+        "updateConnTypeParams": "更新连接路径参数",
+        "fetchWorldImageData": "获取世界图像",
+        "updateWorldImageData": "更新世界图像",
+        "updateWorldDepths": "更新世界深度",
+        "cleanupWorldData": "整理世界数据",
+        "fetchMapData": "获取地图数据",
+        "updateMapData": "更新地图数据",
+        "fetchAuthorInfoData": "获取作者信息",
+        "updateAuthorInfoData": "更新作者信息",
+        "fetchVersionInfoData": "获取版本信息",
+        "updateVersionInfoData": "更新版本信息",
+        "fetchEffectData": "获取效果数据",
+        "updateEffectData": "更新效果数据",
+        "fetchEffectDataJP": "获取日文效果数据",
+        "fetchMenuThemeData": "获取菜单样式数据",
+        "updateMenuThemeData": "更新菜单样式数据",
+        "fetchWallpaperData": "获取壁纸数据",
+        "updateWallpaperData": "更新壁纸数据",
+        "fetchBgmTrackData": "获取音乐数据",
+        "updateBgmTrackData": "更新音乐数据"
     },
     "controls": {
         "search": {
-            "name": "模糊搜索："
+            "name": "搜索："
         },
         "author": {
-            "name": "按地图作者筛选：",
+            "name": "地图作者：",
             "values": {
                 "null": "所有人"
             }
         },
         "version": {
-            "name": "按版本号筛选：",
+            "name": "版本号：",
             "values": {
                 "0": "所有版本"
             }
         },
         "origin": {
-            "name": "输入起点："
+            "name": "起点："
         },
         "destination": {
-            "name": "输入终点："
+            "name": "终点："
         },
         "reset": {
-            "name": "清除"
+            "name": "重置"
         },
         "help": {
             "name": "帮助"
@@ -73,7 +73,7 @@
             "name": "效果"
         },
         "menuThemes": {
-            "name": "界面风格"
+            "name": "菜单样式"
         },
         "wallpapers": {
             "name": "电脑壁纸"
@@ -87,15 +87,15 @@
             "name": "语言"
         },
         "uiTheme": {
-            "name": "界面风格",
+            "name": "菜单样式",
             "values": {
-                "Default_Custom": "默认（缺省项）",
+                "Default_Custom": "默认（自定义）",
                 "Default": "默认",
                 "Default_2": "默认２",
                 "Default_3": "默认３",
                 "Default_4": "默认４",
                 "Default_5": "默认５",
-                "Developer_Room": "开发者的房间",
+                "Developer_Room": "开发者房间",
                 "Glitch_Ending": "错误结局",
                 "Glitch_Ending_2": "错误结局２",
                 "Black_Building": "暗黑大楼",
@@ -115,7 +115,7 @@
                 "Constellation_World": "星座世界",
                 "Blob_Desert": "斑点荒漠",
                 "Cipher_Keyboard": "板凳之馆",
-                "Viridian_Wetlands": "深翠绿的湿地",
+                "Viridian_Wetlands": "深翠绿湿地",
                 "Polluted_Swamp": "腐化之地",
                 "Snowy_Village": "冬之村庄",
                 "Decrepit_Dwellings": "集体宿舍",
@@ -162,20 +162,20 @@
             }
         },
         "displayMode": {
-            "name": "显示方式",
+            "name": "陈列方式",
             "values": {
-                "vertical": "纵向平铺",
-                "horizontal": "横向平铺",
-                "radialIn": "向心式",
-                "radialOut": "离心式",
-                "free": "自由式"
+                "vertical": "纵向",
+                "horizontal": "横向",
+                "radialIn": "向内",
+                "radialOut": "向外",
+                "free": "随意"
             }
         },
         "connMode": {
             "name": "连线方式",
             "values": {
-                "oneWay": "单行方式",
-                "twoWay": "互通方式"
+                "oneWay": "单向",
+                "twoWay": "双向"
             }
         },
         "labelMode": {
@@ -183,7 +183,7 @@
             "values": {
                 "never": "始终隐藏",
                 "hover": "鼠标悬停显示",
-                "select": "选定时显示",
+                "select": "选中时显示",
                 "always": "始终显示"
             }
         },
@@ -198,54 +198,54 @@
             "name": "路径规划模式",
             "values": {
                 "simple": "简洁",
-                "normal": "正常",
-                "detailed": "复杂"
+                "normal": "常规",
+                "detailed": "详细"
             }
         },
         "sizeDiff": {
-            "name": "视图大小"
+            "name": "尺寸差值"
         },
         "stackSize": {
-            "name": "视图比例"
+            "name": "堆叠阈值"
         }
     },
     "contextMenu": {
         "items": {
-            "wiki": "查看相关百科词条",
+            "wiki": "查看Wiki词条",
             "start": "从这里出发",
             "end": "到这里去",
-            "map": "查看该区域大地图",
+            "map": "查看地图",
             "bgm": {
-                "name": "播放该区域背景音乐",
+                "name": "播放背景音乐",
                 "main": "主要曲目"
             }
         }
     },
-    "hiddenLabel": "Undiscovered Location",
+    "hiddenLabel": "未发现的区域",
     "nodeLabel": {
-        "depth": "地图层级：",
-        "author": "地图作者：",
-        "versionAdded": "首次加入版本：",
-        "versionLastUpdated": "最后更新版本：",
-        "versionRemoved": "移除游戏版本：",
+        "depth": "深度：",
+        "author": "作者：",
+        "versionAdded": "加入版本：",
+        "versionLastUpdated": "最后更新：",
+        "versionRemoved": "移除版本：",
         "versionUpdateType": {
             "CHANGE": "",
-            "MINOR_CHANGE": "小幅度更新",
-            "MAJOR_CHANGE": "大幅度更新",
+            "MINOR_CHANGE": "小幅改动",
+            "MAJOR_CHANGE": "大幅改动",
             "BUG_FIX": "BUG修正",
-            "ADD_CONTENT": "要素有新增",
-            "REMOVE_CONTENT": "要素有删除",
-            "LAYOUT_CHANGE": "地形有更改",
-            "EXPANSION": "地图面积扩大",
-            "REDUCTION": "地图面积缩小",
-            "ADD_SUB_AREA": "子地图增加",
-            "REMOVE_SUB_AREA": "子地图删除",
-            "CONNECTION_CHANGE": "连接路线有更改",
-            "ADD_CONNECTION": "连接路径有增加",
-            "REMOVE_CONNECTION": "连接路径有减少",
-            "BGM_CHANGE": "背景音乐更换",
-            "EFFECT_CHANGE": "效果关联更改",
-            "REWORK": "改造"
+            "ADD_CONTENT": "新增要素",
+            "REMOVE_CONTENT": "删除要素",
+            "LAYOUT_CHANGE": "修改布局",
+            "EXPANSION": "面积扩大",
+            "REDUCTION": "面积缩小",
+            "ADD_SUB_AREA": "新增子区域",
+            "REMOVE_SUB_AREA": "移除子区域",
+            "CONNECTION_CHANGE": "更改连接",
+            "ADD_CONNECTION": "增加连接",
+            "REMOVE_CONNECTION": "移除连接",
+            "BGM_CHANGE": "更换背景音乐",
+            "EFFECT_CHANGE": "效果相关改动",
+            "REWORK": "重做"
         }
     },
     "authorLabel": {
@@ -254,9 +254,9 @@
     "versionLabel": {
         "authors": "构建作者：",
         "releaseDate": "发布日期：",
-        "worldCount": "新增地图数量：",
-        "updatedWorldCount": "更新地图数量：",
-        "removedWorldCount": "删除地图数量："
+        "worldCount": "新增世界：",
+        "updatedWorldCount": "更新世界：",
+        "removedWorldCount": "删除世界："
     },
     "effectLabel": {
         "location": "所在地："
@@ -275,33 +275,33 @@
         "ADD": "{WORLD}地图新增",
         "UPDATE": {
             "CHANGE": "{WORLD}地图有更新",
-            "MINOR_CHANGE": "{WORLD}地图有小幅度更新",
-            "MAJOR_CHANGE": "{WORLD}地图有大幅度更新",
-            "BUG_FIX": "{WORLD}有进行BUG修复",
-            "ADD_CONTENT": "{WORLD}地图有新增要素",
-            "REMOVE_CONTENT": "{WORLD}地图有删除要素",
-            "LAYOUT_CHANGE": "{WORLD}地图有地形更改",
-            "EXPANSION": "{WORLD}扩大了地图面积",
+            "MINOR_CHANGE": "{WORLD}有小幅改动",
+            "MAJOR_CHANGE": "{WORLD}有大幅改动",
+            "BUG_FIX": "{WORLD}有BUG被修复",
+            "ADD_CONTENT": "{WORLD}新增了要素",
+            "REMOVE_CONTENT": "{WORLD}删除了要素",
+            "LAYOUT_CHANGE": "{WORLD}更改了布局",
+            "EXPANSION": "{WORLD}扩张了地图面积",
             "REDUCTION": "{WORLD}缩小了地图面积",
-            "ADD_SUB_AREA": "{WORLD}增加了子地图",
-            "REMOVE_SUB_AREA": "{WORLD}删除了子地图",
+            "ADD_SUB_AREA": "{WORLD}增加了子区域",
+            "REMOVE_SUB_AREA": "{WORLD}删除了子区域",
             "CONNECTION_CHANGE": "{WORLD}更改了连接路径",
             "ADD_CONNECTION": "{WORLD}增加了连接路径",
             "REMOVE_CONNECTION": "{WORLD}删除了连接路径",
             "BGM_CHANGE": "{WORLD}更换了背景音乐",
-            "EFFECT_CHANGE": "{WORLD}更改了使用效果的关联方式",
-            "REWORK": "{WORLD}进行了改造"
+            "EFFECT_CHANGE": "{WORLD}有效果相关变动",
+            "REWORK": "{WORLD}被重做"
         },
-        "REMOVE": "{WORLD}地图删除"
+        "REMOVE": "{WORLD}被删除"
     },
     "versionEntriesModal": {
-        "filters": "筛选项目",
+        "filters": "筛选选项",
         "versionDisplayToggle": {
-            "name": "{ENTRY_TYPE} 的版本",
+            "name": "显示 {ENTRY_TYPE} 的版本",
             "entryType": {
-                "ADD": "存在新增地图",
-                "UPDATE": "存在更新地图",
-                "REMOVE": "存在删除地图"
+                "ADD": "新增地图",
+                "UPDATE": "更新地图",
+                "REMOVE": "删除地图"
             },
             "entryUpdateType": {
                 "MINOR_CHANGE": "存在小幅度更新",
@@ -330,8 +330,8 @@
         "removedWallpapers": "已删除的壁纸"
     },
     "bgmTracksModal": {
-        "search": "模糊搜索",
-        "favBgmTracks": "喜爱曲目",
+        "search": "搜索：",
+        "favBgmTracks": "收藏的曲目",
         "musicRoomBgmTracks": "音乐室收录曲目",
         "unnumberedBgmTracks": "无编号曲目",
         "removedBgmTracks": "已删除曲目"
@@ -341,8 +341,8 @@
     },
     "footer": {
         "about": "梦２记导航　版本号：{VERSION} 作者：FlashfyreDev",
-        "lastUpdate": "最后一次数据更新日期：{LAST_UPDATE}",
-        "lastFullUpdate": "最后一次数据迭代日期：{LAST_FULL_UPDATE}"
+        "lastUpdate": "最近一次数据更新：{LAST_UPDATE}",
+        "lastFullUpdate": "最近一次数据迭代：{LAST_FULL_UPDATE}"
     },
     "dot": "．",
     "comma": "、",

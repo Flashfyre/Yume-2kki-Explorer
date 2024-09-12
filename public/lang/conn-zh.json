@@ -1,39 +1,39 @@
 {
   "1": {
       "name": "单向通行",
-      "description": "进入该区域后无法再经此处返回。"
+      "description": "通行后无法经此返回。"
   },
   "2": {
-      "name": "单向终点",
-      "description": "可以从其他地点进入该区域，但无法继续前进至其他区域。"
+      "name": "不可通行",
+      "description": "不可由此区域进入。"
   },
   "4": {
-      "name": "解除单向限行",
-      "description": "从该区域前进可解除反向通行限制，使之往返互通。"
+      "name": "解锁",
+      "description": "可由此解除反向通行限制。"
   },
   "8": {
-      "name": "单向限行",
-      "description": "必须先通过其他路径进入对面区域一次并解除单行限制后方可正常互通。"
+      "name": "需解锁",
+      "description": "需从对面世界解锁通行限制后通行。"
   },
   "16": {
       "name": "死路",
-      "description": "只有从所在地图才能前往的孤立区域。"
+      "description": "导向对面世界被隔断的区域。"
   },
   "32": {
       "name": "被隔断的区域",
-      "description": "从前一地图可以到达当前地图被隔断的有限范围。"
+      "description": "从对面可达当前世界被的隔断区域。"
   },
   "64": {
       "name": "需要效果",
-      "description": "必须使用效果「{0}」才可以通行。"
+      "description": "必须使用效果「{0}」才可通行。"
   },
   "128": {
-      "name": "概率条件通行",
-      "description": "必须达成概率{0}的条件方可通行。"
+      "name": "概率通行",
+      "description": "有 {0} 的概率放行。"
   },
   "256": {
       "name": "条件通行",
-      "description": "必须达成「{0}」的条件方可通行。"
+      "description": "需达成条件：「{0}」"
   },
   "512": {
       "name": "捷径点",
@@ -48,11 +48,11 @@
     "description": "仅在此季节期间开放通行: {0}"
   },
   "4096": {
-      "name": "无法到达",
-      "description": "当前游戏版本无法到达。"
+      "name": "无法抵达",
+      "description": "在当前游戏版本无法抵达。"
   },
   "8192": {
-      "name": "Expedition",
-      "description": "Leads toward your tracked expedition location"
+      "name": "远征",
+      "description": "导向当前设置的远征目的地"
   }
 }
