@@ -1172,7 +1172,7 @@ function parseWorldConn(conn) {
             case "Dead End":
                 ret.type |= ConnType.DEAD_END;
                 break;
-            case "Isolated":
+            case "Return":
                 ret.type |= ConnType.ISOLATED;
                 break;
             case "Needs Effect":
