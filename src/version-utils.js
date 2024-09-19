@@ -163,7 +163,7 @@ function getEmptyVersion(index, name, nameJP) {
 }
 
 function getVersionNameJP(versionName) {
-    return versionName.replace('patch ', 'パッチ').replace(/^(?:pre\-)(.*)/, '$1前')
+    return versionName.replace('patch ', 'パッチ').replace(/^(?:pre\-)(.*)/, '$1前');
 }
 
 function getMissingVersion(index) {
