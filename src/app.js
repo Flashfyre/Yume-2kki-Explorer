@@ -233,7 +233,7 @@ function initAuthorData(authorInfoData, versionInfoData) {
         return {
             name: a,
             displayName: authorInfo ? authorInfo.name : a,
-            displayNameJP: authorInfo ? authorInfo.nameJP : null,
+            displayNameJP: authorInfo ? authorInfo.nameJP : a,
             worldIds: authorWorlds.map(w => w.id),
             worldCount: authorWorlds.length,
             firstVer: authorVersions.length ? authorVersions[authorVersions.length - 1] : null,
