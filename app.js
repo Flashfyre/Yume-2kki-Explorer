@@ -967,7 +967,7 @@ function checkUpdatePage(pageTitle, lastUpdate) {
 
 function checkUpdateMapData(pool, worldData, lastUpdate) {
     return new Promise((resolve, reject) => {
-        checkUpdatePage("Map IDs/0000-0400|Map IDs/0401-0800|Map IDs/0801-1200|Map IDs/1201-1600|Map IDs/1601-2000|Map IDs/2001-2400|Map IDs/2401-2800|Map IDs/2801-3200|Map IDs/3201-3600", lastUpdate).then(needsUpdate => {
+        checkUpdatePage("Map IDs/0000-0400|Map IDs/0401-0800|Map IDs/0801-1200|Map IDs/1201-1600|Map IDs/1601-2000|Map IDs/2001-2400|Map IDs/2401-2800|Map IDs/2801-3200|Map IDs/3201-3600|Map IDs/3601-4000", lastUpdate).then(needsUpdate => {
             if (needsUpdate)
                 updateMapData(pool, worldData).then(() => resolve()).catch(err => reject(err));
             else
@@ -2071,16 +2071,21 @@ function getAuthorInfoWikiData() {
             const authorSectionsHtml = res.text.split('data-jp-name="');
             const authorInfo = [];
 
+            const nameKey = 'class="mw-headline" id="';
+
             for (let a = 0; a < authorSectionsHtml.length - 1; a++) {
                 const section = authorSectionsHtml[a];
                 const nextSection = authorSectionsHtml[a + 1];
-                let searchIndex = section.indexOf('<b>', section.lastIndexOf(' class="mw-headline" ')) + 2;
-                if (searchIndex < 2)
+                let searchIndex = section.indexOf(nameKey) + nameKey.length;
+                if (searchIndex < nameKey.length)
                     continue;
-                if (section.slice(0, section.indexOf('</b>', searchIndex)).indexOf('</a', searchIndex) > -1)
-                    searchIndex = section.indexOf('<a', searchIndex) + 2;
 
-                const authorName = section.slice(section.indexOf('>', searchIndex) + 1, section.indexOf('<', searchIndex));
+                let linkIndex;
+                if ((linkIndex = section.indexOf("<a href=", searchIndex)) > -1) {
+                    searchIndex = section.indexOf('">', linkIndex) + 2;
+                }
+                else searchIndex = section.indexOf('">', searchIndex) + 2;
+                const authorName = section.slice(searchIndex, section.indexOf('</', searchIndex));
                 const authorNameJP = nextSection.slice(0, nextSection.indexOf('"'));
                 authorInfo.push({
                     name: authorName,
