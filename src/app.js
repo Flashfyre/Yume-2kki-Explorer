@@ -1677,7 +1677,7 @@ function initGraph(renderMode, displayMode, paths) {
         if (worldDepths[endWorldId] < maxDepth || (worldDepths[endWorldId] === maxDepth && depths.filter(d => d === maxDepth).length > 1))
             worldDepths[endWorldId] = ++maxDepth;
 
-        const nexusWorldName = "The Nexus";
+        const nexusWorldName = "Nexus";
         const nexusWorldId = worldData.find(w => w.title === nexusWorldName).id;
         const nexusShortcutLinks = links.filter(l => l.target === nexusWorldId && l.connType & ConnType.EFFECT && !worldData[l.source].connections.filter(c => c.targetId === nexusWorldId).length);
         const nexusShortcutWorldIds = nexusShortcutLinks.map(l => l.source);

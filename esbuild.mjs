@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { build } from 'esbuild';
-import pkg from './package.json' assert { type: "json" };
+import pkg from './package.json' with { type: "json" };
 
 build({
   entryPoints: ['src/index.js'],

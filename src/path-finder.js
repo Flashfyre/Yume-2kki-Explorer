@@ -1,4 +1,5 @@
 const $ = require('jquery');
+/** @type {import('lodash')} */
 const _ = require('lodash')._;
 const ConnType = require('./conn-type').ConnType;
 
@@ -261,7 +262,7 @@ class PathFinder {
     }
 
     tryAddNexusPath(matchPaths, existingMatchPaths, sourceId, targetId) {
-        const nexusWorldName = "The Nexus";
+        const nexusWorldName = "Nexus";
         const nexusWorldId = Object.values(this.worldData).find(w => w.title === nexusWorldName).id;
 
         if (sourceId !== nexusWorldId) {
