@@ -661,7 +661,7 @@ function initEffectData(data) {
         const worldIdAttribute = e.worldId != null ? ` data-id="${e.worldId}"` : '';
         const effectImageHtml = `<div class="effect collectable noselect"><img src="${e.filename}" /></div>`;
         const effectLinkHtml = `<a href="javascript:void(0);" class="js--effect effect collectable--border noselect" data-effect-id="${e.id}"${worldIdAttribute}></a>`;
-        e.method = e.method.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
+        e.method = e.method?.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>') || "";
         e.methodJP = e.methodJP ? e.methodJP.replace(/<span .*?>(.*?)<\/ *span>/ig, '$1').replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>') : '';
         $(effectImageHtml).appendTo($effectsContainerItems);
         $(effectLinkHtml).appendTo($effectsContainerBorders);
