@@ -135,8 +135,8 @@ function initDb(pool) {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 connId INT NOT NULL,
                 type SMALLINT NOT NULL,
-                params VARCHAR(1000) NOT NULL,
-                paramsJP VARCHAR(1000) NULL,
+                params VARCHAR(2000) NOT NULL,
+                paramsJP VARCHAR(2000) NULL,
                 FOREIGN KEY (connId)
                     REFERENCES conns (id)
                     ON DELETE CASCADE
