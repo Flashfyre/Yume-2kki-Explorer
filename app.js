@@ -45,7 +45,8 @@ function initConnPool() {
                 user: process.env.DATABASE_USER,
                 password: process.env.DATABASE_PASS,
                 database: process.env.DATABASE_NAME,
-                typeCast: handleTypeCasting
+                typeCast: handleTypeCasting,
+                charset: 'utf8mb4'
             });
         } else {
             const dbUrl = process.env.DATABASE_URL.slice(process.env.DATABASE_URL.indexOf("mysql://") + 8);
@@ -58,7 +59,8 @@ function initConnPool() {
                 user: user,
                 password: password,
                 database: database,
-                typeCast: handleTypeCasting
+                typeCast: handleTypeCasting,
+                charset: 'utf8mb4'
             });
         }
     } else {
@@ -1211,6 +1213,8 @@ function parseWorldConn(conn) {
 }
 
 function updateWorldInfo(pool, world) {
+    if (!world.filename) return Promise.resolve();
+
     return new Promise((resolve, reject) => {
         const titleJPValue = world.titleJP ? `'${world.titleJP}'` : 'NULL';
         const authorValue = world.author ? `'${world.author}'` : 'NULL';
@@ -1228,7 +1232,11 @@ function updateWorldInfo(pool, world) {
         const filename = world.filename ? `'${world.filename.replace(/'/g, "''")}'` : 'NULL';
         pool.query(`UPDATE worlds SET titleJP=${titleJPValue}, author=${authorValue}, filename=${filename}, mapUrl=${mapUrlValue}, mapLabel=${mapLabelValue}, bgmUrl=${bgmUrlValue}, bgmLabel=${bgmLabelValue}, verAdded=${verAddedValue}, verRemoved=${verRemovedValue}, verUpdated=${verUpdatedValue}, verGaps=${verGapsValue}, fgColor=${fgColorValue}, bgColor=${bgColorValue}, removed=${removedValue} WHERE id=${world.id}`,
         (err, _) => {
-            if (err) return reject(err);
+            if (err) {
+                console.error(`Error updating world ${world.title} (${world.id})`);
+
+                return reject(err);
+            }
             resolve();
         });
     });
@@ -1469,6 +1477,10 @@ function updateConnTypeParams(pool, worldData) {
                 const connConnTypeParams = newConnTypeParams[c];
                 for (let t in connConnTypeParams) {
                     const connTypeParam = connConnTypeParams[t];
+                    if (!connTypeParam.params) {
+                        console.log('bug', { connTypeParam, c, t });
+                        continue;
+                    }
                     const params = `'${connTypeParam.params.replace(/'/g, "''")}'`;
                     const paramsJP = connTypeParam.paramsJP ? `'${connTypeParam.paramsJP.replace(/'/g, "''")}'` : 'NULL';
                     if (i++)
@@ -1589,7 +1601,7 @@ function updateWorldImages(pool, worldData, updatedWorldNames) {
 
 function getAllWorldImageData(worldData, updatedWorldNames) {
     const worldDataByName = _.keyBy(worldData, w => w.title);
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         setUpdateTask('fetchWorldImageData');
         const fetchWorldImageData = (worldImageData, continueKey) => {
             superagent.get(`https://wrapper.yume.wiki/images?game=2kki${continueKey ? `&continueKey=${continueKey}` : ''}`, (err, res) => {
