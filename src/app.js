@@ -3524,7 +3524,9 @@ function getConnTypeIcon(connType, typeParams) {
                 break;
             case ConnType.CHANCE:
                 description = typeParams && typeParams.params
-                    ? description.replace('{0}', useEn ? typeParams.params : typeParams.params.replace('%', '％'))
+                    ? typeParams.params === '0%'
+                        ? localizedConn.unspecified
+                        : description.replace('{0}', useEn ? typeParams.params : typeParams.params.replace('%', '％'))
                     : '';
                 break;
             case ConnType.LOCKED_CONDITION:
@@ -3676,7 +3678,7 @@ function initLocalization(isInitial) {
         callback: function (data, defaultCallback) {
             if (config.lang === 'ja' || config.lang === 'ru')
                 massageLocalizedValues(data, true);
-            data.footer.about = data.footer.about.replace("{VERSION}", "5.4.5");
+            data.footer.about = data.footer.about.replace("{VERSION}", "6.0.0");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             localizedSeparator = data.separator;

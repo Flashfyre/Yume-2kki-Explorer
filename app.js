@@ -20,6 +20,9 @@ const appConfig = process.env.ADMIN_KEY ?
     } : require('./config/app.config.js');
 const apiUrl = 'https://yume.wiki/api.php';
 const apiTitlePrefix = 'Yume 2kki:';
+const yumeWikiHeaders = {
+    'X-Yume-2kki-Explorer': ''
+};
 const isRemote = Boolean(process.env.DATABASE_NAME || process.env.DATABASE_URL);
 const defaultPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.LOCKED | ConnType.DEAD_END | ConnType.ISOLATED | ConnType.LOCKED_CONDITION | ConnType.EXIT_POINT;
 const minDepthPathIgnoreConnTypeFlags = ConnType.NO_ENTRY | ConnType.DEAD_END | ConnType.ISOLATED;
@@ -35,6 +38,11 @@ let updating = false;
 let workerAlive = false;
 let updateTask = null;
 var updateTaskStartTime;
+
+function getYumeWiki(url, callback) {
+    const request = superagent.get(url).set(yumeWikiHeaders);
+    return callback ? request.end(callback) : request;
+}
 
 function initConnPool() {
     let ret;
@@ -917,7 +925,7 @@ function getUpdatedWorldNames(worldNames, lastUpdate) {
 
 function populateRecentChanges(recentChanges, lastUpdate) {
     return new Promise((resolve, reject) => {
-        superagent.get(apiUrl)
+        getYumeWiki(apiUrl)
             .query({ action: 'query', list: 'recentchanges', rcdir: 'newer', rcstart: lastUpdate.toISOString(), rclimit: 500, format: 'json' })
             .end((err, res) => {
                 if (err) return reject(err);
@@ -940,8 +948,8 @@ function populateRecentChanges(recentChanges, lastUpdate) {
 
 function checkUpdatePage(pageTitle, lastUpdate) {
     return new Promise((resolve, reject) => {
-        superagent.get(apiUrl)
-            .query({ action: 'query', titles: `${apiTitlePrefix}${pageTitle}`, prop: 'revisions', format: 'json' })
+        getYumeWiki(apiUrl)
+            .query({ action: 'query', titles: pageTitle.split('|').map(title => `${apiTitlePrefix}${title}`).join('|'), prop: 'revisions', format: 'json' })
             .end((err, res) => {
                 if (err) return reject(err);
                 const data = JSON.parse(res.text);
@@ -969,12 +977,44 @@ function checkUpdatePage(pageTitle, lastUpdate) {
 
 function checkUpdateMapData(pool, worldData, lastUpdate) {
     return new Promise((resolve, reject) => {
-        checkUpdatePage("Map IDs/0000-0400|Map IDs/0401-0800|Map IDs/0801-1200|Map IDs/1201-1600|Map IDs/1601-2000|Map IDs/2001-2400|Map IDs/2401-2800|Map IDs/2801-3200|Map IDs/3201-3600|Map IDs/3601-4000", lastUpdate).then(needsUpdate => {
+        getMapPageTitles().then(mapPageTitles => checkUpdatePage(mapPageTitles.join('|'), lastUpdate)).then(needsUpdate => {
             if (needsUpdate)
                 updateMapData(pool, worldData).then(() => resolve()).catch(err => reject(err));
             else
                 resolve();
         }).catch(err => reject(err));
+    });
+}
+
+function getMapPageTitles() {
+    return new Promise((resolve, reject) => {
+        const mapPageTitles = [];
+        const fetchPageTitles = continueKey => {
+            const query = {
+                action: 'query',
+                list: 'categorymembers',
+                cmtitle: 'Category:Yume 2kki Technical Information',
+                cmlimit: 'max',
+                format: 'json'
+            };
+            if (continueKey)
+                query.cmcontinue = continueKey;
+            getYumeWiki(apiUrl).query(query).end((err, res) => {
+                if (err) return reject(err);
+                const data = JSON.parse(res.text);
+                data.query.categorymembers
+                    .map(page => page.title)
+                    .filter(title => /^Yume 2kki:Map IDs\/\d{4}-\d{4}$/.test(title))
+                    .forEach(title => mapPageTitles.push(title.slice(apiTitlePrefix.length)));
+                if (data.continue && data.continue.cmcontinue)
+                    fetchPageTitles(data.continue.cmcontinue);
+                else if (mapPageTitles.length)
+                    resolve(mapPageTitles);
+                else
+                    reject(new Error('No Yume 2kki Map IDs pages found in the wiki category'));
+            });
+        };
+        fetchPageTitles();
     });
 }
 
@@ -1117,20 +1157,29 @@ function populateWorldData(pool, worldData, updatedWorldNames) {
 function populateWorldConnData(worldData) {
     const worldDataByName = _.keyBy(worldData, w => w.title);
     return new Promise((resolve, reject) => {
+        const seenContinueKeys = new Set();
+        let pageNumber = 0;
         setUpdateTask('fetchConnData');
         const fetchConnData = continueKey => {
             superagent.get(`https://wrapper.yume.wiki/connections?game=2kki${continueKey ? `&continueKey=${continueKey}` : ''}`, (err, res) => {
                 if (err) return reject(err);
                 const data = JSON.parse(res.text);
+                pageNumber++;
+
+                if (data.continueKey && seenContinueKeys.has(data.continueKey)) {
+                    console.warn(`Connection data pagination restarted at continueKey ${data.continueKey} after ${pageNumber - 1} pages; treating the preceding page as the end of the dataset.`);
+                    return resolve();
+                }
                 
                 for (let conn of data.connections) {
                     if (worldDataByName[conn.origin] && !conn.isRemoved)
                         worldDataByName[conn.origin].connections.push(parseWorldConn(conn));
                 }
 
-                if (data.continueKey)
+                if (data.continueKey) {
+                    seenContinueKeys.add(data.continueKey);
                     fetchConnData(data.continueKey);
-                else
+                } else
                     resolve();
             });
         };
@@ -1183,8 +1232,7 @@ function parseWorldConn(conn) {
                 break;
             case "Chance":
                 ret.type |= ConnType.CHANCE;
-                // TODO: Implement chanceDescription
-                ret.typeParams[ConnType.CHANCE] = { params: conn.chancePercentage };
+                ret.typeParams[ConnType.CHANCE] = { params: conn.chancePercentage || '0%' };
                 break;
             case "Seasonal":
                 ret.type |= ConnType.SEASONAL;
@@ -1277,10 +1325,10 @@ function updateWorlds(pool, worldData) {
             };
             const newWorldNames = Object.keys(newWorldsByName);
             if (newWorldNames.length) {
+                const newWorlds = newWorldNames.map(worldName => newWorldsByName[worldName]);
                 let i = 0;
                 let worldsQuery = 'INSERT INTO worlds (title, titleJP, author, depth, minDepth, filename, mapUrl, mapLabel, bgmUrl, bgmLabel, verAdded, verRemoved, verUpdated, verGaps, fgColor, bgColor, removed, secret) VALUES ';
-                for (const w in newWorldsByName) {
-                    const newWorld = newWorldsByName[w];
+                for (const newWorld of newWorlds) {
                     if (i++)
                         worldsQuery += ", ";
                     const title = newWorld.title.replace(/'/g, "''");
@@ -1299,15 +1347,13 @@ function updateWorlds(pool, worldData) {
                     const removedValue = newWorld.removed ? '1' : '0';
                     worldsQuery += `('${title}', ${titleJPValue}, ${authorValue}, 0, 0, '${newWorld.filename.replace(/'/g, "''")}', ${mapUrlValue}, ${mapLabelValue}, ${bgmUrlValue}, ${bgmLabelValue}, ${verAddedValue}, ${verRemovedValue}, ${verUpdatedValue}, ${verGapsValue}, ${fgColorValue}, ${bgColorValue}, ${removedValue}, 0)`;
                 }
-                pool.query(worldsQuery, (err, _) => {
+                pool.query(worldsQuery, (err, result) => {
                     if (err) return reject(err);
-                    const worldRowIdsQuery = `SELECT r.id FROM (SELECT id FROM worlds WHERE title IN ('${newWorldNames.map(w => w.replace(/'/g, "''")).join("', '")}') ORDER BY id DESC) r ORDER BY 1`;
-                    pool.query(worldRowIdsQuery, (err, rows) => {
-                        if (err) return reject(err);
-                        for (let r in rows)
-                            newWorldsByName[newWorldNames[r]].id = rows[r].id;
-                        insertCallback();
-                    });
+                    if (result.affectedRows !== newWorlds.length)
+                        return reject(new Error(`Expected to insert ${newWorlds.length} worlds, inserted ${result.affectedRows}`));
+                    for (let index = 0; index < newWorlds.length; index++)
+                        newWorlds[index].id = result.insertId + index;
+                    insertCallback();
                 });
             } else
                 insertCallback();
@@ -1897,12 +1943,12 @@ function updateMapData(pool, worldData) {
 function getMapData(worldData, url) {
     const root = !url;
     if (root)
-        url = 'https://yume.wiki/2kki/Map_IDs/0000-0400';
+        url = 'https://yume.wiki/2kki/Map_IDs/0001-0400';
 
     return new Promise((resolve, reject) => {
         if (root)
             setUpdateTask('fetchMapData');
-        superagent.get(url, function (err, res) {
+        getYumeWiki(url, function (err, res) {
             if (err) return reject(err);
             if (root)
                 worldData.forEach(w => w.mapIds = []);
@@ -2078,7 +2124,7 @@ function updateAuthorInfoData(pool) {
 function getAuthorInfoWikiData() {
     return new Promise((resolve, reject) => {
         setUpdateTask('fetchAuthorInfoData');
-        superagent.get('https://yume.wiki/2kki/Authors', function (err, res) {
+        getYumeWiki('https://yume.wiki/2kki/Authors', function (err, res) {
             if (err) return reject(err);
             const authorSectionsHtml = res.text.split('data-jp-name="');
             const authorInfo = [];
@@ -2219,7 +2265,7 @@ function getVersionInfoWikiData(url) {
     return new Promise((resolve, reject) => {
         if (root)
             setUpdateTask('fetchVersionInfoData');
-        superagent.get(url, function (err, res) {
+        getYumeWiki(url, function (err, res) {
             if (err) return reject(err);
             const versionSectionsHtml = res.text.split('<h3>');
             const versionInfo = [];
@@ -2474,7 +2520,7 @@ function updateEffectData(pool, worldData) {
 function getEffectWikiData(worldData) {
     return new Promise((resolve, reject) => {
         setUpdateTask('fetchEffectData');
-        superagent.get('https://yume.wiki/2kki/Effects', function (err, res) {
+        getYumeWiki('https://yume.wiki/2kki/Effects', function (err, res) {
             if (err) return reject(err);
             const effectSectionsHtml = res.text.split('<h3>');
             const effectData = [];
@@ -2672,7 +2718,7 @@ function updateMenuThemeData(pool, worldData) {
 function getMenuThemeWikiData(worldData) {
     return new Promise((resolve, reject) => {
         setUpdateTask('fetchMenuThemeData');
-        superagent.get('https://yume.wiki/2kki/Menu_Themes', function (err, res) {
+        getYumeWiki('https://yume.wiki/2kki/Menu_Themes', function (err, res) {
             if (err) return reject(err);
             const worldDataByName = _.keyBy(worldData, w => w.title);
             const menuThemeTablesHtml = sliceHtml(res.text, res.text.indexOf('<tbody>'), res.text.lastIndexOf('</table>'));
@@ -3001,7 +3047,7 @@ function updateWallpaperData(pool, worldData) {
 function getWallpaperWikiData(worldData) {
     return new Promise((resolve, reject) => {
         setUpdateTask('fetchWallpaperData');
-        superagent.get('https://yume.wiki/2kki/Wallpaper_Guide', function (err, res) {
+        getYumeWiki('https://yume.wiki/2kki/Wallpaper_Guide', function (err, res) {
             if (err) return reject(err);
             const specHtml = sliceHtml(res.text, res.text.indexOf('id="Specifications"'), res.text.indexOf('id="Removed_or_modified_wallpapers"'));
             const wallpaperSectionsHtml = res.text.split('"gallerybox"');
@@ -3224,7 +3270,7 @@ function getBgmTrackWikiData(worldData, url) {
     return new Promise((resolve, reject) => {
         if (root)
             setUpdateTask('fetchBgmTrackData');
-        superagent.get(url, function (err, res) {
+        getYumeWiki(url, function (err, res) {
             if (err) return reject(err);
             const tableRowRegex = /<tr>[.\s\S]*?<\/tr>/g;
             const tablesHtml = sliceHtml(res.text, res.text.indexOf('</table>') + 8, res.text.indexOf('class="page-footer"'));
@@ -3401,7 +3447,7 @@ function getIndirectBgmTrackUrl(bgmTrack) {
         if (!indirectUrlMatch)
             reject();
         const query = { action: 'query', titles: indirectUrlMatch[1], prop: 'imageinfo', iiprop: 'url', format: 'json' };
-        superagent.get(apiUrl)
+        getYumeWiki(apiUrl)
             .query(query)
             .end((err, res) => {
                 if (err) return reject(err);
@@ -3489,7 +3535,8 @@ function downloadImage(imageUrl, filename) {
     return new Promise((resolve, reject) => {
         const options = {
             url: imageUrl,
-            dest: 'public/images/worlds/' + filename
+            dest: 'public/images/worlds/' + filename,
+            headers: yumeWikiHeaders
         };
         
         return download.image(options)
@@ -3555,7 +3602,7 @@ if (isMainThread) {
 function getLocationPageContent(location) {
     return new Promise((resolve, reject) => {
         const query = { action: 'query', titles: `${apiTitlePrefix}${location}`, prop: 'revisions', rvslots: '*', rvprop: 'content', formatversion: 2, format: 'json' };
-        superagent.get(apiUrl)
+        getYumeWiki(apiUrl)
             .query(query)
             .end((err, res) => {
                 if (err) return reject(err);
@@ -3580,6 +3627,7 @@ function updateLocationPageVersionInfo(request, entry, content, version, user, c
             format: 'json'
         };
         request.post(apiUrl)
+            .set(yumeWikiHeaders)
             .type('form')
             .send(data)
             .then(res => {
@@ -3659,6 +3707,7 @@ function getCsrfToken(request) {
     return new Promise((resolve, reject) => {
         sendLoginRequest(request).then(() => {
             request.get(apiUrl)
+                .set(yumeWikiHeaders)
                 .query(query)
                 .end((err, res) => {
                     if (err) return reject(err);
@@ -3680,6 +3729,7 @@ function sendLoginRequest(request) {
                 format: 'json'
             };
             request.post(apiUrl)
+                .set(yumeWikiHeaders)
                 .type('form')
                 .send(data)
                 .then(() => resolve(), err => reject(err));
@@ -3697,6 +3747,7 @@ function getLoginToken(request) {
 
     return new Promise((resolve, reject) => {
         request.get(apiUrl)
+            .set(yumeWikiHeaders)
             .query(query)
             .end((err, res) => {
                 if (err) return reject(err);

@@ -28,6 +28,7 @@
       "description": "必须使用效果「{0}」才可通行。"
   },
   "128": {
+      "unspecified": "未指定",
       "name": "概率通行",
       "description": "有 {0} 的概率放行。"
   },

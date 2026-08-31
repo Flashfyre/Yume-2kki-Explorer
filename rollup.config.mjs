@@ -1,8 +1,8 @@
 import resolve from '@rollup/plugin-node-resolve';
 import commonJs from '@rollup/plugin-commonjs';
-import { terser } from "rollup-plugin-terser";
+import terser from '@rollup/plugin-terser';
 import inject from '@rollup/plugin-inject';
-import pkg from './package.json' assert { type: "json" };
+import pkg from './package.json' with { type: "json" };
 
 const umdConf = {
   format: 'umd',

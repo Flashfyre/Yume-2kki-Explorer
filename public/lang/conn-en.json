@@ -28,6 +28,7 @@
         "description": "Can be accessed with the following effect(s): {0}"
     },
     "128": {
+        "unspecified": "Unspecified",
         "name": "Chance",
         "description": "{0} chance"
     },
