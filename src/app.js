@@ -1626,6 +1626,7 @@ let audioPlayer;
 let playlistShuffleIndexes = [];
 
 let worldImageData = new Uint8ClampedArray();
+let nodeLabelYOffset;
 
 function initGraph(renderMode, displayMode, paths, reset) {
 
@@ -1634,6 +1635,11 @@ function initGraph(renderMode, displayMode, paths, reset) {
         graph.pauseAnimation();
         clearGraphObjects();
         if (!reuseGraph) {
+            nodeObjectMaterials.forEach(material => disposeNodeMaterial(material));
+            nodeObjectMaterials = [];
+            nodeImageDataState = null;
+            graph.enableNodeDrag(false);
+            graph.enablePointerInteraction(false);
             graph._destructor();
             graph.controls().dispose();
             graph.postProcessingComposer().dispose();
@@ -1970,14 +1976,24 @@ function initGraph(renderMode, displayMode, paths, reset) {
 
     const elem = document.getElementById('graph');
 
-    if (!graph)
+    if (!graph) {
+        if (isWebGL2) {
+            // A previous renderer may leave sprite-upload flags on this shared context.
+            graphContext.pixelStorei(graphContext.UNPACK_FLIP_Y_WEBGL, false);
+            graphContext.pixelStorei(graphContext.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        }
         graph = ForceGraph3D({
             rendererConfig: rendererConfig,
             controlType: 'orbit',
             numDimensions: is2d ? 2 : 3
         })(elem);
+    }
 
     const maxAnisotropy = graph.renderer().capabilities.getMaxAnisotropy();
+    if (isWebGL2) {
+        const context = graph.renderer().getContext();
+        glMaxTextureSize = Math.min(1024, context.getParameter(context.MAX_ARRAY_TEXTURE_LAYERS) || 256);
+    }
     if (isMobile) {
         graph.renderer().setPixelRatio(1);
         graph.postProcessingComposer().setPixelRatio(1);
@@ -2025,97 +2041,8 @@ function initGraph(renderMode, displayMode, paths, reset) {
                 ret.material.grayscale = getNodeGrayscale(node);
             }
 
-            if (!(isWebGL2 && is2d)) {
-                const worldName = !world.hidden ? getLocalizedLabel(world.title, world.titleJP) : localizedHiddenLabel;
-
-                const text = new SpriteText(worldName, 1.5, node.removed ? getNodeTextColor(node, ret.material.grayscale) : 'white');
-                text.fontFace = 'MS Gothic';
-                text.fontSize = isMobile ? 40 : 80;
-                text.strokeWidth = is2d ? 1.5 : 2 - (scale - 1) * 0.1;
-                text.strokeColor = 'black';
-                text.backgroundColor = false;
-
-                if (is2d) {
-                    text.material.depthTest = false;
-                    text.renderOrder = world.id;
-                } else {
-                    text.borderWidth = 1;
-                    text.borderColor = 'transparent';
-                }
-                if (isWebGL2) {
-                    text.renderOrder = 2;
-                    text.material.depthWrite = false;
-                }
-
-                let textLines = worldName.split(' ');
-                for (let l = 0; l < textLines.length; l++) {
-                    text.text = textLines[l];
-                    if (text.scale.x * scale < 13 * scale) {
-                        let mergeIndex = 0;
-                        for (let l2 = l + 1; l2 < textLines.length; l2++) {
-                            const mergedLine = textLines.slice(l, l2 + 1).join(' ');
-                            text.text = mergedLine;
-                            if (text.scale.x * scale < 13 * scale)
-                                mergeIndex = l2;
-                            else
-                                break;
-                        }
-                        if (mergeIndex)
-                            textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(' ')], textLines.slice(mergeIndex + 1));
-                    } else if (textLines[l].indexOf('：') > -1)
-                        textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, '： ').split(' ')).concat(textLines.slice(l + 1));
-                }
-
-                text.text = textLines.join('\n');
-                text.defaultScale = { 'x': text.scale.x, 'y': text.scale.y };
-                text.material.transparent = true;
-                text.material.opacity = ret.material.opacity;
-                if (config.labelMode < 3)
-                    text.visible = false;
-
-                text.scale.x *= scale;
-                text.scale.y *= scale;
-
-                ret.add(text);
-
-                if (worldIsNew[node.id]) {
-                    const iconText = new SpriteText(is2d ? ` ${localizedNodeIconNew} ` : localizedNodeIconNew, 2, 'gold');
-                    iconText.__graphObjType = 'label';
-                    iconText.fontFace = 'MS Gothic';
-                    iconText.fontSize = isMobile ? 40 : 80;
-                    iconText.strokeWidth = 1;
-                    iconText.strokeColor = '#4d4000';
-                    iconText.backgroundColor = false;
-
-                    if (is2d) {
-                        iconText.material.depthTest = false;
-                        iconText.renderOrder = world.id;
-                    } else {
-                        iconText.borderWidth = 1;
-                        iconText.borderColor = 'transparent';
-                    }
-                    if (isWebGL2) {
-                        iconText.renderOrder = 2;
-                        iconText.material.depthWrite = false;
-                    }
-
-                    iconText.defaultScale = { 'x': iconText.scale.x, 'y': iconText.scale.y };
-                    iconText.material.transparent = true;
-                    iconText.material.opacity = ret.material.opacity;
-                    iconText.visible = isNodeLabelVisible(node);
-                    iconText.scale.x *= scale;
-                    iconText.scale.y *= scale;
-
-                    if (is2d) {
-                        iconText.position.set(7 * scale, 4.75 * scale, 0);
-                        iconText.center.set(1, 1);
-                    } else {
-                        iconText.center.set(1 - ((6.5 * scale) / iconText.scale.x), 1 - ((4.875 * scale) / iconText.scale.y));
-                    }
-
-                    ret.add(iconText);
-                }
-            }
+            if (!(isWebGL2 && is2d) && isNodeLabelVisible(node))
+                initNodeLabels(node, ret, is2d);
 
             return ret;
         })
@@ -2329,7 +2256,7 @@ function initGraph(renderMode, displayMode, paths, reset) {
     }
 
     if (isWebGL2) {
-        initNodeObjectMaterials();
+        initNodeObjectMaterials(nodes.length);
         initNodeObjects(nodes.length, is2d);
         updateNodeImageData(nodes, paths, is2d);
         makeIconObject(is2d);
@@ -2376,7 +2303,7 @@ let time = 0;
 const dashLineSpeed = 20;
 function onRender(is2d) {
     time -= clock.getDelta() * dashLineSpeed;
-    if (!(isWebGL2 && is2d))
+    if (config.labelMode > 0 && !(isWebGL2 && is2d))
         updateNodeLabels(is2d, time * -1);
     if (isWebGL2) {
         const cameraMatrix = graph.camera().matrixWorld.elements;
@@ -2394,66 +2321,36 @@ function onRender(is2d) {
 
 // START WEBGL2.0 SPECIFIC CODE
 function updateNodeImageData(nodes, isSubset, is2d) {
-    const amount = nodes.length;
-    let nodeChunks = Math.trunc(amount / glMaxTextureSize);
-
-    for (let chunk = 0; chunk <= nodeChunks; chunk++) {
-        let chunkSize = glMaxTextureSize;
-        if (chunk == nodeChunks)
-            chunkSize = amount % glMaxTextureSize;
-        nodeObjects[chunk].count = chunkSize;
-    }
-
+    const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
+    nodeObjects.forEach((object, chunk) => {
+        object.count = Math.min(glMaxTextureSize, nodes.length - chunk * glMaxTextureSize);
+    });
     if (nodeImageDataState && nodeImageDataState.source === worldImageData && nodeImageDataState.is2d === is2d
-        && nodeImageDataState.ids.length === amount && nodes.every((node, index) => node.id === nodeImageDataState.ids[index]))
+        && nodeImageDataState.ids.length === nodes.length && nodes.every((node, index) => node.id === nodeImageDataState.ids[index]))
         return;
-
-    if (isSubset) {
-        let index = 0;
-        let rIndex = 0;
-        const totalNodeCount = nodes.length;
-        let nodeObject = nodeObjects[0];
-
-        nodes.forEach(node => {
-            let chunkId = Math.trunc(index / glMaxTextureSize);
-            let actualIndex = index % glMaxTextureSize;
-            nodeObject = nodeObjects[chunkId];
-
-            copyImageData(nodeObject, node.id, index, 1);
-            if (is2d) {
-                copyImageData(nodeObject, node.id + worldData.length, index + totalNodeCount, 1);
+    nodeObjects.forEach((object, chunk) => {
+        const texture = object.material.uniforms.diffuse.value;
+        const labels = object.material.uniforms.labels;
+        if (!is2d && labels.value !== texture) {
+            labels.value.dispose();
+            labels.value = texture;
+        }
+        const start = chunk * glMaxTextureSize;
+        if (isSubset) {
+            const pixels = new Uint8ClampedArray(object.count * dataLength);
+            for (let i = 0; i < object.count; i++) {
+                const offset = nodes[start + i].id * dataLength;
+                pixels.set(worldImageData.subarray(offset, offset + dataLength), i * dataLength);
             }
-            index++;
-        });
-    } else {
-        let id = 0;
-        const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
-        nodeObjects.forEach(obj => {
-            let chunkOffset = id * glMaxTextureSize;
-            let chunkSize = glMaxTextureSize;
-            if (id == (nodeObjects.length - 1))
-                chunkSize = amount % glMaxTextureSize;
-
-            let offsetFrom = chunkOffset * dataLength;
-            let offsetTo = offsetFrom + chunkSize * dataLength;
-
-            obj.material.uniforms.diffuse.value.image.data.set(worldImageData.subarray(offsetFrom, offsetTo), 0);
-            if (is2d)
-                copyImageData(obj, chunkOffset + amount, chunkSize, chunkSize);
-            id++;
-        });
-    }
-    nodeObjects.forEach(obj => {
-        obj.material.uniforms.diffuse.value.needsUpdate = true;
+            texture.image.data = pixels;
+        } else {
+            texture.image.data = worldImageData.subarray(start * dataLength, (start + object.count) * dataLength);
+        }
+        texture.needsUpdate = true;
+        object.material.uniformsNeedUpdate = true;
+        object.userData.labelSource = null;
     });
     nodeImageDataState = { source: worldImageData, is2d, ids: nodes.map(node => node.id) };
-}
-
-function copyImageData(nodeObject, from, to, amount) {
-    const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
-    let offsetFrom = from * dataLength;
-    let offsetTo = to * dataLength;
-    nodeObject.material.uniforms.diffuse.value.image.data.set(worldImageData.subarray(offsetFrom, offsetFrom + amount * dataLength), offsetTo);
 }
 
 const instanceVS = `precision highp float;
@@ -2467,6 +2364,8 @@ const instanceVS = `precision highp float;
     out float vOpacity;
     in float grayscale;
     out float vGrayscale;
+    in float labelIndex;
+    out float vLabelIndex;
     in float texIndex;
     out float vTexIndex;
     in vec2 uv;
@@ -2477,6 +2376,7 @@ const instanceVS = `precision highp float;
         vGrayscale = grayscale;
         vUv = vec2(uv.x, 1.0 - uv.y); // flip texture vertically, because of how it's stored
         vTexIndex = texIndex;
+        vLabelIndex = labelIndex;
         vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
         gl_Position = projectionMatrix * mvPosition;
     }
@@ -2536,13 +2436,17 @@ const instanceFS = `precision highp float;
     in float vOpacity;
     in float vGrayscale;
     in float vTexIndex;
+    in float vLabelIndex;
     in vec2 vUv;
 
     uniform sampler2DArray diffuse;
+    uniform sampler2DArray labels;
     out vec4 fragmentColor;
 
     void main() {
-        vec4 temp = texture(diffuse, vec3(vUv, int(vTexIndex + 0.1)));
+        vec4 temp = vLabelIndex >= 0.0
+            ? texture(labels, vec3(vUv, int(vLabelIndex + 0.1)))
+            : texture(diffuse, vec3(vUv, int(vTexIndex + 0.1)));
         temp.a = vOpacity;
         if (vGrayscale > 0.0) {
             float v = (temp.r + temp.g + temp.b) / 3.0;
@@ -2823,130 +2727,107 @@ function sortIconInstances(instanceObject, unsortedOpacities, unsortedGrayscales
     instanceObject.geometry.attributes.texIndex.needsUpdate = true;
 }
 
-function initWorldTextures() {
-    const amount = worldData.length;
-    const filenames = [];
-    worldData.forEach(world => filenames.push(!world.hidden ? worldData[world.id].filename : hiddenWorldImageUrl));
+function drawNodeLabel(ctx, world) {
+    const fontSize = 36 * nodeImgDimensions.x / 320;
+    const halfFontSize = fontSize / 2;
+    const worldName = !world.hidden ? getLocalizedLabel(world.title, world.titleJP) : localizedHiddenLabel;
+    ctx.font = fontSize + 'px MS Gothic';
+    ctx.fillStyle = 'white';
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 5 * nodeImgDimensions.x / 320;
+    ctx.save();
 
-    const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
+    for (let v = 0; v < 3; v++) {
+        if (v)
+            ctx.restore();
 
-    worldImageData = new Uint8ClampedArray(dataLength * amount * 2 + dataLength);
-    return new Promise((resolve, reject) => {
-        Promise.all(getImageRawData(filenames))
-            .then(images => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
-                canvas.width = nodeImgDimensions.x;
-                canvas.height = nodeImgDimensions.y;
-                const fontSize = 36 * nodeImgDimensions.x / 320;
-                const halfFontSize = fontSize / 2;
-                let lineYOffset;
-                ctx.font = fontSize + 'px MS Gothic';
-                ctx.fillStyle = 'white';
-                ctx.strokeStyle = 'black';
-                ctx.lineWidth = 5 * nodeImgDimensions.x / 320;
-                let index = 0;
-                let rIndex = 0;
-                const offsetLabels = images.length * dataLength;
-                images.forEach(img => {
-                    // stretch to fit
-                    ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
-                    let nodeImageData = ctx.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
-                    let offset = index * dataLength;
-                    worldImageData.set(nodeImageData.data, offset);
-                    const worldId = index;
-                    const world = worldData[worldId];
-                    const worldName = !world.hidden ? getLocalizedLabel(world.title, world.titleJP) : localizedHiddenLabel;
-
-                    ctx.save();
-
-                    for (let v = 0; v < 3; v++) {
-                        if (v)
-                            ctx.restore();
-
-                        let textLines = worldName.split(" ");
-                        ctx.fillStyle = nodeTextColors[v];
-                        for (let l = 0; l < textLines.length; l++) {
-                            if (ctx.measureText(textLines[l]).width < nodeImgDimensions.x) {
-                                let mergeIndex = 0;
-                                for (let l2 = l + 1; l2 < textLines.length; l2++) {
-                                    const mergedLine = textLines.slice(l, l2 + 1).join(" ");
-                                    if (ctx.measureText(mergedLine).width < nodeImgDimensions.x)
-                                        mergeIndex = l2;
-                                    else
-                                        break;
-                                }
-                                if (mergeIndex)
-                                    textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
-                            } else if (textLines[l].indexOf("：") > -1)
-                                textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
-                        }
-                        for (let l in textLines) {
-                            const textLine = textLines[l];
-                            const lineWidth = ctx.measureText(textLine).width;
-                            !lineYOffset && (lineYOffset = ctx.measureText(textLine).actualBoundingBoxAscent / 2);
-                            const lineX = (nodeImgDimensions.x - lineWidth) / 2;
-                            const lineY = ((nodeImgDimensions.y / 2) + lineYOffset) - ((textLines.length - 1) * halfFontSize) + l * fontSize;
-                            ctx.strokeText(textLine, lineX, lineY);
-                            ctx.fillText(textLine, lineX, lineY);
-                        }
-                        nodeImageData = ctx.getImageData(0, 0, nodeImgDimensions.x, nodeImgDimensions.y);
-                        worldImageData.set(nodeImageData.data, offsetLabels + offset);
-                        if (!world.removed)
-                            break;
-                    }
-                    index++;
-                });
-                canvas.remove();
-                resolve();
-            })
-            .catch(err => reject(err));
-    });
+        let textLines = worldName.split(" ");
+        ctx.fillStyle = nodeTextColors[v];
+        for (let l = 0; l < textLines.length; l++) {
+            if (ctx.measureText(textLines[l]).width < nodeImgDimensions.x) {
+                let mergeIndex = 0;
+                for (let l2 = l + 1; l2 < textLines.length; l2++) {
+                    const mergedLine = textLines.slice(l, l2 + 1).join(" ");
+                    if (ctx.measureText(mergedLine).width < nodeImgDimensions.x)
+                        mergeIndex = l2;
+                    else
+                        break;
+                }
+                if (mergeIndex)
+                    textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(" ")], textLines.slice(mergeIndex + 1));
+            } else if (textLines[l].indexOf("：") > -1)
+                textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, "： ").split(" ")).concat(textLines.slice(l + 1));
+        }
+        for (let l in textLines) {
+            const textLine = textLines[l];
+            const lineWidth = ctx.measureText(textLine).width;
+            !nodeLabelYOffset && (nodeLabelYOffset = ctx.measureText(textLine).actualBoundingBoxAscent / 2);
+            const lineX = (nodeImgDimensions.x - lineWidth) / 2;
+            const lineY = ((nodeImgDimensions.y / 2) + nodeLabelYOffset) - ((textLines.length - 1) * halfFontSize) + l * fontSize;
+            ctx.strokeText(textLine, lineX, lineY);
+            ctx.fillText(textLine, lineX, lineY);
+        }
+        if (!world.removed)
+            break;
+    }
 }
 
-function initNodeObjectMaterials() {
-    const amount = worldData.length;
-    let nodeChunks = Math.trunc(amount / glMaxTextureSize);
+function initWorldTextures() {
+    const filenames = worldData.map(world => !world.hidden ? world.filename : hiddenWorldImageUrl);
+    const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
+    worldImageData = new Uint8ClampedArray(dataLength * worldData.length);
+    nodeLabelYOffset = undefined;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
+    canvas.width = nodeImgDimensions.x;
+    canvas.height = nodeImgDimensions.y;
+    return getImageRawData(filenames, (img, index) => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);
+        worldImageData.set(ctx.getImageData(0, 0, canvas.width, canvas.height).data, index * dataLength);
+        // Keep the original shared text baseline without storing every labelled screenshot.
+        if (!index)
+            drawNodeLabel(ctx, worldData[index]);
+    }).finally(() => canvas.remove());
+}
 
-    for (let chunk = 0; chunk <= nodeChunks; chunk++) {
-        let chunkSize = glMaxTextureSize;
-        if (chunk == nodeChunks)
-            chunkSize = amount % glMaxTextureSize;
+function disposeNodeMaterial(material) {
+    new Set([material.uniforms.diffuse.value, material.uniforms.labels.value]).forEach(texture => texture.dispose());
+    material.dispose();
+}
 
+function initNodeObjectMaterials(amount) {
+    const nodeChunks = Math.ceil(amount / glMaxTextureSize);
+    const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
+    for (let chunk = 0; chunk < nodeChunks; chunk++) {
+        const chunkSize = Math.min(glMaxTextureSize, amount - chunk * glMaxTextureSize);
         const existingMaterial = nodeObjectMaterials[chunk];
-        if (existingMaterial && existingMaterial.uniforms.diffuse.value.image.depth === chunkSize * 2) {
+        if (existingMaterial && existingMaterial.uniforms.diffuse.value.image.depth === chunkSize) {
             existingMaterial.depthTest = !is2d;
             continue;
         }
-        if (existingMaterial) {
-            existingMaterial.uniforms.diffuse.value.dispose();
-            existingMaterial.dispose();
-        }
+        if (existingMaterial)
+            disposeNodeMaterial(existingMaterial);
         nodeImageDataState = null;
-        const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
-        const buffer = new ArrayBuffer(dataLength * chunkSize * 2);
-        const texture = new THREE.DataArrayTexture(new Uint8ClampedArray(buffer), nodeImgDimensions.x, nodeImgDimensions.y, chunkSize * 2);
+        const start = chunk * glMaxTextureSize * dataLength;
+        const pixels = worldImageData.subarray(start, start + chunkSize * dataLength);
+        const texture = new THREE.DataArrayTexture(pixels, nodeImgDimensions.x, nodeImgDimensions.y, chunkSize);
         texture.format = THREE.RGBAFormat;
         texture.type = THREE.UnsignedByteType;
-
-        let nodeObjectMaterial = new THREE.RawShaderMaterial({
-            uniforms: {
-                diffuse: { value: texture },
-            },
+        nodeObjectMaterials[chunk] = new THREE.RawShaderMaterial({
+            uniforms: { diffuse: { value: texture }, labels: { value: texture } },
             vertexShader: instanceVS,
             fragmentShader: instanceFS,
             transparent: true,
             depthTest: !is2d,
             glslVersion: THREE.GLSL3
         });
-        nodeObjectMaterials[chunk] = nodeObjectMaterial;
     }
-    for (let chunk = nodeChunks + 1; chunk < nodeObjectMaterials.length; chunk++) {
-        nodeObjectMaterials[chunk].uniforms.diffuse.value.dispose();
-        nodeObjectMaterials[chunk].dispose();
+    for (let chunk = nodeChunks; chunk < nodeObjectMaterials.length; chunk++) {
+        disposeNodeMaterial(nodeObjectMaterials[chunk]);
         nodeImageDataState = null;
     }
-    nodeObjectMaterials.length = nodeChunks + 1;
+    nodeObjectMaterials.length = nodeChunks;
 }
 
 function clearGraphObjects() {
@@ -2957,26 +2838,50 @@ function clearGraphObjects() {
     });
     Object.values(icons3D || {}).forEach(icons => icons.forEach(icon => removeObject3D(icon, true)));
     iconObject = nodeIconObject = linksTwoWayBuffered = linksOneWayBuffered = undefined;
+    const geometries = new Set();
+    const materials = new Set();
+    const textures = new Set();
     graph.graphData().nodes.forEach(node => {
         const object = node.__threeObj;
-        if (object) {
-            // The library removes these on its next update. Hide them first
-            // so a pending frame cannot upload their disposed geometry again.
-            object.visible = false;
-            if (object.geometry) object.geometry.dispose();
-            if (object.material.map) object.material.map.dispose();
-            object.material.dispose();
-        }
+        if (!object)
+            return;
+        object.visible = false;
+        object.traverse(child => {
+            if (child.geometry)
+                geometries.add(child.geometry);
+            for (const material of (Array.isArray(child.material) ? child.material : [child.material])) {
+                if (!material)
+                    continue;
+                materials.add(material);
+                if (material.map)
+                    textures.add(material.map);
+            }
+        });
     });
+    geometries.forEach(geometry => geometry.dispose());
+    textures.forEach(texture => disposeTexture(texture));
+    materials.forEach(material => material.dispose());
+}
+
+function disposeTexture(texture) {
+    texture.dispose();
+    const image = texture.image;
+    if (image?.tagName === 'CANVAS') {
+        image.width = 0;
+        image.height = 0;
+    }
 }
 
 function removeObject3D(object3D, disposeMaterial = false) {
     // for better memory management and performance
-    if (object3D.geometry) object3D.geometry.dispose();
-    if (object3D.isInstancedMesh) object3D.dispose();
+    if (object3D.geometry && !object3D.isSprite)
+        object3D.geometry.dispose();
+    if (object3D.isInstancedMesh)
+        object3D.dispose();
     if (disposeMaterial && object3D.material) {
         const material = object3D.material;
-        if (material.map) material.map.dispose();
+        if (material.map)
+            disposeTexture(material.map);
         if (material.uniforms && material.uniforms.diffuse)
             material.uniforms.diffuse.value.dispose();
         material.dispose();
@@ -2991,20 +2896,18 @@ function initNodeObjects(amount, is2d) {
         removeObject3D(obj);
     });
     nodeObjects = [];
-    let nodeChunks = Math.trunc(amount / glMaxTextureSize);
+    const nodeChunks = Math.ceil(amount / glMaxTextureSize);
 
-    for (let chunk = 0; chunk <= nodeChunks; chunk++) {
+    for (let chunk = 0; chunk < nodeChunks; chunk++) {
         let chunkOffset = chunk * glMaxTextureSize;
-        let chunkSize = glMaxTextureSize;
-        if (chunk == nodeChunks)
-            chunkSize = amount % glMaxTextureSize;
+        const chunkSize = Math.min(glMaxTextureSize, amount - chunkOffset);
 
         const opacities = [];
         const grayscales = [];
         const texIndexes = [];
 
         for (let i = 0; i < chunkSize; i++) {
-            const world = worldData[chunkOffset + i];
+            const world = worldData[graph.graphData().nodes[chunkOffset + i].id];
             opacities[i] = getNodeOpacity(world.id);
             grayscales[i] = world.removed ? 1 : 0;
             texIndexes[i] = i;
@@ -3018,8 +2921,9 @@ function initNodeObjects(amount, is2d) {
 
         geometry.attributes.opacity = new THREE.InstancedBufferAttribute(new Float32Array(opacities), 1);
         geometry.attributes.grayscale = new THREE.InstancedBufferAttribute(new Float32Array(grayscales), 1);
+        geometry.attributes.labelIndex = new THREE.InstancedBufferAttribute(new Float32Array(chunkSize).fill(-1), 1);
         geometry.attributes.texIndex = new THREE.InstancedBufferAttribute(new Float32Array(texIndexes), 1);
-        let nodeObject = new THREE.InstancedMesh(geometry, nodeObjectMaterials[chunk], amount);
+        let nodeObject = new THREE.InstancedMesh(geometry, nodeObjectMaterials[chunk], chunkSize);
         nodeObject.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
         nodeObject.renderOrder = 1;
         nodeObjects[chunk] = nodeObject;
@@ -3028,11 +2932,11 @@ function initNodeObjects(amount, is2d) {
 }
 
 function getNodeChunkId(node) {
-    return Math.trunc(node.id / glMaxTextureSize);
+    return Math.trunc(node.index / glMaxTextureSize);
 }
 
 function getNodeIndexInChunk(node) {
-    return node.id % glMaxTextureSize;
+    return node.index % glMaxTextureSize;
 }
 
 function updateNodePositions(is2d) {
@@ -3076,31 +2980,57 @@ function updateNodePositions(is2d) {
 }
 
 function updateNodeLabels2D() {
-    if (!nodeObjects.length) return;
-    let index = 0;
-    let iconIndex = 0;
+    if (!nodeObjects.length)
+        return;
     const nodes = graph.graphData().nodes;
-    nodes.forEach(node => {
-        let chunkId = getNodeChunkId(node);
-        let nodeObject = nodeObjects[chunkId];
-        let indexInChunk = getNodeIndexInChunk(node);
-        let chunkSize = glMaxTextureSize;
-        if (chunkId == nodeObjects.length - 1)
-            chunkSize = nodes.length % glMaxTextureSize;
-
-        if (isNodeLabelVisible(node) && nodeObject) {
-            nodeObject.geometry.attributes.texIndex.array[indexInChunk] = indexInChunk + chunkSize;
-        } else if (nodeObject)
-            nodeObject.geometry.attributes.texIndex.array[indexInChunk] = indexInChunk;
-        index++;
-        if (nodeIconObject && node.isNew)
-            nodeIconObject.geometry.attributes.opacity.array[iconIndex++] = getNodeOpacity(node.id);
+    const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
+    nodeObjects.forEach((object, chunk) => {
+        const start = chunk * glMaxTextureSize;
+        const visible = nodes.slice(start, start + object.count).filter(node => isNodeLabelVisible(node));
+        if (object.userData.labelSource === worldImageData && object.userData.labelIds?.length === visible.length
+            && visible.every((node, index) => node.id === object.userData.labelIds[index]))
+            return;
+        const indices = object.geometry.attributes.labelIndex;
+        indices.array.fill(-1);
+        const base = object.material.uniforms.diffuse.value;
+        let texture = object.material.uniforms.labels.value;
+        if (visible.length) {
+            if (texture === base || texture.image.depth !== visible.length) {
+                if (texture !== base)
+                    texture.dispose();
+                texture = new THREE.DataArrayTexture(new Uint8ClampedArray(visible.length * dataLength), nodeImgDimensions.x, nodeImgDimensions.y, visible.length);
+                object.material.uniforms.labels.value = texture;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = nodeImgDimensions.x;
+            canvas.height = nodeImgDimensions.y;
+            const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
+            visible.forEach((node, index) => {
+                const offset = node.id * dataLength;
+                ctx.putImageData(new ImageData(worldImageData.subarray(offset, offset + dataLength), canvas.width, canvas.height), 0, 0);
+                drawNodeLabel(ctx, worldData[node.id]);
+                texture.image.data.set(ctx.getImageData(0, 0, canvas.width, canvas.height).data, index * dataLength);
+                indices.array[node.index - start] = index;
+            });
+            canvas.remove();
+            texture.needsUpdate = true;
+        } else if (texture !== base) {
+            texture.dispose();
+            object.material.uniforms.labels.value = base;
+        }
+        indices.needsUpdate = true;
+        object.material.uniformsNeedUpdate = true;
+        object.userData.labelSource = worldImageData;
+        object.userData.labelIds = visible.map(node => node.id);
     });
-    nodeObjects.forEach(obj => {
-        obj.geometry.attributes.texIndex.needsUpdate = true;
-    });
-    if (nodeIconObject)
+    if (nodeIconObject) {
+        let iconIndex = 0;
+        nodes.forEach(node => {
+            if (node.isNew)
+                nodeIconObject.geometry.attributes.opacity.array[iconIndex++] = getNodeOpacity(node.id);
+        });
         nodeIconObject.geometry.attributes.opacity.needsUpdate = true;
+    }
 }
 
 function makeNodeIconObject() {
@@ -3254,10 +3184,11 @@ function getLocalizedBgmTrackLabel(localizedBgmTrackLabel) {
 
 /**
  *
- * @param {Array} texturesSources - List of Strings that represent texture sources
- * @returns {Array} Array containing a Promise for each source 
+ * @param {Array} imageSources - Texture image URLs
+ * @param {Function} onImage - Called for each decoded image and its original index
+ * @returns {Promise} Resolves after all images have been processed
  */
-function getImageRawData(imageSources) {
+function getImageRawData(imageSources, onImage) {
     let fallbackImage;
     const getFallbackImage = () => {
         if (!fallbackImage)
@@ -3271,67 +3202,161 @@ function getImageRawData(imageSources) {
             });
         return fallbackImage;
     };
-    return imageSources.map(imageSource => {
-        return new Promise(resolve => {
-            imageLoader.load(
-                imageSource,
-                image => resolve(image),
-                undefined, // onProgress callback not supported from r84
-                () => resolve(getFallbackImage())
-            );
-        });
+    const loadImage = imageSource => new Promise(resolve => {
+        imageLoader.load(
+            imageSource,
+            image => resolve(image),
+            undefined, // onProgress callback not supported from r84
+            () => resolve(getFallbackImage())
+        );
     });
+    let nextIndex = 0;
+    const loadNextImages = async () => {
+        while (nextIndex < imageSources.length) {
+            const index = nextIndex++;
+            const image = await loadImage(imageSources[index]);
+            onImage(image, index);
+        }
+    };
+    return Promise.all(Array.from({ length: Math.min(8, imageSources.length) }, loadNextImages));
+}
+
+function initNodeLabels(node, ret, is2d) {
+    const world = worldData[node.id];
+    const scale = worldScales[node.id];
+    const worldName = !world.hidden ? getLocalizedLabel(world.title, world.titleJP) : localizedHiddenLabel;
+
+    const text = new SpriteText(worldName, 1.5, node.removed ? getNodeTextColor(node, ret.material.grayscale) : 'white');
+    text.fontFace = 'MS Gothic';
+    text.fontSize = isMobile ? 40 : 80;
+    text.strokeWidth = is2d ? 1.5 : 2 - (scale - 1) * 0.1;
+    text.strokeColor = 'black';
+    text.backgroundColor = false;
+
+    if (is2d) {
+        text.material.depthTest = false;
+        text.renderOrder = world.id;
+    } else {
+        text.borderWidth = 1;
+        text.borderColor = 'transparent';
+    }
+    if (isWebGL2) {
+        text.renderOrder = 2;
+        text.material.depthWrite = false;
+    }
+
+    let textLines = worldName.split(' ');
+    for (let l = 0; l < textLines.length; l++) {
+        text.text = textLines[l];
+        if (text.scale.x * scale < 13 * scale) {
+            let mergeIndex = 0;
+            for (let l2 = l + 1; l2 < textLines.length; l2++) {
+                const mergedLine = textLines.slice(l, l2 + 1).join(' ');
+                text.text = mergedLine;
+                if (text.scale.x * scale < 13 * scale)
+                    mergeIndex = l2;
+                else
+                    break;
+            }
+            if (mergeIndex)
+                textLines = textLines.slice(0, l).concat([textLines.slice(l, mergeIndex + 1).join(' ')], textLines.slice(mergeIndex + 1));
+        } else if (textLines[l].indexOf('：') > -1)
+            textLines = textLines.slice(0, l).concat(textLines[l].replace(/：/g, '： ').split(' ')).concat(textLines.slice(l + 1));
+    }
+
+    text.text = textLines.join('\n');
+    text.defaultScale = { 'x': text.scale.x, 'y': text.scale.y };
+    text.material.transparent = true;
+    text.material.opacity = ret.material.opacity;
+    if (config.labelMode < 3)
+        text.visible = false;
+
+    text.scale.x *= scale;
+    text.scale.y *= scale;
+
+    ret.add(text);
+
+    if (node.isNew) {
+        const iconText = new SpriteText(is2d ? ` ${localizedNodeIconNew} ` : localizedNodeIconNew, 2, 'gold');
+        iconText.__graphObjType = 'label';
+        iconText.fontFace = 'MS Gothic';
+        iconText.fontSize = isMobile ? 40 : 80;
+        iconText.strokeWidth = 1;
+        iconText.strokeColor = '#4d4000';
+        iconText.backgroundColor = false;
+
+        if (is2d) {
+            iconText.material.depthTest = false;
+            iconText.renderOrder = world.id;
+        } else {
+            iconText.borderWidth = 1;
+            iconText.borderColor = 'transparent';
+        }
+        if (isWebGL2) {
+            iconText.renderOrder = 2;
+            iconText.material.depthWrite = false;
+        }
+
+        iconText.defaultScale = { 'x': iconText.scale.x, 'y': iconText.scale.y };
+        iconText.material.transparent = true;
+        iconText.material.opacity = ret.material.opacity;
+        iconText.visible = isNodeLabelVisible(node);
+        iconText.scale.x *= scale;
+        iconText.scale.y *= scale;
+
+        if (is2d) {
+            iconText.position.set(7 * scale, 4.75 * scale, 0);
+            iconText.center.set(1, 1);
+        } else {
+            iconText.center.set(1 - ((6.5 * scale) / iconText.scale.x), 1 - ((4.875 * scale) / iconText.scale.y));
+        }
+
+        ret.add(iconText);
+    }
 }
 
 function updateNodeLabels(is2d, time) {
-    if (config.labelMode > 0 || !is2d) {
-        const camera = graph.camera();
-        const dir = is2d ? null : new THREE.Vector3();
-        const modTime = time % 50;
-        const opacityMultiplier = (modTime < 25 ? modTime : 50 - modTime) / 25;
-        graph.graphData().nodes.forEach(node => {
-            const obj = node.__threeObj;
-            if (obj) {
-                const showLabel = isNodeLabelVisible(node);
-                const text = obj.children[0];
-                const scale = worldScales[node.id];
-                const textOpacity = showLabel ? getNodeOpacity(node.id) : 0;
-                if (!is2d && showLabel) {
-                    dir.subVectors(camera.position, obj.getWorldPosition(dir)).normalize();
-                }
-                if (showLabel) {
-                    if (!is2d) {
-                        text.position.set(0, 0, 0);
-                        text.translateOnAxis(dir, 10.5 * scale);
-                    }
-                    text.material.opacity = textOpacity;
-                    const textColor = getNodeTextColor(node);
-                    if (text.color !== textColor)
-                        text.color = textColor;
-                    text.scale.x = text.defaultScale.x * scale;
-                    text.scale.y = text.defaultScale.y * scale;
-
-                    text.visible = true;
-                } else
-                    text.visible = false;
-
-                if (((isWebGL2 && node.isNew && !is2d) || (!isWebGL2 && obj.children.length > 1))) {
-                    const iconLabel = obj.children[1];
-                    if (showLabel) {
-                        if (!is2d) {
-                            iconLabel.position.set(0, 0, 0);
-                            iconLabel.translateOnAxis(dir, 9.75 * scale);
-                        }
-                        iconLabel.scale.x = iconLabel.defaultScale.x * scale;
-                        iconLabel.scale.y = iconLabel.defaultScale.y * scale;
-                        iconLabel.material.opacity = textOpacity * opacityMultiplier;
-                        iconLabel.visible = true;
-                    } else
-                        iconLabel.visible = false;
-                }
+    const camera = graph.camera();
+    const dir = is2d ? null : new THREE.Vector3();
+    const modTime = time % 50;
+    const opacityMultiplier = (modTime < 25 ? modTime : 50 - modTime) / 25;
+    graph.graphData().nodes.forEach(node => {
+        const obj = node.__threeObj;
+        if (!obj)
+            return;
+        if (!isNodeLabelVisible(node)) {
+            obj.children.slice().forEach(child => removeObject3D(child, true));
+            return;
+        }
+        if (!obj.children.length)
+            initNodeLabels(node, obj, is2d);
+        const text = obj.children[0];
+        const scale = worldScales[node.id];
+        const textOpacity = getNodeOpacity(node.id);
+        if (!is2d) {
+            dir.subVectors(camera.position, obj.getWorldPosition(dir)).normalize();
+            text.position.set(0, 0, 0);
+            text.translateOnAxis(dir, 10.5 * scale);
+        }
+        text.material.opacity = textOpacity;
+        const textColor = getNodeTextColor(node);
+        if (text.color !== textColor)
+            text.color = textColor;
+        text.scale.x = text.defaultScale.x * scale;
+        text.scale.y = text.defaultScale.y * scale;
+        text.visible = true;
+        if ((isWebGL2 && node.isNew && !is2d) || (!isWebGL2 && obj.children.length > 1)) {
+            const iconLabel = obj.children[1];
+            if (!is2d) {
+                iconLabel.position.set(0, 0, 0);
+                iconLabel.translateOnAxis(dir, 9.75 * scale);
             }
-        });
-    }
+            iconLabel.scale.x = iconLabel.defaultScale.x * scale;
+            iconLabel.scale.y = iconLabel.defaultScale.y * scale;
+            iconLabel.material.opacity = textOpacity * opacityMultiplier;
+            iconLabel.visible = true;
+        }
+    });
 }
 
 function getNodeOpacity(id) {
@@ -5226,17 +5251,8 @@ function initControls() {
         updateConfig(config);
         if (isWebGL2 && is2d)
             updateNodeLabels2D();
-        if (!isWebGL2 || !is2d) {
-            graph.graphData().nodes.forEach(node => {
-                const obj = node.__threeObj;
-                if (obj) {
-                    const showLabel = isNodeLabelVisible(node);
-                    obj.children[0].visible = showLabel;
-                    if (obj.children.length > 1)
-                        obj.children[1].visible = showLabel;
-                }
-            });
-        }
+        if (!isWebGL2 || !is2d)
+            updateNodeLabels(is2d, time * -1);
     });
 
     $(".js--removed-content-mode").on("change", function () {
