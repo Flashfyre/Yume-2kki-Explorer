@@ -1,4 +1,4 @@
-// Version 6.0.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 6.0.2 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -102960,6 +102960,7 @@ function InsertStackElement(node, body) {
 	    const verAddedWorlds = exports.worldData.filter(w => w.verAdded);
 	    const versionNames = versionUtilsExports.getUniqueWorldVersionNames(exports.worldData).sort(versionUtilsExports.compareVersionNames).reverse();
 	    versionData = versionUtilsExports.parseVersionNames(versionNames);
+	    const versionsByName = new Map(versionNames.map((name, index) => [name, versionData[index]]));
 
 	    for (let w in exports.worldData) {
 	        const world = exports.worldData[w];
@@ -102967,23 +102968,23 @@ function InsertStackElement(node, body) {
 	        world.id = parseInt(w);
 	        world.images.unshift(!world.hidden ? world.filename : hiddenWorldImageUrl);
 	        if (world.verAdded) {
-	            world.verAdded = versionData[versionNames.indexOf(world.verAdded)];
+	            world.verAdded = versionsByName.get(world.verAdded);
 	            world.verAdded.addedWorldIds.push(world.id);
 	        }
 	        if (world.verUpdated) {
 	            world.verUpdated.forEach(vu => {
-	                vu.verUpdated = versionData[versionNames.indexOf(vu.verUpdated)];
+	                vu.verUpdated = versionsByName.get(vu.verUpdated);
 	                vu.verUpdated.updatedWorldIds.push(world.id);
 	            });
 	        }
 	        if (world.verRemoved) {
-	            world.verRemoved = versionData[versionNames.indexOf(world.verRemoved)];
+	            world.verRemoved = versionsByName.get(world.verRemoved);
 	            world.verRemoved.removedWorldIds.push(world.id);
 	        }
 	        if (world.verGaps) {
 	            world.verGaps.forEach(vg => {
-	                vg.verRemoved = versionData[versionNames.indexOf(vg.verRemoved)];
-	                vg.verReadded = versionData[versionNames.indexOf(vg.verReadded)];
+	                vg.verRemoved = versionsByName.get(vg.verRemoved);
+	                vg.verReadded = versionsByName.get(vg.verReadded);
 	                vg.verRemoved.removedWorldIds.push(world.id);
 	                vg.verReadded.addedWorldIds.push(world.id);
 	            });
@@ -104281,7 +104282,6 @@ function InsertStackElement(node, body) {
 	            worldImageData = new Uint8ClampedArray();
 
 	            initWorldTextures().then(() => {
-	                initNodeObjectMaterials();
 	                reloadGraph();
 	                loadCallback();
 	            }).catch(err => console.error(err));
@@ -104312,6 +104312,7 @@ function InsertStackElement(node, body) {
 
 	let glMaxTextureSize = 1024;
 	let nodeObjects = [];
+	let nodeImageDataState;
 	let iconObject;
 	let nodeIconObject;
 	let iconPositionsDirty = true;
@@ -104388,8 +104389,20 @@ function InsertStackElement(node, body) {
 
 	let worldImageData = new Uint8ClampedArray();
 
-	function initGraph(renderMode, displayMode, paths) {
+	function initGraph(renderMode, displayMode, paths, reset) {
 
+	    const reuseGraph = exports.graph && !reset && is2d === !renderMode;
+	    if (exports.graph) {
+	        exports.graph.pauseAnimation();
+	        clearGraphObjects();
+	        if (!reuseGraph) {
+	            exports.graph._destructor();
+	            exports.graph.controls().dispose();
+	            exports.graph.postProcessingComposer().dispose();
+	            exports.graph.renderer().dispose();
+	            exports.graph = null;
+	        }
+	    }
 	    is2d = !renderMode;
 
 	    const links = [];
@@ -104719,11 +104732,12 @@ function InsertStackElement(node, body) {
 
 	    const elem = document.getElementById('graph');
 
-	    exports.graph = _3dForceGraph({
-	        rendererConfig: rendererConfig,
-	        controlType: 'orbit',
-	        numDimensions: is2d ? 2 : 3
-	    })(elem);
+	    if (!exports.graph)
+	        exports.graph = _3dForceGraph({
+	            rendererConfig: rendererConfig,
+	            controlType: 'orbit',
+	            numDimensions: is2d ? 2 : 3
+	        })(elem);
 
 	    const maxAnisotropy = exports.graph.renderer().capabilities.getMaxAnisotropy();
 
@@ -104731,6 +104745,8 @@ function InsertStackElement(node, body) {
 	        exports.graph = exports.graph
 	            .dagMode(displayMode === 0 ? 'td' : displayMode === 1 ? 'lr' : displayMode === 2 ? 'radialin' : 'radialout')
 	            .dagLevelDistance(displayMode < 2 ? 12 : 24 + radius * (config.sizeDiff + 1));
+	    else
+	        exports.graph.dagMode(null);
 
 	    linksTwoWayBuffered = undefined;
 	    linksOneWayBuffered = undefined;
@@ -105060,13 +105076,13 @@ function InsertStackElement(node, body) {
 	    document.addEventListener('mousemove', onDocumentMouseMove, false);
 	    document.querySelector('#graph canvas').addEventListener('wheel', clearTweens, false);
 
-	    (function () {
-	        let _animationCycle = exports.graph._animationCycle;
+	    if (!reuseGraph) {
+	        const _animationCycle = exports.graph._animationCycle;
 	        exports.graph._animationCycle = function () {
 	            onRender(is2d);
 	            _animationCycle.apply(this);
 	        };
-	    })();
+	    }
 
 	    if (isWebGL2) {
 	        initNodeObjectMaterials();
@@ -105101,6 +105117,13 @@ function InsertStackElement(node, body) {
 	    linksOneWayBuffered = makeOneWayLinkObjects(is2d);
 	    updateLinkColors(visibleTwoWayLinks, linksTwoWayBuffered);
 	    updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
+	    if (reuseGraph) {
+	        const currentGraph = exports.graph;
+	        requestAnimationFrame(() => {
+	            if (exports.graph === currentGraph)
+	                currentGraph.resumeAnimation();
+	        });
+	    }
 	}
 
 	const clock = new Clock();
@@ -105135,6 +105158,10 @@ function InsertStackElement(node, body) {
 	            chunkSize = amount % glMaxTextureSize;
 	        nodeObjects[chunk].count = chunkSize;
 	    }
+
+	    if (nodeImageDataState && nodeImageDataState.source === worldImageData && nodeImageDataState.is2d === is2d
+	        && nodeImageDataState.ids.length === amount && nodes.every((node, index) => node.id === nodeImageDataState.ids[index]))
+	        return;
 
 	    if (isSubset) {
 	        let index = 0;
@@ -105172,6 +105199,7 @@ function InsertStackElement(node, body) {
 	    nodeObjects.forEach(obj => {
 	        obj.material.uniforms.diffuse.value.needsUpdate = true;
 	    });
+	    nodeImageDataState = { source: worldImageData, is2d, ids: nodes.map(node => node.id) };
 	}
 
 	function copyImageData(nodeObject, from, to, amount) {
@@ -105517,13 +105545,8 @@ function InsertStackElement(node, body) {
 	    const texIndexes = instanceObject.geometry.attributes.texIndex.array;
 	    let vecArray = [];
 	    for (let i = 0; i < iconCount; i++)
-	        vecArray.push({ pos: positions[i], opacity: unsortedOpacities[i], grayscale: unsortedGrayscales[i], texIndex: unsortedTexIndexes[i], unsortedId: i });
-	    vecArray.sort((a, b) => a.pos.distanceTo(camera.position) > b.pos.distanceTo(camera.position)
-	        ? -1
-	        : a.pos.distanceTo(camera.position) < b.pos.distanceTo(camera.position)
-	            ? 1
-	            : 0
-	    );
+	        vecArray.push({ pos: positions[i], distanceSq: positions[i].distanceToSquared(camera.position), opacity: unsortedOpacities[i], grayscale: unsortedGrayscales[i], texIndex: unsortedTexIndexes[i], unsortedId: i });
+	    vecArray.sort((a, b) => b.distanceSq - a.distanceSq);
 
 	    index = 0;
 	    vecArray.forEach(item => {
@@ -105638,11 +105661,20 @@ function InsertStackElement(node, body) {
 	    let nodeChunks = Math.trunc(amount / glMaxTextureSize);
 
 	    for (let chunk = 0; chunk <= nodeChunks; chunk++) {
-	        let chunkOffset = chunk * glMaxTextureSize;
 	        let chunkSize = glMaxTextureSize;
 	        if (chunk == nodeChunks)
 	            chunkSize = amount % glMaxTextureSize;
 
+	        const existingMaterial = nodeObjectMaterials[chunk];
+	        if (existingMaterial && existingMaterial.uniforms.diffuse.value.image.depth === chunkSize * 2) {
+	            existingMaterial.depthTest = !is2d;
+	            continue;
+	        }
+	        if (existingMaterial) {
+	            existingMaterial.uniforms.diffuse.value.dispose();
+	            existingMaterial.dispose();
+	        }
+	        nodeImageDataState = null;
 	        const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
 	        const buffer = new ArrayBuffer(dataLength * chunkSize * 2);
 	        const texture = new DataArrayTexture(new Uint8ClampedArray(buffer), nodeImgDimensions.x, nodeImgDimensions.y, chunkSize * 2);
@@ -105659,17 +105691,48 @@ function InsertStackElement(node, body) {
 	            depthTest: !is2d,
 	            glslVersion: GLSL3
 	        });
-	        let offsetFrom = chunkOffset * dataLength;
-	        let offsetTo = offsetFrom + chunkSize * 2 * dataLength;
-	        nodeObjectMaterial.uniforms.diffuse.value.image.data.set(worldImageData.subarray(offsetFrom, offsetTo), 0);
-	        nodeObjectMaterial.uniforms.diffuse.value.needsUpdate = true;
 	        nodeObjectMaterials[chunk] = nodeObjectMaterial;
 	    }
+	    for (let chunk = nodeChunks + 1; chunk < nodeObjectMaterials.length; chunk++) {
+	        nodeObjectMaterials[chunk].uniforms.diffuse.value.dispose();
+	        nodeObjectMaterials[chunk].dispose();
+	        nodeImageDataState = null;
+	    }
+	    nodeObjectMaterials.length = nodeChunks + 1;
 	}
 
-	function removeObject3D(object3D) {
+	function clearGraphObjects() {
+	    nodeObjects.forEach(obj => removeObject3D(obj));
+	    nodeObjects = [];
+	    [iconObject, nodeIconObject, linksTwoWayBuffered, linksOneWayBuffered].forEach(obj => {
+	        if (obj) removeObject3D(obj, true);
+	    });
+	    Object.values(icons3D || {}).forEach(icons => icons.forEach(icon => removeObject3D(icon, true)));
+	    iconObject = nodeIconObject = linksTwoWayBuffered = linksOneWayBuffered = undefined;
+	    exports.graph.graphData().nodes.forEach(node => {
+	        const object = node.__threeObj;
+	        if (object) {
+	            // The library removes these on its next update. Hide them first
+	            // so a pending frame cannot upload their disposed geometry again.
+	            object.visible = false;
+	            if (object.geometry) object.geometry.dispose();
+	            if (object.material.map) object.material.map.dispose();
+	            object.material.dispose();
+	        }
+	    });
+	}
+
+	function removeObject3D(object3D, disposeMaterial = false) {
 	    // for better memory management and performance
 	    if (object3D.geometry) object3D.geometry.dispose();
+	    if (object3D.isInstancedMesh) object3D.dispose();
+	    if (disposeMaterial && object3D.material) {
+	        const material = object3D.material;
+	        if (material.map) material.map.dispose();
+	        if (material.uniforms && material.uniforms.diffuse)
+	            material.uniforms.diffuse.value.dispose();
+	        material.dispose();
+	    }
 
 	    object3D.removeFromParent(); // the parent might be the scene or another Object3D, but it is sure to be removed this way
 	    return true;
@@ -105750,8 +105813,6 @@ function InsertStackElement(node, body) {
 	            nodeIconObject.getMatrixAt(iconIndex, dummy.matrix);
 	            dummy.position.set(node.x + (dummy.scale.x / 2) - (1.625 + (4 / 13)) * scale, node.y + (dummy.scale.y / 2) - 1.21875 * scale, 0);
 	            dummy.scale.set(13 * scale, 9.75 * scale, is2d ? 1 : 13 * scale);
-	            const x = new Vector3$1();
-	            x.setFromMatrixScale(dummy.matrix);
 	            dummy.updateMatrix();
 	            nodeIconObject.setMatrixAt(iconIndex, dummy.matrix);
 	            iconIndex++;
@@ -106288,10 +106349,11 @@ function InsertStackElement(node, body) {
 	    let d = 0;
 	    for (let i = 0; i < visibleOneWayLinks.length * 2; i++) {
 	        if ((i % 2)) {
-	            const previousPoint = new Vector3$1(actual[index - 3], actual[index - 2], actual[index - 1]);
-	            const currentPoint = new Vector3$1(actual[index++], actual[index++], actual[index++]);
-	            d = currentPoint.distanceTo(previousPoint);
-	            index += 3;
+	            const dx = actual[index] - actual[index - 3];
+	            const dy = actual[index + 1] - actual[index - 2];
+	            const dz = actual[index + 2] - actual[index - 1];
+	            d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+	            index += 6;
 	        } else
 	            d = 0;
 	        linksOneWayBuffered.geometry.attributes.lineDistance.array[i] = d;
@@ -106457,7 +106519,7 @@ function InsertStackElement(node, body) {
 	        $$1('.js--version').trigger('change');
 	}
 
-	function reloadGraph() {
+	function reloadGraph(reset) {
 	    tempSelectAuthor(null, true);
 	    tempSelectVersion(0, true);
 	    const pathFinder = new pathFinderExports.PathFinder(exports.worldData, isDebug, defaultPathIgnoreConnTypeFlags, false, effectsJP);
@@ -106466,9 +106528,7 @@ function InsertStackElement(node, body) {
 	    const matchPaths = startWorld && endWorld && startWorld != endWorld
 	        ? pathFinder.findPath(startWorld.id, endWorld.id, true, connTypeExports.ConnType.NO_ENTRY | connTypeExports.ConnType.DEAD_END | connTypeExports.ConnType.ISOLATED | connTypeExports.ConnType.SHORTCUT, config.pathMode === 0 ? 3 : config.pathMode === 1 ? 5 : 10)
 	        : null;
-	    if (exports.graph)
-	        exports.graph._destructor();
-	    initGraph(config.renderMode, config.displayMode, matchPaths);
+	    initGraph(config.renderMode, config.displayMode, matchPaths, reset);
 	    if (urlSearchParams.has('location')) {
 	        const worldName = urlSearchParams.get('location');
 	        const node = exports.graph.graphData().nodes.find(n => exports.worldData[n.id].title === worldName);
@@ -106509,7 +106569,7 @@ function InsertStackElement(node, body) {
 	        callback: function (data, defaultCallback) {
 	            if (config.lang === 'ja' || config.lang === 'ru')
 	                massageLocalizedValues(data, true);
-	            data.footer.about = data.footer.about.replace("{VERSION}", "6.0.1");
+	            data.footer.about = data.footer.about.replace("{VERSION}", "6.0.2");
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
 	            localizedSeparator = data.separator;
@@ -107389,7 +107449,6 @@ function InsertStackElement(node, body) {
 	        const loadCallback = displayLoadingAnim($$1("#graphContainer"));
 	        const callback = function () {
 	            if (exports.worldData) {
-	                initNodeObjectMaterials();
 	                reloadGraph();
 	                loadCallback();
 	            }
@@ -107633,7 +107692,7 @@ function InsertStackElement(node, body) {
 	        selectedWorldId = null;
 	        selectedAuthor = null;
 	        if (exports.worldData)
-	            reloadGraph();
+	            reloadGraph(true);
 	    });
 
 	    $$1(".js--help").on("click", function () {
