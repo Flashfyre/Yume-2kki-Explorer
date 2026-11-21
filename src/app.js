@@ -149,15 +149,16 @@ function initWorldData(data) {
         }
         if (world.removed)
             world.rId = removedCount++;
-        for (let world of worldData) {
-            world.connections.forEach(conn => {
-                const effectParams = conn.typeParams[ConnType.EFFECT];
-                if (effectParams) {
-                    effectParams.paramsJP = effectParams.params.split(',').map(e => effectsJP[e]).join('」か「');
-                    effectParams.params = effectParams.params.replace(/,/g, ', ');
-                }
-            });
-        }
+    }
+
+    for (let world of worldData) {
+        world.connections.forEach(conn => {
+            const effectParams = conn.typeParams[ConnType.EFFECT];
+            if (effectParams) {
+                effectParams.paramsJP = effectParams.params.split(',').map(e => effectsJP[e]).join('」か「');
+                effectParams.params = effectParams.params.replace(/,/g, ', ');
+            }
+        });
     }
 
     if (verAddedWorlds.length < worldData.length) {
@@ -1450,7 +1451,7 @@ function reloadData(update) {
         initLocalization();
 
         if (isWebGL2) {
-            worldImageData = [];
+            worldImageData = new Uint8ClampedArray();
 
             initWorldTextures().then(() => {
                 initNodeObjectMaterials();
@@ -1486,6 +1487,8 @@ let glMaxTextureSize = 1024;
 let nodeObjects = [];
 let iconObject;
 let nodeIconObject;
+let iconPositionsDirty = true;
+let lastIconCameraMatrix;
 
 let icons3D;
 
@@ -1558,7 +1561,7 @@ let lastUpdate, lastFullUpdate;
 let audioPlayer;
 let playlistShuffleIndexes = [];
 
-let worldImageData = [];
+let worldImageData = new Uint8ClampedArray();
 
 function initGraph(renderMode, displayMode, paths) {
 
@@ -1828,7 +1831,7 @@ function initGraph(renderMode, displayMode, paths) {
     });
 
     const images = (paths ? worldData.filter(w => visibleWorldIds.indexOf(w.id) > -1) : worldData).map(d => {
-        const img = imageLoader.load(!d.hidden ? d.filename : hiddenWorldImageUrl);
+        const img = isWebGL2 ? {} : imageLoader.load(!d.hidden ? d.filename : hiddenWorldImageUrl);
         img.id = d.id;
         img.rId = d.rId;
         img.title = !d.hidden ? getLocalizedLabel(d.title, d.titleJP) : localizedHiddenLabel;
@@ -2034,6 +2037,7 @@ function initGraph(renderMode, displayMode, paths) {
             return ret;
         })
         .onEngineTick(() => {
+            iconPositionsDirty = true;
             if (linksTwoWayBuffered) updateLinkObjects(visibleTwoWayLinks, linksTwoWayBuffered, is2d);
             if (linksOneWayBuffered) updateLinkObjects(visibleOneWayLinks, linksOneWayBuffered, is2d);
             updateLinkDistances();
@@ -2282,7 +2286,13 @@ function onRender(is2d) {
     if (!(isWebGL2 && is2d))
         updateNodeLabels(is2d, time * -1);
     if (isWebGL2) {
-        updateIconPositions(is2d);
+        const cameraMatrix = graph.camera().matrixWorld.elements;
+        const cameraChanged = !lastIconCameraMatrix || cameraMatrix.some((value, index) => value !== lastIconCameraMatrix[index]);
+        if (iconPositionsDirty || cameraChanged) {
+            updateIconPositions(is2d);
+            lastIconCameraMatrix = cameraMatrix.slice();
+            iconPositionsDirty = false;
+        }
         if (is2d)
             updateNodeIconAnimation(time);
     }
@@ -2331,7 +2341,7 @@ function updateNodeImageData(nodes, isSubset, is2d) {
             let offsetFrom = chunkOffset * dataLength;
             let offsetTo = offsetFrom + chunkSize * dataLength;
 
-            obj.material.uniforms.diffuse.value.image.data.set(worldImageData.slice(offsetFrom, offsetTo), 0);
+            obj.material.uniforms.diffuse.value.image.data.set(worldImageData.subarray(offsetFrom, offsetTo), 0);
             if (is2d)
                 copyImageData(obj, chunkOffset + amount, chunkSize, chunkSize);
             id++;
@@ -2346,7 +2356,7 @@ function copyImageData(nodeObject, from, to, amount) {
     const dataLength = nodeImgDimensions.x * nodeImgDimensions.y * 4;
     let offsetFrom = from * dataLength;
     let offsetTo = to * dataLength;
-    nodeObject.material.uniforms.diffuse.value.image.data.set(worldImageData.slice(offsetFrom, offsetFrom + amount * dataLength), offsetTo);
+    nodeObject.material.uniforms.diffuse.value.image.data.set(worldImageData.subarray(offsetFrom, offsetFrom + amount * dataLength), offsetTo);
 }
 
 const instanceVS = `precision highp float;
@@ -2504,6 +2514,8 @@ let sortedIconIds = [];
 let iconCount;
 
 function makeIconObject(is2d) {
+    iconPositionsDirty = true;
+    lastIconCameraMatrix = undefined;
     const connTypes = [
         ConnType.ONE_WAY,
         ConnType.NO_ENTRY,
@@ -2828,7 +2840,7 @@ function initNodeObjectMaterials() {
         });
         let offsetFrom = chunkOffset * dataLength;
         let offsetTo = offsetFrom + chunkSize * 2 * dataLength;
-        nodeObjectMaterial.uniforms.diffuse.value.image.data.set(worldImageData.slice(offsetFrom, offsetTo), 0);
+        nodeObjectMaterial.uniforms.diffuse.value.image.data.set(worldImageData.subarray(offsetFrom, offsetTo), 0);
         nodeObjectMaterial.uniforms.diffuse.value.needsUpdate = true;
         nodeObjectMaterials[chunk] = nodeObjectMaterial;
     }
@@ -2911,7 +2923,6 @@ function updateNodePositions(is2d) {
         dummy.updateMatrix();
 
         nodeObjects[chunkId].setMatrixAt(actualIndex, dummy.matrix);
-        nodeObjects[chunkId].instanceMatrix.needsUpdate = true;
         index++;
 
         if (is2d && nodeIconObject && node.isNew) {
@@ -2927,6 +2938,7 @@ function updateNodePositions(is2d) {
     });
 
     nodeObjects.forEach(obj => {
+        obj.instanceMatrix.needsUpdate = true;
         obj.computeBoundingSphere();
     });
     if (is2d && nodeIconObject)
@@ -3678,7 +3690,7 @@ function initLocalization(isInitial) {
         callback: function (data, defaultCallback) {
             if (config.lang === 'ja' || config.lang === 'ru')
                 massageLocalizedValues(data, true);
-            data.footer.about = data.footer.about.replace("{VERSION}", "6.0.0");
+            data.footer.about = data.footer.about.replace("{VERSION}", "6.0.1");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             localizedSeparator = data.separator;
@@ -4648,6 +4660,9 @@ function updateConnectionModeIcons(links) {
     if (!links.length)
         return;
     if (isWebGL2 && iconObject) {
+        // These attributes are written in link order below. Re-sort them with
+        // the icon matrices even when the layout and camera have stopped.
+        iconPositionsDirty = true;
         iconObject.geometry.attributes.opacity.array.set(unsortedIconOpacities, 0);
         iconObject.geometry.attributes.grayscale.array.set(unsortedIconGrayscales, 0);
         let opacities = iconObject.geometry.attributes.opacity.array;

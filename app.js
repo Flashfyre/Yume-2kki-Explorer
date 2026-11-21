@@ -12,6 +12,7 @@ const { performance } = require('perf_hooks');
 const ConnType = require('./src/conn-type').ConnType;
 const { PathFinder }= require('./src/path-finder.js');
 const versionUtils = require('./src/version-utils');
+const { encodeImageUrl, repairWorldImageFilename } = require('./src/image-url');
 const appConfig = process.env.ADMIN_KEY ?
     {
         ADMIN_KEY: process.env.ADMIN_KEY,
@@ -493,7 +494,7 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
                     author: row.author,
                     depth: row.depth,
                     minDepth: row.minDepth,
-                    filename: row.filename,
+                    filename: repairWorldImageFilename(row.filename),
                     mapUrl: row.mapUrl,
                     mapLabel: row.mapLabel,
                     bgmUrl: row.bgmUrl,
@@ -638,7 +639,7 @@ function getLocationWorldData(pool, locationNames, hiddenConnLocationNames, trac
                     author: row.author,
                     depth: row.depth,
                     minDepth: row.minDepth,
-                    filename: row.filename,
+                    filename: repairWorldImageFilename(row.filename),
                     mapUrl: row.mapUrl,
                     mapLabel: row.mapLabel,
                     bgmUrl: row.bgmUrl,
@@ -1095,7 +1096,7 @@ function populateWorldData(pool, worldData, updatedWorldNames) {
                 const data = JSON.parse(res.text);
 
                 for (let l of data.locations) {
-                    const encodedFilename = encodeURI(l.locationImage);
+                    const encodedFilename = encodeImageUrl(l.locationImage);
                     let filename = encodedFilename;
 
                     if (!isRemote && filename) {
@@ -1736,9 +1737,11 @@ function updateWorldDepths(pool, worldData) {
         }
 
         const worldDataById = _.keyBy(worldData, w => w.id);
+        const worldDataByName = _.keyBy(worldData, w => w.title);
+        const worldNameSet = new Set(Object.keys(worldDataByName));
 
-        calcDepth(worldData, worldDataById, depthMap, null, 0, defaultPathIgnoreConnTypeFlags, 'depth');
-        calcDepth(worldData, worldDataById, minDepthMap, null, 0, minDepthPathIgnoreConnTypeFlags, 'minDepth');
+        calcDepth(worldData, worldDataById, worldDataByName, worldNameSet, depthMap, null, 0, defaultPathIgnoreConnTypeFlags, 'depth');
+        calcDepth(worldData, worldDataById, worldDataByName, worldNameSet, minDepthMap, null, 0, minDepthPathIgnoreConnTypeFlags, 'minDepth');
 
         const worldsByDepth = _.groupBy(worldData, 'depth');
         const worldsByMinDepth = _.groupBy(worldData, 'minDepth');
@@ -1757,9 +1760,7 @@ function updateWorldDepths(pool, worldData) {
     });
 }
 
-function calcDepth(worldData, worldDataById, depthMap, world, depth, ignoreTypeFlags, depthProp, targetWorldName, removed) {
-    const worldDataByName = _.keyBy(worldData, w => w.title);
-    const worldNames = Object.keys(worldDataByName);
+function calcDepth(worldData, worldDataById, worldDataByName, worldNameSet, depthMap, world, depth, ignoreTypeFlags, depthProp, targetWorldName, removed) {
     let currentWorld;
     if (depth > 0)
         currentWorld = world;
@@ -1770,7 +1771,7 @@ function calcDepth(worldData, worldDataById, depthMap, world, depth, ignoreTypeF
     for (let conn of currentWorld.connections) {
         const targetWorld = worldDataById[conn.targetId];
         const w = targetWorld ? targetWorld.title : conn.location;
-        if (worldNames.indexOf(w) > -1 && (!targetWorldName || w === targetWorldName)) {
+        if (worldNameSet.has(w) && (!targetWorldName || w === targetWorldName)) {
             if (conn.type & ignoreTypeFlags)
                 continue;
             const connWorld = worldDataByName[w];
@@ -1780,21 +1781,19 @@ function calcDepth(worldData, worldDataById, depthMap, world, depth, ignoreTypeF
             if (d === -1 || d > depth + 1) {
                 connWorld[depthProp] = depthMap[w] = depth + 1;
                 if (!targetWorldName)
-                    calcDepth(worldData, worldDataById, depthMap, connWorld, depth + 1, ignoreTypeFlags, depthProp, null, removed || connWorld.removed);
+                    calcDepth(worldData, worldDataById, worldDataByName, worldNameSet, depthMap, connWorld, depth + 1, ignoreTypeFlags, depthProp, null, removed || connWorld.removed);
             }
         }
     }
 
     if (world === null) {
-        const worldDataByName = _.keyBy(worldData, w => w.title);
-
         let anyDepthFound;
         
         while (true) {
             anyDepthFound = false;
             
-            missingDepthWorlds = worldData.filter(w => depthMap[w.title] === -1 && w.title !== startLocation);
-            missingDepthWorlds.forEach(w => anyDepthFound |= resolveMissingDepths(worldData, worldDataById, worldDataByName, depthMap, w, ignoreTypeFlags, depthProp));
+            const missingDepthWorlds = worldData.filter(w => depthMap[w.title] === -1 && w.title !== startLocation);
+            missingDepthWorlds.forEach(w => anyDepthFound |= resolveMissingDepths(worldData, worldDataById, worldDataByName, worldNameSet, depthMap, w, ignoreTypeFlags, depthProp));
 
             if (missingDepthWorlds.length) {
                 if (!anyDepthFound) {
@@ -1824,21 +1823,20 @@ function calcDepth(worldData, worldDataById, depthMap, world, depth, ignoreTypeF
     return depth;
 }
 
-function resolveMissingDepths(worldData, worldDataById, worldDataByName, depthMap, world, ignoreTypeFlags, depthProp) {
-    const worldNames = Object.keys(worldDataByName);
-    const conns = world.connections.filter(c => c.targetId ? worldDataById[c.targetId] : worldNames.indexOf(c.location) > -1);
+function resolveMissingDepths(worldData, worldDataById, worldDataByName, worldNameSet, depthMap, world, ignoreTypeFlags, depthProp) {
+    const conns = world.connections.filter(c => c.targetId ? worldDataById[c.targetId] : worldNameSet.has(c.location));
 
     for (let c of conns) {
         let sourceWorld = c.targetId ? worldDataById[c.targetId] : worldDataByName[c.location];
         if (!sourceWorld.removed && c.type & ConnType.INACCESSIBLE)
             continue;
         if (sourceWorld[depthProp] !== undefined)
-            calcDepth(worldData, worldDataById, depthMap, sourceWorld, depthMap[sourceWorld.title], ignoreTypeFlags, depthProp, world.title, sourceWorld.removed);
+            calcDepth(worldData, worldDataById, worldDataByName, worldNameSet, depthMap, sourceWorld, depthMap[sourceWorld.title], ignoreTypeFlags, depthProp, world.title, sourceWorld.removed);
     }
 
     if (depthMap[world.title] > -1) {
         conns.filter(c => depthMap[c.location ? c.location : worldDataById[c.targetId].title] === -1)
-            .forEach(c => resolveMissingDepths(worldData, worldDataById, worldDataByName, depthMap, c.targetId ? worldDataById[c.targetId] : worldDataByName[c.location], ignoreTypeFlags, depthProp));
+            .forEach(c => resolveMissingDepths(worldData, worldDataById, worldDataByName, worldNameSet, depthMap, c.targetId ? worldDataById[c.targetId] : worldDataByName[c.location], ignoreTypeFlags, depthProp));
         return true;
     }
 
