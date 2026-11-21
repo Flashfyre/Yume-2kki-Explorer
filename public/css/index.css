@@ -100,6 +100,10 @@ h1 {
     z-index: 10;
 }
 
+.mobile-controls-toggle {
+    display: none;
+}
+
 .controls-bottom, .controls-side {
     pointer-events: none;
 }
@@ -266,7 +270,7 @@ a.icon-link {
     -webkit-text-fill-color: white !important;
 }
 
-input[type='text'], select, .slider {
+input[type='text'], select, input.slider {
     margin: 8px;
     padding: 4px;
     font-family: 'Verdana-Cyrillic', 'MS Gothic';
@@ -303,7 +307,7 @@ select:not(.temp-select) > option.temp-select-only {
     display: none;
 }
 
-.slider {
+input.slider {
     -webkit-appearance: none;
     appearance: none;
     width: 128px;
@@ -312,7 +316,7 @@ select:not(.temp-select) > option.temp-select-only {
     outline: none;
 }
 
-.slider::-webkit-slider-thumb {
+input.slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 24px;
@@ -321,7 +325,7 @@ select:not(.temp-select) > option.temp-select-only {
     cursor: pointer;
 }
 
-.slider::-moz-range-thumb {
+input.slider::-moz-range-thumb {
     width: 24px;
     height: 38px;
     border: 6px solid transparent;
@@ -436,6 +440,15 @@ a.close-modal {
     width: calc(200% - 96px);
 }
 
+.collectables-empty {
+    display: block;
+    margin: 24px;
+}
+
+.collectables--empty .modal__content > :not(.collectables-empty) {
+    display: none;
+}
+
 .collectables-container__items, .collectables-container__borders {
     width: 50%;
     display: flex;
@@ -445,6 +458,15 @@ a.close-modal {
 
 .collectables-container__borders {
     margin-left: -50%;
+}
+
+.virtual-gallery-spacer {
+    flex: 0 0 100%;
+    pointer-events: none;
+}
+
+.virtual-gallery {
+    align-content: flex-start;
 }
 
 .collectable-entry--container {
@@ -549,10 +571,20 @@ a.close-modal {
     border-left-width: 0px;
 }
 
-.collectable--border:not([data-id]), .collectable--border:not([data-id]) + .collectable-entry--controls > .collectable-entry--control:not(.bgm-track__set-image),
+.collectable--border:not([data-id]), .collectable--border:not([data-id]):not(.bgm-track) + .collectable-entry--controls > .collectable-entry--control:not(.bgm-track__set-image),
     .collectable--border:not([data-id]) + .collectable-entry--controls + .collectable-entry--controls > .collectable-entry--control {
     filter: grayscale(1);
     cursor: default;
+}
+
+.bgm-tracks__availability {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.bgm-tracks__availability p {
+    margin: 0;
 }
 
 .collectable--border + .collectable-entry--controls > .collectable-entry--control.inactive {
@@ -565,6 +597,7 @@ a.close-modal {
 }
 
 .collectable-entry > img {
+    display: block;
     width: 320px;
     height: 240px;
 }
@@ -572,6 +605,13 @@ a.close-modal {
 .collectable-entry img {
     image-rendering: crisp-edges;
     image-rendering: pixelated;
+}
+
+.modal__content .author-entry.collectable--border,
+.modal__content .version-entry.collectable--border,
+.version-entry + .collectable-entry--content,
+.version-entry ~ .collectable-entry--expand {
+    margin-bottom: 22px;
 }
 
 .collectable-entry img.removed {
@@ -620,18 +660,23 @@ a.close-modal {
 
 .collectable-entry__name--container {
     height: 100%;
-    display: flex !important;
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
     align-items: center;
-    justify-content: center;
+    justify-items: center;
 }
 
 .collectable-entry__name, .collectable-entry__name--shadow {
     font-family: 'Verdana-Cyrillic', 'MS Gothic';
+    grid-area: 1 / 1;
+    min-width: 0;
+    max-width: 100%;
+    text-align: center;
+    overflow-wrap: anywhere;
 }
 
 .collectable-entry__name--shadow {
-    width: 0;
-    white-space: nowrap;
     color: transparent;
 }
 

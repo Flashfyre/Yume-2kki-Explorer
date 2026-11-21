@@ -1,11 +1,13 @@
 <html>
     <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
         <title data-localize="title">Yume 2kki Explorer</title>
         <meta content="Yume 2kki Explorer" property="og:title" />
         <meta content="A tool for visualizing and exploring the content of Yume 2kki" property="og:description" />
         <link rel="shortcut icon" href="/favicon.ico">
-        <link rel="stylesheet" href="/css/index.css" />
+        <link rel="stylesheet" href="/css/vendor/green-audio-player.css?v=7.0.0" />
+        <link rel="stylesheet" href="/css/index.css?v=7.0.0" />
+        <link rel="stylesheet" href="/css/mobile.css?v=7.0.0" media="(max-width: 900px)" />
         <style class="js--theme-styles">
             body {
                 background-color: #000000; /*basebg*/
@@ -93,7 +95,7 @@
                 border-image: url(/images/ui/Default_Custom/border.png) 12 round;
             }
 
-            input[type='text'], select, .slider {
+            input[type='text'], select, input.slider {
                 color: rgba(216, 216, 216, 1); /*base*/
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
                 background-color: rgba(45, 17, 23, 1) !important; /*basebg*/
@@ -114,14 +116,14 @@
                 background-image: linear-gradient(to bottom, rgba(216, 173, 173, 1) 0% 100%) !important; /*alt*/
             }
 
-            .slider::-webkit-slider-thumb {
+            input.slider::-webkit-slider-thumb {
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
                 background-color: rgba(45, 17, 23, 1); /*basebg*/
                 image-rendering: crisp-edges;
                 image-rendering: pixelated;
             }
 
-            .slider::-moz-range-thumb {
+            input.slider::-moz-range-thumb {
                 border-image: url(/images/ui/Default_Custom/border.png) 8 round;
                 background-color: rgba(45, 17, 23, 1); /*basebg*/
                 image-rendering: crisp-edges;
@@ -249,16 +251,17 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-contextmenu/2.9.0/jquery.contextMenu.min.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.css" />
-        <script src="/js/yume-2kki-explorer.js"></script>
+        <script src="/js/yume-2kki-explorer.js?v=7.0.0"></script>
     </head>
     <body>
         <div class="content">
             <div class="y2e-controls controls-top">
-                <div class="controls__container">
-                    <div class="control">
+                <div id="worldControls" class="controls__container">
+                    <div class="control control-search">
                         <label data-localize="controls.search.name" class="noselect">Search:</label>
                         <input name="searchWorld" type="text" class="js--world-input js--search-world" />
                     </div>
+                    <button type="button" class="mobile-controls-toggle js--mobile-controls-toggle noselect" aria-label="Toggle Controls" aria-expanded="false" aria-controls="worldControls">&#9776;</button>
                     <div class="control reverse-control">
                         <select name="author" class="js--author">
                             <option data-localize="controls.author.values.null" value="null">All</option>
@@ -509,6 +512,7 @@
         <div id="menuThemesModal" class="js--menu-themes-modal modal">
             <div class="modal__content--container">
                 <div class="js--menu-themes-modal__content modal__content">
+                    <p class="js--collectables-empty collectables-empty display--none" data-localize="collectableControls.empty">No items available yet.</p>
                     <div class="js--menu-themes-container collectables-container">
                         <div class="js--menu-themes-container__items collectables-container__items"></div>
                         <div class="js--menu-themes-container__borders collectables-container__borders"></div>
@@ -529,6 +533,7 @@
         <div id="wallpapersModal" class="js--wallpapers-modal modal">
             <div class="modal__content--container">
                 <div class="js--wallpapers-modal__content modal__content">
+                    <p class="js--collectables-empty collectables-empty display--none" data-localize="collectableControls.empty">No items available yet.</p>
                     <div class="js--wallpapers-container collectables-container">
                         <div class="js--wallpapers-container__items collectables-container__items"></div>
                         <div class="js--wallpapers-container__borders collectables-container__borders"></div>
@@ -549,9 +554,14 @@
         <div id="bgmTracksModal" class="js--bgm-tracks-modal modal">
             <div class="modal__content--container">
                 <div class="js--bgm-tracks-modal__content modal__content">
+                    <p class="js--collectables-empty collectables-empty display--none" data-localize="collectableControls.empty">No items available yet.</p>
                     <div class="control">
                         <label data-localize="bgmTracksModal.search" class="noselect">Search:</label>
                         <div class="js--bgm-track-search--container"></div>
+                    </div>
+                    <div class="control bgm-tracks__availability">
+                        <label class="noselect"><input type="checkbox" class="js--bgm-playable-only" /> <span data-localize="bgmTracksModal.playableOnly">Only Playable Tracks</span></label>
+                        <p data-localize="bgmTracksModal.audioAvailability">Playback is available only for tracks with audio on the wiki.</p>
                     </div>
                     <div class="js--fav-bgm-tracks--section display--none">
                         <span class="bgm-tracks__fav-title noselect">

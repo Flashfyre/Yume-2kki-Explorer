@@ -1,0 +1,15 @@
+Green Audio Player 1.1.2
+https://github.com/greghub/green-audio-player
+
+The browser source and compiled CSS are included locally because the npm package
+requires node-sass 4 and its obsolete native build toolchain at runtime.
+The MIT license is in green-audio-player.LICENSE.
+
+Upstream Git blob hashes:
+src/js/main.js: 91693301b87dd8422e18dd76917850d75b68b373
+dist/css/green-audio-player.css: c004d96474ba4037a4da355827e6d50b032ac274
+
+Local changes fix touch drag targets, release global listeners when replacing or
+closing a player, handle rejected play promises, and preserve localized playback
+labels. CSS remains upstream;
+the explorer's own styles supply its theme and responsive layout.

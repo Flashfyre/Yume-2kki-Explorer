@@ -52,3 +52,16 @@ index e1827d0..a3d14d1 100644
        clock: new three.Clock(),
        tweenGroup: new Group()
      };
+@@ -593,6 +596,12 @@ var threeRenderObjects = Kapsule({
+       [state.renderer, state.postProcessingComposer].concat(_toConsumableArray(state.extraRenderers)).forEach(function (r) {
+         return r.setSize(state.width, state.height);
+       });
++      if (state.camera.isOrthographicCamera) {
++        var halfWidth = (state.camera.top - state.camera.bottom) / 2 * state.width / state.height;
++        var centerX = (state.camera.left + state.camera.right) / 2;
++        state.camera.left = centerX - halfWidth;
++        state.camera.right = centerX + halfWidth;
++      }
+       state.camera.aspect = state.width / state.height;
+       state.camera.updateProjectionMatrix();
+     }

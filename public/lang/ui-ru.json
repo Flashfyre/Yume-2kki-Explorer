@@ -1,4 +1,23 @@
 {
+    "accessibility": {
+        "mobileControls": "Показать или скрыть панель управления",
+        "audio": {
+            "play": "Воспроизвести",
+            "pause": "Пауза",
+            "seek": "Позиция воспроизведения",
+            "volume": "Громкость",
+            "openVolume": "Открыть настройки громкости",
+            "closeVolume": "Закрыть настройки громкости",
+            "download": "Скачать",
+            "previous": "Предыдущий трек",
+            "next": "Следующий трек",
+            "favourite": "В избранное",
+            "ignore": "Исключить",
+            "shuffle": "Перемешать",
+            "repeat": "Повтор",
+            "addToPlaylist": "Добавить в плейлист"
+        }
+    },
     "title": "Yume 2kki Explorer",
     "loading": {
         "label": "Загрузка",
@@ -63,6 +82,7 @@
         }
     },
     "collectableControls": {
+        "empty": "Пока нет элементов для отображения.",
         "authors": {
             "name": "Авторы"
         },
@@ -330,6 +350,8 @@
         "removedWallpapers": "Удалённые Обои"
     },
     "bgmTracksModal": {
+        "playableOnly": "Только доступные для воспроизведения",
+        "audioAvailability": "Воспроизведение доступно только для треков с аудио на вики.",
         "search": "Поиск:",
         "favBgmTracks": "Любимые треки",
         "musicRoomBgmTracks": "Треки Музыкальной Комнаты",

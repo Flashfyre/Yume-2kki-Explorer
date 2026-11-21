@@ -1,4 +1,4 @@
-// Version 6.1.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 7.0.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -13113,6 +13113,7 @@
 			            ESC: 27,
 			            TAB: 9,
 			            RETURN: 13,
+			            LEFT: 37,
 			            UP: 38,
 			            RIGHT: 39,
 			            DOWN: 40
@@ -14487,7 +14488,7 @@
 	  throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
 	}
 
-	var version = "1.15.0";
+	var version$1 = "1.15.0";
 
 	function userAgent(pattern) {
 	  if (typeof window !== 'undefined' && window.navigator) {
@@ -14749,8 +14750,10 @@
 	    var parentSideVal = getRect(parent)[parentSide],
 	        visible = void 0;
 
-	    {
+	    if (parentSide === 'top' || parentSide === 'left') {
 	      visible = elSideVal >= parentSideVal;
+	    } else {
+	      visible = elSideVal <= parentSideVal;
 	    }
 
 	    if (!visible) return parent;
@@ -17077,7 +17080,7 @@
 	}; // Export
 
 
-	Sortable$1.version = version;
+	Sortable$1.version = version$1;
 
 	var autoScrolls = [],
 	    scrollEl,
@@ -30934,7 +30937,7 @@
 			      bitmask &= ~(isCurry ? WRAP_PARTIAL_RIGHT_FLAG : WRAP_PARTIAL_FLAG);
 
 			      if (!(bitmask & WRAP_CURRY_BOUND_FLAG)) {
-			        bitmask &= -4;
+			        bitmask &= ~(WRAP_BIND_FLAG | WRAP_BIND_KEY_FLAG);
 			      }
 			      var newData = [
 			        func, bitmask, thisArg, newPartials, newHolders, newPartialsRight,
@@ -31037,7 +31040,7 @@
 			      }
 			      var length = partials ? partials.length : 0;
 			      if (!length) {
-			        bitmask &= -97;
+			        bitmask &= ~(WRAP_PARTIAL_FLAG | WRAP_PARTIAL_RIGHT_FLAG);
 			        partials = holders = undefined$1;
 			      }
 			      ary = ary === undefined$1 ? ary : nativeMax(toInteger(ary), 0);
@@ -31070,7 +31073,7 @@
 			        : nativeMax(newData[9] - length, 0);
 
 			      if (!arity && bitmask & (WRAP_CURRY_FLAG | WRAP_CURRY_RIGHT_FLAG)) {
-			        bitmask &= -25;
+			        bitmask &= ~(WRAP_CURRY_FLAG | WRAP_CURRY_RIGHT_FLAG);
 			      }
 			      if (!bitmask || bitmask == WRAP_BIND_FLAG) {
 			        var result = createBind(func, bitmask, thisArg);
@@ -42686,10 +42689,10 @@
 	function tree_add$3(d) {
 	  const x = +this._x.call(null, d),
 	      y = +this._y.call(null, d);
-	  return add$3(this.cover(x, y), x, y, d);
+	  return add$4(this.cover(x, y), x, y, d);
 	}
 
-	function add$3(tree, x, y, d) {
+	function add$4(tree, x, y, d) {
 	  if (isNaN(x) || isNaN(y)) return tree; // ignore invalid points
 
 	  var parent,
@@ -42762,7 +42765,7 @@
 
 	  // Add the new points.
 	  for (i = 0; i < n; ++i) {
-	    add$3(this, xz[i], yz[i], data[i]);
+	    add$4(this, xz[i], yz[i], data[i]);
 	  }
 
 	  return this;
@@ -42961,7 +42964,7 @@
 	  return this;
 	}
 
-	function removeAll$3(data) {
+	function removeAll$4(data) {
 	  for (var i = 0, n = data.length; i < n; ++i) this.remove(data[i]);
 	  return this;
 	}
@@ -43082,7 +43085,7 @@
 	treeProto$3.extent = tree_extent$3;
 	treeProto$3.find = tree_find$3;
 	treeProto$3.remove = tree_remove$3;
-	treeProto$3.removeAll = removeAll$3;
+	treeProto$3.removeAll = removeAll$4;
 	treeProto$3.root = tree_root$3;
 	treeProto$3.size = tree_size$3;
 	treeProto$3.visit = tree_visit$3;
@@ -43292,7 +43295,7 @@
 	    clock$1 = typeof performance === "object" && performance.now ? performance : Date,
 	    setFrame = typeof window === "object" && window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : function(f) { setTimeout(f, 17); };
 
-	function now$3() {
+	function now$4() {
 	  return clockNow || (setFrame(clearNow), clockNow = clock$1.now() + clockSkew);
 	}
 
@@ -43310,7 +43313,7 @@
 	  constructor: Timer,
 	  restart: function(callback, delay, time) {
 	    if (typeof callback !== "function") throw new TypeError("callback is not a function");
-	    time = (time == null ? now$3() : +time) + (delay == null ? 0 : +delay);
+	    time = (time == null ? now$4() : +time) + (delay == null ? 0 : +delay);
 	    if (!this._next && taskTail !== this) {
 	      if (taskTail) taskTail._next = this;
 	      else taskHead = this;
@@ -43336,7 +43339,7 @@
 	}
 
 	function timerFlush() {
-	  now$3(); // Get the current time, if not already set.
+	  now$4(); // Get the current time, if not already set.
 	  ++frame; // Pretend we’ve set an alarm, if we haven’t already.
 	  var t = taskHead, e;
 	  while (t) {
@@ -43398,7 +43401,7 @@
 	 */
 	const REVISION = '162';
 
-	const MOUSE = { ROTATE: 0, DOLLY: 1, PAN: 2 };
+	const MOUSE = { LEFT: 0, MIDDLE: 1, RIGHT: 2, ROTATE: 0, DOLLY: 1, PAN: 2 };
 	const TOUCH = { ROTATE: 0, PAN: 1, DOLLY_PAN: 2, DOLLY_ROTATE: 3 };
 	const CullFaceNone = 0;
 	const CullFaceBack = 1;
@@ -43581,7 +43584,7 @@
 
 			}
 
-			if ( listeners[ type ].indexOf( listener ) === -1 ) {
+			if ( listeners[ type ].indexOf( listener ) === - 1 ) {
 
 				listeners[ type ].push( listener );
 
@@ -43595,7 +43598,7 @@
 
 			const listeners = this._listeners;
 
-			return listeners[ type ] !== undefined && listeners[ type ].indexOf( listener ) !== -1;
+			return listeners[ type ] !== undefined && listeners[ type ].indexOf( listener ) !== - 1;
 
 		}
 
@@ -43610,7 +43613,7 @@
 
 				const index = listenerArray.indexOf( listener );
 
-				if ( index !== -1 ) {
+				if ( index !== - 1 ) {
 
 					listenerArray.splice( index, 1 );
 
@@ -43899,15 +43902,15 @@
 
 			case Int32Array:
 
-				return Math.max( value / 2147483647.0, -1 );
+				return Math.max( value / 2147483647.0, - 1.0 );
 
 			case Int16Array:
 
-				return Math.max( value / 32767.0, -1 );
+				return Math.max( value / 32767.0, - 1.0 );
 
 			case Int8Array:
 
-				return Math.max( value / 127.0, -1 );
+				return Math.max( value / 127.0, - 1.0 );
 
 			default:
 
@@ -44349,7 +44352,7 @@
 
 			// clamp, to handle numerical problems
 
-			return Math.acos( clamp( theta, -1, 1 ) );
+			return Math.acos( clamp( theta, - 1, 1 ) );
 
 		}
 
@@ -44907,9 +44910,9 @@
 	);
 
 	const LINEAR_DISPLAY_P3_TO_LINEAR_SRGB = /*@__PURE__*/ new Matrix3().set(
-		1.2249401, -0.2249404, 0.0,
-		-0.0420569, 1.0420571, 0.0,
-		-0.0196376, -0.0786361, 1.0982735
+		1.2249401, - 0.2249404, 0.0,
+		- 0.0420569, 1.0420571, 0.0,
+		- 0.0196376, - 0.0786361, 1.0982735
 	);
 
 	/**
@@ -46473,7 +46476,7 @@
 
 				let s = 1 - t;
 				const cos = x0 * x1 + y0 * y1 + z0 * z1 + w0 * w1,
-					dir = ( cos >= 0 ? 1 : -1 ),
+					dir = ( cos >= 0 ? 1 : - 1 ),
 					sqrSin = 1 - cos * cos;
 
 				// Skip the Slerp for tiny steps to avoid numeric problems:
@@ -46816,7 +46819,7 @@
 
 		angleTo( q ) {
 
-			return 2 * Math.acos( Math.abs( clamp( this.dot( q ), -1, 1 ) ) );
+			return 2 * Math.acos( Math.abs( clamp( this.dot( q ), - 1, 1 ) ) );
 
 		}
 
@@ -46850,9 +46853,9 @@
 
 		conjugate() {
 
-			this._x *= -1;
-			this._y *= -1;
-			this._z *= -1;
+			this._x *= - 1;
+			this._y *= - 1;
+			this._z *= - 1;
 
 			this._onChangeCallback();
 
@@ -47634,7 +47637,7 @@
 
 			// clamp, to handle numerical problems
 
-			return Math.acos( clamp( theta, -1, 1 ) );
+			return Math.acos( clamp( theta, - 1, 1 ) );
 
 		}
 
@@ -48362,7 +48365,7 @@
 
 	class Sphere {
 
-		constructor( center = new Vector3(), radius = -1 ) {
+		constructor( center = new Vector3(), radius = - 1 ) {
 
 			this.isSphere = true;
 
@@ -48426,7 +48429,7 @@
 		makeEmpty() {
 
 			this.center.set( 0, 0, 0 );
-			this.radius = -1;
+			this.radius = - 1;
 
 			return this;
 
@@ -48608,7 +48611,7 @@
 
 	class Ray {
 
-		constructor( origin = new Vector3(), direction = new Vector3( 0, 0, -1 ) ) {
+		constructor( origin = new Vector3(), direction = new Vector3( 0, 0, - 1 ) ) {
 
 			this.origin = origin;
 			this.direction = direction;
@@ -49014,7 +49017,7 @@
 
 			} else if ( DdN < 0 ) {
 
-				sign = -1;
+				sign = - 1;
 				DdN = - DdN;
 
 			} else {
@@ -49874,7 +49877,7 @@
 			if ( coordinateSystem === WebGLCoordinateSystem ) {
 
 				c = - ( far + near ) / ( far - near );
-				d = ( -2 * far * near ) / ( far - near );
+				d = ( - 2 * far * near ) / ( far - near );
 
 			} else if ( coordinateSystem === WebGPUCoordinateSystem ) {
 
@@ -49890,7 +49893,7 @@
 			te[ 0 ] = x;	te[ 4 ] = 0;	te[ 8 ] = a; 	te[ 12 ] = 0;
 			te[ 1 ] = 0;	te[ 5 ] = y;	te[ 9 ] = b; 	te[ 13 ] = 0;
 			te[ 2 ] = 0;	te[ 6 ] = 0;	te[ 10 ] = c; 	te[ 14 ] = d;
-			te[ 3 ] = 0;	te[ 7 ] = 0;	te[ 11 ] = -1;	te[ 15 ] = 0;
+			te[ 3 ] = 0;	te[ 7 ] = 0;	te[ 11 ] = - 1;	te[ 15 ] = 0;
 
 			return this;
 
@@ -49911,12 +49914,12 @@
 			if ( coordinateSystem === WebGLCoordinateSystem ) {
 
 				z = ( far + near ) * p;
-				zInv = -2 * p;
+				zInv = - 2 * p;
 
 			} else if ( coordinateSystem === WebGPUCoordinateSystem ) {
 
 				z = near * p;
-				zInv = -1 * p;
+				zInv = - 1 * p;
 
 			} else {
 
@@ -50111,7 +50114,7 @@
 
 				case 'XYZ':
 
-					this._y = Math.asin( clamp( m13, -1, 1 ) );
+					this._y = Math.asin( clamp( m13, - 1, 1 ) );
 
 					if ( Math.abs( m13 ) < 0.9999999 ) {
 
@@ -50129,7 +50132,7 @@
 
 				case 'YXZ':
 
-					this._x = Math.asin( - clamp( m23, -1, 1 ) );
+					this._x = Math.asin( - clamp( m23, - 1, 1 ) );
 
 					if ( Math.abs( m23 ) < 0.9999999 ) {
 
@@ -50147,7 +50150,7 @@
 
 				case 'ZXY':
 
-					this._x = Math.asin( clamp( m32, -1, 1 ) );
+					this._x = Math.asin( clamp( m32, - 1, 1 ) );
 
 					if ( Math.abs( m32 ) < 0.9999999 ) {
 
@@ -50165,7 +50168,7 @@
 
 				case 'ZYX':
 
-					this._y = Math.asin( - clamp( m31, -1, 1 ) );
+					this._y = Math.asin( - clamp( m31, - 1, 1 ) );
 
 					if ( Math.abs( m31 ) < 0.9999999 ) {
 
@@ -50183,7 +50186,7 @@
 
 				case 'YZX':
 
-					this._z = Math.asin( clamp( m21, -1, 1 ) );
+					this._z = Math.asin( clamp( m21, - 1, 1 ) );
 
 					if ( Math.abs( m21 ) < 0.9999999 ) {
 
@@ -50201,7 +50204,7 @@
 
 				case 'XZY':
 
-					this._z = Math.asin( - clamp( m12, -1, 1 ) );
+					this._z = Math.asin( - clamp( m12, - 1, 1 ) );
 
 					if ( Math.abs( m12 ) < 0.9999999 ) {
 
@@ -50733,7 +50736,7 @@
 
 			const index = this.children.indexOf( object );
 
-			if ( index !== -1 ) {
+			if ( index !== - 1 ) {
 
 				object.parent = null;
 				this.children.splice( index, 1 );
@@ -52041,7 +52044,7 @@
 
 		getHexString( colorSpace = SRGBColorSpace ) {
 
-			return ( '000000' + this.getHex( colorSpace ).toString( 16 ) ).slice( -6 );
+			return ( '000000' + this.getHex( colorSpace ).toString( 16 ) ).slice( - 6 );
 
 		}
 
@@ -52919,7 +52922,7 @@
 			this.normalized = normalized;
 
 			this.usage = StaticDrawUsage;
-			this._updateRange = { offset: 0, count: -1 };
+			this._updateRange = { offset: 0, count: - 1 };
 			this.updateRanges = [];
 			this.gpuType = FloatType;
 
@@ -53903,7 +53906,7 @@
 
 				tmp2.crossVectors( n2, t );
 				const test = tmp2.dot( tan2[ v ] );
-				const w = ( test < 0.0 ) ? -1 : 1.0;
+				const w = ( test < 0.0 ) ? - 1.0 : 1.0;
 
 				tangentAttribute.setXYZW( v, tmp.x, tmp.y, tmp.z, w );
 
@@ -54762,7 +54765,7 @@
 
 				if ( intersection.normal.dot( ray.direction ) > 0 ) {
 
-					intersection.normal.multiplyScalar( -1 );
+					intersection.normal.multiplyScalar( - 1 );
 
 				}
 
@@ -54825,12 +54828,12 @@
 
 			// build each side of the box geometry
 
-			buildPlane( 'z', 'y', 'x', -1, -1, depth, height, width, depthSegments, heightSegments, 0 ); // px
-			buildPlane( 'z', 'y', 'x', 1, -1, depth, height, - width, depthSegments, heightSegments, 1 ); // nx
+			buildPlane( 'z', 'y', 'x', - 1, - 1, depth, height, width, depthSegments, heightSegments, 0 ); // px
+			buildPlane( 'z', 'y', 'x', 1, - 1, depth, height, - width, depthSegments, heightSegments, 1 ); // nx
 			buildPlane( 'x', 'z', 'y', 1, 1, width, depth, height, widthSegments, depthSegments, 2 ); // py
-			buildPlane( 'x', 'z', 'y', 1, -1, width, depth, - height, widthSegments, depthSegments, 3 ); // ny
-			buildPlane( 'x', 'y', 'z', 1, -1, width, height, depth, widthSegments, heightSegments, 4 ); // pz
-			buildPlane( 'x', 'y', 'z', -1, -1, width, height, - depth, widthSegments, heightSegments, 5 ); // nz
+			buildPlane( 'x', 'z', 'y', 1, - 1, width, depth, - height, widthSegments, depthSegments, 3 ); // ny
+			buildPlane( 'x', 'y', 'z', 1, - 1, width, height, depth, widthSegments, heightSegments, 4 ); // pz
+			buildPlane( 'x', 'y', 'z', - 1, - 1, width, height, - depth, widthSegments, heightSegments, 5 ); // nz
 
 			// build geometry
 
@@ -54880,7 +54883,7 @@
 
 						vector[ u ] = 0;
 						vector[ v ] = 0;
-						vector[ w ] = depth > 0 ? 1 : -1;
+						vector[ w ] = depth > 0 ? 1 : - 1;
 
 						// now apply vector to normal buffer
 
@@ -55421,7 +55424,7 @@
 		 */
 		getViewBounds( distance, minTarget, maxTarget ) {
 
-			_v3$1.set( -1, -1, 0.5 ).applyMatrix4( this.projectionMatrixInverse );
+			_v3$1.set( - 1, - 1, 0.5 ).applyMatrix4( this.projectionMatrixInverse );
 
 			minTarget.set( _v3$1.x, _v3$1.y ).multiplyScalar( - distance / _v3$1.z );
 
@@ -55526,7 +55529,7 @@
 			let top = near * Math.tan( DEG2RAD * 0.5 * this.fov ) / this.zoom;
 			let height = 2 * top;
 			let width = this.aspect * height;
-			let left = -0.5 * width;
+			let left = - 0.5 * width;
 			const view = this.view;
 
 			if ( this.view !== null && this.view.enabled ) {
@@ -55574,7 +55577,7 @@
 
 	}
 
-	const fov = -90; // negative fov is not an error
+	const fov = - 90; // negative fov is not an error
 	const aspect = 1;
 
 	class CubeCamera extends Object3D {
@@ -55631,39 +55634,39 @@
 				cameraPX.lookAt( 1, 0, 0 );
 
 				cameraNX.up.set( 0, 1, 0 );
-				cameraNX.lookAt( -1, 0, 0 );
+				cameraNX.lookAt( - 1, 0, 0 );
 
-				cameraPY.up.set( 0, 0, -1 );
+				cameraPY.up.set( 0, 0, - 1 );
 				cameraPY.lookAt( 0, 1, 0 );
 
 				cameraNY.up.set( 0, 0, 1 );
-				cameraNY.lookAt( 0, -1, 0 );
+				cameraNY.lookAt( 0, - 1, 0 );
 
 				cameraPZ.up.set( 0, 1, 0 );
 				cameraPZ.lookAt( 0, 0, 1 );
 
 				cameraNZ.up.set( 0, 1, 0 );
-				cameraNZ.lookAt( 0, 0, -1 );
+				cameraNZ.lookAt( 0, 0, - 1 );
 
 			} else if ( coordinateSystem === WebGPUCoordinateSystem ) {
 
-				cameraPX.up.set( 0, -1, 0 );
-				cameraPX.lookAt( -1, 0, 0 );
+				cameraPX.up.set( 0, - 1, 0 );
+				cameraPX.lookAt( - 1, 0, 0 );
 
-				cameraNX.up.set( 0, -1, 0 );
+				cameraNX.up.set( 0, - 1, 0 );
 				cameraNX.lookAt( 1, 0, 0 );
 
 				cameraPY.up.set( 0, 0, 1 );
 				cameraPY.lookAt( 0, 1, 0 );
 
-				cameraNY.up.set( 0, 0, -1 );
-				cameraNY.lookAt( 0, -1, 0 );
+				cameraNY.up.set( 0, 0, - 1 );
+				cameraNY.lookAt( 0, - 1, 0 );
 
-				cameraPZ.up.set( 0, -1, 0 );
+				cameraPZ.up.set( 0, - 1, 0 );
 				cameraPZ.lookAt( 0, 0, 1 );
 
-				cameraNZ.up.set( 0, -1, 0 );
-				cameraNZ.lookAt( 0, 0, -1 );
+				cameraNZ.up.set( 0, - 1, 0 );
+				cameraNZ.lookAt( 0, 0, - 1 );
 
 			} else {
 
@@ -55986,7 +55989,7 @@
 
 		negate() {
 
-			this.constant *= -1;
+			this.constant *= - 1;
 			this.normal.negate();
 
 			return this;
@@ -56432,7 +56435,7 @@
 
 			gl.bindBuffer( bufferType, buffer );
 
-			if ( updateRange.count === -1 && updateRanges.length === 0 ) {
+			if ( updateRange.count === - 1 && updateRanges.length === 0 ) {
 
 				// Not using update ranges
 				gl.bufferSubData( bufferType, 0, array );
@@ -56463,7 +56466,7 @@
 			}
 
 			// @deprecated, r159
-			if ( updateRange.count !== -1 ) {
+			if ( updateRange.count !== - 1 ) {
 
 				if ( isWebGL2 ) {
 
@@ -56477,7 +56480,7 @@
 
 				}
 
-				updateRange.count = -1; // reset range
+				updateRange.count = - 1; // reset range
 
 			}
 
@@ -57122,7 +57125,7 @@
 
 			envMap: { value: null },
 			envMapRotation: { value: /*@__PURE__*/ new Matrix3() },
-			flipEnvMap: { value: -1 },
+			flipEnvMap: { value: - 1 },
 			reflectivity: { value: 1.0 }, // basic, lambert, phong
 			ior: { value: 1.5 }, // physical
 			refractionRatio: { value: 0.98 }, // basic, lambert, phong
@@ -57540,7 +57543,7 @@
 
 			uniforms: {
 				envMap: { value: null },
-				flipEnvMap: { value: -1 },
+				flipEnvMap: { value: - 1 },
 				backgroundBlurriness: { value: 0 },
 				backgroundIntensity: { value: 1 },
 				backgroundRotation: { value: /*@__PURE__*/ new Matrix3() }
@@ -57555,7 +57558,7 @@
 
 			uniforms: {
 				tCube: { value: null },
-				tFlip: { value: -1 },
+				tFlip: { value: - 1 },
 				opacity: { value: 1.0 }
 			},
 
@@ -57768,18 +57771,18 @@
 				_e1$1.copy( scene.backgroundRotation );
 
 				// accommodate left-handed frame
-				_e1$1.x *= -1; _e1$1.y *= -1; _e1$1.z *= -1;
+				_e1$1.x *= - 1; _e1$1.y *= - 1; _e1$1.z *= - 1;
 
 				if ( background.isCubeTexture && background.isRenderTargetTexture === false ) {
 
 					// environment maps which are not cube render targets or PMREMs follow a different convention
-					_e1$1.y *= -1;
-					_e1$1.z *= -1;
+					_e1$1.y *= - 1;
+					_e1$1.z *= - 1;
 
 				}
 
 				boxMesh.material.uniforms.envMap.value = background;
-				boxMesh.material.uniforms.flipEnvMap.value = ( background.isCubeTexture && background.isRenderTargetTexture === false ) ? -1 : 1;
+				boxMesh.material.uniforms.flipEnvMap.value = ( background.isCubeTexture && background.isRenderTargetTexture === false ) ? - 1 : 1;
 				boxMesh.material.uniforms.backgroundBlurriness.value = scene.backgroundBlurriness;
 				boxMesh.material.uniforms.backgroundIntensity.value = scene.backgroundIntensity;
 				boxMesh.material.uniforms.backgroundRotation.value.setFromMatrix4( _m1$1.makeRotationFromEuler( _e1$1 ) );
@@ -59007,7 +59010,7 @@
 
 	class OrthographicCamera extends Camera {
 
-		constructor( left = -1, right = 1, top = 1, bottom = -1, near = 0.1, far = 2000 ) {
+		constructor( left = - 1, right = 1, top = 1, bottom = - 1, near = 0.1, far = 2000 ) {
 
 			super();
 
@@ -59164,9 +59167,9 @@
 	// same axis), used as axis directions evenly spread on a sphere.
 	const _axisDirections = [
 		/*@__PURE__*/ new Vector3( 1, 1, 1 ),
-		/*@__PURE__*/ new Vector3( -1, 1, 1 ),
-		/*@__PURE__*/ new Vector3( 1, 1, -1 ),
-		/*@__PURE__*/ new Vector3( -1, 1, -1 ),
+		/*@__PURE__*/ new Vector3( - 1, 1, 1 ),
+		/*@__PURE__*/ new Vector3( 1, 1, - 1 ),
+		/*@__PURE__*/ new Vector3( - 1, 1, - 1 ),
 		/*@__PURE__*/ new Vector3( 0, PHI, INV_PHI ),
 		/*@__PURE__*/ new Vector3( 0, PHI, - INV_PHI ),
 		/*@__PURE__*/ new Vector3( INV_PHI, 0, PHI ),
@@ -59417,8 +59420,8 @@
 			const fov = 90;
 			const aspect = 1;
 			const cubeCamera = new PerspectiveCamera( fov, aspect, near, far );
-			const upSign = [ 1, -1, 1, 1, 1, 1 ];
-			const forwardSign = [ 1, 1, 1, -1, -1, -1 ];
+			const upSign = [ 1, - 1, 1, 1, 1, 1 ];
+			const forwardSign = [ 1, 1, 1, - 1, - 1, - 1 ];
 			const renderer = this._renderer;
 
 			const originalAutoClear = renderer.autoClear;
@@ -59517,7 +59520,7 @@
 
 				}
 
-				this._cubemapMaterial.uniforms.flipEnvMap.value = ( texture.isRenderTargetTexture === false ) ? -1 : 1;
+				this._cubemapMaterial.uniforms.flipEnvMap.value = ( texture.isRenderTargetTexture === false ) ? - 1 : 1;
 
 			} else {
 
@@ -59729,7 +59732,7 @@
 			for ( let face = 0; face < cubeFaces; face ++ ) {
 
 				const x = ( face % 3 ) * 2 / 3 - 1;
-				const y = face > 2 ? 0 : -1;
+				const y = face > 2 ? 0 : - 1;
 				const coordinates = [
 					x, y, 0,
 					x + 2 / 3, y, 0,
@@ -59928,7 +59931,7 @@
 
 			uniforms: {
 				'envMap': { value: null },
-				'flipEnvMap': { value: -1 }
+				'flipEnvMap': { value: - 1 }
 			},
 
 			vertexShader: _getCommonVertexShader(),
@@ -64550,18 +64553,18 @@
 			version: 0,
 
 			hash: {
-				directionalLength: -1,
-				pointLength: -1,
-				spotLength: -1,
-				rectAreaLength: -1,
-				hemiLength: -1,
+				directionalLength: - 1,
+				pointLength: - 1,
+				spotLength: - 1,
+				rectAreaLength: - 1,
+				hemiLength: - 1,
 
-				numDirectionalShadows: -1,
-				numPointShadows: -1,
-				numSpotShadows: -1,
-				numSpotMaps: -1,
+				numDirectionalShadows: - 1,
+				numPointShadows: - 1,
+				numSpotShadows: - 1,
+				numSpotMaps: - 1,
 
-				numLightProbes: -1
+				numLightProbes: - 1
 			},
 
 			ambient: [ 0, 0, 0 ],
@@ -65212,7 +65215,7 @@
 		fullScreenTri.setAttribute(
 			'position',
 			new BufferAttribute(
-				new Float32Array( [ -1, -1, 0.5, 3, -1, 0.5, -1, 3, 0.5 ] ),
+				new Float32Array( [ - 1, - 1, 0.5, 3, - 1, 0.5, - 1, 3, 0.5 ] ),
 				3
 			)
 		);
@@ -65635,7 +65638,7 @@
 					locked = false;
 
 					currentColorMask = null;
-					currentColorClear.set( -1, 0, 0, 0 ); // set to invalid state
+					currentColorClear.set( - 1, 0, 0, 0 ); // set to invalid state
 
 				}
 
@@ -65922,12 +65925,12 @@
 		let version = 0;
 		const glVersion = gl.getParameter( gl.VERSION );
 
-		if ( glVersion.indexOf( 'WebGL' ) !== -1 ) {
+		if ( glVersion.indexOf( 'WebGL' ) !== - 1 ) {
 
 			version = parseFloat( /^WebGL (\d)/.exec( glVersion )[ 1 ] );
 			lineWidthAvailable = ( version >= 1.0 );
 
-		} else if ( glVersion.indexOf( 'OpenGL ES' ) !== -1 ) {
+		} else if ( glVersion.indexOf( 'OpenGL ES' ) !== - 1 ) {
 
 			version = parseFloat( /^OpenGL ES (\d)/.exec( glVersion )[ 1 ] );
 			lineWidthAvailable = ( version >= 2.0 );
@@ -69954,7 +69957,7 @@ void main() {
 
 				const controllerIndex = controllerInputSources.indexOf( event.inputSource );
 
-				if ( controllerIndex === -1 ) {
+				if ( controllerIndex === - 1 ) {
 
 					return;
 
@@ -70236,7 +70239,7 @@ void main() {
 
 					let controllerIndex = controllerInputSources.indexOf( inputSource );
 
-					if ( controllerIndex === -1 ) {
+					if ( controllerIndex === - 1 ) {
 
 						// Assign input source a controller that currently has no input source
 
@@ -70260,7 +70263,7 @@ void main() {
 
 						// If all controllers do currently receive input we ignore new ones
 
-						if ( controllerIndex === -1 ) break;
+						if ( controllerIndex === - 1 ) break;
 
 					}
 
@@ -70806,7 +70809,7 @@ void main() {
 
 				if ( material.side === BackSide ) {
 
-					uniforms.bumpScale.value *= -1;
+					uniforms.bumpScale.value *= - 1;
 
 				}
 
@@ -70873,19 +70876,19 @@ void main() {
 				_e1.copy( envMapRotation );
 
 				// accommodate left-handed frame
-				_e1.x *= -1; _e1.y *= -1; _e1.z *= -1;
+				_e1.x *= - 1; _e1.y *= - 1; _e1.z *= - 1;
 
 				if ( envMap.isCubeTexture && envMap.isRenderTargetTexture === false ) {
 
 					// environment maps which are not cube render targets or PMREMs follow a different convention
-					_e1.y *= -1;
-					_e1.z *= -1;
+					_e1.y *= - 1;
+					_e1.z *= - 1;
 
 				}
 
 				uniforms.envMapRotation.value.setFromMatrix4( _m1.makeRotationFromEuler( _e1 ) );
 
-				uniforms.flipEnvMap.value = ( envMap.isCubeTexture && envMap.isRenderTargetTexture === false ) ? -1 : 1;
+				uniforms.flipEnvMap.value = ( envMap.isCubeTexture && envMap.isRenderTargetTexture === false ) ? - 1 : 1;
 
 				uniforms.reflectivity.value = material.reflectivity;
 				uniforms.ior.value = material.ior;
@@ -71307,7 +71310,7 @@ void main() {
 
 			for ( let i = 0; i < maxBindingPoints; i ++ ) {
 
-				if ( allocatedBindingPoints.indexOf( i ) === -1 ) {
+				if ( allocatedBindingPoints.indexOf( i ) === - 1 ) {
 
 					allocatedBindingPoints.push( i );
 					return i;
@@ -71726,7 +71729,7 @@ void main() {
 			let _currentActiveCubeFace = 0;
 			let _currentActiveMipmapLevel = 0;
 			let _currentRenderTarget = null;
-			let _currentMaterialId = -1;
+			let _currentMaterialId = - 1;
 
 			let _currentCamera = null;
 
@@ -72819,7 +72822,7 @@ void main() {
 				// _gl.finish();
 
 				bindingStates.resetDefaultState();
-				_currentMaterialId = -1;
+				_currentMaterialId = - 1;
 				_currentCamera = null;
 
 				renderStateStack.pop();
@@ -73598,7 +73601,7 @@ void main() {
 
 					m_uniforms.envMap.value = envMap;
 
-					m_uniforms.flipEnvMap.value = ( envMap.isCubeTexture && envMap.isRenderTargetTexture === false ) ? -1 : 1;
+					m_uniforms.flipEnvMap.value = ( envMap.isCubeTexture && envMap.isRenderTargetTexture === false ) ? - 1 : 1;
 
 				}
 
@@ -73871,7 +73874,7 @@ void main() {
 
 				}
 
-				_currentMaterialId = -1; // reset current material to ensure correct uniform bindings
+				_currentMaterialId = - 1; // reset current material to ensure correct uniform bindings
 
 			};
 
@@ -74240,7 +74243,7 @@ void main() {
 			this.count = array !== undefined ? array.length / stride : 0;
 
 			this.usage = StaticDrawUsage;
-			this._updateRange = { offset: 0, count: -1 };
+			this._updateRange = { offset: 0, count: - 1 };
 			this.updateRanges = [];
 
 			this.version = 0;
@@ -74818,10 +74821,10 @@ void main() {
 				_geometry$1 = new BufferGeometry();
 
 				const float32Array = new Float32Array( [
-					-0.5, -0.5, 0, 0, 0,
-					0.5, -0.5, 0, 1, 0,
+					- 0.5, - 0.5, 0, 0, 0,
+					0.5, - 0.5, 0, 1, 0,
 					0.5, 0.5, 0, 1, 1,
-					-0.5, 0.5, 0, 0, 1
+					- 0.5, 0.5, 0, 0, 1
 				] );
 
 				const interleavedBuffer = new InterleavedBuffer( float32Array, 5 );
@@ -74872,8 +74875,8 @@ void main() {
 
 			const center = this.center;
 
-			transformVertex( _vA.set( -0.5, -0.5, 0 ), _mvPosition, center, _worldScale, sin, cos );
-			transformVertex( _vB.set( 0.5, -0.5, 0 ), _mvPosition, center, _worldScale, sin, cos );
+			transformVertex( _vA.set( - 0.5, - 0.5, 0 ), _mvPosition, center, _worldScale, sin, cos );
+			transformVertex( _vB.set( 0.5, - 0.5, 0 ), _mvPosition, center, _worldScale, sin, cos );
 			transformVertex( _vC.set( 0.5, 0.5, 0 ), _mvPosition, center, _worldScale, sin, cos );
 
 			_uvA.set( 0, 0 );
@@ -74886,7 +74889,7 @@ void main() {
 			if ( intersect === null ) {
 
 				// check second triangle
-				transformVertex( _vB.set( -0.5, 0.5, 0 ), _mvPosition, center, _worldScale, sin, cos );
+				transformVertex( _vB.set( - 0.5, 0.5, 0 ), _mvPosition, center, _worldScale, sin, cos );
 				_uvB.set( 0, 1 );
 
 				intersect = raycaster.ray.intersectTriangle( _vA, _vC, _vB, false, _intersectPoint );
@@ -75915,7 +75918,7 @@ void main() {
 
 					vec.normalize();
 
-					const theta = Math.acos( clamp( tangents[ i - 1 ].dot( tangents[ i ] ), -1, 1 ) ); // clamp for floating pt errors
+					const theta = Math.acos( clamp( tangents[ i - 1 ].dot( tangents[ i ] ), - 1, 1 ) ); // clamp for floating pt errors
 
 					normals[ i ].applyMatrix4( mat.makeRotationAxis( vec, theta ) );
 
@@ -75929,7 +75932,7 @@ void main() {
 
 			if ( closed === true ) {
 
-				let theta = Math.acos( clamp( normals[ 0 ].dot( normals[ segments ] ), -1, 1 ) );
+				let theta = Math.acos( clamp( normals[ 0 ].dot( normals[ segments ] ), - 1, 1 ) );
 				theta /= segments;
 
 				if ( tangents[ 0 ].dot( vec.crossVectors( normals[ 0 ], normals[ segments ] ) ) > 0 ) {
@@ -76199,7 +76202,7 @@ void main() {
 
 			c0 = x0;
 			c1 = t0;
-			c2 = -3 * x0 + 3 * x1 - 2 * t0 - t1;
+			c2 = - 3 * x0 + 3 * x1 - 2 * t0 - t1;
 			c3 = 2 * x0 - 2 * x1 + t0 + t1;
 
 		}
@@ -76425,7 +76428,7 @@ void main() {
 		const v1 = ( p3 - p1 ) * 0.5;
 		const t2 = t * t;
 		const t3 = t * t2;
-		return ( 2 * p1 - 2 * p2 + v0 + v1 ) * t3 + ( -3 * p1 + 3 * p2 - 2 * v0 - v1 ) * t2 + v0 * t + p1;
+		return ( 2 * p1 - 2 * p2 + v0 + v1 ) * t3 + ( - 3 * p1 + 3 * p2 - 2 * v0 - v1 ) * t2 + v0 * t + p1;
 
 	}
 
@@ -77222,7 +77225,7 @@ void main() {
 				let groupCount = 0;
 
 				const radius = ( top === true ) ? radiusTop : radiusBottom;
-				const sign = ( top === true ) ? 1 : -1;
+				const sign = ( top === true ) ? 1 : - 1;
 
 				// first we generate the center vertex data of the cap.
 				// because the geometry needs one set of uvs per face,
@@ -77421,7 +77424,7 @@ void main() {
 
 				} else if ( iy === heightSegments && thetaEnd === Math.PI ) {
 
-					uOffset = -0.5 / widthSegments;
+					uOffset = - 0.5 / widthSegments;
 
 				}
 
@@ -77501,7 +77504,7 @@ void main() {
 
 	class TubeGeometry extends BufferGeometry {
 
-		constructor( path = new QuadraticBezierCurve3( new Vector3( -1, -1, 0 ), new Vector3( -1, 1, 0 ), new Vector3( 1, 1, 0 ) ), tubularSegments = 64, radius = 1, radialSegments = 8, closed = false ) {
+		constructor( path = new QuadraticBezierCurve3( new Vector3( - 1, - 1, 0 ), new Vector3( - 1, 1, 0 ), new Vector3( 1, 1, 0 ) ), tubularSegments = 64, radius = 1, radialSegments = 8, closed = false ) {
 
 			super();
 
@@ -77964,7 +77967,7 @@ void main() {
 
 				const index = handlers.indexOf( regex );
 
-				if ( index !== -1 ) {
+				if ( index !== - 1 ) {
 
 					handlers.splice( index, 2 );
 
@@ -78388,7 +78391,7 @@ void main() {
 
 		constructor() {
 
-			super( new OrthographicCamera( -5, 5, 5, -5, 0.5, 500 ) );
+			super( new OrthographicCamera( - 5, 5, 5, - 5, 0.5, 500 ) );
 
 			this.isDirectionalLightShadow = true;
 
@@ -78464,7 +78467,7 @@ void main() {
 
 		start() {
 
-			this.startTime = now$2();
+			this.startTime = now$3();
 
 			this.oldTime = this.startTime;
 			this.elapsedTime = 0;
@@ -78500,7 +78503,7 @@ void main() {
 
 			if ( this.running ) {
 
-				const newTime = now$2();
+				const newTime = now$3();
 
 				diff = ( newTime - this.oldTime ) / 1000;
 				this.oldTime = newTime;
@@ -78515,7 +78518,7 @@ void main() {
 
 	}
 
-	function now$2() {
+	function now$3() {
 
 		return ( typeof performance === 'undefined' ? Date : performance ).now(); // see #10732
 
@@ -78564,7 +78567,7 @@ void main() {
 			} else if ( camera.isOrthographicCamera ) {
 
 				this.ray.origin.set( coords.x, coords.y, ( camera.near + camera.far ) / ( camera.near - camera.far ) ).unproject( camera ); // set origin in plane of camera
-				this.ray.direction.set( 0, 0, -1 ).transformDirection( camera.matrixWorld );
+				this.ray.direction.set( 0, 0, - 1 ).transformDirection( camera.matrixWorld );
 				this.camera = camera;
 
 			} else {
@@ -78580,7 +78583,7 @@ void main() {
 			_matrix.identity().extractRotation( controller.matrixWorld );
 
 			this.ray.origin.setFromMatrixPosition( controller.matrixWorld );
-			this.ray.direction.set( 0, 0, -1 ).applyMatrix4( _matrix );
+			this.ray.direction.set( 0, 0, - 1 ).applyMatrix4( _matrix );
 
 			return this;
 
@@ -78708,7 +78711,7 @@ void main() {
 			} else {
 
 				this.theta = Math.atan2( x, z );
-				this.phi = Math.acos( clamp( y / this.radius, -1, 1 ) );
+				this.phi = Math.acos( clamp( y / this.radius, - 1, 1 ) );
 
 			}
 
@@ -79220,6 +79223,614 @@ void main() {
 	  }]);
 	}(three$3.Sprite);
 
+	// Green Audio Player 1.1.2, MIT. See green-audio-player.LICENSE and README.
+	class GreenAudioPlayer {
+	    constructor(player, options) {
+	        this.audioPlayer = typeof player === 'string' ? document.querySelector(player) : player;
+	        const opts = options || {};
+
+	        const audioElement = this.audioPlayer.innerHTML;
+	        this.audioPlayer.classList.add('green-audio-player');
+	        this.audioPlayer.innerHTML = GreenAudioPlayer.getTemplate() + audioElement;
+
+	        this.isDevice = /ipad|iphone|ipod|android/i.test(window.navigator.userAgent.toLowerCase()) && !window.MSStream;
+	        this.playPauseBtn = this.audioPlayer.querySelector('.play-pause-btn');
+	        this.loading = this.audioPlayer.querySelector('.loading');
+	        this.sliders = this.audioPlayer.querySelectorAll('.slider');
+	        this.progress = this.audioPlayer.querySelector('.controls__progress');
+	        this.volumeBtn = this.audioPlayer.querySelector('.volume__button');
+	        this.volumeControls = this.audioPlayer.querySelector('.volume__controls');
+	        this.volumeProgress = this.volumeControls.querySelector('.volume__progress');
+	        this.player = this.audioPlayer.querySelector('audio');
+	        this.currentTime = this.audioPlayer.querySelector('.controls__current-time');
+	        this.totalTime = this.audioPlayer.querySelector('.controls__total-time');
+	        this.speaker = this.audioPlayer.querySelector('.volume__speaker');
+	        this.download = this.audioPlayer.querySelector('.download');
+	        this.downloadLink = this.audioPlayer.querySelector('.download__link');
+	        this.span = this.audioPlayer.querySelectorAll('.message__offscreen');
+	        this.svg = this.audioPlayer.getElementsByTagName('svg');
+	        this.img = this.audioPlayer.getElementsByTagName('img');
+	        this.draggableClasses = ['pin'];
+	        this.currentlyDragged = null;
+	        this.cleanupDrag = null;
+	        this.onViewportChange = this.directionAware.bind(this);
+	        this.onKeyDown = this.pressKb.bind(this);
+	        this.onKeyUp = this.unPressKb.bind(this);
+	        this.stopOthersOnPlay = opts.stopOthersOnPlay || false;
+	        this.enableKeystrokes = opts.enableKeystrokes || false;
+	        this.showTooltips = opts.showTooltips || false;
+
+	        const self = this;
+
+	        this.labels = {
+	            volume: {
+	                open: 'Open Volume Controls',
+	                close: 'Close Volume Controls',
+	            },
+	            pause: 'Pause',
+	            play: 'Play',
+	            download: 'Download',
+	        };
+
+	        if (!this.enableKeystrokes) {
+	            for (let i = 0; i < this.span.length; i++) {
+	                this.span[i].outerHTML = '';
+	            }
+	        } else {
+	            window.addEventListener('keydown', this.onKeyDown, false);
+	            window.addEventListener('keyup', this.onKeyUp, false);
+	            this.sliders[0].setAttribute('tabindex', 0);
+	            this.sliders[1].setAttribute('tabindex', 0);
+	            this.download.setAttribute('tabindex', -1);
+	            this.downloadLink.setAttribute('tabindex', -1);
+	            for (let j = 0; j < this.svg.length; j++) {
+	                this.svg[j].setAttribute('tabindex', 0);
+	                this.svg[j].setAttribute('focusable', true);
+	            }
+	            for (let k = 0; k < this.img.length; k++) {
+	                this.img[k].setAttribute('tabindex', 0);
+	            }
+	        }
+
+	        if (this.showTooltips) {
+	            this.playPauseBtn.setAttribute('title', this.labels.play);
+	            this.volumeBtn.setAttribute('title', this.labels.volume.open);
+	            this.downloadLink.setAttribute('title', this.labels.download);
+	        }
+
+	        if (opts.outlineControls || false) {
+	            this.audioPlayer.classList.add('player-accessible');
+	        }
+
+	        if (opts.showDownloadButton || false) {
+	            this.showDownload();
+	        }
+
+	        this.initEvents();
+	        this.directionAware();
+	        this.overcomeIosLimitations();
+
+	        if ('autoplay' in this.player.attributes) {
+	            const promise = this.player.play();
+	            if (promise !== undefined) {
+	                promise.then(() => {
+	                    const playPauseButton = self.player.parentElement.querySelector('.play-pause-btn__icon');
+	                    playPauseButton.attributes.d.value = 'M0 0h6v24H0zM12 0h6v24h-6z';
+	                    self.playPauseBtn.setAttribute('aria-label', self.labels.pause);
+	                    self.hasSetAttribute(self.playPauseBtn, 'title', self.labels.pause);
+	                }).catch(() => {
+	                    // eslint-disable-next-line no-console
+	                    console.error('Green Audio Player Error: Autoplay has been prevented, because it is not allowed by this browser.');
+	                });
+	            }
+	        }
+	        if ('preload' in this.player.attributes && this.player.attributes.preload.value === 'none') {
+	            this.playPauseBtn.style.visibility = 'visible';
+	            this.loading.style.visibility = 'hidden';
+	        }
+	    }
+
+	    static init(options) {
+	        const players = document.querySelectorAll(options.selector);
+
+	        players.forEach((player) => {
+	            /* eslint-disable no-new */
+	            new GreenAudioPlayer(player, options);
+	        });
+	    }
+
+	    static getTemplate() {
+	        return `
+            <div class="holder">
+                <div class="loading">
+                    <div class="loading__spinner"></div>
+                </div>
+
+                <div class="play-pause-btn" aria-label="Play" role="button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="24" viewBox="0 0 18 24">
+                        <path fill="#566574" fill-rule="evenodd" d="M18 12L0 24V0" class="play-pause-btn__icon"/>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="controls">
+                <span class="controls__current-time" aria-live="off" role="timer">00:00</span>
+                <div class="controls__slider slider" data-direction="horizontal">
+                    <div class="controls__progress gap-progress" aria-label="Time Slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" role="slider">
+                        <div class="pin progress__pin" data-method="rewind"></div>
+                    </div>
+                </div>
+                <span class="controls__total-time">00:00</span>
+            </div>
+
+            <div class="volume">
+                <div class="volume__button" aria-label="Open Volume Controls" role="button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                        <path class="volume__speaker" fill="#566574" fill-rule="evenodd" d="M14.667 0v2.747c3.853 1.146 6.666 4.72 6.666 8.946 0 4.227-2.813 7.787-6.666 8.934v2.76C20 22.173 24 17.4 24 11.693 24 5.987 20 1.213 14.667 0zM18 11.693c0-2.36-1.333-4.386-3.333-5.373v10.707c2-.947 3.333-2.987 3.333-5.334zm-18-4v8h5.333L12 22.36V1.027L5.333 7.693H0z"/>
+                    </svg>
+                    <span class="message__offscreen">Press Enter or Space to show volume slider.</span>
+                </div>
+                <div class="volume__controls hidden">
+                    <div class="volume__slider slider" data-direction="vertical">
+                        <div class="volume__progress gap-progress" aria-label="Volume Slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="81" role="slider">
+                            <div class="pin volume__pin" data-method="changeVolume"></div>
+                        </div>
+                        <span class="message__offscreen">Use Up/Down Arrow keys to increase or decrease volume.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="download">
+                <a class="download__link" href="" download="" aria-label="Download" role="button">
+                    <svg width="24" height="24" fill="#566574" enable-background="new 0 0 29.978 29.978" version="1.1" viewBox="0 0 29.978 29.978" xml:space="preserve" xmlns="http://www.w3.org/2000/svg">
+                        <path d="m25.462 19.105v6.848h-20.947v-6.848h-4.026v8.861c0 1.111 0.9 2.012 2.016 2.012h24.967c1.115 0 2.016-0.9 2.016-2.012v-8.861h-4.026z"/>
+                        <path d="m14.62 18.426l-5.764-6.965s-0.877-0.828 0.074-0.828 3.248 0 3.248 0 0-0.557 0-1.416v-8.723s-0.129-0.494 0.615-0.494h4.572c0.536 0 0.524 0.416 0.524 0.416v8.742 1.266s1.842 0 2.998 0c1.154 0 0.285 0.867 0.285 0.867s-4.904 6.51-5.588 7.193c-0.492 0.495-0.964-0.058-0.964-0.058z"/>
+                    </svg>
+                </a>
+            </div>
+        `;
+	    }
+
+	    initEvents() {
+	        const self = this;
+
+	        self.audioPlayer.addEventListener('mousedown', (event) => {
+	            if (self.isDraggable(event.target)) {
+	                self.cleanupDrag?.();
+	                self.currentlyDragged = event.target;
+	                const handleMethod = self.currentlyDragged.dataset.method;
+	                const listener = self[handleMethod].bind(self);
+	                window.addEventListener('mousemove', listener, false);
+	                if (self.currentlyDragged.parentElement.parentElement === self.sliders[0]) {
+	                    self.paused = self.player.paused;
+	                    if (self.paused === false)
+	                        self.togglePlay();
+	                }
+	                const endDrag = () => {
+	                    if (self.currentlyDragged !== false
+	                        && self.currentlyDragged.parentElement.parentElement === self.sliders[0]
+	                        && self.paused !== self.player.paused) {
+	                        self.togglePlay();
+	                    }
+	                    self.cleanupDrag();
+	                };
+	                self.cleanupDrag = () => {
+	                    self.currentlyDragged = false;
+	                    window.removeEventListener('mousemove', listener, false);
+	                    window.removeEventListener('mouseup', endDrag, false);
+	                    self.cleanupDrag = null;
+	                };
+	                window.addEventListener('mouseup', endDrag, false);
+	            }
+	        });
+
+	        // for mobile touches
+	        self.audioPlayer.addEventListener('touchstart', (event) => {
+	            if (self.isDraggable(event.target)) {
+	                self.cleanupDrag?.();
+	                [self.currentlyDragged] = event.targetTouches;
+	                const handleMethod = self.currentlyDragged.target.dataset.method;
+	                const listener = self[handleMethod].bind(self);
+	                window.addEventListener('touchmove', listener, false);
+	                if (self.currentlyDragged.target.parentElement.parentElement === self.sliders[0]) {
+	                    self.paused = self.player.paused;
+	                    if (self.paused === false)
+	                        self.togglePlay();
+	                }
+	                const endDrag = () => {
+	                    if (self.currentlyDragged !== false
+	                        && self.currentlyDragged.target.parentElement.parentElement === self.sliders[0]
+	                        && self.paused !== self.player.paused) {
+	                        self.togglePlay();
+	                    }
+	                    self.cleanupDrag();
+	                };
+	                self.cleanupDrag = () => {
+	                    self.currentlyDragged = false;
+	                    window.removeEventListener('touchmove', listener, false);
+	                    window.removeEventListener('touchend', endDrag, false);
+	                    window.removeEventListener('touchcancel', endDrag, false);
+	                    self.cleanupDrag = null;
+	                };
+	                window.addEventListener('touchend', endDrag, false);
+	                window.addEventListener('touchcancel', endDrag, false);
+
+	                event.preventDefault();
+	            }
+	        });
+
+	        this.playPauseBtn.addEventListener('click', this.togglePlay.bind(self));
+	        this.player.addEventListener('timeupdate', this.updateProgress.bind(self));
+	        this.player.addEventListener('volumechange', this.updateVolume.bind(self));
+	        this.player.volume = 0.81;
+	        this.player.addEventListener('loadedmetadata', () => {
+	            self.totalTime.textContent = GreenAudioPlayer.formatTime(self.player.duration);
+	        });
+	        this.player.addEventListener('seeking', this.showLoadingIndicator.bind(self));
+	        this.player.addEventListener('seeked', this.hideLoadingIndicator.bind(self));
+	        this.player.addEventListener('canplay', this.hideLoadingIndicator.bind(self));
+	        this.player.addEventListener('ended', () => {
+	            GreenAudioPlayer.pausePlayer(self.player, 'ended');
+	            self.player.currentTime = 0;
+	            self.playPauseBtn.setAttribute('aria-label', self.labels.play);
+	            self.hasSetAttribute(self.playPauseBtn, 'title', self.labels.play);
+	        });
+
+	        this.volumeBtn.addEventListener('click', this.showHideVolume.bind(self));
+	        window.addEventListener('resize', this.onViewportChange);
+	        window.addEventListener('scroll', this.onViewportChange);
+
+	        for (let i = 0; i < this.sliders.length; i++) {
+	            const pin = this.sliders[i].querySelector('.pin');
+	            this.sliders[i].addEventListener('click', self[pin.dataset.method].bind(self));
+	        }
+
+	        this.downloadLink.addEventListener('click', this.downloadAudio.bind(self));
+	    }
+
+	    overcomeIosLimitations() {
+	        const self = this;
+	        if (this.isDevice) {
+	            // iOS does not support "canplay" event
+	            this.player.addEventListener('loadedmetadata', this.hideLoadingIndicator.bind(self));
+	            // iOS does not let "volume" property to be set programmatically
+	            this.audioPlayer.querySelector('.volume').style.display = 'none';
+	            this.audioPlayer.querySelector('.controls').style.marginRight = '0';
+	        }
+	    }
+
+	    isDraggable(el) {
+	        let canDrag = false;
+
+	        if (typeof el.classList === 'undefined')
+	            return false; // fix for IE 11 not supporting classList on SVG elements
+
+	        for (let i = 0; i < this.draggableClasses.length; i++) {
+	            if (el.classList.contains(this.draggableClasses[i])) {
+	                canDrag = true;
+	            }
+	        }
+
+	        return canDrag;
+	    }
+
+	    inRange(event) {
+	        const touch = ('touches' in event); // instanceof TouchEvent may also be used
+	        const rangeBox = this.getRangeBox(event);
+	        const sliderPositionAndDimensions = rangeBox.getBoundingClientRect();
+	        const { dataset: { direction } } = rangeBox;
+	        let min = null;
+	        let max = null;
+
+	        if (direction === 'horizontal') {
+	            min = sliderPositionAndDimensions.x;
+	            max = min + sliderPositionAndDimensions.width;
+	            const clientX = touch ? event.touches[0].clientX : event.clientX;
+	            if (clientX < min || clientX > max)
+	                return false;
+	        } else {
+	            min = sliderPositionAndDimensions.top;
+	            max = min + sliderPositionAndDimensions.height;
+	            const clientY = touch ? event.touches[0].clientY : event.clientY;
+	            if (clientY < min || clientY > max)
+	                return false;
+	        }
+	        return true;
+	    }
+
+	    updateProgress() {
+	        const current = this.player.currentTime;
+	        const percent = (current / this.player.duration) * 100;
+	        this.progress.setAttribute('aria-valuenow', percent);
+	        this.progress.style.width = `${percent}%`;
+
+	        this.currentTime.textContent = GreenAudioPlayer.formatTime(current);
+	    }
+
+	    updateVolume() {
+	        this.volumeProgress.setAttribute('aria-valuenow', this.player.volume * 100);
+	        this.volumeProgress.style.height = `${this.player.volume * 100}%`;
+	        if (this.player.volume >= 0.5) {
+	            this.speaker.attributes.d.value = 'M14.667 0v2.747c3.853 1.146 6.666 4.72 6.666 8.946 0 4.227-2.813 7.787-6.666 8.934v2.76C20 22.173 24 17.4 24 11.693 24 5.987 20 1.213 14.667 0zM18 11.693c0-2.36-1.333-4.386-3.333-5.373v10.707c2-.947 3.333-2.987 3.333-5.334zm-18-4v8h5.333L12 22.36V1.027L5.333 7.693H0z';
+	        } else if (this.player.volume < 0.5 && this.player.volume > 0.05) {
+	            this.speaker.attributes.d.value = 'M0 7.667v8h5.333L12 22.333V1L5.333 7.667M17.333 11.373C17.333 9.013 16 6.987 14 6v10.707c2-.947 3.333-2.987 3.333-5.334z';
+	        } else if (this.player.volume <= 0.05) {
+	            this.speaker.attributes.d.value = 'M0 7.667v8h5.333L12 22.333V1L5.333 7.667';
+	        }
+	    }
+
+	    getRangeBox(event) {
+	        let rangeBox = event.target;
+	        const el = this.currentlyDragged;
+	        if (event.type === 'click' && this.isDraggable(event.target)) {
+	            rangeBox = event.target.parentElement.parentElement;
+	        }
+	        if (event.type === 'mousemove') {
+	            rangeBox = el.parentElement.parentElement;
+	        }
+	        if (event.type === 'touchmove') {
+	            rangeBox = el.target.parentElement.parentElement;
+	        }
+	        return rangeBox;
+	    }
+
+
+	    getCoefficient(event) {
+	        const touch = ('touches' in event); // instanceof TouchEvent may also be used
+
+	        const slider = this.getRangeBox(event);
+	        const sliderPositionAndDimensions = slider.getBoundingClientRect();
+	        let K = 0;
+	        if (slider.dataset.direction === 'horizontal') {
+	            // if event is touch
+	            const clientX = touch ? event.touches[0].clientX : event.clientX;
+	            const offsetX = clientX - sliderPositionAndDimensions.left;
+	            const { width } = sliderPositionAndDimensions;
+	            K = offsetX / width;
+	        } else if (slider.dataset.direction === 'vertical') {
+	            const { height } = sliderPositionAndDimensions;
+	            const clientY = touch ? event.touches[0].clientY : event.clientY;
+	            const offsetY = clientY - sliderPositionAndDimensions.top;
+	            K = 1 - offsetY / height;
+	        }
+	        return K;
+	    }
+
+	    rewind(event) {
+	        if (this.player.seekable && this.player.seekable.length) { // no seek if not (pre)loaded
+	            if (this.inRange(event)) {
+	                this.player.currentTime = this.player.duration * this.getCoefficient(event);
+	            }
+	        }
+	    }
+
+	    showVolume() {
+	        if (this.volumeBtn.getAttribute('aria-attribute') === this.labels.volume.open) {
+	            this.volumeControls.classList.remove('hidden');
+	            this.volumeBtn.classList.add('open');
+	            this.volumeBtn.setAttribute('aria-label', this.labels.volume.close);
+	            this.hasSetAttribute(this.volumeBtn, 'title', this.labels.volume.close);
+	        }
+	    }
+
+	    showHideVolume() {
+	        this.volumeControls.classList.toggle('hidden');
+
+	        if (this.volumeBtn.getAttribute('aria-label') === this.labels.volume.open) {
+	            this.volumeBtn.setAttribute('aria-label', this.labels.volume.close);
+	            this.hasSetAttribute(this.volumeBtn, 'title', this.labels.volume.close);
+	            this.volumeBtn.classList.add('open');
+	        } else {
+	            this.volumeBtn.setAttribute('aria-label', this.labels.volume.open);
+	            this.hasSetAttribute(this.volumeBtn, 'title', this.labels.volume.open);
+	            this.volumeBtn.classList.remove('open');
+	        }
+	    }
+
+	    changeVolume(event) {
+	        if (this.inRange(event)) {
+	            this.player.volume = Math.round(this.getCoefficient(event) * 50) / 50;
+	        }
+	    }
+
+	    static formatTime(time) {
+	        const min = Math.floor(time / 60);
+	        const sec = Math.floor(time % 60);
+	        return `${(min < 10) ? `0${min}` : min}:${(sec < 10) ? `0${sec}` : sec}`;
+	    }
+
+	    preloadNone() {
+	        const self = this;
+	        if (!this.player.duration) {
+	            self.playPauseBtn.style.visibility = 'hidden';
+	            self.loading.style.visibility = 'visible';
+	        }
+	    }
+
+	    togglePlay() {
+	        this.preloadNone();
+	        if (this.player.paused) {
+	            if (this.stopOthersOnPlay) {
+	                GreenAudioPlayer.stopOtherPlayers();
+	            }
+	            GreenAudioPlayer.playPlayer(this.player);
+	            this.playPauseBtn.setAttribute('aria-label', this.labels.pause);
+	            this.hasSetAttribute(this.playPauseBtn, 'title', this.labels.pause);
+	        } else {
+	            GreenAudioPlayer.pausePlayer(this.player, 'toggle');
+	            this.playPauseBtn.setAttribute('aria-label', this.labels.play);
+	            this.hasSetAttribute(this.playPauseBtn, 'title', this.labels.play);
+	        }
+	    }
+
+	    hasSetAttribute(el, a, v) {
+	        if (this.showTooltips) {
+	            if (el.hasAttribute(a)) {
+	                el.setAttribute(a, v);
+	            }
+	        }
+	    }
+
+	    setCurrentTime(time) {
+	        const pos = this.player.currentTime;
+	        const end = Math.floor(this.player.duration);
+	        if (pos + time < 0 && pos === 0) {
+	            this.player.currentTime = this.player.currentTime;
+	        } else if (pos + time < 0) {
+	            this.player.currentTime = 0;
+	        } else if (pos + time > end) {
+	            this.player.currentTime = end;
+	        } else {
+	            this.player.currentTime += time;
+	        }
+	    }
+
+	    setVolume(volume) {
+	        if (this.isDevice)
+	            return;
+	        const vol = this.player.volume;
+	        if (vol + volume >= 0 && vol + volume < 1) {
+	            this.player.volume += volume;
+	        } else if (vol + volume <= 0) {
+	            this.player.volume = 0;
+	        } else {
+	            this.player.volume = 1;
+	        }
+	    }
+
+	    unPressKb(event) {
+	        const evt = event || window.event;
+	        if (this.seeking && (evt.keyCode === 37 || evt.keyCode === 39)) {
+	            this.togglePlay();
+	            this.seeking = false;
+	        }
+	    }
+
+	    pressKb(event) {
+	        const evt = event || window.event;
+	        switch (evt.keyCode) {
+	        case 13: // Enter
+	        case 32: // Spacebar
+	            if (document.activeElement.parentNode === this.playPauseBtn) {
+	                this.togglePlay();
+	            } else if (document.activeElement.parentNode === this.volumeBtn
+	                || document.activeElement === this.sliders[1]) {
+	                if (document.activeElement === this.sliders[1]) {
+	                    try { // IE 11 not supporting programmatic focus on svg elements
+	                        this.volumeBtn.children[0].focus();
+	                    } catch (error) {
+	                        this.volumeBtn.focus();
+	                    }
+	                }
+	                this.showHideVolume();
+	            }
+	            if (evt.keyCode === 13 && this.showDownload
+	                && document.activeElement.parentNode === this.downloadLink) {
+	                this.downloadLink.focus();
+	            }
+	            break;
+	        case 37: case 39: // horizontal Arrows
+	            if (document.activeElement === this.sliders[0]) {
+	                if (evt.keyCode === 37) {
+	                    this.setCurrentTime(-5);
+	                } else {
+	                    this.setCurrentTime(+5);
+	                }
+	                if (!this.player.paused && this.player.seeking) {
+	                    this.togglePlay();
+	                    this.seeking = true;
+	                }
+	            }
+	            break;
+	        case 38: case 40: // vertical Arrows
+	            if (document.activeElement.parentNode === this.volumeBtn
+	                || document.activeElement === this.sliders[1]) {
+	                if (evt.keyCode === 38) {
+	                    this.setVolume(0.05);
+	                } else {
+	                    this.setVolume(-0.05);
+	                }
+	            }
+	            if (document.activeElement.parentNode === this.volumeBtn) {
+	                this.showVolume();
+	            }
+	            break;
+	        }
+	    }
+
+	    static pausePlayer(player) {
+	        const playPauseButton = player.parentElement?.querySelector('.play-pause-btn__icon');
+	        if (playPauseButton)
+	            playPauseButton.attributes.d.value = 'M18 12L0 24V0';
+	        player.parentElement?.querySelector('.play-pause-btn')?.setAttribute('aria-label', player.explorerAudioLabels?.play || 'Play');
+	        player.pause();
+	    }
+
+	    static playPlayer(player) {
+	        const playPauseButton = player.parentElement?.querySelector('.play-pause-btn__icon');
+	        if (playPauseButton)
+	            playPauseButton.attributes.d.value = 'M0 0h6v24H0zM12 0h6v24h-6z';
+	        player.parentElement?.querySelector('.play-pause-btn')?.setAttribute('aria-label', player.explorerAudioLabels?.pause || 'Pause');
+	        return player.play().catch(error => {
+	            if (error.name !== 'AbortError')
+	                GreenAudioPlayer.pausePlayer(player);
+	        });
+	    }
+
+	    static stopOtherPlayers() {
+	        const players = document.querySelectorAll('.green-audio-player audio');
+
+	        for (let i = 0; i < players.length; i++) {
+	            GreenAudioPlayer.pausePlayer(players[i]);
+	        }
+	    }
+
+	    showLoadingIndicator() {
+	        this.playPauseBtn.style.visibility = 'hidden';
+	        this.loading.style.visibility = 'visible';
+	    }
+
+	    hideLoadingIndicator() {
+	        this.playPauseBtn.style.visibility = 'visible';
+	        this.loading.style.visibility = 'hidden';
+	    }
+
+	    showDownload() {
+	        this.download.style.display = 'block';
+	    }
+
+	    downloadAudio() {
+	        const src = this.player.currentSrc;
+	        const name = src.split('/').reverse()[0];
+
+	        this.downloadLink.setAttribute('href', src);
+	        this.downloadLink.setAttribute('download', name);
+	    }
+
+	    destroy() {
+	        this.cleanupDrag?.();
+	        window.removeEventListener('resize', this.onViewportChange);
+	        window.removeEventListener('scroll', this.onViewportChange);
+	        window.removeEventListener('keydown', this.onKeyDown);
+	        window.removeEventListener('keyup', this.onKeyUp);
+	        this.player.pause();
+	        this.player.removeAttribute('src');
+	        this.player.load();
+	    }
+
+	    directionAware() {
+	        this.volumeControls.classList.remove('top', 'middle', 'bottom');
+
+	        if (window.innerHeight < 250) {
+	            this.volumeControls.classList.add('middle');
+	        } else if (this.audioPlayer.getBoundingClientRect().top < 180) {
+	            this.volumeControls.classList.add('bottom');
+	        } else {
+	            this.volumeControls.classList.add('top');
+	        }
+	    }
+	}
+
 	const _plane$1 = new Plane();
 	const _raycaster = new Raycaster();
 
@@ -79544,10 +80155,10 @@ void main() {
 
 	function tree_add$2(d) {
 	  const x = +this._x.call(null, d);
-	  return add$2(this.cover(x), x, d);
+	  return add$3(this.cover(x), x, d);
 	}
 
-	function add$2(tree, x, d) {
+	function add$3(tree, x, d) {
 	  if (isNaN(x)) return tree; // ignore invalid points
 
 	  var parent,
@@ -79605,7 +80216,7 @@ void main() {
 
 	  // Add the new points.
 	  for (let i = 0; i < n; ++i) {
-	    add$2(this, xz[i], data[i]);
+	    add$3(this, xz[i], data[i]);
 	  }
 
 	  return this;
@@ -79777,7 +80388,7 @@ void main() {
 	  return this;
 	}
 
-	function removeAll$2(data) {
+	function removeAll$3(data) {
 	  for (var i = 0, n = data.length; i < n; ++i) this.remove(data[i]);
 	  return this;
 	}
@@ -79883,7 +80494,7 @@ void main() {
 	treeProto$2.extent = tree_extent$2;
 	treeProto$2.find = tree_find$2;
 	treeProto$2.remove = tree_remove$2;
-	treeProto$2.removeAll = removeAll$2;
+	treeProto$2.removeAll = removeAll$3;
 	treeProto$2.root = tree_root$2;
 	treeProto$2.size = tree_size$2;
 	treeProto$2.visit = tree_visit$2;
@@ -79893,10 +80504,10 @@ void main() {
 	function tree_add$1(d) {
 	  var x = +this._x.call(null, d),
 	      y = +this._y.call(null, d);
-	  return add$1(this.cover(x, y), x, y, d);
+	  return add$2(this.cover(x, y), x, y, d);
 	}
 
-	function add$1(tree, x, y, d) {
+	function add$2(tree, x, y, d) {
 	  if (isNaN(x) || isNaN(y)) return tree; // ignore invalid points
 
 	  var parent,
@@ -79969,7 +80580,7 @@ void main() {
 
 	  // Add the new points.
 	  for (i = 0; i < n; ++i) {
-	    add$1(this, xz[i], yz[i], data[i]);
+	    add$2(this, xz[i], yz[i], data[i]);
 	  }
 
 	  return this;
@@ -80168,7 +80779,7 @@ void main() {
 	  return this;
 	}
 
-	function removeAll$1(data) {
+	function removeAll$2(data) {
 	  for (var i = 0, n = data.length; i < n; ++i) this.remove(data[i]);
 	  return this;
 	}
@@ -80289,7 +80900,7 @@ void main() {
 	treeProto$1.extent = tree_extent$1;
 	treeProto$1.find = tree_find$1;
 	treeProto$1.remove = tree_remove$1;
-	treeProto$1.removeAll = removeAll$1;
+	treeProto$1.removeAll = removeAll$2;
 	treeProto$1.root = tree_root$1;
 	treeProto$1.size = tree_size$1;
 	treeProto$1.visit = tree_visit$1;
@@ -80301,10 +80912,10 @@ void main() {
 	  const x = +this._x.call(null, d),
 	      y = +this._y.call(null, d),
 	      z = +this._z.call(null, d);
-	  return add(this.cover(x, y, z), x, y, z, d);
+	  return add$1(this.cover(x, y, z), x, y, z, d);
 	}
 
-	function add(tree, x, y, z, d) {
+	function add$1(tree, x, y, z, d) {
 	  if (isNaN(x) || isNaN(y) || isNaN(z)) return tree; // ignore invalid points
 
 	  var parent,
@@ -80390,7 +81001,7 @@ void main() {
 
 	  // Add the new points.
 	  for (let i = 0; i < n; ++i) {
-	    add(this, xz[i], yz[i], zz[i], data[i]);
+	    add$1(this, xz[i], yz[i], zz[i], data[i]);
 	  }
 
 	  return this;
@@ -80645,7 +81256,7 @@ void main() {
 	  return this;
 	}
 
-	function removeAll(data) {
+	function removeAll$1(data) {
 	  for (var i = 0, n = data.length; i < n; ++i) this.remove(data[i]);
 	  return this;
 	}
@@ -80786,7 +81397,7 @@ void main() {
 	treeProto.find = tree_find;
 	treeProto.findAllWithinRadius = findAllWithinRadius;
 	treeProto.remove = tree_remove;
-	treeProto.removeAll = removeAll;
+	treeProto.removeAll = removeAll$1;
 	treeProto.root = tree_root;
 	treeProto.size = tree_size;
 	treeProto.visit = tree_visit;
@@ -83926,11 +84537,15 @@ function InsertStackElement(node, body) {
 	/** Detect free variable `global` from Node.js. */
 	var freeGlobal = typeof global == 'object' && global && global.Object === Object && global;
 
+	var freeGlobal$1 = freeGlobal;
+
 	/** Detect free variable `self`. */
 	var freeSelf = typeof self == 'object' && self && self.Object === Object && self;
 
 	/** Used as a reference to the global object. */
-	var root = freeGlobal || freeSelf || Function('return this')();
+	var root = freeGlobal$1 || freeSelf || Function('return this')();
+
+	var root$1 = root;
 
 	/**
 	 * Gets the timestamp of the number of milliseconds that have elapsed since
@@ -83949,8 +84564,10 @@ function InsertStackElement(node, body) {
 	 * // => Logs the number of milliseconds it took for the deferred invocation.
 	 */
 	var now$1 = function() {
-	  return root.Date.now();
+	  return root$1.Date.now();
 	};
+
+	var now$2 = now$1;
 
 	/** Used to match a single whitespace character. */
 	var reWhitespace = /\s/;
@@ -83987,7 +84604,9 @@ function InsertStackElement(node, body) {
 	}
 
 	/** Built-in value references. */
-	var Symbol$1 = root.Symbol;
+	var Symbol$1 = root$1.Symbol;
+
+	var Symbol$2 = Symbol$1;
 
 	/** Used for built-in method references. */
 	var objectProto$1 = Object.prototype;
@@ -84003,7 +84622,7 @@ function InsertStackElement(node, body) {
 	var nativeObjectToString$1 = objectProto$1.toString;
 
 	/** Built-in value references. */
-	var symToStringTag$1 = Symbol$1 ? Symbol$1.toStringTag : undefined;
+	var symToStringTag$1 = Symbol$2 ? Symbol$2.toStringTag : undefined;
 
 	/**
 	 * A specialized version of `baseGetTag` which ignores `Symbol.toStringTag` values.
@@ -84058,7 +84677,7 @@ function InsertStackElement(node, body) {
 	    undefinedTag = '[object Undefined]';
 
 	/** Built-in value references. */
-	var symToStringTag = Symbol$1 ? Symbol$1.toStringTag : undefined;
+	var symToStringTag = Symbol$2 ? Symbol$2.toStringTag : undefined;
 
 	/**
 	 * The base implementation of `getTag` without fallbacks for buggy environments.
@@ -84313,7 +84932,7 @@ function InsertStackElement(node, body) {
 	  }
 
 	  function timerExpired() {
-	    var time = now$1();
+	    var time = now$2();
 	    if (shouldInvoke(time)) {
 	      return trailingEdge(time);
 	    }
@@ -84342,11 +84961,11 @@ function InsertStackElement(node, body) {
 	  }
 
 	  function flush() {
-	    return timerId === undefined ? result : trailingEdge(now$1());
+	    return timerId === undefined ? result : trailingEdge(now$2());
 	  }
 
 	  function debounced() {
-	    var time = now$1(),
+	    var time = now$2(),
 	        isInvoking = shouldInvoke(time);
 
 	    lastArgs = arguments;
@@ -88573,7 +89192,7 @@ function InsertStackElement(node, body) {
 			super();
 
 			const scope = this;
-			const STATE = { NONE: -1, ROTATE: 0, ZOOM: 1, PAN: 2, TOUCH_ROTATE: 3, TOUCH_ZOOM_PAN: 4 };
+			const STATE = { NONE: - 1, ROTATE: 0, ZOOM: 1, PAN: 2, TOUCH_ROTATE: 3, TOUCH_ZOOM_PAN: 4 };
 
 			this.object = object;
 			this.domElement = domElement;
@@ -89719,7 +90338,7 @@ function InsertStackElement(node, body) {
 							if ( this.screenSpacePanning ) {
 
 								// position the orbit target in front of the new camera position
-								scope.target.set( 0, 0, -1 )
+								scope.target.set( 0, 0, - 1 )
 									.transformDirection( scope.object.matrix )
 									.multiplyScalar( newRadius )
 									.add( scope.object.position );
@@ -89728,7 +90347,7 @@ function InsertStackElement(node, body) {
 
 								// get the ray and translation plane to compute target
 								_ray.origin.copy( scope.object.position );
-								_ray.direction.set( 0, 0, -1 ).transformDirection( scope.object.matrix );
+								_ray.direction.set( 0, 0, - 1 ).transformDirection( scope.object.matrix );
 
 								// if the camera is 20 degrees above the horizon then don't adjust the focus target to avoid
 								// extremely large values
@@ -89822,7 +90441,7 @@ function InsertStackElement(node, body) {
 			const scope = this;
 
 			const STATE = {
-				NONE: -1,
+				NONE: - 1,
 				ROTATE: 0,
 				DOLLY: 1,
 				PAN: 2,
@@ -90157,7 +90776,7 @@ function InsertStackElement(node, body) {
 
 						if ( event.ctrlKey || event.metaKey || event.shiftKey ) {
 
-							rotateUp( -2 * Math.PI * scope.rotateSpeed / scope.domElement.clientHeight );
+							rotateUp( - 2 * Math.PI * scope.rotateSpeed / scope.domElement.clientHeight );
 
 						} else {
 
@@ -90187,7 +90806,7 @@ function InsertStackElement(node, body) {
 
 						if ( event.ctrlKey || event.metaKey || event.shiftKey ) {
 
-							rotateLeft( -2 * Math.PI * scope.rotateSpeed / scope.domElement.clientHeight );
+							rotateLeft( - 2 * Math.PI * scope.rotateSpeed / scope.domElement.clientHeight );
 
 						} else {
 
@@ -90482,7 +91101,7 @@ function InsertStackElement(node, body) {
 
 					default:
 
-						mouseAction = -1;
+						mouseAction = - 1;
 
 				}
 
@@ -91295,7 +91914,7 @@ function InsertStackElement(node, body) {
 
 	// Helper for passes that need to fill the viewport with a single quad.
 
-	const _camera = new OrthographicCamera( -1, 1, 1, -1, 0, 1 );
+	const _camera = new OrthographicCamera( - 1, 1, 1, - 1, 0, 1 );
 
 	// https://github.com/mrdoob/three.js/pull/21358
 
@@ -91305,7 +91924,7 @@ function InsertStackElement(node, body) {
 
 			super();
 
-			this.setAttribute( 'position', new Float32BufferAttribute( [ -1, 3, 0, -1, -1, 0, 3, -1, 0 ], 3 ) );
+			this.setAttribute( 'position', new Float32BufferAttribute( [ - 1, 3, 0, - 1, - 1, 0, 3, - 1, 0 ], 3 ) );
 			this.setAttribute( 'uv', new Float32BufferAttribute( [ 0, 2, 0, 0, 2, 0 ], 2 ) );
 
 		}
@@ -91587,7 +92206,7 @@ function InsertStackElement(node, body) {
 
 			const index = this.passes.indexOf( pass );
 
-			if ( index !== -1 ) {
+			if ( index !== - 1 ) {
 
 				this.passes.splice( index, 1 );
 
@@ -91901,9 +92520,9 @@ function InsertStackElement(node, body) {
 	    return Wrapper.prototype = Object.create(t.prototype, {
 	      constructor: {
 	        value: Wrapper,
-	        enumerable: false,
-	        writable: true,
-	        configurable: true
+	        enumerable: !1,
+	        writable: !0,
+	        configurable: !0
 	      }
 	    }), _setPrototypeOf(Wrapper, t);
 	  }, _wrapNativeSuper(t);
@@ -92480,7 +93099,9 @@ function InsertStackElement(node, body) {
 	 * }
 	 */
 	function hsl(value, saturation, lightness) {
-	  if (typeof value === 'object' && saturation === undefined && lightness === undefined) {
+	  if (typeof value === 'number' && typeof saturation === 'number' && typeof lightness === 'number') {
+	    return hslToHex(value, saturation, lightness);
+	  } else if (typeof value === 'object' && saturation === undefined && lightness === undefined) {
 	    return hslToHex(value.hue, value.saturation, value.lightness);
 	  }
 	  throw new PolishedError(1);
@@ -92513,7 +93134,9 @@ function InsertStackElement(node, body) {
 	 * }
 	 */
 	function hsla(value, saturation, lightness, alpha) {
-	  if (typeof value === 'object' && saturation === undefined && lightness === undefined && alpha === undefined) {
+	  if (typeof value === 'number' && typeof saturation === 'number' && typeof lightness === 'number' && typeof alpha === 'number') {
+	    return alpha >= 1 ? hslToHex(value, saturation, lightness) : "rgba(" + hslToRgb(value, saturation, lightness) + "," + alpha + ")";
+	  } else if (typeof value === 'object' && saturation === undefined && lightness === undefined && alpha === undefined) {
 	    return value.alpha >= 1 ? hslToHex(value.hue, value.saturation, value.lightness) : "rgba(" + hslToRgb(value.hue, value.saturation, value.lightness) + "," + value.alpha + ")";
 	  }
 	  throw new PolishedError(2);
@@ -92586,7 +93209,12 @@ function InsertStackElement(node, body) {
 	 * }
 	 */
 	function rgba(firstValue, secondValue, thirdValue, fourthValue) {
-	  if (typeof firstValue === 'object' && secondValue === undefined && thirdValue === undefined && fourthValue === undefined) {
+	  if (typeof firstValue === 'string' && typeof secondValue === 'number') {
+	    var rgbValue = parseToRgb(firstValue);
+	    return "rgba(" + rgbValue.red + "," + rgbValue.green + "," + rgbValue.blue + "," + secondValue + ")";
+	  } else if (typeof firstValue === 'number' && typeof secondValue === 'number' && typeof thirdValue === 'number' && typeof fourthValue === 'number') {
+	    return fourthValue >= 1 ? rgb(firstValue, secondValue, thirdValue) : "rgba(" + firstValue + "," + secondValue + "," + thirdValue + "," + fourthValue + ")";
+	  } else if (typeof firstValue === 'object' && secondValue === undefined && thirdValue === undefined && fourthValue === undefined) {
 	    return firstValue.alpha >= 1 ? rgb(firstValue.red, firstValue.green, firstValue.blue) : "rgba(" + firstValue.red + "," + firstValue.green + "," + firstValue.blue + "," + firstValue.alpha + ")";
 	  }
 	  throw new PolishedError(7);
@@ -93433,10 +94061,67 @@ function InsertStackElement(node, body) {
 	        }
 	        return fn(v[i], v[i + 1 > m ? m : i + 1], f - i);
 	    },
+	    Bezier: function (v, k) {
+	        var b = 0;
+	        var n = v.length - 1;
+	        var pw = Math.pow;
+	        var bn = Interpolation.Utils.Bernstein;
+	        for (var i = 0; i <= n; i++) {
+	            b += pw(1 - k, n - i) * pw(k, i) * v[i] * bn(n, i);
+	        }
+	        return b;
+	    },
+	    CatmullRom: function (v, k) {
+	        var m = v.length - 1;
+	        var f = m * k;
+	        var i = Math.floor(f);
+	        var fn = Interpolation.Utils.CatmullRom;
+	        if (v[0] === v[m]) {
+	            if (k < 0) {
+	                i = Math.floor((f = m * (1 + k)));
+	            }
+	            return fn(v[(i - 1 + m) % m], v[i], v[(i + 1) % m], v[(i + 2) % m], f - i);
+	        }
+	        else {
+	            if (k < 0) {
+	                return v[0] - (fn(v[0], v[0], v[1], v[1], -f) - v[0]);
+	            }
+	            if (k > 1) {
+	                return v[m] - (fn(v[m], v[m], v[m - 1], v[m - 1], f - m) - v[m]);
+	            }
+	            return fn(v[i ? i - 1 : 0], v[i], v[m < i + 1 ? m : i + 1], v[m < i + 2 ? m : i + 2], f - i);
+	        }
+	    },
 	    Utils: {
 	        Linear: function (p0, p1, t) {
 	            return (p1 - p0) * t + p0;
-	        }},
+	        },
+	        Bernstein: function (n, i) {
+	            var fc = Interpolation.Utils.Factorial;
+	            return fc(n) / fc(i) / fc(n - i);
+	        },
+	        Factorial: (function () {
+	            var a = [1];
+	            return function (n) {
+	                var s = 1;
+	                if (a[n]) {
+	                    return a[n];
+	                }
+	                for (var i = n; i > 1; i--) {
+	                    s *= i;
+	                }
+	                a[n] = s;
+	                return s;
+	            };
+	        })(),
+	        CatmullRom: function (p0, p1, p2, p3, t) {
+	            var v0 = (p2 - p0) * 0.5;
+	            var v1 = (p3 - p1) * 0.5;
+	            var t2 = t * t;
+	            var t3 = t * t2;
+	            return (2 * p1 - 2 * p2 + v0 + v1) * t3 + (-3 * p1 + 3 * p2 - 2 * v0 - v1) * t2 + v0 * t + p1;
+	        },
+	    },
 	};
 
 	/**
@@ -93918,6 +94603,8 @@ function InsertStackElement(node, body) {
 	    return Tween;
 	}());
 
+	var VERSION = '23.1.3';
+
 	/**
 	 * Tween.js - Licensed under the MIT license
 	 * https://github.com/tweenjs/tween.js
@@ -93926,7 +94613,7 @@ function InsertStackElement(node, body) {
 	 * See https://github.com/tweenjs/tween.js/graphs/contributors for the full list of contributors.
 	 * Thank you all, you're awesome!
 	 */
-	Sequence.nextId;
+	var nextId = Sequence.nextId;
 	/**
 	 * Controlling groups of tweens
 	 *
@@ -93938,14 +94625,26 @@ function InsertStackElement(node, body) {
 	// Modules and CommonJS, without build hacks, and so as not to break the
 	// existing API.
 	// https://github.com/rollup/rollup/issues/1961#issuecomment-423037881
-	TWEEN.getAll.bind(TWEEN);
-	TWEEN.removeAll.bind(TWEEN);
-	TWEEN.add.bind(TWEEN);
-	TWEEN.remove.bind(TWEEN);
-	TWEEN.update.bind(TWEEN);
+	var getAll = TWEEN.getAll.bind(TWEEN);
+	var removeAll = TWEEN.removeAll.bind(TWEEN);
+	var add = TWEEN.add.bind(TWEEN);
+	var remove = TWEEN.remove.bind(TWEEN);
+	var update = TWEEN.update.bind(TWEEN);
 	var exports$1 = {
 	    Easing: Easing,
-	    Tween: Tween};
+	    Group: Group,
+	    Interpolation: Interpolation,
+	    now: now,
+	    Sequence: Sequence,
+	    nextId: nextId,
+	    Tween: Tween,
+	    VERSION: VERSION,
+	    getAll: getAll,
+	    removeAll: removeAll,
+	    add: add,
+	    remove: remove,
+	    update: update,
+	};
 
 	function styleInject$1(css, ref) {
 	  if (ref === void 0) ref = {};
@@ -93989,9 +94688,9 @@ function InsertStackElement(node, body) {
 	function _defineProperty$1(e, r, t) {
 	  return (r = _toPropertyKey$1(r)) in e ? Object.defineProperty(e, r, {
 	    value: t,
-	    enumerable: true,
-	    configurable: true,
-	    writable: true
+	    enumerable: !0,
+	    configurable: !0,
+	    writable: !0
 	  }) : e[r] = t, e;
 	}
 	function _iterableToArray$1(r) {
@@ -94005,12 +94704,12 @@ function InsertStackElement(node, body) {
 	      i,
 	      u,
 	      a = [],
-	      f = true,
-	      o = false;
+	      f = !0,
+	      o = !1;
 	    try {
 	      if (i = (t = t.call(r)).next, 0 === l) ; else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0);
 	    } catch (r) {
-	      o = true, n = r;
+	      o = !0, n = r;
 	    } finally {
 	      try {
 	        if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return;
@@ -94037,7 +94736,7 @@ function InsertStackElement(node, body) {
 	  if ("object" != typeof t || !t) return t;
 	  var e = t[Symbol.toPrimitive];
 	  if (void 0 !== e) {
-	    var i = e.call(t, r);
+	    var i = e.call(t, r || "default");
 	    if ("object" != typeof i) return i;
 	    throw new TypeError("@@toPrimitive must return a primitive value.");
 	  }
@@ -94072,6 +94771,10 @@ function InsertStackElement(node, body) {
 	  SphereGeometry: SphereGeometry,
 	  MeshBasicMaterial: MeshBasicMaterial,
 	  BackSide: BackSide,
+	  EventDispatcher: EventDispatcher,
+	  MOUSE: MOUSE,
+	  Quaternion: Quaternion,
+	  Spherical: Spherical,
 	  Clock: Clock
 	};
 	var threeRenderObjects = index$1({
@@ -94248,7 +94951,7 @@ function InsertStackElement(node, body) {
 	        }
 	      }
 	      function getLookAt() {
-	        return Object.assign(new three$1.Vector3(0, 0, camera.isOrthographicCamera ? 0 : -1e3).applyQuaternion(camera.quaternion).add(camera.position));
+	        return Object.assign(new three$1.Vector3(0, 0, camera.isOrthographicCamera ? 0 : -1000).applyQuaternion(camera.quaternion).add(camera.position));
 	      }
 	    },
 	    zoomToFit: function zoomToFit(state) {
@@ -94528,6 +95231,12 @@ function InsertStackElement(node, body) {
 	      [state.renderer, state.postProcessingComposer].concat(_toConsumableArray$1(state.extraRenderers)).forEach(function (r) {
 	        return r.setSize(state.width, state.height);
 	      });
+	      if (state.camera.isOrthographicCamera) {
+	        var halfWidth = (state.camera.top - state.camera.bottom) / 2 * state.width / state.height;
+	        var centerX = (state.camera.left + state.camera.right) / 2;
+	        state.camera.left = centerX - halfWidth;
+	        state.camera.right = centerX + halfWidth;
+	      }
 	      state.camera.aspect = state.width / state.height;
 	      state.camera.updateProjectionMatrix();
 	    }
@@ -94627,9 +95336,9 @@ function InsertStackElement(node, body) {
 	function _defineProperty(e, r, t) {
 	  return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
 	    value: t,
-	    enumerable: true,
-	    configurable: true,
-	    writable: true
+	    enumerable: !0,
+	    configurable: !0,
+	    writable: !0
 	  }) : e[r] = t, e;
 	}
 	function _iterableToArray(r) {
@@ -94651,7 +95360,7 @@ function InsertStackElement(node, body) {
 	function _objectSpread2(e) {
 	  for (var r = 1; r < arguments.length; r++) {
 	    var t = null != arguments[r] ? arguments[r] : {};
-	    r % 2 ? ownKeys(Object(t), true).forEach(function (r) {
+	    r % 2 ? ownKeys(Object(t), !0).forEach(function (r) {
 	      _defineProperty(e, r, t[r]);
 	    }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) {
 	      Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r));
@@ -94666,7 +95375,7 @@ function InsertStackElement(node, body) {
 	  if ("object" != typeof t || !t) return t;
 	  var e = t[Symbol.toPrimitive];
 	  if (void 0 !== e) {
-	    var i = e.call(t, r);
+	    var i = e.call(t, r || "default");
 	    if ("object" != typeof i) return i;
 	    throw new TypeError("@@toPrimitive must return a primitive value.");
 	  }
@@ -94717,6 +95426,7 @@ function InsertStackElement(node, body) {
 	: {
 	  AmbientLight: AmbientLight,
 	  DirectionalLight: DirectionalLight,
+	  Vector3: Vector3,
 	  REVISION: REVISION
 	};
 
@@ -95972,6 +96682,251 @@ function InsertStackElement(node, body) {
 
 	var versionUtilsExports = requireVersionUtils();
 
+	const galleries = new Map();
+	const pairedItems = new WeakMap();
+
+	function getGalleryItem(border) {
+	    return pairedItems.get(border);
+	}
+
+	function restoreGallery(items) {
+	    galleries.get(items)?.destroy();
+	}
+
+	function virtualizeGallery(items, borders) {
+	    if (!items || !borders || items.children.length < 24 || items.children.length !== borders.children.length)
+	        return;
+	    const gallery = new VirtualGallery(items, borders);
+	    galleries.set(items, gallery);
+	}
+
+	function refreshGalleries(modal) {
+	    for (const gallery of galleries.values())
+	        if (modal.contains(gallery.items))
+	            gallery.measure();
+	}
+
+	function restoreGalleries() {
+	    for (const gallery of galleries.values())
+	        gallery.mountAll();
+	}
+
+	class VirtualGallery {
+	    constructor(items, borders) {
+	        this.items = items;
+	        this.borders = borders;
+	        items.classList.add('virtual-gallery');
+	        borders.classList.add('virtual-gallery');
+	        this.viewport = items.closest('.modal__content');
+	        this.images = Array.from(items.children);
+	        this.links = Array.from(borders.children);
+	        this.rows = [];
+	        this.start = this.end = -1;
+	        this.schedule = () => {
+	            if (!this.frame)
+	                this.frame = requestAnimationFrame(() => {
+	                    this.frame = null;
+	                    this.update();
+	                });
+	        };
+	        this.images.forEach((item, index) => {
+	            const border = this.links[index];
+	            pairedItems.set(border, item);
+	            border.querySelectorAll('a').forEach(link => pairedItems.set(link, item));
+	        });
+	        this.viewport.addEventListener('scroll', this.schedule, { passive: true });
+	        this.onResize = () => {
+	            if (this.items.getClientRects().length)
+	                this.measure();
+	        };
+	        this.observer = new ResizeObserver(entries => {
+	            const width = entries[0].contentRect.width;
+	            if (width !== this.width) {
+	                this.width = width;
+	                this.onResize();
+	            }
+	        });
+	        this.observer.observe(this.viewport);
+	        this.onTransition = event => {
+	            if (event.propertyName === 'width' || event.propertyName === 'margin-right')
+	                this.onResize();
+	        };
+	        borders.addEventListener('transitionend', this.onTransition);
+	        if (items.getClientRects().length)
+	            this.measure();
+	        else {
+	            items.replaceChildren();
+	            borders.replaceChildren();
+	        }
+	    }
+
+	    mountAll() {
+	        this.items.replaceChildren(...this.images);
+	        this.borders.replaceChildren(...this.links);
+	        this.start = this.end = -1;
+	    }
+
+	    measure() {
+	        this.mountAll();
+	        if (!this.items.getClientRects().length) {
+	            this.items.replaceChildren();
+	            this.borders.replaceChildren();
+	            this.rows = [];
+	            return;
+	        }
+	        // The existing details panel can change both column count and row height.
+	        // Keep its layout intact until it is collapsed again.
+	        if (this.borders.querySelector('.collectable-entry--content.expanded')) {
+	            this.rows = [];
+	            return;
+	        }
+	        const measureList = (parent, elements) => {
+	            const top = parent.getBoundingClientRect().top;
+	            return elements.map(element => {
+	                const rect = element.getBoundingClientRect();
+	                const style = getComputedStyle(element);
+	                return {
+	                    top: rect.top - top - parseFloat(style.marginTop),
+	                    bottom: rect.bottom - top + parseFloat(style.marginBottom)
+	                };
+	            });
+	        };
+	        this.imageBounds = measureList(this.items, this.images);
+	        this.linkBounds = measureList(this.borders, this.links);
+	        this.imageHeight = this.items.getBoundingClientRect().height;
+	        this.linkHeight = this.borders.getBoundingClientRect().height;
+	        this.rows = [];
+	        for (let i = 0; i < this.images.length; i++) {
+	            const bounds = this.imageBounds[i];
+	            const previous = this.rows[this.rows.length - 1];
+	            if (previous && Math.abs(bounds.top - previous.top) < 1) {
+	                previous.end = i + 1;
+	                previous.bottom = Math.max(previous.bottom, bounds.bottom);
+	            } else
+	                this.rows.push({ start: i, end: i + 1, ...bounds });
+	        }
+	        this.update();
+	    }
+
+	    update() {
+	        if (!this.rows.length || !this.items.getClientRects().length)
+	            return;
+	        // Keep an extra screen on either side so fast scrolling remains smooth.
+	        const viewport = this.viewport.getBoundingClientRect();
+	        const top = this.items.getBoundingClientRect().top;
+	        const min = viewport.top - top - viewport.height;
+	        const max = viewport.bottom - top + viewport.height;
+	        let first = this.rows.findIndex(row => row.bottom >= min);
+	        if (first < 0)
+	            first = this.rows.length - 1;
+	        let last = first;
+	        while (last + 1 < this.rows.length && this.rows[last + 1].top <= max)
+	            last++;
+	        const start = this.rows[first].start;
+	        const end = this.rows[last].end;
+	        if (start === this.start && end === this.end)
+	            return;
+	        const render = (parent, elements, bounds, height) => {
+	            const spacer = size => {
+	                const element = document.createElement('div');
+	                element.className = 'virtual-gallery-spacer';
+	                element.style.height = `${Math.max(0, size)}px`;
+	                element.setAttribute('aria-hidden', 'true');
+	                return element;
+	            };
+	            const bottom = Math.max(...bounds.slice(start, end).map(bound => bound.bottom));
+	            parent.replaceChildren(spacer(bounds[start].top), ...elements.slice(start, end), spacer(height - bottom));
+	        };
+	        render(this.items, this.images, this.imageBounds, this.imageHeight);
+	        render(this.borders, this.links, this.linkBounds, this.linkHeight);
+	        this.start = start;
+	        this.end = end;
+	    }
+
+	    destroy() {
+	        cancelAnimationFrame(this.frame);
+	        this.observer.disconnect();
+	        this.viewport.removeEventListener('scroll', this.schedule);
+	        this.borders.removeEventListener('transitionend', this.onTransition);
+	        this.mountAll();
+	        this.items.classList.remove('virtual-gallery');
+	        this.borders.classList.remove('virtual-gallery');
+	        galleries.delete(this.items);
+	    }
+	}
+
+	var effectNames;
+	var hasRequiredEffectNames;
+
+	function requireEffectNames () {
+		if (hasRequiredEffectNames) return effectNames;
+		hasRequiredEffectNames = 1;
+		function wikiText(html) {
+		    const entities = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+		    return html.replace(/<[^>]+>/g, '').replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos|nbsp);/gi, (entity, code) => {
+		        if (code[0] !== '#')
+		            return entities[code.toLowerCase()];
+		        const value = code[1].toLowerCase() === 'x' ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
+		        return value <= 0x10ffff ? String.fromCodePoint(value) : entity;
+		    }).trim();
+		}
+
+		function parseEffectHeading(heading) {
+		    const headline = /<span\b[^>]*class="[^"]*\bmw-headline\b[^"]*"[^>]*>([\s\S]*?)<\/span>/i.exec(heading);
+		    return wikiText(headline ? headline[1] : heading);
+		}
+
+		function parseJapaneseEffectName(section) {
+		    const match = /[（(]\s*([^,，、)）]+)(?:[,，、][^）)]*)?[）)]/.exec(wikiText(section));
+		    return match && /[\u3040-\u30ff\u3400-\u9fff]/.test(match[1]) ? match[1].trim() : null;
+		}
+
+		function createEffectNameNormalizer(namesJP) {
+		    const names = { ...namesJP, Instructions: '説明書' };
+		    const foldKana = name => name.normalize('NFKC').replace(/[\u30a1-\u30f6]/g, char => String.fromCharCode(char.charCodeAt(0) - 0x60));
+		    const englishByJapanese = new Map(Object.entries(names).map(([en, jp]) => [foldKana(jp), en]));
+		    return effect => {
+		        if (names[effect.name])
+		            return { ...effect, nameJP: effect.nameJP || names[effect.name] };
+		        // Older imports mistook the bold pronunciation for the English heading.
+		        const japanese = (effect.nameJP || effect.name || '').replace(/^[（(]\s*/, '').split(/[,，、)）]/, 1)[0].trim();
+		        const english = englishByJapanese.get(foldKana(japanese));
+		        return english ? { ...effect, name: english, nameJP: effect.nameJP || japanese } : effect;
+		    };
+		}
+
+		effectNames = { wikiText, parseEffectHeading, parseJapaneseEffectName, createEffectNameNormalizer };
+		return effectNames;
+	}
+
+	var effectNamesExports = requireEffectNames();
+
+	var collectableIds;
+	var hasRequiredCollectableIds;
+
+	function requireCollectableIds () {
+		if (hasRequiredCollectableIds) return collectableIds;
+		hasRequiredCollectableIds = 1;
+		const BGM_UNNUMBERED_OFFSET = 10000;
+		const BGM_UNUSED_OFFSET = 20000;
+		const WALLPAPER_ID_RANGE = 10000;
+
+		function getWallpaperNumber(wallpaper) {
+		    if (!wallpaper.removed)
+		        return wallpaper.wallpaperId;
+		    return wallpaper.wallpaperId < WALLPAPER_ID_RANGE
+		        ? wallpaper.wallpaperId - 1000
+		        : wallpaper.wallpaperId % WALLPAPER_ID_RANGE;
+		}
+
+		collectableIds = { BGM_UNNUMBERED_OFFSET, BGM_UNUSED_OFFSET, WALLPAPER_ID_RANGE, getWallpaperNumber };
+		return collectableIds;
+	}
+
+	var collectableIdsExports = requireCollectableIds();
+
+	var version = "7.0.0";
+
 	const urlSearchParams = new URLSearchParams(window.location.search);
 
 	const locationMode = urlSearchParams.has('locations') && document.currentScript.src.split('?')[1].startsWith('locationMode=true');
@@ -96003,7 +96958,9 @@ function InsertStackElement(node, body) {
 	let graphCanvas;
 	let graphContext;
 	let maxWorldDepth;
-	const nodeImgDimensions = { x: 320, y: 240 };
+	const isMobile = checkIsMobile(navigator.userAgent) || window.matchMedia('(pointer: coarse)').matches;
+	const mobileLayout = window.matchMedia('(max-width: 900px)');
+	const nodeImgDimensions = isMobile ? { x: 160, y: 120 } : { x: 320, y: 240 };
 	const nodeIconImgDimensions = { x: nodeImgDimensions.x / 4, y: nodeImgDimensions.y / 4 };
 	let nodeObjectMaterials = [];
 	let iconTexts = [];
@@ -96022,8 +96979,6 @@ function InsertStackElement(node, body) {
 	const imageLoader = new ImageLoader();
 
 	const getLocalizedLabel = (enLabel, jaLabel, singleValue) => getLocalizedValue(enLabel, jaLabel, config.lang, singleValue);
-
-	checkIsMobile(navigator.userAgent);
 
 	$$1.fn.extend({
 	    animateCss: function (animation, duration, endCallback) {
@@ -96200,12 +97155,13 @@ function InsertStackElement(node, body) {
 	    const $authorEntriesContainerItems = $$1('.js--author-entries-container__items');
 	    const $authorEntriesContainerBorders = $$1('.js--author-entries-container__borders');
 
+	    restoreGallery($authorEntriesContainerItems[0]);
 	    $authorEntriesContainerItems.empty();
 	    $authorEntriesContainerBorders.empty();
 
 	    const authorEntryHtmlTemplate = '<div class="author-entry collectable-entry collectable noselect"></div>';
 	    const authorEntryImageContainerHtmlTemplate = '<div class="author-entry__image-container collectable-entry__image-container"></div>';
-	    const authorEntryImageHtmlTemplate = '<img src="{FILENAME}" />';
+	    const authorEntryImageHtmlTemplate = '<img loading="lazy" decoding="async" src="{FILENAME}" />';
 	    const authorsByName = {};
 
 	    for (let a of authorData) {
@@ -96232,14 +97188,17 @@ function InsertStackElement(node, body) {
 	        }
 	        const authorEntryLinkHtml =
 	            `<a href="javascript:void(0);" class="js--author-entry author-entry collectable-entry collectable--border noselect" data-id="${a.name}" data-display-name="${a.displayName}" data-display-name-jp="${(a.displayNameJP || a.displayName)}">
-                <h1 class="author-entry__name--shadow collectable-entry__name--shadow">${a.name}</h1>
-                <h1 class="author-entry__name collectable-entry__name">${a.name}</h1>
+                <div class="collectable-entry__name--container">
+                    <h1 class="author-entry__name--shadow collectable-entry__name--shadow">${a.name}</h1>
+                    <h1 class="author-entry__name collectable-entry__name">${a.name}</h1>
+                </div>
             </a>`;
 	        $authorEntry.appendTo($authorEntriesContainerItems);
 	        $$1(authorEntryLinkHtml).appendTo($authorEntriesContainerBorders);
 	        authorsByName[a.name] = a;
 	    }
 
+	    $$1('.author-entry-tooltip').remove();
 	    const $tooltip = $$1('<div class="author-entry-tooltip scene-tooltip display--none"></div>').prependTo('.content');
 
 	    $$1('.js--author-entry[data-id]').on('click', function () {
@@ -96265,11 +97224,12 @@ function InsertStackElement(node, body) {
 	            $tooltip.find('.js--author-entry-tooltip__first-version').remove();
 	        if (!author.lastVer || author.lastVer === author.firstVer)
 	            $tooltip.find('.js--author-entry-tooltip__last-version').remove();
-	        $$1($authorEntriesContainerItems.children()[$$1(this).index()]).addClass('hover');
+	        $$1(getGalleryItem(this) || $authorEntriesContainerItems.children()[$$1(this).index()]).addClass('hover');
 	    }).on('mouseleave', function () {
 	        $tooltip.addClass('display--none');
-	        $$1($authorEntriesContainerItems.children()[$$1(this).index()]).removeClass('hover');
+	        $$1(getGalleryItem(this) || $authorEntriesContainerItems.children()[$$1(this).index()]).removeClass('hover');
 	    });
+	    virtualizeGallery($authorEntriesContainerItems[0], $authorEntriesContainerBorders[0]);
 	}
 
 	function getAuthorDisplayName(author, appendShi) {
@@ -96292,13 +97252,14 @@ function InsertStackElement(node, body) {
 	    const $versionEntriesContainerItems = $$1('.js--version-entries-container__items');
 	    const $versionEntriesContainerBorders = $$1('.js--version-entries-container__borders');
 
+	    restoreGallery($versionEntriesContainerItems[0]);
 	    $versionEntriesControls.empty();
 	    $versionEntriesContainerItems.empty();
 	    $versionEntriesContainerBorders.empty();
 
 	    const versionEntryHtmlTemplate = '<div class="js--version-entry version-entry collectable-entry collectable noselect"></div>';
 	    const versionEntryImageContainerHtmlTemplate = '<div class="version-entry__image-container collectable-entry__image-container"></div>';
-	    const versionEntryImageHtmlTemplate = '<img src="{FILENAME}" />';
+	    const versionEntryImageHtmlTemplate = '<img loading="lazy" decoding="async" src="{FILENAME}" />';
 	    const versionsByIndex = {};
 
 	    const versionIndexAddedWorldIds = {};
@@ -96408,12 +97369,8 @@ function InsertStackElement(node, body) {
             </div>
         `);
 
-	        const versionDetailsEntries = getVersionDetailsEntries(v);
-
 	        const $versionEntryContent = $$1('<div class="js--version-entry--content collectable-entry--content"></div>');
 	        const $versionEntryContentList = $$1('<ul class="js--version-entry--content__list collectable-entry--content__list"></ul>');
-	        for (let vde of versionDetailsEntries)
-	            $versionEntryContentList.append(`<li class="styled-list-item">${vde}</li>`);
 	        $versionEntryContent.append($versionEntryContentList);
 	        $versionEntryLink.append($versionEntryContent);
 	        $versionEntryLink.append(`
@@ -96427,6 +97384,7 @@ function InsertStackElement(node, body) {
 	        versionsByIndex[v.index] = v;
 	    }
 
+	    $$1('.version-entry-tooltip').remove();
 	    const $tooltip = $$1('<div class="version-entry-tooltip scene-tooltip display--none"></div>').prependTo('.content');
 
 	    $$1('.js--version-entry-link[data-id]').on('click', function () {
@@ -96457,10 +97415,10 @@ function InsertStackElement(node, body) {
 	            $tooltip.find('.js--version-entry-tooltip__updated-world-count').remove();
 	        if (!versionIndexRemovedWorldIds[verIndex].length)
 	            $tooltip.find('.js--version-entry-tooltip__removed-world-count').remove();
-	        $$1($versionEntriesContainerItems.children()[$$1(this).index()]).addClass('hover');
+	        $$1(getGalleryItem($$1(this).parent()[0]) || $versionEntriesContainerItems.children()[$$1(this).parent().index()]).addClass('hover');
 	    }).on('mouseleave', function () {
 	        $tooltip.addClass('display--none');
-	        $$1($versionEntriesContainerItems.children()[$$1(this).index()]).removeClass('hover');
+	        $$1(getGalleryItem($$1(this).parent()[0]) || $versionEntriesContainerItems.children()[$$1(this).parent().index()]).removeClass('hover');
 	    });
 
 	    const entryTypeKeys = Object.keys(versionUtilsExports.VersionEntryType);
@@ -96510,12 +97468,18 @@ function InsertStackElement(node, body) {
 
 	    $$1('.js--version-entry--expand').on('click', function () {
 	        const $entryContainer = $$1(this).parent('.js--version-entry--container');
+	        const $details = $entryContainer.find('.js--version-entry--content__list');
+	        if (!$details.data('loaded')) {
+	            const version = versionsByIndex[$entryContainer.find('.js--version-entry-link').data('id')];
+	            for (const entry of getVersionDetailsEntries(version))
+	                $details.append(`<li class="styled-list-item">${entry}</li>`);
+	            $details.data('loaded', true);
+	        }
 	        $$1(this).prev('.js--version-entry--content').toggleClass('expanded');
-	        $entryContainer.parent('.js--version-entries-container__borders')
-	            .prev('.js--version-entries-container__items')
-	            .children(`.js--version-entry:nth-child(${$entryContainer.index() + 1})`)
-	            .toggleClass('expanded');
+	        $$1(getGalleryItem($entryContainer[0]) || $versionEntriesContainerItems.children()[$entryContainer.index()]).toggleClass('expanded');
+	        refreshGalleries($entryContainer.closest('.modal')[0]);
 	    });
+	    virtualizeGallery($versionEntriesContainerItems[0], $versionEntriesContainerBorders[0]);
 	}
 
 	function removeVersionUpdatedWorldIdsOfUpdateTypes(verName, versionUpdatedWorldIds, updateTypes) {
@@ -96604,7 +97568,7 @@ function InsertStackElement(node, body) {
 	}
 
 	function initEffectData(data) {
-	    effectData = data;
+	    effectData = data.map(normalizeEffectNames).filter(effect => effect.name !== 'Instructions');
 
 	    const $effectsContainerItems = $$1('.js--effects-container__items');
 	    const $effectsContainerBorders = $$1('.js--effects-container__borders');
@@ -96624,6 +97588,7 @@ function InsertStackElement(node, body) {
 	        effectsById[e.id] = e;
 	    }
 
+	    $$1('.effect-tooltip').remove();
 	    const $tooltip = $$1('<div class="effect-tooltip scene-tooltip display--none"></div>').prependTo('.content');
 
 	    $$1('.js--effect[data-id]').on('click', function () {
@@ -96655,8 +97620,15 @@ function InsertStackElement(node, body) {
 	    });
 	}
 
+	function setCollectableEmptyState(selector, data) {
+	    const empty = !data.length;
+	    const $modal = $$1(selector).toggleClass('collectables--empty', empty);
+	    $modal.find('.js--collectables-empty').toggleClass('display--none', !empty);
+	}
+
 	function initMenuThemeData(data) {
 	    menuThemeData = data;
+	    setCollectableEmptyState('.js--menu-themes-modal', data.filter(theme => theme.locations.length));
 
 	    const $menuThemesContainerItems = $$1('.js--menu-themes-container__items');
 	    const $menuThemesContainerBorders = $$1('.js--menu-themes-container__borders');
@@ -96673,7 +97645,7 @@ function InsertStackElement(node, body) {
 	        for (let l of m.locations) {
 	            const removedCollectableClass = l.removed ? ' removed-collectable' : '';
 	            const worldIdAttribute = l.worldId != null ? ` data-id="${l.worldId}"` : '';
-	            const menuThemeImageHtml = `<div class="menu-theme collectable${removedCollectableClass} noselect"><img src="${m.filename}" /></div>`;
+	            const menuThemeImageHtml = `<div class="menu-theme collectable${removedCollectableClass} noselect"><img loading="lazy" decoding="async" src="${m.filename}" /></div>`;
 	            const menuThemeLinkHtml = `<a href="javascript:void(0);" class="js--menu-theme menu-theme collectable--border noselect" data-location-id="${l.id}"${worldIdAttribute}></a>`;
 	            l.method = l.method.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
 	            if (l.methodJP)
@@ -96714,6 +97686,7 @@ function InsertStackElement(node, body) {
 
 	function initWallpaperData(data) {
 	    wallpaperData = data;
+	    setCollectableEmptyState('.js--wallpapers-modal', data);
 
 	    const $wallpapersContainerItems = $$1('.js--wallpapers-container__items');
 	    const $wallpapersContainerBorders = $$1('.js--wallpapers-container__borders');
@@ -96728,10 +97701,10 @@ function InsertStackElement(node, body) {
 
 	    for (let wp of wallpaperData) {
 	        const removedCollectableClass = wp.removed ? ' removed-collectable' : '';
-	        const censoredClass = wp.wallpaperId === 1149 ? ' censored' : '';
+	        const censoredClass = wp.removed && collectableIdsExports.getWallpaperNumber(wp) === 149 ? ' censored' : '';
 	        const worldIdAttribute = wp.worldId != null ? ` data-id="${wp.worldId}"` : '';
 	        const removedAttribute = wp.removed ? ' data-removed="true"' : '';
-	        const wallpaperImageHtml = `<div class="wallpaper collectable${censoredClass}${removedCollectableClass} noselect"><img src="${wp.filename}" /></div>`;
+	        const wallpaperImageHtml = `<div class="wallpaper collectable${censoredClass}${removedCollectableClass} noselect"><img loading="lazy" decoding="async" src="${wp.filename}" /></div>`;
 	        const wallpaperLinkHtml = `<a href="javascript:void(0);" class="js--wallpaper wallpaper collectable--border noselect" data-wallpaper-id="${wp.id}"${worldIdAttribute}${removedAttribute}></a>`;
 	        wp.method = wp.method.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
 	        if (wp.methodJP)
@@ -96757,10 +97730,10 @@ function InsertStackElement(node, body) {
 	        });
 	    }).on('mouseenter', function () {
 	        const wallpaper = wallpapersById[$$1(this).data('wallpaperId')];
-	        const title = getLocalizedLabel(wallpaper.name, wallpaper.nameJP);
+	        const title = getLocalizedLabel(_.escape(wallpaper.name), _.escape(wallpaper.nameJP));
 	        const method = getLocalizedLabel(wallpaper.method, wallpaper.methodJP);
 	        $tooltip.html(localizedWallpaperLabel
-	            .replace('{WALLPAPER_ID}', wallpaper.wallpaperId - (wallpaper.removed ? 1000 : 0))
+	            .replace('{WALLPAPER_ID}', collectableIdsExports.getWallpaperNumber(wallpaper))
 	            .replace('{TITLE}', title)
 	            .replace('{METHOD}', method || ''))
 	            .removeClass('display--none');
@@ -96777,6 +97750,7 @@ function InsertStackElement(node, body) {
 
 	function initBgmTrackData(data) {
 	    bgmTrackData = data;
+	    setCollectableEmptyState('.js--bgm-tracks-modal', data);
 	    bgmTrackIds = [];
 	    bgmTrackIndexesById = {};
 
@@ -96803,20 +97777,21 @@ function InsertStackElement(node, body) {
 
 	    for (let t of bgmTrackData) {
 	        let trackId = '';
-	        if (t.trackNo < 1000)
+	        if (t.trackNo < collectableIdsExports.BGM_UNNUMBERED_OFFSET)
 	            trackId = t.trackNo.toString().padStart(3, 0);
 	        if (t.variant)
 	            trackId += ` ${t.variant}`;
 	        const hasIdAttribute = t.url ? ` data-id="true"` : '';
+	        const playbackDisabled = t.url ? '' : ' disabled';
 	        const removedCollectableClass = t.removed ? ' removed-collectable' : '';
 	        const worldIdAttribute = t.worldId != null ? ` data-world-id="${t.worldId}"` : '';
 	        const imageUrl = t.worldId != null ? exports.worldData[t.worldId].images[t.worldImageOrdinal] : getMissingBgmTrackUrl(t.location);
-	        const unnumberedAttribute = t.trackNo >= 1000 ? ' data-unnumbered="true"' : '';
+	        const unnumberedAttribute = t.trackNo >= collectableIdsExports.BGM_UNNUMBERED_OFFSET ? ' data-unnumbered="true"' : '';
 	        const removedAttribute = t.removed ? ' data-removed="true"' : '';
 	        const favButtonClass = config.bgmTrackInput.hasOwnProperty(t.id) ? config.bgmTrackInput[t.id] ? ' on' : ' inactive' : '';
 	        const ignoreButtonClass = config.bgmTrackInput.hasOwnProperty(t.id) ? !config.bgmTrackInput[t.id] ? ' on' : ' inactive' : '';
-	        const bgmTrackImageHtml = `<div class="js--bgm-track-image--container bgm-track collectable-entry collectable${removedCollectableClass} noselect"><img src="${imageUrl}" class="js--bgm-track-image" /></div>`;
-	        const bgmTrackNameHtml = t.trackNo < 1000 ? `
+	        const bgmTrackImageHtml = `<div class="js--bgm-track-image--container bgm-track collectable-entry collectable${removedCollectableClass} noselect"><img loading="lazy" decoding="async" src="${imageUrl}" class="js--bgm-track-image" /></div>`;
+	        const bgmTrackNameHtml = t.trackNo < collectableIdsExports.BGM_UNNUMBERED_OFFSET ? `
             <div class="collectable-entry__name--container">
                 <h1 class="bgm-track__name--shadow collectable-entry__name--shadow">${trackId}</h1>
                 <h1 class="bgm-track__name collectable-entry__name">${trackId}</h1>
@@ -96845,7 +97820,7 @@ function InsertStackElement(node, body) {
                     ${bgmTrackImageButtonHtml}
                 </div>
                 <div class="js--bgm-track--collectable-entry--play-controls collectable-entry--controls noselect">
-                    <button class="js--bgm-track__play collectable-entry--control">
+                    <button class="js--bgm-track__play collectable-entry--control"${playbackDisabled}>
                         <svg width="18" height="24" viewBox="0 0 18 24" xmlns="http://www.w3.org/2000/svg">
                             <path class="collectable-entry--control__icon" d="M18 12L0 24V0" fill-rule="evenodd" />
                         </svg>
@@ -96855,7 +97830,7 @@ function InsertStackElement(node, body) {
                             <path class="collectable-entry--control__icon" d="M0 0h6v24H0zM12 0h6v24h-6z" fill-rule="evenodd" />
                         </svg>
                     </button>
-                    <button class="js--bgm-track__playlist-add collectable-entry--control">
+                    <button class="js--bgm-track__playlist-add collectable-entry--control"${playbackDisabled}>
                         <svg width="24" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
                             <path class="collectable-entry--control__icon" d="m18 2h-18v-2h18zm0 5h-18v-2h18zm-11 5h-7v-2h7zm0 5h-7v-2h7zm8 1h-3v-3h-3v-3h3v-3h3v3h3v3h-3z" fill-rule="evenodd" />
                         </svg>
@@ -96870,8 +97845,8 @@ function InsertStackElement(node, body) {
 	            t.notes = t.notes.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
 	        if (t.notesJP)
 	            t.notesJP = t.notesJP.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
-	        $$1(bgmTrackImageHtml).appendTo(t.trackNo < 1000 ? $bgmTracksContainerItems : !t.removed ? $unnumberedBgmTracksContainerItems : $removedBgmTracksContainerItems);
-	        $$1(bgmTrackLinkHtml).appendTo(t.trackNo < 1000 ? $bgmTracksContainerBorders : !t.removed ? $unnumberedBgmTracksContainerBorders : $removedBgmTracksContainerBorders);
+	        $$1(bgmTrackImageHtml).appendTo(t.trackNo < collectableIdsExports.BGM_UNNUMBERED_OFFSET ? $bgmTracksContainerItems : !t.removed ? $unnumberedBgmTracksContainerItems : $removedBgmTracksContainerItems);
+	        $$1(bgmTrackLinkHtml).appendTo(t.trackNo < collectableIdsExports.BGM_UNNUMBERED_OFFSET ? $bgmTracksContainerBorders : !t.removed ? $unnumberedBgmTracksContainerBorders : $removedBgmTracksContainerBorders);
 	        bgmTracksById[t.id] = t;
 	        bgmTrackIds.push(t.id);
 	        bgmTrackIndexesById[t.id] = i++;
@@ -96891,7 +97866,8 @@ function InsertStackElement(node, body) {
 
 	        window.setTimeout(function () {
 	            if ($bgmTrackSearch.val().trim() === changeValue) {
-	                if (changeValue) {
+	                const playableOnly = $$1('.js--bgm-playable-only').prop('checked');
+	                if (changeValue || playableOnly) {
 	                    const bgmTrackIdMatch = /^(\d+) ?([A-Z])?$/i.exec(changeValue);
 	                    const trackNo = bgmTrackIdMatch ? parseInt(bgmTrackIdMatch[1]) : null;
 	                    const variant = bgmTrackIdMatch && bgmTrackIdMatch[2] || null;
@@ -96902,12 +97878,14 @@ function InsertStackElement(node, body) {
 	                        const name = bgmTrack.name;
 	                        const location = getLocalizedLabel(bgmTrack.location, bgmTrack.locationJP);
 	                        const notes = getLocalizedLabel(bgmTrack.notes, bgmTrack.notesJP);
-	                        let visible = (name && name.toLowerCase().indexOf(changeValueLower) > -1) ||
+	                        let visible = !changeValue || (name && name.toLowerCase().indexOf(changeValueLower) > -1) ||
 	                            (location && location.toLowerCase().indexOf(changeValueLower) > -1) ||
 	                            (notes && notes.toLowerCase().indexOf(changeValueLower) > -1);
 
 	                        if (!visible && bgmTrackIdMatch)
 	                            visible = bgmTrack.trackNo === trackNo && (variant === null || bgmTrack.variant === variant);
+	                        if (playableOnly && !bgmTrack.url)
+	                            visible = false;
 
 	                        $$1(this).parent().toggleClass('display--none', !visible);
 	                        getBgmTrackImageContainer($$1(this)).toggleClass('display--none', !visible);
@@ -96919,34 +97897,37 @@ function InsertStackElement(node, body) {
 	    });
 
 	    $$1('.js--bgm-track-search--container').empty().append($bgmTrackSearch);
+	    $$1('.js--bgm-playable-only').off('change').on('change', () => $bgmTrackSearch.trigger('input'));
+	    if ($$1('.js--bgm-playable-only').prop('checked'))
+	        $bgmTrackSearch.trigger('input');
 
-	    /*const playBgmTrackEntry = function (openWorld) {
-	        const bgmTrack = bgmTracksById[$(this).data('bgmTrackId')];
+	    const playBgmTrackEntry = function (openWorld) {
+	        const bgmTrack = bgmTracksById[$$1(this).data('bgmTrackId')];
 	        if (bgmTrack.url) {
 	            const playlistIndex = bgmTrackIds.indexOf(bgmTrack.id);
-	            if (!config.playlist && config.playlistIndex === playlistIndex)
+	            if (audioPlayer && !config.playlist && config.playlistIndex === playlistIndex)
 	                GreenAudioPlayer.playPlayer(audioPlayer.player);
 	            else {
 	                playBgmTrack(bgmTrack, playlistIndex);
 	                updatePlaylistShuffleIndexes(playlistIndex);
 	            }
 	            if (openWorld) {
-	                const worldId = $(this).data('worldId');
+	                const worldId = $$1(this).data('worldId');
 	                if (worldId !== undefined)
 	                    trySelectNode(worldId, true, true);
 	                $tooltip.addClass('display--none');
-	                $.modal.close();
+	                $$1.modal.close();
 	            } else
 	                updateControlsContainer();
 	        }
 	    };
 	  
-	    $('.js--bgm-track[data-id]').on('click', function () { playBgmTrackEntry.apply(this, [ true ]); }).parent()
+	    $$1('.js--bgm-track[data-bgm-track-id]').on('click', function () { playBgmTrackEntry.apply(this, [ true ]); }).parent()
 	        .children('.js--bgm-track--collectable-entry--input-controls').children().on('click', function () {
-	            const $bgmTrackEntry = $(this).parent().parent().children('.js--bgm-track');
+	            const $bgmTrackEntry = $$1(this).parent().parent().children('.js--bgm-track');
 	            const bgmTrackId = $bgmTrackEntry.data('bgmTrackId');
-	            const isFav = $(this).hasClass('js--bgm-track__fav');
-	            const isIgnore = !isFav && $(this).hasClass('js--bgm-track__ignore');
+	            const isFav = $$1(this).hasClass('js--bgm-track__fav');
+	            const isIgnore = !isFav && $$1(this).hasClass('js--bgm-track__ignore');
 	            if (isFav || isIgnore) {
 	                const hasInput = config.bgmTrackInput.hasOwnProperty(bgmTrackId);
 	                if (!hasInput || !!config.bgmTrackInput[bgmTrackId] === isFav) {
@@ -96961,30 +97942,30 @@ function InsertStackElement(node, body) {
 	                        else
 	                            addFavBgmTrackEntry(bgmTrackId);
 	                    }
-	                    $(this).toggleClass('on', !hasInput);
-	                    $(this).parent().children(`.js--bgm-track__${isFav ? 'ignore' : 'fav'}`).toggleClass('inactive', !hasInput);
+	                    $$1(this).toggleClass('on', !hasInput);
+	                    $$1(this).parent().children(`.js--bgm-track__${isFav ? 'ignore' : 'fav'}`).toggleClass('inactive', !hasInput);
 	                    if (config.playlistIndex > -1) {
 	                        if (bgmTrackId === getPlaylistBgmTrackIds()[config.playlistIndex]) {
-	                            $(`.audio-player .${isFav ? 'fav' : 'ignore'}-btn`).toggleClass('on', !hasInput);
-	                            $(`.audio-player .${isFav ? 'ignore' : 'fav'}-btn`).toggleClass('inactive', !hasInput);
+	                            $$1(`.audio-player .${isFav ? 'fav' : 'ignore'}-btn`).toggleClass('on', !hasInput);
+	                            $$1(`.audio-player .${isFav ? 'ignore' : 'fav'}-btn`).toggleClass('inactive', !hasInput);
 	                        }
 	                    }
 	                }
 	            }
 	        }).parent().parent().children('.js--bgm-track--collectable-entry--play-controls').children().on('click', function () {
-	            const isPlay = $(this).hasClass('js--bgm-track__play');
-	            const isPause = !isPlay && $(this).hasClass('js--bgm-track__pause');
+	            const isPlay = $$1(this).hasClass('js--bgm-track__play');
+	            const isPause = !isPlay && $$1(this).hasClass('js--bgm-track__pause');
 	            if (isPlay || isPause) {
-	                if (!$(this).hasClass('pressed')) {
+	                if (!$$1(this).hasClass('pressed')) {
 	                    if (isPlay)
-	                        playBgmTrackEntry.apply($(this).parent().parent().children('.js--bgm-track')[0]);
+	                        playBgmTrackEntry.apply($$1(this).parent().parent().children('.js--bgm-track')[0]);
 	                    else
 	                        pauseBgm();
-	                    $(this).addClass('pressed');
+	                    $$1(this).addClass('pressed');
 	                }
-	            } else if ($(this).hasClass('js--bgm-track__playlist-add'))
-	                addPlaylistBgmTrack($(this).parent().parent().children('.js--bgm-track').data('bgmTrackId'));
-	        });*/
+	            } else if ($$1(this).hasClass('js--bgm-track__playlist-add'))
+	                addPlaylistBgmTrack($$1(this).parent().parent().children('.js--bgm-track').data('bgmTrackId'));
+	        });
 
 	    $$1('.js--bgm-track__set-image').on('click', function () {
 	        const $bgmTrackEntry = $$1(this).parent().parent().children('.js--bgm-track');
@@ -97002,12 +97983,12 @@ function InsertStackElement(node, body) {
 	        const location = getLocalizedLabel(bgmTrack.location, bgmTrack.locationJP);
 	        const notes = getLocalizedLabel(bgmTrack.notes, bgmTrack.notesJP);
 	        $tooltip.html(localizedBgmTrackLabel
-	            .replace('{BGM_TRACK_ID}', bgmTrack.trackNo < 1000 ? bgmTrack.trackNo + (bgmTrack.variant ? ` ${bgmTrack.variant}` : '') : '')
-	            .replace('{NAME}', name)
+	            .replace('{BGM_TRACK_ID}', bgmTrack.trackNo < collectableIdsExports.BGM_UNNUMBERED_OFFSET ? bgmTrack.trackNo + (bgmTrack.variant ? ` ${bgmTrack.variant}` : '') : '')
+	            .replace('{NAME}', _.escape(name))
 	            .replace('{LOCATION}', location)
 	            .replace('{NOTES}', notes || ''))
 	            .removeClass('display--none');
-	        if (bgmTrack.trackNo >= 1000)
+	        if (bgmTrack.trackNo >= collectableIdsExports.BGM_UNNUMBERED_OFFSET)
 	            $tooltip.find('.js--bgm-track-tooltip__bgm-track-id').remove();
 	        if (!location)
 	            $tooltip.find('.js--bgm-track-tooltip__location').remove();
@@ -97072,6 +98053,20 @@ function InsertStackElement(node, body) {
 
 	    if ($favBgmTracksContainerBorders.children().length === 1)
 	        $$1('.js--fav-bgm-tracks--section').removeClass('display--none');
+	}
+
+	function removeFavBgmTrackEntry(bgmTrackId) {
+	    const $favBgmTracksContainerItems = $$1('.js--fav-bgm-tracks-container__items');
+	    const $favBgmTracksContainerBorders = $$1('.js--fav-bgm-tracks-container__borders');
+
+	    const $bgmTrackLinkContainer = $favBgmTracksContainerBorders.find(`.js--bgm-track[data-bgm-track-id=${bgmTrackId}]`).parent();
+	    const $bgmTrackImageContainer = $$1($$1($favBgmTracksContainerItems.children('.js--bgm-track-image--container')[$bgmTrackLinkContainer.index()]));
+
+	    $bgmTrackLinkContainer.remove();
+	    $bgmTrackImageContainer.remove();
+
+	    if (!$favBgmTracksContainerBorders.children().length)
+	        $$1('.js--fav-bgm-tracks--section').addClass('display--none');
 	}
 
 	function initBgmTrackImagesModal($bgmTrackEntry, getBgmTrackImageContainer) {
@@ -97186,6 +98181,7 @@ function InsertStackElement(node, body) {
 	    } catch (error) {
 	        console.log(error);
 	    }
+	    $$1('.js--label-mode').val(config.labelMode);
 	}
 
 	function getDefaultVersionDisplayToggles() {
@@ -97242,6 +98238,31 @@ function InsertStackElement(node, body) {
 	}
 
 	function updateControlsContainer(updateTabMargin) {
+	    const viewportHeight = mobileLayout.matches && window.visualViewport && window.visualViewport.scale === 1
+	        ? Math.round(Math.min(window.innerHeight, window.visualViewport.height))
+	        : window.innerHeight;
+	    document.documentElement.style.setProperty('--app-height', `${viewportHeight}px`);
+	    if (exports.graph) {
+	        const viewportWidth = document.getElementById('graphContainer').getBoundingClientRect().width;
+	        const renderer = exports.graph.renderer();
+	        const pixelRatio = isMobile || mobileLayout.matches ? 1 : Math.min(2, window.devicePixelRatio);
+	        if (renderer.getPixelRatio() !== pixelRatio) {
+	            renderer.setPixelRatio(pixelRatio);
+	            exports.graph.postProcessingComposer().setPixelRatio(pixelRatio);
+	        }
+	        if (exports.graph.width() !== viewportWidth)
+	            exports.graph.width(viewportWidth);
+	        if (exports.graph.height() !== viewportHeight)
+	            exports.graph.height(viewportHeight);
+	    }
+	    if (locationMode)
+	        return;
+	    if (mobileLayout.matches) {
+	        document.documentElement.style.setProperty('--mobile-header-height', `${$$1('.controls-top').outerHeight() || 0}px`);
+	        $$1('.modal__content').css('padding-right', '');
+	        return;
+	    }
+
 	    const controlsHeight = $$1(".controls-top").outerHeight();
 	    const settingsHeight = $$1(".controls-bottom").outerHeight();
 	    const collectableControlsHeight = $$1(".controls-collectables").outerHeight();
@@ -97332,7 +98353,7 @@ function InsertStackElement(node, body) {
 	    const loadData = () => $$1.get(`/${locationMode ? 'locationData' : 'data'}${queryString}`).done(data => onSuccess(data)).fail(onFail);
 	    const loadOrUpdateData = update => {
 	        if (update) {
-	            const req = { reset: update === 'reset' };
+	            const req = { reset: update === 'reset', collectablesOnly: update === 'collectables' };
 	            $$1.post('/updateData', req)
 	                .done(() => {
 	                    const pollTimer = setInterval(() => {
@@ -97456,6 +98477,7 @@ function InsertStackElement(node, body) {
 	let localizedComma;
 	let localizedBraces;
 	let localizedNA;
+	let localizedAudioControls;
 
 	let iconLabel;
 
@@ -97467,6 +98489,7 @@ function InsertStackElement(node, body) {
 	let localizedUpdateTasks;
 
 	let effectsJP;
+	let normalizeEffectNames = effectNamesExports.createEffectNameNormalizer({});
 
 	let config = {
 	    debug: false,
@@ -97477,7 +98500,7 @@ function InsertStackElement(node, body) {
 	    renderMode: 0,
 	    displayMode: 0,
 	    connMode: 0,
-	    labelMode: 1,
+	    labelMode: isMobile ? 2 : 1,
 	    removedContentMode: 0,
 	    pathMode: 1,
 	    sizeDiff: 1,
@@ -97498,6 +98521,8 @@ function InsertStackElement(node, body) {
 	}
 
 	let lastUpdate, lastFullUpdate;
+
+	let audioPlayer;
 	let playlistShuffleIndexes = [];
 
 	let worldImageData = new Uint8ClampedArray();
@@ -97853,6 +98878,10 @@ function InsertStackElement(node, body) {
 	        })(elem);
 
 	    const maxAnisotropy = exports.graph.renderer().capabilities.getMaxAnisotropy();
+	    if (isMobile) {
+	        exports.graph.renderer().setPixelRatio(1);
+	        exports.graph.postProcessingComposer().setPixelRatio(1);
+	    }
 
 	    if (displayMode < 4)
 	        exports.graph = exports.graph
@@ -97901,7 +98930,7 @@ function InsertStackElement(node, body) {
 
 	                const text = new _default(worldName, 1.5, node.removed ? getNodeTextColor(node, ret.material.grayscale) : 'white');
 	                text.fontFace = 'MS Gothic';
-	                text.fontSize = 80;
+	                text.fontSize = isMobile ? 40 : 80;
 	                text.strokeWidth = is2d ? 1.5 : 2 - (scale - 1) * 0.1;
 	                text.strokeColor = 'black';
 	                text.backgroundColor = false;
@@ -97953,7 +98982,7 @@ function InsertStackElement(node, body) {
 	                    const iconText = new _default(is2d ? ` ${localizedNodeIconNew} ` : localizedNodeIconNew, 2, 'gold');
 	                    iconText.__graphObjType = 'label';
 	                    iconText.fontFace = 'MS Gothic';
-	                    iconText.fontSize = 80;
+	                    iconText.fontSize = isMobile ? 40 : 80;
 	                    iconText.strokeWidth = 1;
 	                    iconText.strokeColor = '#4d4000';
 	                    iconText.backgroundColor = false;
@@ -98229,6 +99258,7 @@ function InsertStackElement(node, body) {
 	    linksOneWayBuffered = makeOneWayLinkObjects(is2d);
 	    updateLinkColors(visibleTwoWayLinks, linksTwoWayBuffered);
 	    updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
+	    updateControlsContainer(true);
 	    if (reuseGraph) {
 	        const currentGraph = exports.graph;
 	        requestAnimationFrame(() => {
@@ -98703,13 +99733,13 @@ function InsertStackElement(node, body) {
 	                const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
 	                canvas.width = nodeImgDimensions.x;
 	                canvas.height = nodeImgDimensions.y;
-	                const fontSize = 36;
+	                const fontSize = 36 * nodeImgDimensions.x / 320;
 	                const halfFontSize = fontSize / 2;
 	                let lineYOffset;
 	                ctx.font = fontSize + 'px MS Gothic';
 	                ctx.fillStyle = 'white';
 	                ctx.strokeStyle = 'black';
-	                ctx.lineWidth = 5;
+	                ctx.lineWidth = 5 * nodeImgDimensions.x / 320;
 	                let index = 0;
 	                const offsetLabels = images.length * dataLength;
 	                images.forEach(img => {
@@ -98982,14 +100012,15 @@ function InsertStackElement(node, body) {
 	    const context = canvas.getContext('2d');
 	    canvas.width = nodeIconImgDimensions.x;
 	    canvas.height = nodeIconImgDimensions.y;
-	    context.font = '50px MS Gothic';
+	    context.font = `${50 * nodeImgDimensions.x / 320}px MS Gothic`;
 	    context.textAlign = 'right';
 	    context.textBaseline = 'top';
 	    context.fillStyle = 'gold';
 	    context.strokeStyle = '#4d4000';
-	    context.lineWidth = 5;
-	    context.strokeText(localizedNodeIconNew, nodeIconImgDimensions.x - 4, 2);
-	    context.fillText(localizedNodeIconNew, nodeIconImgDimensions.x - 4, 2);
+	    context.lineWidth = 5 * nodeImgDimensions.x / 320;
+	    const padding = 4 * nodeImgDimensions.x / 320;
+	    context.strokeText(localizedNodeIconNew, nodeIconImgDimensions.x - padding, padding / 2);
+	    context.fillText(localizedNodeIconNew, nodeIconImgDimensions.x - padding, padding / 2);
 	    nodeIconImgData.set(context.getImageData(0, 0, nodeIconImgDimensions.x, nodeIconImgDimensions.y).data, 0);
 
 	    const texture = new DataArrayTexture(nodeIconImgData, nodeIconImgDimensions.x, nodeIconImgDimensions.y, 1);
@@ -99670,6 +100701,7 @@ function InsertStackElement(node, body) {
 	}
 
 	function initLocalization(isInitial) {
+	    restoreGalleries();
 	    if (isInitial && urlSearchParams.has("lang")) {
 	        const urlLang = urlSearchParams.get("lang");
 	        if (/^(?:en|ja|zh|ko)$/.test(urlLang))
@@ -99682,7 +100714,7 @@ function InsertStackElement(node, body) {
 	        callback: function (data, defaultCallback) {
 	            if (config.lang === 'ja' || config.lang === 'ru')
 	                massageLocalizedValues(data, true);
-	            data.footer.about = data.footer.about.replace("{VERSION}", "6.1.0");
+	            data.footer.about = data.footer.about.replace("{VERSION}", version);
 	            data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
 	            localizedSeparator = data.separator;
@@ -99690,6 +100722,9 @@ function InsertStackElement(node, body) {
 	            localizedComma = data.comma;
 	            localizedBraces = data.braces;
 	            localizedNA = data.na;
+	            localizedAudioControls = data.accessibility.audio;
+	            $$1('.js--mobile-controls-toggle').attr('aria-label', data.accessibility.mobileControls);
+	            localizeAudioPlayer();
 	            localizedConns = data.conn;
 	            localizedUpdateTasks = data.updateTask;
 	            if (exports.worldData)
@@ -99751,6 +100786,9 @@ function InsertStackElement(node, body) {
 	            pathPrefix: "/lang",
 	            callback: function (data) {
 	                effectsJP = data;
+	                normalizeEffectNames = effectNamesExports.createEffectNameNormalizer(data);
+	                if (effectData)
+	                    initEffectData(effectData);
 	            }
 	        });
 	    } else {
@@ -99809,6 +100847,9 @@ function InsertStackElement(node, body) {
 	        $$1(".js--author-entry").each(function () {
 	            const displayName = $$1(this).data(getLangUsesEn(config.lang) ? "displayName" : "displayNameJp");
 	            $$1(this).find('h1').text(displayName);
+	        });
+	        $$1('.modal').each(function () {
+	            refreshGalleries(this);
 	        });
 	    }
 	}
@@ -99994,8 +101035,8 @@ function InsertStackElement(node, body) {
 	                    const world = exports.worldData[contextWorldId];
 	                    if (world.bgmUrl.indexOf('|') === -1) {
 	                        if (!isCtrl) {
-	                            getLocalizedLabel(world.title, world.titleJP);
-	                            //playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel), world.filename, world.id);
+	                            const worldName = getLocalizedLabel(world.title, world.titleJP);
+	                            playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel), world.filename, world.id);
 	                        } else {
 	                            const handle = window.open(world.bgmUrl, '_blank');
 	                            if (handle)
@@ -100043,7 +101084,7 @@ function InsertStackElement(node, body) {
 	        }
 
 	        if (world.bgmUrl && world.bgmUrl.indexOf('|') > -1) {
-	            getLocalizedLabel(world.title, world.titleJP);
+	            const worldName = getLocalizedLabel(world.title, world.titleJP);
 	            const bgmUrls = world.bgmUrl.split('|');
 	            const bgmLabels = getBgmLabels(world.bgmLabel.split('|'), localizedContextMenu.items.bgm);
 	            for (let b = 0; b < bgmUrls.length; b++) {
@@ -100052,7 +101093,9 @@ function InsertStackElement(node, body) {
 	                    name: bgmLabels[bgmIndex],
 	                    callback: function () {
 	                        const bgmUrl = bgmUrls[bgmIndex];
-	                        if (!isCtrl) ; else {
+	                        if (!isCtrl) {
+	                            playBgm(bgmUrl, getBgmLabel(worldName, world.bgmLabel.split('|')[bgmIndex]), world.filename, world.id);
+	                        } else {
 	                            const handle = window.open(bgmUrl, '_blank');
 	                            if (handle)
 	                                handle.focus();
@@ -100080,17 +101123,360 @@ function InsertStackElement(node, body) {
 	        "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
 	}
 
+	function localizeAudioPlayer() {
+	    if (!audioPlayer || !localizedAudioControls)
+	        return;
+	    const labels = localizedAudioControls;
+	    audioPlayer.labels = { play: labels.play, pause: labels.pause, download: labels.download, volume: { open: labels.openVolume, close: labels.closeVolume } };
+	    audioPlayer.player.explorerAudioLabels = labels;
+	    const controls = {
+	        '.play-pause-btn': audioPlayer.player.paused ? labels.play : labels.pause,
+	        '.controls__progress': labels.seek,
+	        '.volume__button': audioPlayer.volumeControls.classList.contains('hidden') ? labels.openVolume : labels.closeVolume,
+	        '.volume__progress': labels.volume,
+	        '.download__link': labels.download,
+	        '.prev-btn': labels.previous,
+	        '.next-btn': labels.next,
+	        '.fav-btn': labels.favourite,
+	        '.ignore-btn': labels.ignore,
+	        '.shuffle-btn': labels.shuffle,
+	        '.repeat-btn': labels.repeat,
+	        '.playlist-add-btn': labels.addToPlaylist
+	    };
+	    for (const selector in controls)
+	        $$1('.audio-player').find(selector).attr('aria-label', controls[selector]);
+	}
+
 	function initBgm(url, label, imageUrl, worldId, play, playlistIndex, playlist) {
-	    return;
+	    if (!url)
+	        return;
+	    audioPlayer?.destroy();
+	    audioPlayer = null;
+	    const loopAttribute = playlistIndex === undefined || playlistIndex === -1 ? ' loop' : '';
+	    const $bgmTrackLink = worldId != null ? $$1(`<a href="javascript:void(0);" class="js--world-node-link no-border" data-world-id="${worldId}"></a>`) : null;
+	    const $bgmTrackImage = $$1(`<img src="${imageUrl}" class="audio-player-image noselect" />`);
+	    $$1('.audio-player-image-container').empty().append(worldId != null ? $bgmTrackLink.append($bgmTrackImage) : $bgmTrackImage);
+	    $$1('.audio-player-player-container').empty().append(`
+        <a href="javascript:void(0);" class="close-audio-player noselect">✖</a>
+        <marquee class="audio-player-marquee" scrollamount="5">
+            <label class="audio-player-label noselect">${label}</label>
+        </marquee>
+    `).append(`
+        <div class="audio-player">
+            <audio class="audio-source" preload="none"${loopAttribute}></audio>
+        </div>
+    `);
+	    $$1('.audio-player-container').addClass('open');
+
+	    audioPlayer = new GreenAudioPlayer('.audio-player');
+	    const player = audioPlayer.player;
+
+	    const $loadingIndicator = $$1('.audio-player .loading');
+	    const $playBtn = $$1('.audio-player .play-pause-btn');
+	    const $prevBtn = $$1(`
+        <div class="audio-player-playlist-btn prev-btn" aria-label="Previous" role="button">
+            <svg width="18" height="24" viewBox="0 0 18 24" xmlns="http://www.w3.org/2000/svg">
+                <path class="prev-btn__icon" d="m3 10v-10h-3v24h3v-10l13 10v-24" fill-rule="evenodd" />
+            </svg>
+        </div>
+    `);
+	    const $nextBtn = $$1(`
+        <div class="audio-player-playlist-btn next-btn" aria-label="Next" role="button">
+            <svg width="18" height="24" viewBox="0 0 18 24" xmlns="http://www.w3.org/2000/svg">
+                <path class="next-btn__icon" d="m15 10v-10h3v24h-3v-9l-15 9v-24" fill-rule="evenodd" />
+            </svg>
+        </div>
+    `);
+	    const $favBtn = $$1(`
+        <div class="audio-player-playlist-btn fav-btn" aria-label="Favourite" role="button">
+            <svg width="24" height="24" viewBox="0 -1.5 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path class="fav-btn__icon" d="m22.2 2c-2.5-2.7-6.5-2.6-9.1 0.1l-1.1 1.3-1.1-1.3c-2.6-2.7-6.6-2.8-9-0.1h-0.1c-2.4 2.6-2.4 7 0.2 9.7l5.4 5.9 0.1 0.1 4.5 4.8 4.4-4.8h0.1l0.1-0.1 5.4-5.9c2.6-2.7 2.6-7.1 0.2-9.7z" fill-rule="evenodd" />
+            </svg>
+        </div>
+    `);
+	    const $ignoreBtn = $$1(`
+         <div class="audio-player-playlist-btn ignore-btn" aria-label="Ignore" role="button">
+            <svg width="24" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                <path class="ignore-btn__icon" d="m9 0a9 9 90 1 0 9 9 9 9 90 0 0 -9 -9zm0 2.1a6.9 6.9 90 0 1 4.1 1.3l-9.7 9.7a6.9 6.9 90 0 1 5.6 -11zm0 13.8a6.9 6.9 90 0 1 -4.1 -1.3l9.6-9.6a6.9 6.9 90 0 1 -5.5 10.9z" fill-rule="evenodd"/>
+            </svg>
+        </div>
+    `);
+	    const $shuffleBtn = $$1(`
+        <div class="audio-player-playlist-btn shuffle-btn${config.playlistShuffle ? ' on' : ''}" aria-label="Shuffle" role="button">
+            <svg width="24" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                <path class="shuffle-btn__icon" d="m0 2h7l5 11h3v-2l3 3.5-3 3.5v-2h-5l-5-11h-5m0 11h7l0.9-2-2-3-0.9 2h-5m10.6-5l1.4-3h3v2l3-3.5-3-3.5v2h-5l-0.9 2" fill-rule="evenodd" />
+            </svg>
+        </div>
+    `);
+	    const $repeatBtn = $$1(`
+        <div class="audio-player-playlist-btn repeat-btn${config.playlistRepeat ? ' on' : ''}" aria-label="Repeat" role="button">
+            <svg width="24" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                <path class="repeat-btn__icon" d="m0 9v-7h15v-2l3 3.5-3 3.5v-2h-12v4zm18 0v7h-15v2l-3-3.5 3-3.5v2h12v-4z" fill-rule="evenodd"/>
+            </svg>
+        </div>
+    `);
+	    const $playlistAddBtn = $$1(`
+        <div class="audio-player-playlist-btn playlist-add-btn" aria-label="Add to Playlist" role="button">
+            <svg width="24" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                <path class="playlist-add-btn__icon" d="m18 2h-18v-2h18zm0 5h-18v-2h18zm-11 5h-7v-2h7zm0 5h-7v-2h7zm8 1h-3v-3h-3v-3h3v-3h3v3h3v3h-3z" fill-rule="evenodd" />
+            </svg>
+        </div>
+    `);
+	    const $volume = $$1('.audio-player .volume');
+	    const $mainHolder = $playBtn.parent().addClass('main-holder');
+	    const $leftHolder = $$1('<div class="holder left-holder"></div>');
+	    const $rightHolder = $$1('<div class="holder right-holder"></div>');
+
+	    $leftHolder.insertBefore($mainHolder);
+	    $leftHolder.append($favBtn);
+	    $ignoreBtn.insertAfter($favBtn);
+	    $shuffleBtn.insertBefore($loadingIndicator);
+	    $prevBtn.insertAfter($shuffleBtn);
+	    $nextBtn.insertAfter($playBtn);
+	    $repeatBtn.insertAfter($nextBtn);
+	    $volume.wrap($rightHolder);
+	    $playlistAddBtn.insertBefore($volume);
+	    localizeAudioPlayer();
+
+	    audioPlayer.showLoadingIndicator();
+
+	    audioPlayer.player.addEventListener('canplay', function () {
+	        $$1('.audio-player .loading').addClass('display--none');
+	        $playBtn.removeClass('display--none');
+	    });
+
+	    audioPlayer.player.volume = config.audioVolume;
+	    audioPlayer.player.addEventListener('volumechange', function () {
+	        const currentVolume = player.volume;
+	        window.setTimeout(function () {
+	            if (audioPlayer?.player === player && player.volume === currentVolume) {
+	                config.audioVolume = currentVolume;
+	                updateConfig(config);
+	            }
+	        }, 1000);
+	    });
+
+	    if (playlistIndex > -1) {
+	        if (url) {
+	            const bgmTrackId = getPlaylistBgmTrackIds()[playlistIndex];
+	            const $bgmTrackEntry = $$1(`.js--bgm-track[data-bgm-track-id='${bgmTrackId}']`);
+	            const $bgmTrackEntryInputControls = $bgmTrackEntry.parent().children('.js--bgm-track--collectable-entry--input-controls');
+	            const $bgmTrackEntryPlayControls = $bgmTrackEntry.parent().children('.js--bgm-track--collectable-entry--play-controls');
+	            const toggleEntryPlayingInList = function (playing) {
+	                if (!playlist) {
+	                    $bgmTrackEntryPlayControls.children('.js--bgm-track__play').toggleClass('display--none', playing).toggleClass('pressed', playing);
+	                    $bgmTrackEntryPlayControls.children('.js--bgm-track__pause').toggleClass('display--none', !playing).toggleClass('pressed', !playing);
+	                }
+	            };
+
+	            if (config.bgmTrackInput.hasOwnProperty(bgmTrackId)) {
+	                const input = config.bgmTrackInput[bgmTrackId];
+	                $favBtn.addClass(input ? 'on' : 'inactive');
+	                $ignoreBtn.addClass(input ? 'inactive' : 'on');
+	            }
+
+	            $$1('.js--playlist-item.playing').removeClass('playing');
+
+	            $$1('.js--bgm-track__pause:visible').addClass('display--none')
+	                .parent().children('.js--bgm-track__play').removeClass('display--none').removeClass('pressed');
+	            if (playlist)
+	                $$1(`.js--playlist-item:nth(${playlistIndex})`).addClass('playing');
+
+	            config.playlist = !!playlist;
+	            config.playlistIndex = playlistIndex;
+	            updateConfig(config);
+
+	            const updateBgmTrackInput = function () {
+	                const isFav = $$1(this).hasClass('fav-btn');
+	                const hasInput = config.bgmTrackInput.hasOwnProperty(bgmTrackId);
+	                if (!hasInput || !!config.bgmTrackInput[bgmTrackId] === isFav) {
+	                    if (hasInput)
+	                        delete config.bgmTrackInput[bgmTrackId];
+	                    else
+	                        config.bgmTrackInput[bgmTrackId] = isFav ? 1 : 0;
+	                    updateConfig(config);
+	                    if (isFav) {
+	                        if (hasInput)
+	                            removeFavBgmTrackEntry(bgmTrackId);
+	                        else
+	                            addFavBgmTrackEntry(bgmTrackId);
+	                    }
+	                    $$1(this).toggleClass('on', !hasInput);
+	                    (isFav ? $ignoreBtn : $favBtn).toggleClass('inactive', !hasInput);
+	                    $bgmTrackEntryInputControls.find(`.js--bgm-track__${isFav ? 'fav' : 'ignore'}`).toggleClass('on', !hasInput);
+	                    $bgmTrackEntryInputControls.find(`.js--bgm-track__${isFav ? 'ignore' : 'fav'}`).toggleClass('inactive', !hasInput);
+	                }
+	            };
+
+	            const playPrevTrack = function () {
+	                if (getPlaylistBgmTrackIds().length > 1) {
+	                    audioPlayer.player.src = '';
+	                    toggleEntryPlayingInList(false);
+	                    if (playPrevPlaylistBgmTrack(playlistIndex))
+	                        return;
+	                    toggleEntryPlayingInList(true);
+	                    audioPlayer.player.src = url;
+	                }
+	                GreenAudioPlayer.playPlayer(audioPlayer.player);
+	            };
+	            const playNextTrack = function () {
+	                if (getPlaylistBgmTrackIds().length > 1) {
+	                    audioPlayer.player.src = '';
+	                    toggleEntryPlayingInList(false);
+	                    if (playNextPlaylistBgmTrack(playlistIndex))
+	                        return;
+	                    toggleEntryPlayingInList(true);
+	                    audioPlayer.player.src = url;
+	                }
+	                GreenAudioPlayer.playPlayer(audioPlayer.player);
+	            };
+
+	            if (!playlist) {
+	                audioPlayer.player.addEventListener('play', () => toggleEntryPlayingInList(true));
+	                audioPlayer.player.addEventListener('pause', () => toggleEntryPlayingInList(false));
+	            }
+
+	            audioPlayer.player.addEventListener('ended', function () {
+	                if (audioPlayer?.player !== player)
+	                    return;
+	                if (config.playlistRepeat)
+	                    GreenAudioPlayer.playPlayer(audioPlayer.player);
+	                else
+	                    playNextTrack();
+	            });
+
+	            $prevBtn.on('click', playPrevTrack);
+	            $nextBtn.on('click', playNextTrack);
+	            $favBtn.on('click', updateBgmTrackInput);
+	            $ignoreBtn.on('click', updateBgmTrackInput);
+	            $shuffleBtn.on('click', function () {
+	                const shuffle = (config.playlistShuffle = !config.playlistShuffle);
+	                $$1(this).toggleClass('on', shuffle);
+	                if (shuffle)
+	                    updatePlaylistShuffleIndexes();
+	                updateConfig(config);
+	            });
+	            $repeatBtn.on('click', function () {
+	                const repeat = (config.playlistRepeat = !config.playlistRepeat);
+	                $$1(this).toggleClass('on', repeat);
+	                updateConfig(config);
+	            });
+
+	            if (!playlist)
+	                $playlistAddBtn.on('click', () => addPlaylistBgmTrack(bgmTrackId));
+	            else
+	                $playlistAddBtn.addClass('inactive');
+	        } else {
+	            audioPlayer.player.src = '';
+	            playNextPlaylistBgmTrack(playlistIndex);
+	            return;
+	        }
+	    } else {
+	        $$1('.audio-player-playlist-btn').addClass('inactive');
+
+	        if (config.playlist || config.playlistIndex > -1) {
+	            config.playlist = false;
+	            config.playlistIndex = -1;
+	            updateConfig(config);
+	        }
+
+	        if (!url)
+	            return;
+	    }
+
+	    $$1('.close-audio-player').on('click', function () {
+	        audioPlayer?.destroy();
+	        audioPlayer = null;
+	        config.playlistIndex = -1;
+	        updateConfig(config);
+	        $$1('.audio-player-container').removeClass('open');
+	        $$1('.audio-player-image-container, .audio-player-player-container').empty();
+	        updateControlsContainer();
+	    });
+	    player.addEventListener('error', function () {
+	        if (audioPlayer?.player === player) {
+	            audioPlayer.hideLoadingIndicator();
+	            $playBtn.removeClass('display--none');
+	            $$1('.audio-player-label').text(`${label} (${localizedNA})`);
+	        }
+	    });
+	    player.src = url;
+	    if (play)
+	        GreenAudioPlayer.playPlayer(player);
+	    else
+	        audioPlayer.hideLoadingIndicator();
+	    updateControlsContainer();
 	}
 
 	function initBgmTrack(bgmTrack, play, playlistIndex, playlist) {
-	    const imageUrl = bgmTrack.worldId != null ? exports.worldData[bgmTrack.worldId].images[bgmTrack.worldImageOrdinal] : getMissingBgmTrackUrl(bgmTrack.location);
-	    initBgm(bgmTrack.url, getBgmTrackLabel(bgmTrack), imageUrl, bgmTrack.worldId);
+	    const world = exports.worldData[bgmTrack.worldId];
+	    const imageUrl = world?.images[bgmTrack.worldImageOrdinal || 0] || getMissingBgmTrackUrl(bgmTrack.location);
+	    initBgm(bgmTrack.url, getBgmTrackLabel(bgmTrack), imageUrl, bgmTrack.worldId, play, playlistIndex, playlist);
+	}
+
+	function playBgm(url, label, imageUrl, worldId) {
+	    initBgm(url, label, imageUrl, worldId, true);
 	}
 
 	function playBgmTrack(bgmTrack, playlistIndex, playlist) {
-	    initBgmTrack(bgmTrack);
+	    initBgmTrack(bgmTrack, true, playlistIndex, playlist);
+	}
+
+	function playPrevPlaylistBgmTrack(lastPlaylistIndex, attempts = 0) {
+	    if (!getPlaylistBgmTrackIds().length || attempts >= getPlaylistBgmTrackIds().length)
+	        return false;
+	    const wrapIndex = config.playlistShuffle ? lastPlaylistIndex === playlistShuffleIndexes[0] : lastPlaylistIndex <= 0;
+	    if (wrapIndex)
+	        updatePlaylistShuffleIndexes();
+	    const playlistIndex = config.playlistShuffle
+	        ? playlistShuffleIndexes[!wrapIndex ? playlistShuffleIndexes.indexOf(lastPlaylistIndex) - 1 : playlistShuffleIndexes.length - 1]
+	        : !wrapIndex ? lastPlaylistIndex - 1 : getPlaylistBgmTrackIds().length - 1;
+	    const playlistBgmTrackId = getPlaylistBgmTrackIds()[playlistIndex];
+	    const skipTrack = () => playPrevPlaylistBgmTrack(playlistIndex, attempts + 1);
+	    if (bgmTrackIndexesById.hasOwnProperty(playlistBgmTrackId)) {
+	        const bgmTrack = bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]];
+	        if (bgmTrack.url && (config.playlist || !config.bgmTrackInput.hasOwnProperty(playlistBgmTrackId) || config.bgmTrackInput[playlistBgmTrackId])) {
+	            GreenAudioPlayer.stopOtherPlayers();
+	            playBgmTrack(bgmTrack, playlistIndex, config.playlist);
+	        } else
+	            return skipTrack();
+	    } else
+	        return skipTrack();
+	    return true;
+	}
+
+	function playNextPlaylistBgmTrack(lastPlaylistIndex, attempts = 0) {
+	    if (!getPlaylistBgmTrackIds().length || attempts >= getPlaylistBgmTrackIds().length)
+	        return false;
+	    const wrapIndex = config.playlistShuffle ? lastPlaylistIndex === playlistShuffleIndexes[playlistShuffleIndexes.length - 1] : lastPlaylistIndex >= getPlaylistBgmTrackIds().length - 1;
+	    if (wrapIndex)
+	        updatePlaylistShuffleIndexes();
+	    const playlistIndex = config.playlistShuffle
+	        ? playlistShuffleIndexes[!wrapIndex ? playlistShuffleIndexes.indexOf(lastPlaylistIndex) + 1 : 0]
+	        : !wrapIndex ? lastPlaylistIndex + 1 : 0;
+	    const playlistBgmTrackId = getPlaylistBgmTrackIds()[playlistIndex];
+	    const skipTrack = () => playNextPlaylistBgmTrack(playlistIndex, attempts + 1);
+	    if (bgmTrackIndexesById.hasOwnProperty(playlistBgmTrackId)) {
+	        const bgmTrack = bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]];
+	        if (bgmTrack.url && (config.playlist || !config.bgmTrackInput.hasOwnProperty(playlistBgmTrackId) || config.bgmTrackInput[playlistBgmTrackId])) {
+	            GreenAudioPlayer.stopOtherPlayers();
+	            playBgmTrack(bgmTrack, playlistIndex, config.playlist);
+	        } else
+	            return skipTrack();
+	    } else
+	        return skipTrack();
+	    return true;
+	}
+
+	function pauseBgm() {
+	    const audioSources = document.getElementsByClassName('audio-source');
+	    if (audioSources.length)
+	        GreenAudioPlayer.pausePlayer(audioSources[0]);
+	    if (!config.playlist && config.playlistIndex > -1) {
+	        const $bgmTrackEntryControls = $$1(`.js--bgm-track[data-bgm-track-id='${bgmTrackIds[config.playlistIndex]}']`).parent().children('.js--bgm-track--collectable-entry--play-controls');
+	        $bgmTrackEntryControls.children('.js--bgm-track__pause').addClass('display--none');
+	        $bgmTrackEntryControls.children('.js--bgm-track__play').removeClass('display--none').removeClass('pressed');
+	    }
 	}
 
 	function getPlaylistBgmTrackIds() {
@@ -100120,7 +101506,7 @@ function InsertStackElement(node, body) {
 
 	function initPlaylist() {
 	    for (let bgmTrackId of config.playlistBgmTrackIds)
-	        addPlaylistBgmTrack(bgmTrackId);
+	        addPlaylistBgmTrack(bgmTrackId, true);
 
 	    if (config.playlistBgmTrackIds.length) {
 	        $$1('.controls-playlist--container, .controls-playlist--container--tab').removeClass('display--none');
@@ -100128,7 +101514,7 @@ function InsertStackElement(node, body) {
 	            if (config.playlistIndex > -1 && config.playlistIndex < config.playlistBgmTrackIds.length) {
 	                const playlistBgmTrackId = config.playlistBgmTrackIds[config.playlistIndex];
 	                if (bgmTrackIndexesById.hasOwnProperty(playlistBgmTrackId))
-	                    initBgmTrack(bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]], false, config.playlistIndex);
+	                    initBgmTrack(bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]], false, config.playlistIndex, true);
 	            }
 	            updatePlaylistShuffleIndexes(config.playlistIndex);
 	        }
@@ -100148,7 +101534,7 @@ function InsertStackElement(node, body) {
 	function addPlaylistBgmTrack(bgmTrackId, isInit) {
 	    const bgmTrack = bgmTrackIndexesById.hasOwnProperty(bgmTrackId) ? bgmTrackData[bgmTrackIndexesById[bgmTrackId]] : null;
 	    const imageUrl = bgmTrack && bgmTrack.worldId != null ? exports.worldData[bgmTrack.worldId].images[bgmTrack.worldImageOrdinal] : getMissingBgmTrackUrl(bgmTrack ? bgmTrack.location : null);
-	    const trackLabel = bgmTrack && bgmTrack.trackNo < 1000 ? bgmTrack.trackNo.toString().padStart(3, 0) + (bgmTrack.variant ? ` ${bgmTrack.variant}` : '') : '';
+	    const trackLabel = bgmTrack && bgmTrack.trackNo < collectableIdsExports.BGM_UNNUMBERED_OFFSET ? bgmTrack.trackNo.toString().padStart(3, 0) + (bgmTrack.variant ? ` ${bgmTrack.variant}` : '') : '';
 	    const trackLabelHtml = trackLabel ? `<h2 class="playlist-item__label noselect">${trackLabel}</h2>` : '';
 	    const $playlistItem = $$1(`
         <div class="js--playlist-item playlist-item" data-bgm-track-id="${bgmTrackId}">
@@ -100163,13 +101549,25 @@ function InsertStackElement(node, body) {
 	    if (bgmTrack)
 	        $playlistItem.on('click', function () {
 	            if (bgmTrackIndexesById.hasOwnProperty(bgmTrackId)) {
-	                playBgmTrack(bgmTrackData[bgmTrackIndexesById[bgmTrackId]], $$1(this).index());
+	                playBgmTrack(bgmTrackData[bgmTrackIndexesById[bgmTrackId]], $$1(this).index(), true);
 	                updatePlaylistShuffleIndexes($$1(this).index());
 	            }
 	        });
 	    $playlistItem.children('.js--remove-playlist-item').on('click', function () {
 	        removePlaylistBgmTrack($$1(this).parent('.js--playlist-item').index());
 	    });
+
+	    if (!isInit) {
+	        if (!config.playlistBgmTrackIds.length)
+	            $$1('.controls-playlist--container, .controls-playlist--container--tab').removeClass('display--none');
+	        if (!$$1('.controls-playlist').hasClass('visible'))
+	            $$1('.controls-playlist--container--tab__button').trigger('click');
+	        else
+	            updateControlsContainer(true);
+	        config.playlistBgmTrackIds.push(bgmTrackId);
+	        updatePlaylistShuffleIndexes();
+	        updateConfig(config);
+	    }
 	}
 
 	function removePlaylistBgmTrack(playlistIndex) {
@@ -100246,10 +101644,17 @@ function InsertStackElement(node, body) {
 	    return ret;
 	}
 
+	function getBgmLabel(worldName, bgmLabel) {
+	    const separatorIndex = bgmLabel.indexOf('^');
+	    if (separatorIndex === bgmLabel.length - 1 || !getLangUsesEn(config.lang))
+	        return `${worldName}${localizedSeparator}${bgmLabel.slice(0, separatorIndex)}`;
+	    return `${worldName}${localizedSeparator}${bgmLabel.slice(separatorIndex + 1)}${localizedBraces.replace('{VALUE}', bgmLabel.slice(0, separatorIndex))})`;
+	}
+
 	function getBgmTrackLabel(bgmTrack) {
 	    let trackLabel = '';
 
-	    if (bgmTrack.trackNo < 1000) {
+	    if (bgmTrack.trackNo < collectableIdsExports.BGM_UNNUMBERED_OFFSET) {
 	        trackLabel = bgmTrack.trackNo.toString().padStart(3, 0);
 	        if (bgmTrack.variant)
 	            trackLabel += ` ${bgmTrack.variant}`;
@@ -100257,7 +101662,7 @@ function InsertStackElement(node, body) {
 	    }
 
 	    const location = getLocalizedLabel(bgmTrack.location, bgmTrack.locationJP);
-	    const name = bgmTrack.name;
+	    const name = _.escape(bgmTrack.name);
 
 	    if (location) {
 	        trackLabel += location;
@@ -100456,7 +101861,42 @@ function InsertStackElement(node, body) {
 	}
 
 	function initControls() {
+	    const closeMobilePanels = () => {
+	        $$1('.controls-bottom, .controls-collectables, .controls-playlist').removeClass('visible').css('opacity', 0);
+	        $$1('.controls-top').removeClass('mobile-controls-open');
+	        $$1('.js--mobile-controls-toggle').attr('aria-expanded', 'false');
+	    };
+	    const toggleMobilePanel = selector => {
+	        const $panel = $$1(selector);
+	        const open = !$panel.hasClass('visible');
+	        closeMobilePanels();
+	        if (open)
+	            $panel.addClass('visible').css('opacity', 1);
+	        updateControlsContainer();
+	    };
+	    $$1(document).on('click', '.js--mobile-controls-toggle', function () {
+	        const open = !$$1('.controls-top').hasClass('mobile-controls-open');
+	        closeMobilePanels();
+	        $$1('.controls-top').toggleClass('mobile-controls-open', open);
+	        $$1(this).attr('aria-expanded', String(open));
+	        updateControlsContainer();
+	    });
+	    mobileLayout.addEventListener('change', () => {
+	        closeMobilePanels();
+	        $$1('.controls--container--tab, .audio-player-container, .footer').css({marginTop: '', marginBottom: '', marginLeft: ''});
+	        $$1('.controls-playlist--container').css({marginBottom: '', paddingBottom: ''});
+	        updateControlsContainer(true);
+	    });
+	    $$1('.controls-collectables button').on('click', function () {
+	        if (mobileLayout.matches)
+	            closeMobilePanels();
+	    });
+
 	    $$1(".controls-bottom--container--tab__button").on("click", function () {
+	        if (mobileLayout.matches) {
+	            toggleMobilePanel('.controls-bottom');
+	            return;
+	        }
 	        if ($$1(".controls-bottom").hasClass("visible")) {
 	            const settingsHeight = $$1(".controls-bottom").outerHeight() + 8;
 	            $$1(".controls-bottom").removeClass("visible").animateCss("slideOutDown", 250, function () {
@@ -100480,6 +101920,10 @@ function InsertStackElement(node, body) {
 	    });
 
 	    $$1(".controls-collectables--container--tab__button").on("click", function () {
+	        if (mobileLayout.matches) {
+	            toggleMobilePanel('.controls-collectables');
+	            return;
+	        }
 	        if ($$1(".controls-collectables").hasClass("visible")) {
 	            $$1(".controls-collectables").removeClass("visible").animateCss("slideOutRight", 250, function () {
 	                if (!$$1(this).hasClass("visible"))
@@ -100496,6 +101940,10 @@ function InsertStackElement(node, body) {
 	    });
 
 	    $$1(".controls-playlist--container--tab__button").on("click", function () {
+	        if (mobileLayout.matches) {
+	            toggleMobilePanel('.controls-playlist');
+	            return;
+	        }
 	        if ($$1(".controls-playlist").hasClass("visible")) {
 	            $$1(".controls-playlist").removeClass("visible").animateCss("slideOutLeft", 250, function () {
 	                if (!$$1(this).hasClass("visible"))
@@ -100513,14 +101961,19 @@ function InsertStackElement(node, body) {
 
 	    updateControlsContainer(true);
 
-	    $$1(window).on("resize", updateControlsContainer).on("blur", function () {
+	    $$1(window).on("blur", function () {
 	        isShift = false;
 	        isCtrl = false;
 	    });
 
 	    const onModalShown = function () {
 	        const $modalContent = $$1(this).find(".modal__content");
-	        $modalContent.css("padding-right", $modalContent[0].scrollHeight > $modalContent[0].clientHeight ? "24px" : null);
+	        if (mobileLayout.matches) {
+	            closeMobilePanels();
+	            updateControlsContainer();
+	        } else
+	            $modalContent.css("padding-right", $modalContent[0].scrollHeight > $modalContent[0].clientHeight ? "24px" : null);
+	        refreshGalleries(this);
 	    };
 
 	    $$1(document).on($$1.modal.OPEN, ".modal", onModalShown);
@@ -100758,7 +102211,7 @@ function InsertStackElement(node, body) {
 	    });
 
 	    $$1(".js--menu-themes").on("click", function () {
-	        if (menuThemeData && menuThemeData.length) {
+	        if (menuThemeData) {
 	            if ($$1(".js--menu-themes-modal:visible").length)
 	                $$1.modal.close();
 	            else
@@ -100771,7 +102224,7 @@ function InsertStackElement(node, body) {
 	    });
 
 	    $$1(".js--wallpapers").on("click", function () {
-	        if (wallpaperData && wallpaperData.length) {
+	        if (wallpaperData) {
 	            if ($$1(".js--wallpapers-modal:visible").length)
 	                $$1.modal.close();
 	            else
@@ -100784,7 +102237,7 @@ function InsertStackElement(node, body) {
 	    });
 
 	    $$1(".js--bgm-tracks").on("click", function () {
-	        if (bgmTrackData && bgmTrackData.length) {
+	        if (bgmTrackData) {
 	            if ($$1(".js--bgm-tracks-modal:visible").length)
 	                $$1.modal.close();
 	            else
@@ -101602,6 +103055,17 @@ function InsertStackElement(node, body) {
 	/* End Admin */
 
 	$$1(function () {
+	    let resizeFrame;
+	    const resizeGraph = () => {
+	        cancelAnimationFrame(resizeFrame);
+	        resizeFrame = requestAnimationFrame(() => updateControlsContainer(true));
+	    };
+	    $$1(window).on('resize', resizeGraph);
+	    if (window.visualViewport)
+	        window.visualViewport.addEventListener('resize', resizeGraph);
+	    const graphResizeObserver = new ResizeObserver(resizeGraph);
+	    graphResizeObserver.observe(document.getElementById('graphContainer'));
+
 	    if (!locationMode)
 	        loadOrInitConfig();
 

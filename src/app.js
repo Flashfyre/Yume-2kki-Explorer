@@ -10,6 +10,7 @@ import _ from 'lodash';
 import { forceCollide } from 'd3-force';
 import * as THREE from 'three';
 import SpriteText from 'three-spritetext';
+import GreenAudioPlayer from './vendor/green-audio-player.js';
 import ForceGraph3D from '3d-force-graph';
 import TWEEN from '@tweenjs/tween.js';
 import { checkIsMobile, formatDate, getLocalizedValue, getLangUsesEn, getColorRgba, hueToRGBA, uiThemeFontColors, uiThemeBgColors, getBaseBgColor, getFontColors, getFontShadow, getGradientText, updateSvgGradient, getSvgGradientStop } from './utils';
@@ -17,6 +18,10 @@ import { updateConfig } from './config.js';
 import { ConnType } from './conn-type.js';
 import { PathFinder } from './path-finder.js';
 import * as versionUtils from './version-utils.js';
+import { getGalleryItem, restoreGallery, virtualizeGallery, refreshGalleries, restoreGalleries } from './virtual-gallery.js';
+import { createEffectNameNormalizer } from './effect-names.js';
+import { BGM_UNNUMBERED_OFFSET, getWallpaperNumber } from './collectable-ids.js';
+import { version as appVersion } from '../package.json';
 
 const urlSearchParams = new URLSearchParams(window.location.search);
 
@@ -49,7 +54,9 @@ let is2d;
 let graphCanvas;
 let graphContext;
 let maxWorldDepth;
-const nodeImgDimensions = { x: 320, y: 240 };
+const isMobile = checkIsMobile(navigator.userAgent) || window.matchMedia('(pointer: coarse)').matches;
+const mobileLayout = window.matchMedia('(max-width: 900px)');
+const nodeImgDimensions = isMobile ? { x: 160, y: 120 } : { x: 320, y: 240 };
 const nodeIconImgDimensions = { x: nodeImgDimensions.x / 4, y: nodeImgDimensions.y / 4 };
 let nodeObjectMaterials = [];
 let iconTexts = [];
@@ -68,8 +75,6 @@ THREE.ImageLoader.prototype.load = function (url, onLoad, onProgress, onError) {
 const imageLoader = new THREE.ImageLoader();
 
 const getLocalizedLabel = (enLabel, jaLabel, singleValue) => getLocalizedValue(enLabel, jaLabel, config.lang, singleValue);
-
-const isMobile = checkIsMobile(navigator.userAgent);
 
 $.fn.extend({
     animateCss: function (animation, duration, endCallback) {
@@ -246,12 +251,13 @@ function initAuthorData(authorInfoData, versionInfoData) {
     const $authorEntriesContainerItems = $('.js--author-entries-container__items');
     const $authorEntriesContainerBorders = $('.js--author-entries-container__borders');
 
+    restoreGallery($authorEntriesContainerItems[0]);
     $authorEntriesContainerItems.empty();
     $authorEntriesContainerBorders.empty();
 
     const authorEntryHtmlTemplate = '<div class="author-entry collectable-entry collectable noselect"></div>';
     const authorEntryImageContainerHtmlTemplate = '<div class="author-entry__image-container collectable-entry__image-container"></div>';
-    const authorEntryImageHtmlTemplate = '<img src="{FILENAME}" />';
+    const authorEntryImageHtmlTemplate = '<img loading="lazy" decoding="async" src="{FILENAME}" />';
     const authorsByName = {};
 
     for (let a of authorData) {
@@ -278,14 +284,17 @@ function initAuthorData(authorInfoData, versionInfoData) {
         }
         const authorEntryLinkHtml =
             `<a href="javascript:void(0);" class="js--author-entry author-entry collectable-entry collectable--border noselect" data-id="${a.name}" data-display-name="${a.displayName}" data-display-name-jp="${(a.displayNameJP || a.displayName)}">
-                <h1 class="author-entry__name--shadow collectable-entry__name--shadow">${a.name}</h1>
-                <h1 class="author-entry__name collectable-entry__name">${a.name}</h1>
+                <div class="collectable-entry__name--container">
+                    <h1 class="author-entry__name--shadow collectable-entry__name--shadow">${a.name}</h1>
+                    <h1 class="author-entry__name collectable-entry__name">${a.name}</h1>
+                </div>
             </a>`;
         $authorEntry.appendTo($authorEntriesContainerItems);
         $(authorEntryLinkHtml).appendTo($authorEntriesContainerBorders);
         authorsByName[a.name] = a;
     }
 
+    $('.author-entry-tooltip').remove();
     const $tooltip = $('<div class="author-entry-tooltip scene-tooltip display--none"></div>').prependTo('.content');
 
     $('.js--author-entry[data-id]').on('click', function () {
@@ -311,11 +320,12 @@ function initAuthorData(authorInfoData, versionInfoData) {
             $tooltip.find('.js--author-entry-tooltip__first-version').remove();
         if (!author.lastVer || author.lastVer === author.firstVer)
             $tooltip.find('.js--author-entry-tooltip__last-version').remove();
-        $($authorEntriesContainerItems.children()[$(this).index()]).addClass('hover');
+        $(getGalleryItem(this) || $authorEntriesContainerItems.children()[$(this).index()]).addClass('hover');
     }).on('mouseleave', function () {
         $tooltip.addClass('display--none');
-        $($authorEntriesContainerItems.children()[$(this).index()]).removeClass('hover');
+        $(getGalleryItem(this) || $authorEntriesContainerItems.children()[$(this).index()]).removeClass('hover');
     });
+    virtualizeGallery($authorEntriesContainerItems[0], $authorEntriesContainerBorders[0]);
 }
 
 function getAuthorDisplayName(author, appendShi) {
@@ -338,13 +348,14 @@ function initVersionData(versionInfoData) {
     const $versionEntriesContainerItems = $('.js--version-entries-container__items');
     const $versionEntriesContainerBorders = $('.js--version-entries-container__borders');
 
+    restoreGallery($versionEntriesContainerItems[0]);
     $versionEntriesControls.empty();
     $versionEntriesContainerItems.empty();
     $versionEntriesContainerBorders.empty();
 
     const versionEntryHtmlTemplate = '<div class="js--version-entry version-entry collectable-entry collectable noselect"></div>';
     const versionEntryImageContainerHtmlTemplate = '<div class="version-entry__image-container collectable-entry__image-container"></div>';
-    const versionEntryImageHtmlTemplate = '<img src="{FILENAME}" />';
+    const versionEntryImageHtmlTemplate = '<img loading="lazy" decoding="async" src="{FILENAME}" />';
     const versionsByIndex = {};
 
     const versionIndexAddedWorldIds = {};
@@ -454,12 +465,8 @@ function initVersionData(versionInfoData) {
             </div>
         `);
 
-        const versionDetailsEntries = getVersionDetailsEntries(v);
-
         const $versionEntryContent = $('<div class="js--version-entry--content collectable-entry--content"></div>');
         const $versionEntryContentList = $('<ul class="js--version-entry--content__list collectable-entry--content__list"></ul>');
-        for (let vde of versionDetailsEntries)
-            $versionEntryContentList.append(`<li class="styled-list-item">${vde}</li>`);
         $versionEntryContent.append($versionEntryContentList);
         $versionEntryLink.append($versionEntryContent);
         $versionEntryLink.append(`
@@ -473,6 +480,7 @@ function initVersionData(versionInfoData) {
         versionsByIndex[v.index] = v;
     }
 
+    $('.version-entry-tooltip').remove();
     const $tooltip = $('<div class="version-entry-tooltip scene-tooltip display--none"></div>').prependTo('.content');
 
     $('.js--version-entry-link[data-id]').on('click', function () {
@@ -503,10 +511,10 @@ function initVersionData(versionInfoData) {
             $tooltip.find('.js--version-entry-tooltip__updated-world-count').remove();
         if (!versionIndexRemovedWorldIds[verIndex].length)
             $tooltip.find('.js--version-entry-tooltip__removed-world-count').remove();
-        $($versionEntriesContainerItems.children()[$(this).index()]).addClass('hover');
+        $(getGalleryItem($(this).parent()[0]) || $versionEntriesContainerItems.children()[$(this).parent().index()]).addClass('hover');
     }).on('mouseleave', function () {
         $tooltip.addClass('display--none');
-        $($versionEntriesContainerItems.children()[$(this).index()]).removeClass('hover');
+        $(getGalleryItem($(this).parent()[0]) || $versionEntriesContainerItems.children()[$(this).parent().index()]).removeClass('hover');
     });
 
     const entryTypeKeys = Object.keys(versionUtils.VersionEntryType);
@@ -556,12 +564,18 @@ function initVersionData(versionInfoData) {
 
     $('.js--version-entry--expand').on('click', function () {
         const $entryContainer = $(this).parent('.js--version-entry--container');
+        const $details = $entryContainer.find('.js--version-entry--content__list');
+        if (!$details.data('loaded')) {
+            const version = versionsByIndex[$entryContainer.find('.js--version-entry-link').data('id')];
+            for (const entry of getVersionDetailsEntries(version))
+                $details.append(`<li class="styled-list-item">${entry}</li>`);
+            $details.data('loaded', true);
+        }
         $(this).prev('.js--version-entry--content').toggleClass('expanded');
-        $entryContainer.parent('.js--version-entries-container__borders')
-            .prev('.js--version-entries-container__items')
-            .children(`.js--version-entry:nth-child(${$entryContainer.index() + 1})`)
-            .toggleClass('expanded');
+        $(getGalleryItem($entryContainer[0]) || $versionEntriesContainerItems.children()[$entryContainer.index()]).toggleClass('expanded');
+        refreshGalleries($entryContainer.closest('.modal')[0]);
     });
+    virtualizeGallery($versionEntriesContainerItems[0], $versionEntriesContainerBorders[0]);
 }
 
 function removeVersionUpdatedWorldIdsOfUpdateTypes(verName, versionUpdatedWorldIds, updateTypes) {
@@ -650,7 +664,7 @@ function getDisplayWorldIdsForEntryImage(worldIds, displayCount) {
 }
 
 function initEffectData(data) {
-    effectData = data;
+    effectData = data.map(normalizeEffectNames).filter(effect => effect.name !== 'Instructions');
 
     const $effectsContainerItems = $('.js--effects-container__items');
     const $effectsContainerBorders = $('.js--effects-container__borders');
@@ -670,6 +684,7 @@ function initEffectData(data) {
         effectsById[e.id] = e;
     }
 
+    $('.effect-tooltip').remove();
     const $tooltip = $('<div class="effect-tooltip scene-tooltip display--none"></div>').prependTo('.content');
 
     $('.js--effect[data-id]').on('click', function () {
@@ -701,8 +716,15 @@ function initEffectData(data) {
     });
 }
 
+function setCollectableEmptyState(selector, data) {
+    const empty = !data.length;
+    const $modal = $(selector).toggleClass('collectables--empty', empty);
+    $modal.find('.js--collectables-empty').toggleClass('display--none', !empty);
+}
+
 function initMenuThemeData(data) {
     menuThemeData = data;
+    setCollectableEmptyState('.js--menu-themes-modal', data.filter(theme => theme.locations.length));
 
     const $menuThemesContainerItems = $('.js--menu-themes-container__items');
     const $menuThemesContainerBorders = $('.js--menu-themes-container__borders');
@@ -719,7 +741,7 @@ function initMenuThemeData(data) {
         for (let l of m.locations) {
             const removedCollectableClass = l.removed ? ' removed-collectable' : '';
             const worldIdAttribute = l.worldId != null ? ` data-id="${l.worldId}"` : '';
-            const menuThemeImageHtml = `<div class="menu-theme collectable${removedCollectableClass} noselect"><img src="${m.filename}" /></div>`;
+            const menuThemeImageHtml = `<div class="menu-theme collectable${removedCollectableClass} noselect"><img loading="lazy" decoding="async" src="${m.filename}" /></div>`;
             const menuThemeLinkHtml = `<a href="javascript:void(0);" class="js--menu-theme menu-theme collectable--border noselect" data-location-id="${l.id}"${worldIdAttribute}></a>`;
             l.method = l.method.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
             if (l.methodJP)
@@ -760,6 +782,7 @@ function initMenuThemeData(data) {
 
 function initWallpaperData(data) {
     wallpaperData = data;
+    setCollectableEmptyState('.js--wallpapers-modal', data);
 
     const $wallpapersContainerItems = $('.js--wallpapers-container__items');
     const $wallpapersContainerBorders = $('.js--wallpapers-container__borders');
@@ -774,10 +797,10 @@ function initWallpaperData(data) {
 
     for (let wp of wallpaperData) {
         const removedCollectableClass = wp.removed ? ' removed-collectable' : '';
-        const censoredClass = wp.wallpaperId === 1149 ? ' censored' : '';
+        const censoredClass = wp.removed && getWallpaperNumber(wp) === 149 ? ' censored' : '';
         const worldIdAttribute = wp.worldId != null ? ` data-id="${wp.worldId}"` : '';
         const removedAttribute = wp.removed ? ' data-removed="true"' : '';
-        const wallpaperImageHtml = `<div class="wallpaper collectable${censoredClass}${removedCollectableClass} noselect"><img src="${wp.filename}" /></div>`;
+        const wallpaperImageHtml = `<div class="wallpaper collectable${censoredClass}${removedCollectableClass} noselect"><img loading="lazy" decoding="async" src="${wp.filename}" /></div>`;
         const wallpaperLinkHtml = `<a href="javascript:void(0);" class="js--wallpaper wallpaper collectable--border noselect" data-wallpaper-id="${wp.id}"${worldIdAttribute}${removedAttribute}></a>`;
         wp.method = wp.method.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
         if (wp.methodJP)
@@ -803,10 +826,10 @@ function initWallpaperData(data) {
         });
     }).on('mouseenter', function () {
         const wallpaper = wallpapersById[$(this).data('wallpaperId')];
-        const title = getLocalizedLabel(wallpaper.name, wallpaper.nameJP);
+        const title = getLocalizedLabel(_.escape(wallpaper.name), _.escape(wallpaper.nameJP));
         const method = getLocalizedLabel(wallpaper.method, wallpaper.methodJP);
         $tooltip.html(localizedWallpaperLabel
-            .replace('{WALLPAPER_ID}', wallpaper.wallpaperId - (wallpaper.removed ? 1000 : 0))
+            .replace('{WALLPAPER_ID}', getWallpaperNumber(wallpaper))
             .replace('{TITLE}', title)
             .replace('{METHOD}', method || ''))
             .removeClass('display--none');
@@ -823,6 +846,7 @@ function initWallpaperData(data) {
 
 function initBgmTrackData(data) {
     bgmTrackData = data;
+    setCollectableEmptyState('.js--bgm-tracks-modal', data);
     bgmTrackIds = [];
     bgmTrackIndexesById = {};
 
@@ -849,20 +873,21 @@ function initBgmTrackData(data) {
 
     for (let t of bgmTrackData) {
         let trackId = '';
-        if (t.trackNo < 1000)
+        if (t.trackNo < BGM_UNNUMBERED_OFFSET)
             trackId = t.trackNo.toString().padStart(3, 0);
         if (t.variant)
             trackId += ` ${t.variant}`;
         const hasIdAttribute = t.url ? ` data-id="true"` : '';
+        const playbackDisabled = t.url ? '' : ' disabled';
         const removedCollectableClass = t.removed ? ' removed-collectable' : '';
         const worldIdAttribute = t.worldId != null ? ` data-world-id="${t.worldId}"` : '';
         const imageUrl = t.worldId != null ? worldData[t.worldId].images[t.worldImageOrdinal] : getMissingBgmTrackUrl(t.location);
-        const unnumberedAttribute = t.trackNo >= 1000 ? ' data-unnumbered="true"' : '';
+        const unnumberedAttribute = t.trackNo >= BGM_UNNUMBERED_OFFSET ? ' data-unnumbered="true"' : '';
         const removedAttribute = t.removed ? ' data-removed="true"' : '';
         const favButtonClass = config.bgmTrackInput.hasOwnProperty(t.id) ? config.bgmTrackInput[t.id] ? ' on' : ' inactive' : '';
         const ignoreButtonClass = config.bgmTrackInput.hasOwnProperty(t.id) ? !config.bgmTrackInput[t.id] ? ' on' : ' inactive' : '';
-        const bgmTrackImageHtml = `<div class="js--bgm-track-image--container bgm-track collectable-entry collectable${removedCollectableClass} noselect"><img src="${imageUrl}" class="js--bgm-track-image" /></div>`;
-        const bgmTrackNameHtml = t.trackNo < 1000 ? `
+        const bgmTrackImageHtml = `<div class="js--bgm-track-image--container bgm-track collectable-entry collectable${removedCollectableClass} noselect"><img loading="lazy" decoding="async" src="${imageUrl}" class="js--bgm-track-image" /></div>`;
+        const bgmTrackNameHtml = t.trackNo < BGM_UNNUMBERED_OFFSET ? `
             <div class="collectable-entry__name--container">
                 <h1 class="bgm-track__name--shadow collectable-entry__name--shadow">${trackId}</h1>
                 <h1 class="bgm-track__name collectable-entry__name">${trackId}</h1>
@@ -891,7 +916,7 @@ function initBgmTrackData(data) {
                     ${bgmTrackImageButtonHtml}
                 </div>
                 <div class="js--bgm-track--collectable-entry--play-controls collectable-entry--controls noselect">
-                    <button class="js--bgm-track__play collectable-entry--control">
+                    <button class="js--bgm-track__play collectable-entry--control"${playbackDisabled}>
                         <svg width="18" height="24" viewBox="0 0 18 24" xmlns="http://www.w3.org/2000/svg">
                             <path class="collectable-entry--control__icon" d="M18 12L0 24V0" fill-rule="evenodd" />
                         </svg>
@@ -901,7 +926,7 @@ function initBgmTrackData(data) {
                             <path class="collectable-entry--control__icon" d="M0 0h6v24H0zM12 0h6v24h-6z" fill-rule="evenodd" />
                         </svg>
                     </button>
-                    <button class="js--bgm-track__playlist-add collectable-entry--control">
+                    <button class="js--bgm-track__playlist-add collectable-entry--control"${playbackDisabled}>
                         <svg width="24" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
                             <path class="collectable-entry--control__icon" d="m18 2h-18v-2h18zm0 5h-18v-2h18zm-11 5h-7v-2h7zm0 5h-7v-2h7zm8 1h-3v-3h-3v-3h3v-3h3v3h3v3h-3z" fill-rule="evenodd" />
                         </svg>
@@ -916,8 +941,8 @@ function initBgmTrackData(data) {
             t.notes = t.notes.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
         if (t.notesJP)
             t.notesJP = t.notesJP.replace(/<a .*?>(.*?)<\/ *a>/ig, '<span class="alt-highlight">$1</span>');
-        $(bgmTrackImageHtml).appendTo(t.trackNo < 1000 ? $bgmTracksContainerItems : !t.removed ? $unnumberedBgmTracksContainerItems : $removedBgmTracksContainerItems);
-        $(bgmTrackLinkHtml).appendTo(t.trackNo < 1000 ? $bgmTracksContainerBorders : !t.removed ? $unnumberedBgmTracksContainerBorders : $removedBgmTracksContainerBorders);
+        $(bgmTrackImageHtml).appendTo(t.trackNo < BGM_UNNUMBERED_OFFSET ? $bgmTracksContainerItems : !t.removed ? $unnumberedBgmTracksContainerItems : $removedBgmTracksContainerItems);
+        $(bgmTrackLinkHtml).appendTo(t.trackNo < BGM_UNNUMBERED_OFFSET ? $bgmTracksContainerBorders : !t.removed ? $unnumberedBgmTracksContainerBorders : $removedBgmTracksContainerBorders);
         bgmTracksById[t.id] = t;
         bgmTrackIds.push(t.id);
         bgmTrackIndexesById[t.id] = i++;
@@ -937,7 +962,8 @@ function initBgmTrackData(data) {
 
         window.setTimeout(function () {
             if ($bgmTrackSearch.val().trim() === changeValue) {
-                if (changeValue) {
+                const playableOnly = $('.js--bgm-playable-only').prop('checked');
+                if (changeValue || playableOnly) {
                     const bgmTrackIdMatch = /^(\d+) ?([A-Z])?$/i.exec(changeValue);
                     const trackNo = bgmTrackIdMatch ? parseInt(bgmTrackIdMatch[1]) : null;
                     const variant = bgmTrackIdMatch && bgmTrackIdMatch[2] || null;
@@ -948,12 +974,14 @@ function initBgmTrackData(data) {
                         const name = bgmTrack.name;
                         const location = getLocalizedLabel(bgmTrack.location, bgmTrack.locationJP);
                         const notes = getLocalizedLabel(bgmTrack.notes, bgmTrack.notesJP);
-                        let visible = (name && name.toLowerCase().indexOf(changeValueLower) > -1) ||
+                        let visible = !changeValue || (name && name.toLowerCase().indexOf(changeValueLower) > -1) ||
                             (location && location.toLowerCase().indexOf(changeValueLower) > -1) ||
                             (notes && notes.toLowerCase().indexOf(changeValueLower) > -1);
 
                         if (!visible && bgmTrackIdMatch)
                             visible = bgmTrack.trackNo === trackNo && (variant === null || bgmTrack.variant === variant);
+                        if (playableOnly && !bgmTrack.url)
+                            visible = false;
 
                         $(this).parent().toggleClass('display--none', !visible);
                         getBgmTrackImageContainer($(this)).toggleClass('display--none', !visible);
@@ -965,12 +993,15 @@ function initBgmTrackData(data) {
     });
 
     $('.js--bgm-track-search--container').empty().append($bgmTrackSearch);
+    $('.js--bgm-playable-only').off('change').on('change', () => $bgmTrackSearch.trigger('input'));
+    if ($('.js--bgm-playable-only').prop('checked'))
+        $bgmTrackSearch.trigger('input');
 
-    /*const playBgmTrackEntry = function (openWorld) {
+    const playBgmTrackEntry = function (openWorld) {
         const bgmTrack = bgmTracksById[$(this).data('bgmTrackId')];
         if (bgmTrack.url) {
             const playlistIndex = bgmTrackIds.indexOf(bgmTrack.id);
-            if (!config.playlist && config.playlistIndex === playlistIndex)
+            if (audioPlayer && !config.playlist && config.playlistIndex === playlistIndex)
                 GreenAudioPlayer.playPlayer(audioPlayer.player);
             else {
                 playBgmTrack(bgmTrack, playlistIndex);
@@ -987,7 +1018,7 @@ function initBgmTrackData(data) {
         }
     };
   
-    $('.js--bgm-track[data-id]').on('click', function () { playBgmTrackEntry.apply(this, [ true ]); }).parent()
+    $('.js--bgm-track[data-bgm-track-id]').on('click', function () { playBgmTrackEntry.apply(this, [ true ]); }).parent()
         .children('.js--bgm-track--collectable-entry--input-controls').children().on('click', function () {
             const $bgmTrackEntry = $(this).parent().parent().children('.js--bgm-track');
             const bgmTrackId = $bgmTrackEntry.data('bgmTrackId');
@@ -1030,7 +1061,7 @@ function initBgmTrackData(data) {
                 }
             } else if ($(this).hasClass('js--bgm-track__playlist-add'))
                 addPlaylistBgmTrack($(this).parent().parent().children('.js--bgm-track').data('bgmTrackId'));
-        });*/
+        });
 
     $('.js--bgm-track__set-image').on('click', function () {
         const $bgmTrackEntry = $(this).parent().parent().children('.js--bgm-track');
@@ -1048,12 +1079,12 @@ function initBgmTrackData(data) {
         const location = getLocalizedLabel(bgmTrack.location, bgmTrack.locationJP);
         const notes = getLocalizedLabel(bgmTrack.notes, bgmTrack.notesJP);
         $tooltip.html(localizedBgmTrackLabel
-            .replace('{BGM_TRACK_ID}', bgmTrack.trackNo < 1000 ? bgmTrack.trackNo + (bgmTrack.variant ? ` ${bgmTrack.variant}` : '') : '')
-            .replace('{NAME}', name)
+            .replace('{BGM_TRACK_ID}', bgmTrack.trackNo < BGM_UNNUMBERED_OFFSET ? bgmTrack.trackNo + (bgmTrack.variant ? ` ${bgmTrack.variant}` : '') : '')
+            .replace('{NAME}', _.escape(name))
             .replace('{LOCATION}', location)
             .replace('{NOTES}', notes || ''))
             .removeClass('display--none');
-        if (bgmTrack.trackNo >= 1000)
+        if (bgmTrack.trackNo >= BGM_UNNUMBERED_OFFSET)
             $tooltip.find('.js--bgm-track-tooltip__bgm-track-id').remove();
         if (!location)
             $tooltip.find('.js--bgm-track-tooltip__location').remove();
@@ -1246,6 +1277,7 @@ function loadOrInitConfig() {
     } catch (error) {
         console.log(error);
     }
+    $('.js--label-mode').val(config.labelMode);
 }
 
 function getDefaultVersionDisplayToggles() {
@@ -1302,6 +1334,31 @@ function getUpdatedVersionDisplayToggles(value) {
 }
 
 function updateControlsContainer(updateTabMargin) {
+    const viewportHeight = mobileLayout.matches && window.visualViewport && window.visualViewport.scale === 1
+        ? Math.round(Math.min(window.innerHeight, window.visualViewport.height))
+        : window.innerHeight;
+    document.documentElement.style.setProperty('--app-height', `${viewportHeight}px`);
+    if (graph) {
+        const viewportWidth = document.getElementById('graphContainer').getBoundingClientRect().width;
+        const renderer = graph.renderer();
+        const pixelRatio = isMobile || mobileLayout.matches ? 1 : Math.min(2, window.devicePixelRatio);
+        if (renderer.getPixelRatio() !== pixelRatio) {
+            renderer.setPixelRatio(pixelRatio);
+            graph.postProcessingComposer().setPixelRatio(pixelRatio);
+        }
+        if (graph.width() !== viewportWidth)
+            graph.width(viewportWidth);
+        if (graph.height() !== viewportHeight)
+            graph.height(viewportHeight);
+    }
+    if (locationMode)
+        return;
+    if (mobileLayout.matches) {
+        document.documentElement.style.setProperty('--mobile-header-height', `${$('.controls-top').outerHeight() || 0}px`);
+        $('.modal__content').css('padding-right', '');
+        return;
+    }
+
     const controlsHeight = $(".controls-top").outerHeight();
     const settingsHeight = $(".controls-bottom").outerHeight();
     const collectableControlsHeight = $(".controls-collectables").outerHeight();
@@ -1392,7 +1449,7 @@ export function loadData(update, onSuccess, onFail) {
     const loadData = () => $.get(`/${locationMode ? 'locationData' : 'data'}${queryString}`).done(data => onSuccess(data)).fail(onFail);
     const loadOrUpdateData = update => {
         if (update) {
-            const req = { reset: update === 'reset' };
+            const req = { reset: update === 'reset', collectablesOnly: update === 'collectables' };
             $.post('/updateData', req)
                 .done(() => {
                     const pollTimer = setInterval(() => {
@@ -1516,6 +1573,7 @@ let localizedDot;
 let localizedComma;
 let localizedBraces;
 let localizedNA;
+let localizedAudioControls;
 
 let iconLabel;
 
@@ -1527,6 +1585,7 @@ let localizedConns;
 let localizedUpdateTasks;
 
 let effectsJP;
+let normalizeEffectNames = createEffectNameNormalizer({});
 
 let config = {
     debug: false,
@@ -1537,7 +1596,7 @@ let config = {
     renderMode: 0,
     displayMode: 0,
     connMode: 0,
-    labelMode: 1,
+    labelMode: isMobile ? 2 : 1,
     removedContentMode: 0,
     pathMode: 1,
     sizeDiff: 1,
@@ -1915,6 +1974,10 @@ function initGraph(renderMode, displayMode, paths, reset) {
         })(elem);
 
     const maxAnisotropy = graph.renderer().capabilities.getMaxAnisotropy();
+    if (isMobile) {
+        graph.renderer().setPixelRatio(1);
+        graph.postProcessingComposer().setPixelRatio(1);
+    }
 
     if (displayMode < 4)
         graph = graph
@@ -1963,7 +2026,7 @@ function initGraph(renderMode, displayMode, paths, reset) {
 
                 const text = new SpriteText(worldName, 1.5, node.removed ? getNodeTextColor(node, ret.material.grayscale) : 'white');
                 text.fontFace = 'MS Gothic';
-                text.fontSize = 80;
+                text.fontSize = isMobile ? 40 : 80;
                 text.strokeWidth = is2d ? 1.5 : 2 - (scale - 1) * 0.1;
                 text.strokeColor = 'black';
                 text.backgroundColor = false;
@@ -2015,7 +2078,7 @@ function initGraph(renderMode, displayMode, paths, reset) {
                     const iconText = new SpriteText(is2d ? ` ${localizedNodeIconNew} ` : localizedNodeIconNew, 2, 'gold');
                     iconText.__graphObjType = 'label';
                     iconText.fontFace = 'MS Gothic';
-                    iconText.fontSize = 80;
+                    iconText.fontSize = isMobile ? 40 : 80;
                     iconText.strokeWidth = 1;
                     iconText.strokeColor = '#4d4000';
                     iconText.backgroundColor = false;
@@ -2291,6 +2354,7 @@ function initGraph(renderMode, displayMode, paths, reset) {
     linksOneWayBuffered = makeOneWayLinkObjects(is2d);
     updateLinkColors(visibleTwoWayLinks, linksTwoWayBuffered);
     updateLinkColors(visibleOneWayLinks, linksOneWayBuffered);
+    updateControlsContainer(true);
     if (reuseGraph) {
         const currentGraph = graph;
         requestAnimationFrame(() => {
@@ -2767,13 +2831,13 @@ function initWorldTextures() {
                 const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
                 canvas.width = nodeImgDimensions.x;
                 canvas.height = nodeImgDimensions.y;
-                const fontSize = 36;
+                const fontSize = 36 * nodeImgDimensions.x / 320;
                 const halfFontSize = fontSize / 2;
                 let lineYOffset;
                 ctx.font = fontSize + 'px MS Gothic';
                 ctx.fillStyle = 'white';
                 ctx.strokeStyle = 'black';
-                ctx.lineWidth = 5;
+                ctx.lineWidth = 5 * nodeImgDimensions.x / 320;
                 let index = 0;
                 let rIndex = 0;
                 const offsetLabels = images.length * dataLength;
@@ -3049,14 +3113,15 @@ function makeNodeIconObject() {
     const context = canvas.getContext('2d');
     canvas.width = nodeIconImgDimensions.x;
     canvas.height = nodeIconImgDimensions.y;
-    context.font = '50px MS Gothic';
+    context.font = `${50 * nodeImgDimensions.x / 320}px MS Gothic`;
     context.textAlign = 'right';
     context.textBaseline = 'top';
     context.fillStyle = 'gold';
     context.strokeStyle = '#4d4000';
-    context.lineWidth = 5;
-    context.strokeText(localizedNodeIconNew, nodeIconImgDimensions.x - 4, 2);
-    context.fillText(localizedNodeIconNew, nodeIconImgDimensions.x - 4, 2);
+    context.lineWidth = 5 * nodeImgDimensions.x / 320;
+    const padding = 4 * nodeImgDimensions.x / 320;
+    context.strokeText(localizedNodeIconNew, nodeIconImgDimensions.x - padding, padding / 2);
+    context.fillText(localizedNodeIconNew, nodeIconImgDimensions.x - padding, padding / 2);
     nodeIconImgData.set(context.getImageData(0, 0, nodeIconImgDimensions.x, nodeIconImgDimensions.y).data, 0);
 
     const texture = new THREE.DataArrayTexture(nodeIconImgData, nodeIconImgDimensions.x, nodeIconImgDimensions.y, 1);
@@ -3737,6 +3802,7 @@ function reloadGraph(reset) {
 }
 
 function initLocalization(isInitial) {
+    restoreGalleries();
     if (isInitial && urlSearchParams.has("lang")) {
         const urlLang = urlSearchParams.get("lang");
         if (/^(?:en|ja|zh|ko)$/.test(urlLang))
@@ -3749,7 +3815,7 @@ function initLocalization(isInitial) {
         callback: function (data, defaultCallback) {
             if (config.lang === 'ja' || config.lang === 'ru')
                 massageLocalizedValues(data, true);
-            data.footer.about = data.footer.about.replace("{VERSION}", "6.1.0");
+            data.footer.about = data.footer.about.replace("{VERSION}", appVersion);
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             localizedSeparator = data.separator;
@@ -3757,6 +3823,9 @@ function initLocalization(isInitial) {
             localizedComma = data.comma;
             localizedBraces = data.braces;
             localizedNA = data.na;
+            localizedAudioControls = data.accessibility.audio;
+            $('.js--mobile-controls-toggle').attr('aria-label', data.accessibility.mobileControls);
+            localizeAudioPlayer();
             localizedConns = data.conn;
             localizedUpdateTasks = data.updateTask;
             if (worldData)
@@ -3818,6 +3887,9 @@ function initLocalization(isInitial) {
             pathPrefix: "/lang",
             callback: function (data) {
                 effectsJP = data;
+                normalizeEffectNames = createEffectNameNormalizer(data);
+                if (effectData)
+                    initEffectData(effectData);
             }
         });
     } else {
@@ -3876,6 +3948,9 @@ function initLocalization(isInitial) {
         $(".js--author-entry").each(function () {
             const displayName = $(this).data(getLangUsesEn(config.lang) ? "displayName" : "displayNameJp");
             $(this).find('h1').text(displayName);
+        });
+        $('.modal').each(function () {
+            refreshGalleries(this);
         });
     }
 }
@@ -4062,7 +4137,7 @@ function initContextMenu(localizedContextMenu) {
                     if (world.bgmUrl.indexOf('|') === -1) {
                         if (!isCtrl) {
                             const worldName = getLocalizedLabel(world.title, world.titleJP);
-                            //playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel), world.filename, world.id);
+                            playBgm(world.bgmUrl, getBgmLabel(worldName, world.bgmLabel), world.filename, world.id);
                         } else {
                             const handle = window.open(world.bgmUrl, '_blank');
                             if (handle)
@@ -4120,7 +4195,7 @@ function initContextMenu(localizedContextMenu) {
                     callback: function () {
                         const bgmUrl = bgmUrls[bgmIndex];
                         if (!isCtrl) {
-                            //playBgm(bgmUrl, getBgmLabel(worldName, world.bgmLabel.split('|')[bgmIndex]), world.filename, world.id);
+                            playBgm(bgmUrl, getBgmLabel(worldName, world.bgmLabel.split('|')[bgmIndex]), world.filename, world.id);
                         } else {
                             const handle = window.open(bgmUrl, '_blank');
                             if (handle)
@@ -4149,8 +4224,35 @@ function openWorldWikiPage(worldId, newWindow) {
         "_blank", newWindow ? "width=" + window.outerWidth + ",height=" + window.outerHeight : "");
 }
 
+function localizeAudioPlayer() {
+    if (!audioPlayer || !localizedAudioControls)
+        return;
+    const labels = localizedAudioControls;
+    audioPlayer.labels = { play: labels.play, pause: labels.pause, download: labels.download, volume: { open: labels.openVolume, close: labels.closeVolume } };
+    audioPlayer.player.explorerAudioLabels = labels;
+    const controls = {
+        '.play-pause-btn': audioPlayer.player.paused ? labels.play : labels.pause,
+        '.controls__progress': labels.seek,
+        '.volume__button': audioPlayer.volumeControls.classList.contains('hidden') ? labels.openVolume : labels.closeVolume,
+        '.volume__progress': labels.volume,
+        '.download__link': labels.download,
+        '.prev-btn': labels.previous,
+        '.next-btn': labels.next,
+        '.fav-btn': labels.favourite,
+        '.ignore-btn': labels.ignore,
+        '.shuffle-btn': labels.shuffle,
+        '.repeat-btn': labels.repeat,
+        '.playlist-add-btn': labels.addToPlaylist
+    };
+    for (const selector in controls)
+        $('.audio-player').find(selector).attr('aria-label', controls[selector]);
+}
+
 function initBgm(url, label, imageUrl, worldId, play, playlistIndex, playlist) {
-    return;
+    if (!url)
+        return;
+    audioPlayer?.destroy();
+    audioPlayer = null;
     const loopAttribute = playlistIndex === undefined || playlistIndex === -1 ? ' loop' : '';
     const $bgmTrackLink = worldId != null ? $(`<a href="javascript:void(0);" class="js--world-node-link no-border" data-world-id="${worldId}"></a>`) : null;
     const $bgmTrackImage = $(`<img src="${imageUrl}" class="audio-player-image noselect" />`);
@@ -4162,12 +4264,13 @@ function initBgm(url, label, imageUrl, worldId, play, playlistIndex, playlist) {
         </marquee>
     `).append(`
         <div class="audio-player">
-            <audio class="audio-source" crossorigin preload="none"${loopAttribute}></audio>
+            <audio class="audio-source" preload="none"${loopAttribute}></audio>
         </div>
     `);
     $('.audio-player-container').addClass('open');
 
     audioPlayer = new GreenAudioPlayer('.audio-player');
+    const player = audioPlayer.player;
 
     const $loadingIndicator = $('.audio-player .loading');
     const $playBtn = $('.audio-player .play-pause-btn');
@@ -4234,8 +4337,7 @@ function initBgm(url, label, imageUrl, worldId, play, playlistIndex, playlist) {
     $repeatBtn.insertAfter($nextBtn);
     $volume.wrap($rightHolder);
     $playlistAddBtn.insertBefore($volume);
-
-    $playBtn.addClass('display--none');
+    localizeAudioPlayer();
 
     audioPlayer.showLoadingIndicator();
 
@@ -4244,13 +4346,11 @@ function initBgm(url, label, imageUrl, worldId, play, playlistIndex, playlist) {
         $playBtn.removeClass('display--none');
     });
 
-    const requestObj = new Request(url, { method: 'GET' });
-
     audioPlayer.player.volume = config.audioVolume;
     audioPlayer.player.addEventListener('volumechange', function () {
-        const currentVolume = audioPlayer.player.volume;
+        const currentVolume = player.volume;
         window.setTimeout(function () {
-            if (audioPlayer.player.volume === currentVolume) {
+            if (audioPlayer?.player === player && player.volume === currentVolume) {
                 config.audioVolume = currentVolume;
                 updateConfig(config);
             }
@@ -4338,6 +4438,8 @@ function initBgm(url, label, imageUrl, worldId, play, playlistIndex, playlist) {
             }
 
             audioPlayer.player.addEventListener('ended', function () {
+                if (audioPlayer?.player !== player)
+                    return;
                 if (config.playlistRepeat)
                     GreenAudioPlayer.playPlayer(audioPlayer.player);
                 else
@@ -4383,34 +4485,33 @@ function initBgm(url, label, imageUrl, worldId, play, playlistIndex, playlist) {
             return;
     }
 
-    const player = audioPlayer.player;
-
-    fetch(requestObj).then(function (response) {
-        if (!response.ok)
-            $('.audio-player-label').text('ERROR');
-        return response;
-    }).then(async function (res) {
-        const blob = await res.blob();
-        if (player === audioPlayer.player) {
-            const url = window.URL.createObjectURL(blob);
-            player.src = url;
-            $('.close-audio-player').on('click', function () {
-                audioPlayer = null;
-                config.playlistIndex = -1;
-                updateConfig(config);
-                $('.audio-player-container').removeClass('open');
-                $('.audio-player-image-container, .audio-player-player-container').empty();
-                if (!$('.controls-playlist').hasClass('visible'))
-                    updateControlsContainer();
-            });
-            if (play)
-                GreenAudioPlayer.playPlayer(player);
+    $('.close-audio-player').on('click', function () {
+        audioPlayer?.destroy();
+        audioPlayer = null;
+        config.playlistIndex = -1;
+        updateConfig(config);
+        $('.audio-player-container').removeClass('open');
+        $('.audio-player-image-container, .audio-player-player-container').empty();
+        updateControlsContainer();
+    });
+    player.addEventListener('error', function () {
+        if (audioPlayer?.player === player) {
+            audioPlayer.hideLoadingIndicator();
+            $playBtn.removeClass('display--none');
+            $('.audio-player-label').text(`${label} (${localizedNA})`);
         }
-    }).catch((err) => console.error(err));
+    });
+    player.src = url;
+    if (play)
+        GreenAudioPlayer.playPlayer(player);
+    else
+        audioPlayer.hideLoadingIndicator();
+    updateControlsContainer();
 }
 
 function initBgmTrack(bgmTrack, play, playlistIndex, playlist) {
-    const imageUrl = bgmTrack.worldId != null ? worldData[bgmTrack.worldId].images[bgmTrack.worldImageOrdinal] : getMissingBgmTrackUrl(bgmTrack.location);
+    const world = worldData[bgmTrack.worldId];
+    const imageUrl = world?.images[bgmTrack.worldImageOrdinal || 0] || getMissingBgmTrackUrl(bgmTrack.location);
     initBgm(bgmTrack.url, getBgmTrackLabel(bgmTrack), imageUrl, bgmTrack.worldId, play, playlistIndex, playlist);
 }
 
@@ -4422,7 +4523,9 @@ function playBgmTrack(bgmTrack, playlistIndex, playlist) {
     initBgmTrack(bgmTrack, true, playlistIndex, playlist);
 }
 
-function playPrevPlaylistBgmTrack(lastPlaylistIndex, attempts) {
+function playPrevPlaylistBgmTrack(lastPlaylistIndex, attempts = 0) {
+    if (!getPlaylistBgmTrackIds().length || attempts >= getPlaylistBgmTrackIds().length)
+        return false;
     const wrapIndex = config.playlistShuffle ? lastPlaylistIndex === playlistShuffleIndexes[0] : lastPlaylistIndex <= 0;
     if (wrapIndex)
         updatePlaylistShuffleIndexes();
@@ -4430,22 +4533,22 @@ function playPrevPlaylistBgmTrack(lastPlaylistIndex, attempts) {
         ? playlistShuffleIndexes[!wrapIndex ? playlistShuffleIndexes.indexOf(lastPlaylistIndex) - 1 : playlistShuffleIndexes.length - 1]
         : !wrapIndex ? lastPlaylistIndex - 1 : getPlaylistBgmTrackIds().length - 1;
     const playlistBgmTrackId = getPlaylistBgmTrackIds()[playlistIndex];
-    const skipTrack = () => playPrevPlaylistBgmTrack(playlistIndex, attempts ? ++attempts : 1);
+    const skipTrack = () => playPrevPlaylistBgmTrack(playlistIndex, attempts + 1);
     if (bgmTrackIndexesById.hasOwnProperty(playlistBgmTrackId)) {
         const bgmTrack = bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]];
         if (bgmTrack.url && (config.playlist || !config.bgmTrackInput.hasOwnProperty(playlistBgmTrackId) || config.bgmTrackInput[playlistBgmTrackId])) {
             GreenAudioPlayer.stopOtherPlayers();
             playBgmTrack(bgmTrack, playlistIndex, config.playlist);
         } else
-            skipTrack();
-    } else if (attempts < getPlaylistBgmTrackIds().length)
-        skipTrack();
-    else
-        return false;
+            return skipTrack();
+    } else
+        return skipTrack();
     return true;
 }
 
-function playNextPlaylistBgmTrack(lastPlaylistIndex, attempts) {
+function playNextPlaylistBgmTrack(lastPlaylistIndex, attempts = 0) {
+    if (!getPlaylistBgmTrackIds().length || attempts >= getPlaylistBgmTrackIds().length)
+        return false;
     const wrapIndex = config.playlistShuffle ? lastPlaylistIndex === playlistShuffleIndexes[playlistShuffleIndexes.length - 1] : lastPlaylistIndex >= getPlaylistBgmTrackIds().length - 1;
     if (wrapIndex)
         updatePlaylistShuffleIndexes();
@@ -4453,18 +4556,16 @@ function playNextPlaylistBgmTrack(lastPlaylistIndex, attempts) {
         ? playlistShuffleIndexes[!wrapIndex ? playlistShuffleIndexes.indexOf(lastPlaylistIndex) + 1 : 0]
         : !wrapIndex ? lastPlaylistIndex + 1 : 0;
     const playlistBgmTrackId = getPlaylistBgmTrackIds()[playlistIndex];
-    const skipTrack = () => playNextPlaylistBgmTrack(playlistIndex, attempts ? ++attempts : 1);
+    const skipTrack = () => playNextPlaylistBgmTrack(playlistIndex, attempts + 1);
     if (bgmTrackIndexesById.hasOwnProperty(playlistBgmTrackId)) {
         const bgmTrack = bgmTrackData[bgmTrackIndexesById[playlistBgmTrackId]];
         if (bgmTrack.url && (config.playlist || !config.bgmTrackInput.hasOwnProperty(playlistBgmTrackId) || config.bgmTrackInput[playlistBgmTrackId])) {
             GreenAudioPlayer.stopOtherPlayers();
             playBgmTrack(bgmTrack, playlistIndex, config.playlist);
         } else
-            skipTrack();
-    } else if (attempts < getPlaylistBgmTrackIds().length)
-        skipTrack();
-    else
-        return false;
+            return skipTrack();
+    } else
+        return skipTrack();
     return true;
 }
 
@@ -4534,7 +4635,7 @@ function initPlaylist() {
 function addPlaylistBgmTrack(bgmTrackId, isInit) {
     const bgmTrack = bgmTrackIndexesById.hasOwnProperty(bgmTrackId) ? bgmTrackData[bgmTrackIndexesById[bgmTrackId]] : null;
     const imageUrl = bgmTrack && bgmTrack.worldId != null ? worldData[bgmTrack.worldId].images[bgmTrack.worldImageOrdinal] : getMissingBgmTrackUrl(bgmTrack ? bgmTrack.location : null);
-    const trackLabel = bgmTrack && bgmTrack.trackNo < 1000 ? bgmTrack.trackNo.toString().padStart(3, 0) + (bgmTrack.variant ? ` ${bgmTrack.variant}` : '') : '';
+    const trackLabel = bgmTrack && bgmTrack.trackNo < BGM_UNNUMBERED_OFFSET ? bgmTrack.trackNo.toString().padStart(3, 0) + (bgmTrack.variant ? ` ${bgmTrack.variant}` : '') : '';
     const trackLabelHtml = trackLabel ? `<h2 class="playlist-item__label noselect">${trackLabel}</h2>` : '';
     const $playlistItem = $(`
         <div class="js--playlist-item playlist-item" data-bgm-track-id="${bgmTrackId}">
@@ -4654,7 +4755,7 @@ function getBgmLabel(worldName, bgmLabel) {
 function getBgmTrackLabel(bgmTrack) {
     let trackLabel = '';
 
-    if (bgmTrack.trackNo < 1000) {
+    if (bgmTrack.trackNo < BGM_UNNUMBERED_OFFSET) {
         trackLabel = bgmTrack.trackNo.toString().padStart(3, 0);
         if (bgmTrack.variant)
             trackLabel += ` ${bgmTrack.variant}`;
@@ -4662,7 +4763,7 @@ function getBgmTrackLabel(bgmTrack) {
     }
 
     const location = getLocalizedLabel(bgmTrack.location, bgmTrack.locationJP);
-    const name = bgmTrack.name;
+    const name = _.escape(bgmTrack.name);
 
     if (location) {
         trackLabel += location;
@@ -4863,7 +4964,42 @@ function openHelpModal() {
 }
 
 function initControls() {
+    const closeMobilePanels = () => {
+        $('.controls-bottom, .controls-collectables, .controls-playlist').removeClass('visible').css('opacity', 0);
+        $('.controls-top').removeClass('mobile-controls-open');
+        $('.js--mobile-controls-toggle').attr('aria-expanded', 'false');
+    };
+    const toggleMobilePanel = selector => {
+        const $panel = $(selector);
+        const open = !$panel.hasClass('visible');
+        closeMobilePanels();
+        if (open)
+            $panel.addClass('visible').css('opacity', 1);
+        updateControlsContainer();
+    };
+    $(document).on('click', '.js--mobile-controls-toggle', function () {
+        const open = !$('.controls-top').hasClass('mobile-controls-open');
+        closeMobilePanels();
+        $('.controls-top').toggleClass('mobile-controls-open', open);
+        $(this).attr('aria-expanded', String(open));
+        updateControlsContainer();
+    });
+    mobileLayout.addEventListener('change', () => {
+        closeMobilePanels();
+        $('.controls--container--tab, .audio-player-container, .footer').css({marginTop: '', marginBottom: '', marginLeft: ''});
+        $('.controls-playlist--container').css({marginBottom: '', paddingBottom: ''});
+        updateControlsContainer(true);
+    });
+    $('.controls-collectables button').on('click', function () {
+        if (mobileLayout.matches)
+            closeMobilePanels();
+    });
+
     $(".controls-bottom--container--tab__button").on("click", function () {
+        if (mobileLayout.matches) {
+            toggleMobilePanel('.controls-bottom');
+            return;
+        }
         if ($(".controls-bottom").hasClass("visible")) {
             const settingsHeight = $(".controls-bottom").outerHeight() + 8;
             $(".controls-bottom").removeClass("visible").animateCss("slideOutDown", 250, function () {
@@ -4887,6 +5023,10 @@ function initControls() {
     });
 
     $(".controls-collectables--container--tab__button").on("click", function () {
+        if (mobileLayout.matches) {
+            toggleMobilePanel('.controls-collectables');
+            return;
+        }
         if ($(".controls-collectables").hasClass("visible")) {
             $(".controls-collectables").removeClass("visible").animateCss("slideOutRight", 250, function () {
                 if (!$(this).hasClass("visible"))
@@ -4903,6 +5043,10 @@ function initControls() {
     });
 
     $(".controls-playlist--container--tab__button").on("click", function () {
+        if (mobileLayout.matches) {
+            toggleMobilePanel('.controls-playlist');
+            return;
+        }
         if ($(".controls-playlist").hasClass("visible")) {
             $(".controls-playlist").removeClass("visible").animateCss("slideOutLeft", 250, function () {
                 if (!$(this).hasClass("visible"))
@@ -4920,14 +5064,19 @@ function initControls() {
 
     updateControlsContainer(true);
 
-    $(window).on("resize", updateControlsContainer).on("blur", function () {
+    $(window).on("blur", function () {
         isShift = false;
         isCtrl = false;
     });
 
     const onModalShown = function () {
         const $modalContent = $(this).find(".modal__content");
-        $modalContent.css("padding-right", $modalContent[0].scrollHeight > $modalContent[0].clientHeight ? "24px" : null);
+        if (mobileLayout.matches) {
+            closeMobilePanels();
+            updateControlsContainer();
+        } else
+            $modalContent.css("padding-right", $modalContent[0].scrollHeight > $modalContent[0].clientHeight ? "24px" : null);
+        refreshGalleries(this);
     };
 
     $(document).on($.modal.OPEN, ".modal", onModalShown);
@@ -5165,7 +5314,7 @@ function initControls() {
     });
 
     $(".js--menu-themes").on("click", function () {
-        if (menuThemeData && menuThemeData.length) {
+        if (menuThemeData) {
             if ($(".js--menu-themes-modal:visible").length)
                 $.modal.close();
             else
@@ -5178,7 +5327,7 @@ function initControls() {
     });
 
     $(".js--wallpapers").on("click", function () {
-        if (wallpaperData && wallpaperData.length) {
+        if (wallpaperData) {
             if ($(".js--wallpapers-modal:visible").length)
                 $.modal.close();
             else
@@ -5191,7 +5340,7 @@ function initControls() {
     });
 
     $(".js--bgm-tracks").on("click", function () {
-        if (bgmTrackData && bgmTrackData.length) {
+        if (bgmTrackData) {
             if ($(".js--bgm-tracks-modal:visible").length)
                 $.modal.close();
             else
@@ -6009,6 +6158,17 @@ function initAdminControls() {
 /* End Admin */
 
 $(function () {
+    let resizeFrame;
+    const resizeGraph = () => {
+        cancelAnimationFrame(resizeFrame);
+        resizeFrame = requestAnimationFrame(() => updateControlsContainer(true));
+    };
+    $(window).on('resize', resizeGraph);
+    if (window.visualViewport)
+        window.visualViewport.addEventListener('resize', resizeGraph);
+    const graphResizeObserver = new ResizeObserver(resizeGraph);
+    graphResizeObserver.observe(document.getElementById('graphContainer'));
+
     if (!locationMode)
         loadOrInitConfig();
 

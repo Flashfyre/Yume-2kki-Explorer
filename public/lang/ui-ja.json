@@ -1,4 +1,23 @@
 {
+    "accessibility": {
+        "mobileControls": "操作パネルの表示切替",
+        "audio": {
+            "play": "再生",
+            "pause": "一時停止",
+            "seek": "再生位置",
+            "volume": "音量",
+            "openVolume": "音量調整を開く",
+            "closeVolume": "音量調整を閉じる",
+            "download": "ダウンロード",
+            "previous": "前の曲",
+            "next": "次の曲",
+            "favourite": "お気に入り",
+            "ignore": "除外",
+            "shuffle": "シャッフル",
+            "repeat": "リピート",
+            "addToPlaylist": "プレイリストに追加"
+        }
+    },
     "title": "ゆめ２っきエクスプローラー",
     "loading": {
         "label": "ロード中",
@@ -63,6 +82,7 @@
         }
     },
     "collectableControls": {
+        "empty": "表示できる項目はまだありません。",
         "authors": {
             "name": "ツクラー"
         },
@@ -331,6 +351,8 @@
         "removedWallpapers": "削除された壁紙"
     },
     "bgmTracksModal": {
+        "playableOnly": "再生できる曲のみ",
+        "audioAvailability": "Wikiに音源がある曲のみ再生できます。",
         "search": "検索",
         "favBgmTracks": "お気に入りの曲",
         "musicRoomBgmTracks": "SR分室の曲",

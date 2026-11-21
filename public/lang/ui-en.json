@@ -1,4 +1,23 @@
 {
+    "accessibility": {
+        "mobileControls": "Toggle Controls",
+        "audio": {
+            "play": "Play",
+            "pause": "Pause",
+            "seek": "Playback Position",
+            "volume": "Volume",
+            "openVolume": "Open Volume Controls",
+            "closeVolume": "Close Volume Controls",
+            "download": "Download",
+            "previous": "Previous Track",
+            "next": "Next Track",
+            "favourite": "Favourite",
+            "ignore": "Ignore",
+            "shuffle": "Shuffle",
+            "repeat": "Repeat",
+            "addToPlaylist": "Add to Playlist"
+        }
+    },
     "title": "Yume 2kki Explorer",
     "loading": {
         "label": "Loading",
@@ -63,6 +82,7 @@
         }
     },
     "collectableControls": {
+        "empty": "No items available yet.",
         "authors": {
             "name": "Authors"
         },
@@ -331,6 +351,8 @@
         "removedWallpapers": "Removed Wallpapers"
     },
     "bgmTracksModal": {
+        "playableOnly": "Only Playable Tracks",
+        "audioAvailability": "Playback is available only for tracks with audio on the wiki.",
         "search": "Search:",
         "favBgmTracks": "Favourite Tracks",
         "musicRoomBgmTracks": "Music Room Tracks",

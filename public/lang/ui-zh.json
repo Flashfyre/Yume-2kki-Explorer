@@ -1,4 +1,23 @@
 {
+    "accessibility": {
+        "mobileControls": "显示或隐藏控制面板",
+        "audio": {
+            "play": "播放",
+            "pause": "暂停",
+            "seek": "播放位置",
+            "volume": "音量",
+            "openVolume": "打开音量控制",
+            "closeVolume": "关闭音量控制",
+            "download": "下载",
+            "previous": "上一曲",
+            "next": "下一曲",
+            "favourite": "收藏",
+            "ignore": "忽略",
+            "shuffle": "随机播放",
+            "repeat": "循环播放",
+            "addToPlaylist": "添加到播放列表"
+        }
+    },
     "title": "梦２记导航",
     "loading": {
         "label": "载入中",
@@ -63,6 +82,7 @@
         }
     },
     "collectableControls": {
+        "empty": "暂无可显示的项目。",
         "authors": {
             "name": "地图作者"
         },
@@ -330,6 +350,8 @@
         "removedWallpapers": "已删除的壁纸"
     },
     "bgmTracksModal": {
+        "playableOnly": "仅显示可播放曲目",
+        "audioAvailability": "仅能播放维基上有音频的曲目。",
         "search": "搜索：",
         "favBgmTracks": "收藏的曲目",
         "musicRoomBgmTracks": "音乐室收录曲目",

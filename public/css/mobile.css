@@ -1,0 +1,448 @@
+:root {
+    --mobile-gap: 8px;
+    --mobile-border: 8px;
+    --mobile-tab-height: 48px;
+    --mobile-tab-width: 86px;
+    --mobile-edge-top: calc(env(safe-area-inset-top, 0px) + var(--mobile-gap));
+    --mobile-edge-right: calc(env(safe-area-inset-right, 0px) + var(--mobile-gap));
+    --mobile-edge-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--mobile-gap));
+    --mobile-edge-left: calc(env(safe-area-inset-left, 0px) + var(--mobile-gap));
+    --mobile-dock-offset: calc(env(safe-area-inset-bottom, 0px) + var(--mobile-tab-height) + var(--mobile-gap));
+}
+
+html, body, .content {
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    height: var(--app-height, 100dvh);
+}
+
+body {
+    background-image: none;
+}
+
+.controls-top {
+    position: fixed;
+    top: var(--mobile-edge-top);
+    left: var(--mobile-edge-left);
+    right: var(--mobile-edge-right);
+    width: auto;
+    margin: 0;
+    padding: var(--mobile-gap);
+    min-height: 0;
+    max-height: calc(var(--app-height, 100dvh) - 90px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    box-sizing: border-box;
+    border-width: var(--mobile-border);
+}
+
+.controls-top > .controls__container:not(.admin-controls) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    align-items: center;
+    gap: var(--mobile-gap);
+}
+
+.control {
+    min-width: 0;
+    padding: 0;
+}
+
+label {
+    font-size: 14px;
+    margin: 0;
+    overflow-wrap: break-word;
+}
+
+button, input, select {
+    font-size: 16px;
+    min-height: 44px;
+    box-sizing: border-box;
+}
+
+input, select {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+}
+
+input[type='text'], select, .slider {
+    margin: 0;
+    font-size: 16px;
+}
+
+.controls-top .control, .controls-bottom .control {
+    display: grid;
+    grid-template-columns: 104px minmax(0, 1fr);
+    column-gap: var(--mobile-gap);
+    align-items: center;
+    grid-column: 1 / -1;
+}
+
+.controls-top .control > label, .controls-bottom .control > label {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.controls-top .control > input, .controls-top .control > select,
+.controls-bottom .control > input, .controls-bottom .control > select {
+    grid-column: 2;
+}
+
+.controls-top .control-search {
+    grid-column: 1;
+    grid-template-columns: auto minmax(0, 1fr);
+}
+
+.mobile-controls-toggle {
+    display: block;
+    width: 44px;
+    margin: 0;
+    padding: 4px;
+}
+
+.controls-top:not(.mobile-controls-open) .control:not(.control-search),
+.controls-top:not(.mobile-controls-open) .admin-controls {
+    display: none;
+}
+
+.controls-top .control:has(> button) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--mobile-gap);
+}
+
+.controls-top .control > button {
+    flex: 1;
+    margin: 0;
+}
+
+.controls--container {
+    position: fixed;
+    z-index: 21;
+    pointer-events: none;
+}
+
+.controls-bottom--container, .controls-playlist--container {
+    inset: auto var(--mobile-edge-right) var(--mobile-dock-offset) var(--mobile-edge-left);
+    width: auto;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.controls-collectables--container {
+    top: auto !important;
+    left: auto;
+    right: var(--mobile-edge-right);
+    bottom: var(--mobile-dock-offset);
+    width: min(240px, calc(100% - var(--mobile-edge-left) - var(--mobile-edge-right)));
+    margin: 0 !important;
+}
+
+.controls-bottom, .controls-collectables, .controls-playlist {
+    position: relative;
+    display: none;
+    width: 100%;
+    min-height: 0;
+    max-height: calc(var(--app-height, 100dvh) - var(--mobile-edge-top) - var(--mobile-header-height, 76px) - var(--mobile-gap) - var(--mobile-dock-offset));
+    overflow: auto;
+    overscroll-behavior: contain;
+    box-sizing: border-box;
+    margin: 0;
+    padding: var(--mobile-gap);
+    border-width: var(--mobile-border);
+    animation: none !important;
+}
+
+.controls-bottom.visible, .controls-collectables.visible {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: stretch;
+    gap: var(--mobile-gap);
+}
+
+.controls-playlist.visible {
+    display: flex;
+}
+
+.controls-collectables .control {
+    display: flex;
+    flex-direction: column;
+    gap: var(--mobile-gap);
+}
+
+.controls-collectables button {
+    width: 100%;
+    margin: 0;
+}
+
+.controls-playlist {
+    height: auto;
+    max-width: 100% !important;
+}
+
+.controls--container--tab {
+    position: fixed;
+    top: auto !important;
+    bottom: 0 !important;
+    width: var(--mobile-tab-width) !important;
+    height: calc(var(--mobile-tab-height) + env(safe-area-inset-bottom, 0px)) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    z-index: 22;
+    animation: none !important;
+}
+
+.controls-bottom--container--tab {
+    left: calc(50% - var(--mobile-tab-width) / 2) !important;
+}
+
+.controls-collectables--container--tab {
+    left: auto !important;
+    right: 0;
+    width: calc(var(--mobile-tab-width) + env(safe-area-inset-right, 0px)) !important;
+}
+
+.controls-playlist--container--tab {
+    left: 0 !important;
+    width: calc(var(--mobile-tab-width) + env(safe-area-inset-left, 0px)) !important;
+}
+
+.controls--container--tab__button {
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 4px;
+    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+    justify-content: center;
+    flex-direction: row !important;
+}
+
+.controls-bottom--container--tab > .controls--container--tab__button {
+    border-width: var(--mobile-border) var(--mobile-border) 0 !important;
+    padding-bottom: calc(4px + var(--mobile-border) + env(safe-area-inset-bottom, 0px));
+}
+
+.controls-collectables--container--tab > .controls--container--tab__button {
+    border-width: var(--mobile-border) 0 var(--mobile-border) var(--mobile-border) !important;
+    padding-right: calc(4px + var(--mobile-border) + env(safe-area-inset-right, 0px));
+}
+
+.controls-playlist--container--tab > .controls--container--tab__button {
+    border-width: var(--mobile-border) var(--mobile-border) var(--mobile-border) 0 !important;
+    padding-left: calc(4px + var(--mobile-border) + env(safe-area-inset-left, 0px));
+}
+
+.footer {
+    display: none;
+}
+
+.jquery-modal.blocker {
+    height: var(--app-height, 100dvh);
+    box-sizing: border-box;
+    text-align: left;
+    padding: calc(var(--mobile-edge-top) + var(--mobile-header-height, 76px) + var(--mobile-gap)) var(--mobile-edge-right) var(--mobile-dock-offset) var(--mobile-edge-left) !important;
+}
+
+.jquery-modal.blocker:before {
+    display: none;
+}
+
+.modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box;
+    border-width: var(--mobile-border);
+    transition: none !important;
+}
+
+.modal__content {
+    height: 100%;
+    margin: 0;
+    padding: var(--mobile-gap);
+    box-sizing: border-box;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+.modal h1 {
+    font-size: 26px;
+}
+
+.modal h2 {
+    font-size: 22px;
+}
+
+.modal img {
+    max-width: 100%;
+}
+
+.collectables-container {
+    margin: var(--mobile-gap) 0;
+    width: 200%;
+    --world-thumb-width: clamp(120px, calc(100vw - 184px), 192px);
+    --world-thumb-height: clamp(90px, calc(75vw - 138px), 144px);
+    --bgm-thumb-width: clamp(96px, calc(100vw - 224px), 160px);
+    --bgm-thumb-height: clamp(72px, calc(75vw - 168px), 120px);
+}
+
+.collectables-empty {
+    margin: var(--mobile-gap);
+}
+
+.collectable-entry > img, .wallpaper > img,
+.collectable-entry > .collectable-entry__image-container {
+    width: var(--world-thumb-width);
+    height: var(--world-thumb-height);
+}
+
+.collectable-entry.collectable--border, .wallpaper.collectable--border {
+    width: calc(var(--world-thumb-width) - 40px);
+    min-width: calc(var(--world-thumb-width) - 40px);
+    height: calc(var(--world-thumb-height) - 40px);
+}
+
+.collectable-entry > .collectable-entry__image-container > img {
+    width: 50%;
+    height: 50%;
+}
+
+.collectable-entry > .collectable-entry__image-container--2 > img {
+    height: 100%;
+}
+
+.collectable-entry > .collectable-entry__image-container--3 > img:nth-child(3) {
+    width: 100%;
+}
+
+.bgm-track > img, .bgm-track-image > img {
+    width: var(--bgm-thumb-width);
+    height: var(--bgm-thumb-height);
+}
+
+.bgm-track.collectable--border, .bgm-track-image.collectable--border {
+    width: calc(var(--bgm-thumb-width) - 40px);
+    min-width: calc(var(--bgm-thumb-width) - 40px);
+    height: calc(var(--bgm-thumb-height) - 40px);
+}
+
+.collectable-entry--container {
+    margin-left: 0;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 100%;
+}
+
+.js--version-entry--container, .bgm-track--collectable-entry-container {
+    padding-left: 22px;
+}
+
+.collectable.expanded {
+    margin-right: 12px;
+}
+
+.collectable-entry--container > .collectable-entry--content:not(.expanded) {
+    display: none;
+}
+
+.collectable-entry--container > .collectable-entry--content.expanded {
+    order: 3;
+    box-sizing: border-box;
+    flex-basis: calc(100% - 24px);
+    width: calc(100% - 24px);
+    height: auto;
+    min-height: 120px;
+    max-height: 40dvh;
+    margin: 6px 12px 24px;
+    border-left: 12px solid transparent;
+}
+
+.modal .collectable-entry__name, .modal .collectable-entry__name--shadow {
+    font-size: 16px;
+}
+
+.modal__controls--expand + .modal__controls.expanded {
+    max-height: 40dvh;
+    overflow: auto;
+}
+
+.audio-player-container {
+    position: fixed;
+    top: auto;
+    bottom: var(--mobile-dock-offset);
+    left: var(--mobile-edge-left);
+    right: var(--mobile-edge-right);
+    width: auto;
+    margin: 0 !important;
+    box-sizing: border-box;
+}
+
+.audio-player-image-container {
+    display: none;
+}
+
+.audio-player-container.open {
+    padding: var(--mobile-gap);
+    border-width: var(--mobile-border);
+}
+
+.audio-player-player-container {
+    min-width: 0;
+    width: 100%;
+}
+
+.audio-player {
+    width: 100% !important;
+    min-width: 0;
+    height: auto;
+    flex-wrap: wrap;
+    padding: 0;
+    gap: var(--mobile-gap);
+    box-sizing: border-box;
+}
+
+.audio-player .main-holder {
+    min-width: 0;
+    flex: 1;
+    order: 2;
+}
+
+.audio-player .left-holder {
+    margin: 0;
+    order: 2;
+}
+
+.audio-player .right-holder {
+    min-width: 44px;
+    order: 2;
+}
+
+.audio-player .holder {
+    gap: var(--mobile-gap);
+}
+
+.audio-player-marquee {
+    margin-left: 40px;
+}
+
+.audio-player > .controls {
+    gap: 2px;
+    flex-basis: 100%;
+    margin: 0;
+}
+
+.autocomplete-suggestions {
+    max-width: calc(100vw - 24px);
+    max-height: 35dvh !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation: none !important;
+        transition: none !important;
+    }
+}
