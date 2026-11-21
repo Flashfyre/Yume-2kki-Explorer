@@ -1,0 +1,15 @@
+Graph dependencies
+
+These patches apply to the pinned official npm packages during postinstall.
+They change the ESM modules used by the explorer's Rollup build and their types.
+
+3d-force-graph: exposes nodesPerStack and passes numDimensions to the renderer.
+three-forcegraph: preserves stacked levels, size-based spacing, depthOverride,
+dagIgnore, and world names in cycle errors. Stack sizes are grouped in one pass.
+three-render-objects: preserves the orthographic camera used for 2D mode.
+
+Three.js 0.162.0 is the last release with WebGL1 support. The renderer stays on
+1.29.5 because 1.30.0 imports the newer Three.js WebGPU module, even in WebGL mode.
+
+Run npm ci to install and apply the patches, then npm run compile to rebuild.
+When upgrading a patched package, update its pinned version and patch together.

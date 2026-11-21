@@ -2060,7 +2060,7 @@ function initGraph(renderMode, displayMode, paths, reset) {
             if (isWebGL2)
                 updateNodePositions(is2d);
         })
-        .linkThreeObject(link => dummyLinkObject)
+        .linkThreeObject(dummyLinkObject)
         .linkPositionUpdate((linkObject, { start, end }, link) => {
             if (!isWebGL2 && icons3D[link.key] !== undefined) {
                 const linkIcons = icons3D[link.key];
@@ -2094,7 +2094,6 @@ function initGraph(renderMode, displayMode, paths, reset) {
                 }
             }
         })
-        .connMode(() => config.connMode)
         .nodeVal(node => node.width)
         .nodeLabel(node => {
             const world = worldData[node.id];
@@ -3202,6 +3201,7 @@ function getImageRawData(imageSources) {
 function updateNodeLabels(is2d, time) {
     if (config.labelMode > 0 || !is2d) {
         const camera = graph.camera();
+        const dir = is2d ? null : new THREE.Vector3();
         const modTime = time % 50;
         const opacityMultiplier = (modTime < 25 ? modTime : 50 - modTime) / 25;
         graph.graphData().nodes.forEach(node => {
@@ -3211,9 +3211,7 @@ function updateNodeLabels(is2d, time) {
                 const text = obj.children[0];
                 const scale = worldScales[node.id];
                 const textOpacity = showLabel ? getNodeOpacity(node.id) : 0;
-                let dir;
                 if (!is2d && showLabel) {
-                    dir = new THREE.Vector3();
                     dir.subVectors(camera.position, obj.getWorldPosition(dir)).normalize();
                 }
                 if (showLabel) {
@@ -3222,7 +3220,9 @@ function updateNodeLabels(is2d, time) {
                         text.translateOnAxis(dir, 10.5 * scale);
                     }
                     text.material.opacity = textOpacity;
-                    text.color = getNodeTextColor(node);
+                    const textColor = getNodeTextColor(node);
+                    if (text.color !== textColor)
+                        text.color = textColor;
                     text.scale.x = text.defaultScale.x * scale;
                     text.scale.y = text.defaultScale.y * scale;
 
@@ -3749,7 +3749,7 @@ function initLocalization(isInitial) {
         callback: function (data, defaultCallback) {
             if (config.lang === 'ja' || config.lang === 'ru')
                 massageLocalizedValues(data, true);
-            data.footer.about = data.footer.about.replace("{VERSION}", "6.0.2");
+            data.footer.about = data.footer.about.replace("{VERSION}", "6.1.0");
             data.footer.lastUpdate = data.footer.lastUpdate.replace("{LAST_UPDATE}", isInitial ? "" : formatDate(lastUpdate, config.lang, true));
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             localizedSeparator = data.separator;

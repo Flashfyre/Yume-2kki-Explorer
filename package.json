@@ -1,11 +1,11 @@
 {
   "name": "yume-2kki-explorer",
-  "version": "6.0.2",
+  "version": "6.1.0",
   "description": "A visualization of maps in Yume 2kki that scrapes the wiki for data",
   "main": "app.js",
   "dependencies": {
     "@tweenjs/tween.js": "^23.1.2",
-    "3d-force-graph": "https://github.com/Flashfyre/3d-force-graph.git",
+    "3d-force-graph": "1.73.6",
     "d3-force": "^2.0.1",
     "d3-quadtree": "^1.0.7",
     "devbridge-autocomplete": "^1.4.11",
@@ -23,11 +23,13 @@
     "rollup": "^4.62.2",
     "sortablejs": "^1.14.0",
     "superagent": "^5.3.1",
-    "three": "^0.155.0",
+    "three": "0.162.0",
     "three-dragcontrols": "^0.88.2",
-    "three-forcegraph": "https://github.com/Flashfyre/three-forcegraph.git",
-    "three-render-objects": "https://github.com/Flashfyre/three-render-objects.git",
-    "three-spritetext": "^1.8.1"
+    "three-forcegraph": "1.43.6",
+    "three-render-objects": "1.29.5",
+    "three-spritetext": "1.10.0",
+    "patch-package": "8.0.1",
+    "postinstall-postinstall": "2.1.0"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^29.0.3",
@@ -39,14 +41,16 @@
     "esbuild": "^0.23.1"
   },
   "resolutions": {
-    "3d-force-graph": "https://github.com/Flashfyre/3d-force-graph.git",
-    "three-forcegraph": "https://github.com/Flashfyre/three-forcegraph.git",
-    "three-render-objects": "https://github.com/Flashfyre/three-render-objects.git"
+    "3d-force-graph": "1.73.6",
+    "three-forcegraph": "1.43.6",
+    "three-render-objects": "1.29.5",
+    "three": "0.162.0"
   },
   "scripts": {
     "start": "node app.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "compile": "rollup -c"
+    "compile": "rollup -c",
+    "postinstall": "patch-package --error-on-fail"
   },
   "engines": {
     "node": "^20",
@@ -58,5 +62,11 @@
   "bugs": {
     "url": "https://github.com/Flashfyre/Yume-2kki-Explorer/issues"
   },
-  "homepage": "https://github.com/Flashfyre/Yume-2kki-Explorer#readme"
+  "homepage": "https://github.com/Flashfyre/Yume-2kki-Explorer#readme",
+  "overrides": {
+    "3d-force-graph": "1.73.6",
+    "three-forcegraph": "1.43.6",
+    "three-render-objects": "1.29.5",
+    "three": "0.162.0"
+  }
 }

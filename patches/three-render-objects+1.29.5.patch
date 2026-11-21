@@ -1,0 +1,54 @@
+diff --git a/node_modules/three-render-objects/dist/three-render-objects.d.ts b/node_modules/three-render-objects/dist/three-render-objects.d.ts
+index 4d37d30..6362aa0 100644
+--- a/node_modules/three-render-objects/dist/three-render-objects.d.ts
++++ b/node_modules/three-render-objects/dist/three-render-objects.d.ts
+@@ -5,6 +5,7 @@ import { FlyControls } from 'three/examples/jsm/controls/FlyControls.js';
+ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+ 
+ interface ConfigOptions {
++  numDimensions?: 1 | 2 | 3,
+   controlType?: 'trackball' | 'orbit' | 'fly';
+   rendererConfig?: WebGLRendererParameters;
+   extraRenderers?: Renderer[];
+diff --git a/node_modules/three-render-objects/dist/three-render-objects.mjs b/node_modules/three-render-objects/dist/three-render-objects.mjs
+index e1827d0..a3d14d1 100644
+--- a/node_modules/three-render-objects/dist/three-render-objects.mjs
++++ b/node_modules/three-render-objects/dist/three-render-objects.mjs
+@@ -1,4 +1,4 @@
+-import { WebGLRenderer, Scene, PerspectiveCamera, Raycaster, SRGBColorSpace, TextureLoader, Vector2, Vector3, Box3, Color, Mesh, SphereGeometry, MeshBasicMaterial, BackSide, EventDispatcher, MOUSE, Quaternion, Spherical, Clock } from 'three';
++import { WebGLRenderer, Scene, OrthographicCamera, PerspectiveCamera, Raycaster, SRGBColorSpace, TextureLoader, Vector2, Vector3, Box3, Color, Mesh, SphereGeometry, MeshBasicMaterial, BackSide, EventDispatcher, MOUSE, Quaternion, Spherical, Clock } from 'three';
+ import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
+ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+ import { FlyControls } from 'three/examples/jsm/controls/FlyControls.js';
+@@ -121,6 +121,7 @@ var three = window.THREE ? window.THREE // Prefer consumption from global THREE,
+ : {
+   WebGLRenderer: WebGLRenderer,
+   Scene: Scene,
++  OrthographicCamera: OrthographicCamera,
+   PerspectiveCamera: PerspectiveCamera,
+   Raycaster: Raycaster,
+   SRGBColorSpace: SRGBColorSpace,
+@@ -313,7 +314,7 @@ var threeRenderObjects = Kapsule({
+         }
+       }
+       function getLookAt() {
+-        return Object.assign(new three.Vector3(0, 0, -1000).applyQuaternion(camera.quaternion).add(camera.position));
++        return Object.assign(new three.Vector3(0, 0, camera.isOrthographicCamera ? 0 : -1000).applyQuaternion(camera.quaternion).add(camera.position));
+       }
+     },
+     zoomToFit: function zoomToFit(state) {
+@@ -410,10 +411,12 @@ var threeRenderObjects = Kapsule({
+       return state.controls;
+     } // to be deprecated
+   },
+-  stateInit: function stateInit() {
++  stateInit: function stateInit(options = {}) {
+     return {
+       scene: new three.Scene(),
+-      camera: new three.PerspectiveCamera(),
++      camera: options.numDimensions < 3
++        ? new three.OrthographicCamera(-500 * window.innerWidth / window.innerHeight, 500 * window.innerWidth / window.innerHeight, 500, -500, 0.1, 2000)
++        : new three.PerspectiveCamera(),
+       clock: new three.Clock(),
+       tweenGroup: new Group()
+     };

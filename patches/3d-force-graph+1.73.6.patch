@@ -1,0 +1,41 @@
+diff --git a/node_modules/3d-force-graph/dist/3d-force-graph.d.ts b/node_modules/3d-force-graph/dist/3d-force-graph.d.ts
+index f3a59a0..3922a7e 100644
+--- a/node_modules/3d-force-graph/dist/3d-force-graph.d.ts
++++ b/node_modules/3d-force-graph/dist/3d-force-graph.d.ts
+@@ -5,6 +5,7 @@ import { NodeObject, LinkObject, ThreeForceGraphGeneric } from 'three-forcegraph
+ interface ConfigOptions {
+   controlType?: 'trackball' | 'orbit' | 'fly'
+   rendererConfig?: WebGLRendererParameters,
++  numDimensions?: 1 | 2 | 3,
+   extraRenderers?: Renderer[]
+ }
+ 
+diff --git a/node_modules/3d-force-graph/dist/3d-force-graph.mjs b/node_modules/3d-force-graph/dist/3d-force-graph.mjs
+index d56360d..9ca3c16 100644
+--- a/node_modules/3d-force-graph/dist/3d-force-graph.mjs
++++ b/node_modules/3d-force-graph/dist/3d-force-graph.mjs
+@@ -146,7 +146,7 @@ var CAMERA_DISTANCE2NODES_FACTOR = 170;
+ 
+ // Expose config from forceGraph
+ var bindFG = linkKapsule('forceGraph', ThreeForceGraph);
+-var linkedFGProps = Object.assign.apply(Object, _toConsumableArray(['jsonUrl', 'graphData', 'numDimensions', 'dagMode', 'dagLevelDistance', 'dagNodeFilter', 'onDagError', 'nodeRelSize', 'nodeId', 'nodeVal', 'nodeResolution', 'nodeColor', 'nodeAutoColorBy', 'nodeOpacity', 'nodeVisibility', 'nodeThreeObject', 'nodeThreeObjectExtend', 'linkSource', 'linkTarget', 'linkVisibility', 'linkColor', 'linkAutoColorBy', 'linkOpacity', 'linkWidth', 'linkResolution', 'linkCurvature', 'linkCurveRotation', 'linkMaterial', 'linkThreeObject', 'linkThreeObjectExtend', 'linkPositionUpdate', 'linkDirectionalArrowLength', 'linkDirectionalArrowColor', 'linkDirectionalArrowRelPos', 'linkDirectionalArrowResolution', 'linkDirectionalParticles', 'linkDirectionalParticleSpeed', 'linkDirectionalParticleWidth', 'linkDirectionalParticleColor', 'linkDirectionalParticleResolution', 'forceEngine', 'd3AlphaDecay', 'd3VelocityDecay', 'd3AlphaMin', 'ngraphPhysics', 'warmupTicks', 'cooldownTicks', 'cooldownTime', 'onEngineTick', 'onEngineStop'].map(function (p) {
++var linkedFGProps = Object.assign.apply(Object, _toConsumableArray(['jsonUrl', 'graphData', 'numDimensions', 'dagMode', 'dagLevelDistance', 'dagNodeFilter', 'onDagError', 'nodeRelSize', 'nodeId', 'nodeVal', 'nodeResolution', 'nodeColor', 'nodeAutoColorBy', 'nodeOpacity', 'nodeVisibility', 'nodesPerStack', 'nodeThreeObject', 'nodeThreeObjectExtend', 'linkSource', 'linkTarget', 'linkVisibility', 'linkColor', 'linkAutoColorBy', 'linkOpacity', 'linkWidth', 'linkResolution', 'linkCurvature', 'linkCurveRotation', 'linkMaterial', 'linkThreeObject', 'linkThreeObjectExtend', 'linkPositionUpdate', 'linkDirectionalArrowLength', 'linkDirectionalArrowColor', 'linkDirectionalArrowRelPos', 'linkDirectionalArrowResolution', 'linkDirectionalParticles', 'linkDirectionalParticleSpeed', 'linkDirectionalParticleWidth', 'linkDirectionalParticleColor', 'linkDirectionalParticleResolution', 'forceEngine', 'd3AlphaDecay', 'd3VelocityDecay', 'd3AlphaMin', 'ngraphPhysics', 'warmupTicks', 'cooldownTicks', 'cooldownTime', 'onEngineTick', 'onEngineStop'].map(function (p) {
+   return _defineProperty({}, p, bindFG.linkProp(p));
+ })));
+ var linkedFGMethods = Object.assign.apply(Object, _toConsumableArray(['refresh', 'getGraphBbox', 'd3Force', 'd3ReheatSimulation', 'emitParticle'].map(function (p) {
+@@ -297,6 +297,7 @@ var _3dForceGraph = Kapsule({
+   stateInit: function stateInit(_ref5) {
+     var controlType = _ref5.controlType,
+       rendererConfig = _ref5.rendererConfig,
++      numDimensions = _ref5.numDimensions,
+       extraRenderers = _ref5.extraRenderers;
+     var forceGraph = new ThreeForceGraph();
+     return {
+@@ -304,6 +305,7 @@ var _3dForceGraph = Kapsule({
+       renderObjs: ThreeRenderObjects({
+         controlType: controlType,
+         rendererConfig: rendererConfig,
++        numDimensions: numDimensions,
+         extraRenderers: extraRenderers
+       }).objects([forceGraph]) // Populate scene
+       .lights([new three.AmbientLight(0xcccccc, Math.PI), new three.DirectionalLight(0xffffff, 0.6 * Math.PI)])

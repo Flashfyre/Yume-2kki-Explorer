@@ -1,0 +1,95 @@
+diff --git a/node_modules/three-forcegraph/dist/three-forcegraph.d.ts b/node_modules/three-forcegraph/dist/three-forcegraph.d.ts
+index 5cdeeeb..180f7a1 100644
+--- a/node_modules/three-forcegraph/dist/three-forcegraph.d.ts
++++ b/node_modules/three-forcegraph/dist/three-forcegraph.d.ts
+@@ -138,6 +138,8 @@ declare class ThreeForceGraphGeneric<ChainableInstance, N extends NodeObject = N
+   // Node styling
+   nodeRelSize(): number;
+   nodeRelSize(size: number): ChainableInstance;
++  nodesPerStack(): number;
++  nodesPerStack(count: number): ChainableInstance;
+   nodeVal(): NodeAccessor<number, N>;
+   nodeVal(valAccessor: NodeAccessor<number, N>): ChainableInstance;
+   nodeVisibility(): NodeAccessor<boolean, N>;
+diff --git a/node_modules/three-forcegraph/dist/three-forcegraph.mjs b/node_modules/three-forcegraph/dist/three-forcegraph.mjs
+index 38bb4c4..df27f47 100644
+--- a/node_modules/three-forcegraph/dist/three-forcegraph.mjs
++++ b/node_modules/three-forcegraph/dist/three-forcegraph.mjs
+@@ -134,7 +134,7 @@ function getDagDepths ({
+     for (let i = 0, l = nodes.length; i < l; i++) {
+       const node = nodes[i];
+       if (nodeStack.indexOf(node) !== -1) {
+-        const loop = [...nodeStack.slice(nodeStack.indexOf(node)), node].map(d => idAccessor(d.data));
++        const loop = [...nodeStack.slice(nodeStack.indexOf(node)), node].map(d => d.data.img ? `${d.data.img.title} (${idAccessor(d.data)})` : idAccessor(d.data));
+         if (!foundLoops.some(foundLoop => foundLoop.length === loop.length && foundLoop.every((id, idx) => id === loop[idx]))) {
+           foundLoops.push(loop);
+           onLoopError(loop);
+@@ -143,8 +143,8 @@ function getDagDepths ({
+       }
+       if (currentDepth > node.depth) {
+         // Don't unnecessarily revisit chunks of the graph
+-        node.depth = currentDepth;
+-        traverse(node.out, [...nodeStack, node], currentDepth + (node.skip ? 0 : 1));
++        node.depth = node.data.depthOverride || currentDepth;
++        traverse(node.out.filter(next => !(node.data.dagIgnore || []).includes(idAccessor(next.data))), [...nodeStack, node], currentDepth + (node.skip ? 0 : 1));
+       }
+     }
+   }
+@@ -267,6 +267,7 @@ var ForceGraph = Kapsule({
+     nodeVisibility: {
+       default: true
+     },
++    nodesPerStack: { default: 20 },
+     nodeThreeObject: {},
+     nodeThreeObjectExtend: {
+       default: false
+@@ -1091,7 +1092,7 @@ var ForceGraph = Kapsule({
+     state._flushObjects = false; // reset objects refresh flag
+ 
+     // simulation engine
+-    if (hasAnyPropChanged(['graphData', 'nodeId', 'linkSource', 'linkTarget', 'numDimensions', 'forceEngine', 'dagMode', 'dagNodeFilter', 'dagLevelDistance'])) {
++    if (hasAnyPropChanged(['graphData', 'nodeId', 'linkSource', 'linkTarget', 'numDimensions', 'forceEngine', 'dagMode', 'dagNodeFilter', 'dagLevelDistance', 'nodesPerStack', 'nodeVal'])) {
+       state.engineRunning = false; // Pause simulation
+ 
+       // parse links
+@@ -1130,10 +1131,38 @@ var ForceGraph = Kapsule({
+ 
+         // Fix nodes to x,y,z for dag mode
+         if (['lr', 'rl', 'td', 'bu', 'zin', 'zout'].includes(state.dagMode)) {
++          const depthCounts = {};
++          const depthMaxNodeVals = {};
++          const getVal = accessorFn(state.nodeVal);
++          const dagNodes = state.graphData.nodes.filter(state.dagNodeFilter);
++          dagNodes.forEach(node => {
++            const depth = nodeDepths[node[state.nodeId]];
++            depthCounts[depth] = (depthCounts[depth] || 0) + 1;
++            depthMaxNodeVals[depth] = Math.max(depthMaxNodeVals[depth] || 0, getVal(node));
++          });
++          const depthStackCounts = {};
++          const depthYOffsets = {};
++          const depthDistances = {};
++          let previousDistance = 0;
++          Object.keys(depthCounts).forEach(depth => {
++            const count = Math.ceil(depthCounts[depth] / state.nodesPerStack);
++            depthStackCounts[depth] = count;
++            depthYOffsets[depth] = (count - 1) / -2;
++            depthDistances[depth] = previousDistance + depthMaxNodeVals[depth] * (count + 0.5) + dagLevelDistance;
++            previousDistance = depthDistances[depth];
++          });
++          const dagOffset = depthDistances[maxDepth] / -2;
+           const invert = ['rl', 'td', 'zout'].includes(state.dagMode);
+-          const fixFn = node => (nodeDepths[node[state.nodeId]] - maxDepth / 2) * dagLevelDistance * (invert ? -1 : 1);
++          const fixFn = node => {
++            const depth = nodeDepths[node[state.nodeId]];
++            const count = depthStackCounts[depth];
++            const offset = count === 1 ? 0 : depthYOffsets[depth] * depthMaxNodeVals[depth];
++            if (count > 1)
++              depthYOffsets[depth] += depthYOffsets[depth] < count / 2 - 1 ? 1 : -count + 1;
++            return (depthDistances[depth] + dagOffset) * (invert ? -1 : 1) + offset;
++          };
+           const resetProp = ['lr', 'rl'].includes(state.dagMode) ? 'fx' : ['td', 'bu'].includes(state.dagMode) ? 'fy' : 'fz';
+-          state.graphData.nodes.filter(state.dagNodeFilter).forEach(node => node[resetProp] = fixFn(node));
++          dagNodes.forEach(node => node[resetProp] = fixFn(node));
+         }
+ 
+         // Use radial force for radial dags

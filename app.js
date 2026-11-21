@@ -544,7 +544,7 @@ function getWorldData(pool, preserveIds, excludeRemovedContent) {
                     if (world.verGaps)
                         world.verGaps = versionUtils.parseVersionGaps(world.verGaps);
                     if (!isRemote && world.filename)
-                        world.filename = `./images/worlds/${world.filename.slice(0, world.filename.indexOf('|'))}`;
+                        world.filename = getWorldImageFilename(world.filename);
                 }
                 cachedWorldData = newCachedWorldData;
             }
@@ -691,7 +691,7 @@ function getLocationWorldData(pool, locationNames, hiddenConnLocationNames, trac
                     if (world.verGaps)
                         world.verGaps = versionUtils.parseVersionGaps(world.verGaps);
                     if (!isRemote && world.filename.indexOf('|') > -1)
-                        world.filename = `./images/worlds/${world.filename.slice(0, world.filename.indexOf('|'))}`;
+                        world.filename = getWorldImageFilename(world.filename);
                 }
 
                 pool.query(`SELECT c.id, c.sourceId, c.targetId, c.type
@@ -1106,9 +1106,9 @@ function populateWorldData(pool, worldData, updatedWorldNames) {
                         try {
                             if (!fs.existsSync(`./public/images/worlds/${localFilename}`))
                                 downloadImage(encodedFilename, localFilename)
-                                    .catch(err => reject(err));
+                                    .catch(err => console.warn(`Could not cache image for ${l.title}; using wiki URL: ${err.message}`));
                         } catch (err) {
-                            reject(err);
+                            console.warn(`Could not cache image for ${l.title}; using wiki URL: ${err.message}`);
                         }
                     }
 
@@ -3527,6 +3527,17 @@ function deleteRemovedBgmTracks(pool, removedBgmTrackIds) {
             resolve();
         });
     });
+}
+
+function getWorldImageFilename(filename) {
+    if (!filename || isRemote || filename.indexOf('|') === -1)
+        return filename;
+
+    const separator = filename.indexOf('|');
+    const localFilename = filename.slice(0, separator);
+    return fs.existsSync(`public/images/worlds/${localFilename}`)
+        ? `./images/worlds/${localFilename}`
+        : filename.slice(separator + 1);
 }
 
 function downloadImage(imageUrl, filename) {
