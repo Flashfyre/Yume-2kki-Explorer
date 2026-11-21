@@ -23,7 +23,7 @@ function repairWorldImageFilename(filename) {
         // decoded filename. Only repair when that confirms the original name;
         // a legitimate filename containing literal "%27" must keep its escapes.
         const matchesHash = name => {
-            const hash = createHash('md5').update(decodeURIComponent(name)).digest('hex');
+            const hash = createHash('md5').update(decodeURIComponent(name).replace(/ /g, '_')).digest('hex');
             return hash[0] === match[1] && hash.slice(0, 2) === match[2];
         };
         if (!matchesHash(match[3]) && matchesHash(repaired))

@@ -1,4 +1,4 @@
-// Version 7.0.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 7.0.1 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -13113,7 +13113,6 @@
 			            ESC: 27,
 			            TAB: 9,
 			            RETURN: 13,
-			            LEFT: 37,
 			            UP: 38,
 			            RIGHT: 39,
 			            DOWN: 40
@@ -14750,10 +14749,8 @@
 	    var parentSideVal = getRect(parent)[parentSide],
 	        visible = void 0;
 
-	    if (parentSide === 'top' || parentSide === 'left') {
+	    {
 	      visible = elSideVal >= parentSideVal;
-	    } else {
-	      visible = elSideVal <= parentSideVal;
 	    }
 
 	    if (!visible) return parent;
@@ -30937,7 +30934,7 @@
 			      bitmask &= ~(isCurry ? WRAP_PARTIAL_RIGHT_FLAG : WRAP_PARTIAL_FLAG);
 
 			      if (!(bitmask & WRAP_CURRY_BOUND_FLAG)) {
-			        bitmask &= ~(WRAP_BIND_FLAG | WRAP_BIND_KEY_FLAG);
+			        bitmask &= -4;
 			      }
 			      var newData = [
 			        func, bitmask, thisArg, newPartials, newHolders, newPartialsRight,
@@ -31040,7 +31037,7 @@
 			      }
 			      var length = partials ? partials.length : 0;
 			      if (!length) {
-			        bitmask &= ~(WRAP_PARTIAL_FLAG | WRAP_PARTIAL_RIGHT_FLAG);
+			        bitmask &= -97;
 			        partials = holders = undefined$1;
 			      }
 			      ary = ary === undefined$1 ? ary : nativeMax(toInteger(ary), 0);
@@ -31073,7 +31070,7 @@
 			        : nativeMax(newData[9] - length, 0);
 
 			      if (!arity && bitmask & (WRAP_CURRY_FLAG | WRAP_CURRY_RIGHT_FLAG)) {
-			        bitmask &= ~(WRAP_CURRY_FLAG | WRAP_CURRY_RIGHT_FLAG);
+			        bitmask &= -25;
 			      }
 			      if (!bitmask || bitmask == WRAP_BIND_FLAG) {
 			        var result = createBind(func, bitmask, thisArg);
@@ -43295,7 +43292,7 @@
 	    clock$1 = typeof performance === "object" && performance.now ? performance : Date,
 	    setFrame = typeof window === "object" && window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : function(f) { setTimeout(f, 17); };
 
-	function now$4() {
+	function now$3() {
 	  return clockNow || (setFrame(clearNow), clockNow = clock$1.now() + clockSkew);
 	}
 
@@ -43313,7 +43310,7 @@
 	  constructor: Timer,
 	  restart: function(callback, delay, time) {
 	    if (typeof callback !== "function") throw new TypeError("callback is not a function");
-	    time = (time == null ? now$4() : +time) + (delay == null ? 0 : +delay);
+	    time = (time == null ? now$3() : +time) + (delay == null ? 0 : +delay);
 	    if (!this._next && taskTail !== this) {
 	      if (taskTail) taskTail._next = this;
 	      else taskHead = this;
@@ -43339,7 +43336,7 @@
 	}
 
 	function timerFlush() {
-	  now$4(); // Get the current time, if not already set.
+	  now$3(); // Get the current time, if not already set.
 	  ++frame; // Pretend we’ve set an alarm, if we haven’t already.
 	  var t = taskHead, e;
 	  while (t) {
@@ -43401,7 +43398,7 @@
 	 */
 	const REVISION = '162';
 
-	const MOUSE = { LEFT: 0, MIDDLE: 1, RIGHT: 2, ROTATE: 0, DOLLY: 1, PAN: 2 };
+	const MOUSE = { ROTATE: 0, DOLLY: 1, PAN: 2 };
 	const TOUCH = { ROTATE: 0, PAN: 1, DOLLY_PAN: 2, DOLLY_ROTATE: 3 };
 	const CullFaceNone = 0;
 	const CullFaceBack = 1;
@@ -43584,7 +43581,7 @@
 
 			}
 
-			if ( listeners[ type ].indexOf( listener ) === - 1 ) {
+			if ( listeners[ type ].indexOf( listener ) === -1 ) {
 
 				listeners[ type ].push( listener );
 
@@ -43598,7 +43595,7 @@
 
 			const listeners = this._listeners;
 
-			return listeners[ type ] !== undefined && listeners[ type ].indexOf( listener ) !== - 1;
+			return listeners[ type ] !== undefined && listeners[ type ].indexOf( listener ) !== -1;
 
 		}
 
@@ -43613,7 +43610,7 @@
 
 				const index = listenerArray.indexOf( listener );
 
-				if ( index !== - 1 ) {
+				if ( index !== -1 ) {
 
 					listenerArray.splice( index, 1 );
 
@@ -43902,15 +43899,15 @@
 
 			case Int32Array:
 
-				return Math.max( value / 2147483647.0, - 1.0 );
+				return Math.max( value / 2147483647.0, -1 );
 
 			case Int16Array:
 
-				return Math.max( value / 32767.0, - 1.0 );
+				return Math.max( value / 32767.0, -1 );
 
 			case Int8Array:
 
-				return Math.max( value / 127.0, - 1.0 );
+				return Math.max( value / 127.0, -1 );
 
 			default:
 
@@ -44352,7 +44349,7 @@
 
 			// clamp, to handle numerical problems
 
-			return Math.acos( clamp( theta, - 1, 1 ) );
+			return Math.acos( clamp( theta, -1, 1 ) );
 
 		}
 
@@ -44910,9 +44907,9 @@
 	);
 
 	const LINEAR_DISPLAY_P3_TO_LINEAR_SRGB = /*@__PURE__*/ new Matrix3().set(
-		1.2249401, - 0.2249404, 0.0,
-		- 0.0420569, 1.0420571, 0.0,
-		- 0.0196376, - 0.0786361, 1.0982735
+		1.2249401, -0.2249404, 0.0,
+		-0.0420569, 1.0420571, 0.0,
+		-0.0196376, -0.0786361, 1.0982735
 	);
 
 	/**
@@ -46476,7 +46473,7 @@
 
 				let s = 1 - t;
 				const cos = x0 * x1 + y0 * y1 + z0 * z1 + w0 * w1,
-					dir = ( cos >= 0 ? 1 : - 1 ),
+					dir = ( cos >= 0 ? 1 : -1 ),
 					sqrSin = 1 - cos * cos;
 
 				// Skip the Slerp for tiny steps to avoid numeric problems:
@@ -46819,7 +46816,7 @@
 
 		angleTo( q ) {
 
-			return 2 * Math.acos( Math.abs( clamp( this.dot( q ), - 1, 1 ) ) );
+			return 2 * Math.acos( Math.abs( clamp( this.dot( q ), -1, 1 ) ) );
 
 		}
 
@@ -46853,9 +46850,9 @@
 
 		conjugate() {
 
-			this._x *= - 1;
-			this._y *= - 1;
-			this._z *= - 1;
+			this._x *= -1;
+			this._y *= -1;
+			this._z *= -1;
 
 			this._onChangeCallback();
 
@@ -47637,7 +47634,7 @@
 
 			// clamp, to handle numerical problems
 
-			return Math.acos( clamp( theta, - 1, 1 ) );
+			return Math.acos( clamp( theta, -1, 1 ) );
 
 		}
 
@@ -48365,7 +48362,7 @@
 
 	class Sphere {
 
-		constructor( center = new Vector3(), radius = - 1 ) {
+		constructor( center = new Vector3(), radius = -1 ) {
 
 			this.isSphere = true;
 
@@ -48429,7 +48426,7 @@
 		makeEmpty() {
 
 			this.center.set( 0, 0, 0 );
-			this.radius = - 1;
+			this.radius = -1;
 
 			return this;
 
@@ -48611,7 +48608,7 @@
 
 	class Ray {
 
-		constructor( origin = new Vector3(), direction = new Vector3( 0, 0, - 1 ) ) {
+		constructor( origin = new Vector3(), direction = new Vector3( 0, 0, -1 ) ) {
 
 			this.origin = origin;
 			this.direction = direction;
@@ -49017,7 +49014,7 @@
 
 			} else if ( DdN < 0 ) {
 
-				sign = - 1;
+				sign = -1;
 				DdN = - DdN;
 
 			} else {
@@ -49877,7 +49874,7 @@
 			if ( coordinateSystem === WebGLCoordinateSystem ) {
 
 				c = - ( far + near ) / ( far - near );
-				d = ( - 2 * far * near ) / ( far - near );
+				d = ( -2 * far * near ) / ( far - near );
 
 			} else if ( coordinateSystem === WebGPUCoordinateSystem ) {
 
@@ -49893,7 +49890,7 @@
 			te[ 0 ] = x;	te[ 4 ] = 0;	te[ 8 ] = a; 	te[ 12 ] = 0;
 			te[ 1 ] = 0;	te[ 5 ] = y;	te[ 9 ] = b; 	te[ 13 ] = 0;
 			te[ 2 ] = 0;	te[ 6 ] = 0;	te[ 10 ] = c; 	te[ 14 ] = d;
-			te[ 3 ] = 0;	te[ 7 ] = 0;	te[ 11 ] = - 1;	te[ 15 ] = 0;
+			te[ 3 ] = 0;	te[ 7 ] = 0;	te[ 11 ] = -1;	te[ 15 ] = 0;
 
 			return this;
 
@@ -49914,12 +49911,12 @@
 			if ( coordinateSystem === WebGLCoordinateSystem ) {
 
 				z = ( far + near ) * p;
-				zInv = - 2 * p;
+				zInv = -2 * p;
 
 			} else if ( coordinateSystem === WebGPUCoordinateSystem ) {
 
 				z = near * p;
-				zInv = - 1 * p;
+				zInv = -1 * p;
 
 			} else {
 
@@ -50114,7 +50111,7 @@
 
 				case 'XYZ':
 
-					this._y = Math.asin( clamp( m13, - 1, 1 ) );
+					this._y = Math.asin( clamp( m13, -1, 1 ) );
 
 					if ( Math.abs( m13 ) < 0.9999999 ) {
 
@@ -50132,7 +50129,7 @@
 
 				case 'YXZ':
 
-					this._x = Math.asin( - clamp( m23, - 1, 1 ) );
+					this._x = Math.asin( - clamp( m23, -1, 1 ) );
 
 					if ( Math.abs( m23 ) < 0.9999999 ) {
 
@@ -50150,7 +50147,7 @@
 
 				case 'ZXY':
 
-					this._x = Math.asin( clamp( m32, - 1, 1 ) );
+					this._x = Math.asin( clamp( m32, -1, 1 ) );
 
 					if ( Math.abs( m32 ) < 0.9999999 ) {
 
@@ -50168,7 +50165,7 @@
 
 				case 'ZYX':
 
-					this._y = Math.asin( - clamp( m31, - 1, 1 ) );
+					this._y = Math.asin( - clamp( m31, -1, 1 ) );
 
 					if ( Math.abs( m31 ) < 0.9999999 ) {
 
@@ -50186,7 +50183,7 @@
 
 				case 'YZX':
 
-					this._z = Math.asin( clamp( m21, - 1, 1 ) );
+					this._z = Math.asin( clamp( m21, -1, 1 ) );
 
 					if ( Math.abs( m21 ) < 0.9999999 ) {
 
@@ -50204,7 +50201,7 @@
 
 				case 'XZY':
 
-					this._z = Math.asin( - clamp( m12, - 1, 1 ) );
+					this._z = Math.asin( - clamp( m12, -1, 1 ) );
 
 					if ( Math.abs( m12 ) < 0.9999999 ) {
 
@@ -50736,7 +50733,7 @@
 
 			const index = this.children.indexOf( object );
 
-			if ( index !== - 1 ) {
+			if ( index !== -1 ) {
 
 				object.parent = null;
 				this.children.splice( index, 1 );
@@ -52044,7 +52041,7 @@
 
 		getHexString( colorSpace = SRGBColorSpace ) {
 
-			return ( '000000' + this.getHex( colorSpace ).toString( 16 ) ).slice( - 6 );
+			return ( '000000' + this.getHex( colorSpace ).toString( 16 ) ).slice( -6 );
 
 		}
 
@@ -52922,7 +52919,7 @@
 			this.normalized = normalized;
 
 			this.usage = StaticDrawUsage;
-			this._updateRange = { offset: 0, count: - 1 };
+			this._updateRange = { offset: 0, count: -1 };
 			this.updateRanges = [];
 			this.gpuType = FloatType;
 
@@ -53906,7 +53903,7 @@
 
 				tmp2.crossVectors( n2, t );
 				const test = tmp2.dot( tan2[ v ] );
-				const w = ( test < 0.0 ) ? - 1.0 : 1.0;
+				const w = ( test < 0.0 ) ? -1 : 1.0;
 
 				tangentAttribute.setXYZW( v, tmp.x, tmp.y, tmp.z, w );
 
@@ -54765,7 +54762,7 @@
 
 				if ( intersection.normal.dot( ray.direction ) > 0 ) {
 
-					intersection.normal.multiplyScalar( - 1 );
+					intersection.normal.multiplyScalar( -1 );
 
 				}
 
@@ -54828,12 +54825,12 @@
 
 			// build each side of the box geometry
 
-			buildPlane( 'z', 'y', 'x', - 1, - 1, depth, height, width, depthSegments, heightSegments, 0 ); // px
-			buildPlane( 'z', 'y', 'x', 1, - 1, depth, height, - width, depthSegments, heightSegments, 1 ); // nx
+			buildPlane( 'z', 'y', 'x', -1, -1, depth, height, width, depthSegments, heightSegments, 0 ); // px
+			buildPlane( 'z', 'y', 'x', 1, -1, depth, height, - width, depthSegments, heightSegments, 1 ); // nx
 			buildPlane( 'x', 'z', 'y', 1, 1, width, depth, height, widthSegments, depthSegments, 2 ); // py
-			buildPlane( 'x', 'z', 'y', 1, - 1, width, depth, - height, widthSegments, depthSegments, 3 ); // ny
-			buildPlane( 'x', 'y', 'z', 1, - 1, width, height, depth, widthSegments, heightSegments, 4 ); // pz
-			buildPlane( 'x', 'y', 'z', - 1, - 1, width, height, - depth, widthSegments, heightSegments, 5 ); // nz
+			buildPlane( 'x', 'z', 'y', 1, -1, width, depth, - height, widthSegments, depthSegments, 3 ); // ny
+			buildPlane( 'x', 'y', 'z', 1, -1, width, height, depth, widthSegments, heightSegments, 4 ); // pz
+			buildPlane( 'x', 'y', 'z', -1, -1, width, height, - depth, widthSegments, heightSegments, 5 ); // nz
 
 			// build geometry
 
@@ -54883,7 +54880,7 @@
 
 						vector[ u ] = 0;
 						vector[ v ] = 0;
-						vector[ w ] = depth > 0 ? 1 : - 1;
+						vector[ w ] = depth > 0 ? 1 : -1;
 
 						// now apply vector to normal buffer
 
@@ -55424,7 +55421,7 @@
 		 */
 		getViewBounds( distance, minTarget, maxTarget ) {
 
-			_v3$1.set( - 1, - 1, 0.5 ).applyMatrix4( this.projectionMatrixInverse );
+			_v3$1.set( -1, -1, 0.5 ).applyMatrix4( this.projectionMatrixInverse );
 
 			minTarget.set( _v3$1.x, _v3$1.y ).multiplyScalar( - distance / _v3$1.z );
 
@@ -55529,7 +55526,7 @@
 			let top = near * Math.tan( DEG2RAD * 0.5 * this.fov ) / this.zoom;
 			let height = 2 * top;
 			let width = this.aspect * height;
-			let left = - 0.5 * width;
+			let left = -0.5 * width;
 			const view = this.view;
 
 			if ( this.view !== null && this.view.enabled ) {
@@ -55577,7 +55574,7 @@
 
 	}
 
-	const fov = - 90; // negative fov is not an error
+	const fov = -90; // negative fov is not an error
 	const aspect = 1;
 
 	class CubeCamera extends Object3D {
@@ -55634,39 +55631,39 @@
 				cameraPX.lookAt( 1, 0, 0 );
 
 				cameraNX.up.set( 0, 1, 0 );
-				cameraNX.lookAt( - 1, 0, 0 );
+				cameraNX.lookAt( -1, 0, 0 );
 
-				cameraPY.up.set( 0, 0, - 1 );
+				cameraPY.up.set( 0, 0, -1 );
 				cameraPY.lookAt( 0, 1, 0 );
 
 				cameraNY.up.set( 0, 0, 1 );
-				cameraNY.lookAt( 0, - 1, 0 );
+				cameraNY.lookAt( 0, -1, 0 );
 
 				cameraPZ.up.set( 0, 1, 0 );
 				cameraPZ.lookAt( 0, 0, 1 );
 
 				cameraNZ.up.set( 0, 1, 0 );
-				cameraNZ.lookAt( 0, 0, - 1 );
+				cameraNZ.lookAt( 0, 0, -1 );
 
 			} else if ( coordinateSystem === WebGPUCoordinateSystem ) {
 
-				cameraPX.up.set( 0, - 1, 0 );
-				cameraPX.lookAt( - 1, 0, 0 );
+				cameraPX.up.set( 0, -1, 0 );
+				cameraPX.lookAt( -1, 0, 0 );
 
-				cameraNX.up.set( 0, - 1, 0 );
+				cameraNX.up.set( 0, -1, 0 );
 				cameraNX.lookAt( 1, 0, 0 );
 
 				cameraPY.up.set( 0, 0, 1 );
 				cameraPY.lookAt( 0, 1, 0 );
 
-				cameraNY.up.set( 0, 0, - 1 );
-				cameraNY.lookAt( 0, - 1, 0 );
+				cameraNY.up.set( 0, 0, -1 );
+				cameraNY.lookAt( 0, -1, 0 );
 
-				cameraPZ.up.set( 0, - 1, 0 );
+				cameraPZ.up.set( 0, -1, 0 );
 				cameraPZ.lookAt( 0, 0, 1 );
 
-				cameraNZ.up.set( 0, - 1, 0 );
-				cameraNZ.lookAt( 0, 0, - 1 );
+				cameraNZ.up.set( 0, -1, 0 );
+				cameraNZ.lookAt( 0, 0, -1 );
 
 			} else {
 
@@ -55989,7 +55986,7 @@
 
 		negate() {
 
-			this.constant *= - 1;
+			this.constant *= -1;
 			this.normal.negate();
 
 			return this;
@@ -56435,7 +56432,7 @@
 
 			gl.bindBuffer( bufferType, buffer );
 
-			if ( updateRange.count === - 1 && updateRanges.length === 0 ) {
+			if ( updateRange.count === -1 && updateRanges.length === 0 ) {
 
 				// Not using update ranges
 				gl.bufferSubData( bufferType, 0, array );
@@ -56466,7 +56463,7 @@
 			}
 
 			// @deprecated, r159
-			if ( updateRange.count !== - 1 ) {
+			if ( updateRange.count !== -1 ) {
 
 				if ( isWebGL2 ) {
 
@@ -56480,7 +56477,7 @@
 
 				}
 
-				updateRange.count = - 1; // reset range
+				updateRange.count = -1; // reset range
 
 			}
 
@@ -57125,7 +57122,7 @@
 
 			envMap: { value: null },
 			envMapRotation: { value: /*@__PURE__*/ new Matrix3() },
-			flipEnvMap: { value: - 1 },
+			flipEnvMap: { value: -1 },
 			reflectivity: { value: 1.0 }, // basic, lambert, phong
 			ior: { value: 1.5 }, // physical
 			refractionRatio: { value: 0.98 }, // basic, lambert, phong
@@ -57543,7 +57540,7 @@
 
 			uniforms: {
 				envMap: { value: null },
-				flipEnvMap: { value: - 1 },
+				flipEnvMap: { value: -1 },
 				backgroundBlurriness: { value: 0 },
 				backgroundIntensity: { value: 1 },
 				backgroundRotation: { value: /*@__PURE__*/ new Matrix3() }
@@ -57558,7 +57555,7 @@
 
 			uniforms: {
 				tCube: { value: null },
-				tFlip: { value: - 1 },
+				tFlip: { value: -1 },
 				opacity: { value: 1.0 }
 			},
 
@@ -57771,18 +57768,18 @@
 				_e1$1.copy( scene.backgroundRotation );
 
 				// accommodate left-handed frame
-				_e1$1.x *= - 1; _e1$1.y *= - 1; _e1$1.z *= - 1;
+				_e1$1.x *= -1; _e1$1.y *= -1; _e1$1.z *= -1;
 
 				if ( background.isCubeTexture && background.isRenderTargetTexture === false ) {
 
 					// environment maps which are not cube render targets or PMREMs follow a different convention
-					_e1$1.y *= - 1;
-					_e1$1.z *= - 1;
+					_e1$1.y *= -1;
+					_e1$1.z *= -1;
 
 				}
 
 				boxMesh.material.uniforms.envMap.value = background;
-				boxMesh.material.uniforms.flipEnvMap.value = ( background.isCubeTexture && background.isRenderTargetTexture === false ) ? - 1 : 1;
+				boxMesh.material.uniforms.flipEnvMap.value = ( background.isCubeTexture && background.isRenderTargetTexture === false ) ? -1 : 1;
 				boxMesh.material.uniforms.backgroundBlurriness.value = scene.backgroundBlurriness;
 				boxMesh.material.uniforms.backgroundIntensity.value = scene.backgroundIntensity;
 				boxMesh.material.uniforms.backgroundRotation.value.setFromMatrix4( _m1$1.makeRotationFromEuler( _e1$1 ) );
@@ -59010,7 +59007,7 @@
 
 	class OrthographicCamera extends Camera {
 
-		constructor( left = - 1, right = 1, top = 1, bottom = - 1, near = 0.1, far = 2000 ) {
+		constructor( left = -1, right = 1, top = 1, bottom = -1, near = 0.1, far = 2000 ) {
 
 			super();
 
@@ -59167,9 +59164,9 @@
 	// same axis), used as axis directions evenly spread on a sphere.
 	const _axisDirections = [
 		/*@__PURE__*/ new Vector3( 1, 1, 1 ),
-		/*@__PURE__*/ new Vector3( - 1, 1, 1 ),
-		/*@__PURE__*/ new Vector3( 1, 1, - 1 ),
-		/*@__PURE__*/ new Vector3( - 1, 1, - 1 ),
+		/*@__PURE__*/ new Vector3( -1, 1, 1 ),
+		/*@__PURE__*/ new Vector3( 1, 1, -1 ),
+		/*@__PURE__*/ new Vector3( -1, 1, -1 ),
 		/*@__PURE__*/ new Vector3( 0, PHI, INV_PHI ),
 		/*@__PURE__*/ new Vector3( 0, PHI, - INV_PHI ),
 		/*@__PURE__*/ new Vector3( INV_PHI, 0, PHI ),
@@ -59420,8 +59417,8 @@
 			const fov = 90;
 			const aspect = 1;
 			const cubeCamera = new PerspectiveCamera( fov, aspect, near, far );
-			const upSign = [ 1, - 1, 1, 1, 1, 1 ];
-			const forwardSign = [ 1, 1, 1, - 1, - 1, - 1 ];
+			const upSign = [ 1, -1, 1, 1, 1, 1 ];
+			const forwardSign = [ 1, 1, 1, -1, -1, -1 ];
 			const renderer = this._renderer;
 
 			const originalAutoClear = renderer.autoClear;
@@ -59520,7 +59517,7 @@
 
 				}
 
-				this._cubemapMaterial.uniforms.flipEnvMap.value = ( texture.isRenderTargetTexture === false ) ? - 1 : 1;
+				this._cubemapMaterial.uniforms.flipEnvMap.value = ( texture.isRenderTargetTexture === false ) ? -1 : 1;
 
 			} else {
 
@@ -59732,7 +59729,7 @@
 			for ( let face = 0; face < cubeFaces; face ++ ) {
 
 				const x = ( face % 3 ) * 2 / 3 - 1;
-				const y = face > 2 ? 0 : - 1;
+				const y = face > 2 ? 0 : -1;
 				const coordinates = [
 					x, y, 0,
 					x + 2 / 3, y, 0,
@@ -59931,7 +59928,7 @@
 
 			uniforms: {
 				'envMap': { value: null },
-				'flipEnvMap': { value: - 1 }
+				'flipEnvMap': { value: -1 }
 			},
 
 			vertexShader: _getCommonVertexShader(),
@@ -64553,18 +64550,18 @@
 			version: 0,
 
 			hash: {
-				directionalLength: - 1,
-				pointLength: - 1,
-				spotLength: - 1,
-				rectAreaLength: - 1,
-				hemiLength: - 1,
+				directionalLength: -1,
+				pointLength: -1,
+				spotLength: -1,
+				rectAreaLength: -1,
+				hemiLength: -1,
 
-				numDirectionalShadows: - 1,
-				numPointShadows: - 1,
-				numSpotShadows: - 1,
-				numSpotMaps: - 1,
+				numDirectionalShadows: -1,
+				numPointShadows: -1,
+				numSpotShadows: -1,
+				numSpotMaps: -1,
 
-				numLightProbes: - 1
+				numLightProbes: -1
 			},
 
 			ambient: [ 0, 0, 0 ],
@@ -65215,7 +65212,7 @@
 		fullScreenTri.setAttribute(
 			'position',
 			new BufferAttribute(
-				new Float32Array( [ - 1, - 1, 0.5, 3, - 1, 0.5, - 1, 3, 0.5 ] ),
+				new Float32Array( [ -1, -1, 0.5, 3, -1, 0.5, -1, 3, 0.5 ] ),
 				3
 			)
 		);
@@ -65638,7 +65635,7 @@
 					locked = false;
 
 					currentColorMask = null;
-					currentColorClear.set( - 1, 0, 0, 0 ); // set to invalid state
+					currentColorClear.set( -1, 0, 0, 0 ); // set to invalid state
 
 				}
 
@@ -65925,12 +65922,12 @@
 		let version = 0;
 		const glVersion = gl.getParameter( gl.VERSION );
 
-		if ( glVersion.indexOf( 'WebGL' ) !== - 1 ) {
+		if ( glVersion.indexOf( 'WebGL' ) !== -1 ) {
 
 			version = parseFloat( /^WebGL (\d)/.exec( glVersion )[ 1 ] );
 			lineWidthAvailable = ( version >= 1.0 );
 
-		} else if ( glVersion.indexOf( 'OpenGL ES' ) !== - 1 ) {
+		} else if ( glVersion.indexOf( 'OpenGL ES' ) !== -1 ) {
 
 			version = parseFloat( /^OpenGL ES (\d)/.exec( glVersion )[ 1 ] );
 			lineWidthAvailable = ( version >= 2.0 );
@@ -69957,7 +69954,7 @@ void main() {
 
 				const controllerIndex = controllerInputSources.indexOf( event.inputSource );
 
-				if ( controllerIndex === - 1 ) {
+				if ( controllerIndex === -1 ) {
 
 					return;
 
@@ -70239,7 +70236,7 @@ void main() {
 
 					let controllerIndex = controllerInputSources.indexOf( inputSource );
 
-					if ( controllerIndex === - 1 ) {
+					if ( controllerIndex === -1 ) {
 
 						// Assign input source a controller that currently has no input source
 
@@ -70263,7 +70260,7 @@ void main() {
 
 						// If all controllers do currently receive input we ignore new ones
 
-						if ( controllerIndex === - 1 ) break;
+						if ( controllerIndex === -1 ) break;
 
 					}
 
@@ -70809,7 +70806,7 @@ void main() {
 
 				if ( material.side === BackSide ) {
 
-					uniforms.bumpScale.value *= - 1;
+					uniforms.bumpScale.value *= -1;
 
 				}
 
@@ -70876,19 +70873,19 @@ void main() {
 				_e1.copy( envMapRotation );
 
 				// accommodate left-handed frame
-				_e1.x *= - 1; _e1.y *= - 1; _e1.z *= - 1;
+				_e1.x *= -1; _e1.y *= -1; _e1.z *= -1;
 
 				if ( envMap.isCubeTexture && envMap.isRenderTargetTexture === false ) {
 
 					// environment maps which are not cube render targets or PMREMs follow a different convention
-					_e1.y *= - 1;
-					_e1.z *= - 1;
+					_e1.y *= -1;
+					_e1.z *= -1;
 
 				}
 
 				uniforms.envMapRotation.value.setFromMatrix4( _m1.makeRotationFromEuler( _e1 ) );
 
-				uniforms.flipEnvMap.value = ( envMap.isCubeTexture && envMap.isRenderTargetTexture === false ) ? - 1 : 1;
+				uniforms.flipEnvMap.value = ( envMap.isCubeTexture && envMap.isRenderTargetTexture === false ) ? -1 : 1;
 
 				uniforms.reflectivity.value = material.reflectivity;
 				uniforms.ior.value = material.ior;
@@ -71310,7 +71307,7 @@ void main() {
 
 			for ( let i = 0; i < maxBindingPoints; i ++ ) {
 
-				if ( allocatedBindingPoints.indexOf( i ) === - 1 ) {
+				if ( allocatedBindingPoints.indexOf( i ) === -1 ) {
 
 					allocatedBindingPoints.push( i );
 					return i;
@@ -71729,7 +71726,7 @@ void main() {
 			let _currentActiveCubeFace = 0;
 			let _currentActiveMipmapLevel = 0;
 			let _currentRenderTarget = null;
-			let _currentMaterialId = - 1;
+			let _currentMaterialId = -1;
 
 			let _currentCamera = null;
 
@@ -72822,7 +72819,7 @@ void main() {
 				// _gl.finish();
 
 				bindingStates.resetDefaultState();
-				_currentMaterialId = - 1;
+				_currentMaterialId = -1;
 				_currentCamera = null;
 
 				renderStateStack.pop();
@@ -73601,7 +73598,7 @@ void main() {
 
 					m_uniforms.envMap.value = envMap;
 
-					m_uniforms.flipEnvMap.value = ( envMap.isCubeTexture && envMap.isRenderTargetTexture === false ) ? - 1 : 1;
+					m_uniforms.flipEnvMap.value = ( envMap.isCubeTexture && envMap.isRenderTargetTexture === false ) ? -1 : 1;
 
 				}
 
@@ -73874,7 +73871,7 @@ void main() {
 
 				}
 
-				_currentMaterialId = - 1; // reset current material to ensure correct uniform bindings
+				_currentMaterialId = -1; // reset current material to ensure correct uniform bindings
 
 			};
 
@@ -74243,7 +74240,7 @@ void main() {
 			this.count = array !== undefined ? array.length / stride : 0;
 
 			this.usage = StaticDrawUsage;
-			this._updateRange = { offset: 0, count: - 1 };
+			this._updateRange = { offset: 0, count: -1 };
 			this.updateRanges = [];
 
 			this.version = 0;
@@ -74821,10 +74818,10 @@ void main() {
 				_geometry$1 = new BufferGeometry();
 
 				const float32Array = new Float32Array( [
-					- 0.5, - 0.5, 0, 0, 0,
-					0.5, - 0.5, 0, 1, 0,
+					-0.5, -0.5, 0, 0, 0,
+					0.5, -0.5, 0, 1, 0,
 					0.5, 0.5, 0, 1, 1,
-					- 0.5, 0.5, 0, 0, 1
+					-0.5, 0.5, 0, 0, 1
 				] );
 
 				const interleavedBuffer = new InterleavedBuffer( float32Array, 5 );
@@ -74875,8 +74872,8 @@ void main() {
 
 			const center = this.center;
 
-			transformVertex( _vA.set( - 0.5, - 0.5, 0 ), _mvPosition, center, _worldScale, sin, cos );
-			transformVertex( _vB.set( 0.5, - 0.5, 0 ), _mvPosition, center, _worldScale, sin, cos );
+			transformVertex( _vA.set( -0.5, -0.5, 0 ), _mvPosition, center, _worldScale, sin, cos );
+			transformVertex( _vB.set( 0.5, -0.5, 0 ), _mvPosition, center, _worldScale, sin, cos );
 			transformVertex( _vC.set( 0.5, 0.5, 0 ), _mvPosition, center, _worldScale, sin, cos );
 
 			_uvA.set( 0, 0 );
@@ -74889,7 +74886,7 @@ void main() {
 			if ( intersect === null ) {
 
 				// check second triangle
-				transformVertex( _vB.set( - 0.5, 0.5, 0 ), _mvPosition, center, _worldScale, sin, cos );
+				transformVertex( _vB.set( -0.5, 0.5, 0 ), _mvPosition, center, _worldScale, sin, cos );
 				_uvB.set( 0, 1 );
 
 				intersect = raycaster.ray.intersectTriangle( _vA, _vC, _vB, false, _intersectPoint );
@@ -75918,7 +75915,7 @@ void main() {
 
 					vec.normalize();
 
-					const theta = Math.acos( clamp( tangents[ i - 1 ].dot( tangents[ i ] ), - 1, 1 ) ); // clamp for floating pt errors
+					const theta = Math.acos( clamp( tangents[ i - 1 ].dot( tangents[ i ] ), -1, 1 ) ); // clamp for floating pt errors
 
 					normals[ i ].applyMatrix4( mat.makeRotationAxis( vec, theta ) );
 
@@ -75932,7 +75929,7 @@ void main() {
 
 			if ( closed === true ) {
 
-				let theta = Math.acos( clamp( normals[ 0 ].dot( normals[ segments ] ), - 1, 1 ) );
+				let theta = Math.acos( clamp( normals[ 0 ].dot( normals[ segments ] ), -1, 1 ) );
 				theta /= segments;
 
 				if ( tangents[ 0 ].dot( vec.crossVectors( normals[ 0 ], normals[ segments ] ) ) > 0 ) {
@@ -76202,7 +76199,7 @@ void main() {
 
 			c0 = x0;
 			c1 = t0;
-			c2 = - 3 * x0 + 3 * x1 - 2 * t0 - t1;
+			c2 = -3 * x0 + 3 * x1 - 2 * t0 - t1;
 			c3 = 2 * x0 - 2 * x1 + t0 + t1;
 
 		}
@@ -76428,7 +76425,7 @@ void main() {
 		const v1 = ( p3 - p1 ) * 0.5;
 		const t2 = t * t;
 		const t3 = t * t2;
-		return ( 2 * p1 - 2 * p2 + v0 + v1 ) * t3 + ( - 3 * p1 + 3 * p2 - 2 * v0 - v1 ) * t2 + v0 * t + p1;
+		return ( 2 * p1 - 2 * p2 + v0 + v1 ) * t3 + ( -3 * p1 + 3 * p2 - 2 * v0 - v1 ) * t2 + v0 * t + p1;
 
 	}
 
@@ -77225,7 +77222,7 @@ void main() {
 				let groupCount = 0;
 
 				const radius = ( top === true ) ? radiusTop : radiusBottom;
-				const sign = ( top === true ) ? 1 : - 1;
+				const sign = ( top === true ) ? 1 : -1;
 
 				// first we generate the center vertex data of the cap.
 				// because the geometry needs one set of uvs per face,
@@ -77424,7 +77421,7 @@ void main() {
 
 				} else if ( iy === heightSegments && thetaEnd === Math.PI ) {
 
-					uOffset = - 0.5 / widthSegments;
+					uOffset = -0.5 / widthSegments;
 
 				}
 
@@ -77504,7 +77501,7 @@ void main() {
 
 	class TubeGeometry extends BufferGeometry {
 
-		constructor( path = new QuadraticBezierCurve3( new Vector3( - 1, - 1, 0 ), new Vector3( - 1, 1, 0 ), new Vector3( 1, 1, 0 ) ), tubularSegments = 64, radius = 1, radialSegments = 8, closed = false ) {
+		constructor( path = new QuadraticBezierCurve3( new Vector3( -1, -1, 0 ), new Vector3( -1, 1, 0 ), new Vector3( 1, 1, 0 ) ), tubularSegments = 64, radius = 1, radialSegments = 8, closed = false ) {
 
 			super();
 
@@ -77967,7 +77964,7 @@ void main() {
 
 				const index = handlers.indexOf( regex );
 
-				if ( index !== - 1 ) {
+				if ( index !== -1 ) {
 
 					handlers.splice( index, 2 );
 
@@ -78391,7 +78388,7 @@ void main() {
 
 		constructor() {
 
-			super( new OrthographicCamera( - 5, 5, 5, - 5, 0.5, 500 ) );
+			super( new OrthographicCamera( -5, 5, 5, -5, 0.5, 500 ) );
 
 			this.isDirectionalLightShadow = true;
 
@@ -78467,7 +78464,7 @@ void main() {
 
 		start() {
 
-			this.startTime = now$3();
+			this.startTime = now$2();
 
 			this.oldTime = this.startTime;
 			this.elapsedTime = 0;
@@ -78503,7 +78500,7 @@ void main() {
 
 			if ( this.running ) {
 
-				const newTime = now$3();
+				const newTime = now$2();
 
 				diff = ( newTime - this.oldTime ) / 1000;
 				this.oldTime = newTime;
@@ -78518,7 +78515,7 @@ void main() {
 
 	}
 
-	function now$3() {
+	function now$2() {
 
 		return ( typeof performance === 'undefined' ? Date : performance ).now(); // see #10732
 
@@ -78567,7 +78564,7 @@ void main() {
 			} else if ( camera.isOrthographicCamera ) {
 
 				this.ray.origin.set( coords.x, coords.y, ( camera.near + camera.far ) / ( camera.near - camera.far ) ).unproject( camera ); // set origin in plane of camera
-				this.ray.direction.set( 0, 0, - 1 ).transformDirection( camera.matrixWorld );
+				this.ray.direction.set( 0, 0, -1 ).transformDirection( camera.matrixWorld );
 				this.camera = camera;
 
 			} else {
@@ -78583,7 +78580,7 @@ void main() {
 			_matrix.identity().extractRotation( controller.matrixWorld );
 
 			this.ray.origin.setFromMatrixPosition( controller.matrixWorld );
-			this.ray.direction.set( 0, 0, - 1 ).applyMatrix4( _matrix );
+			this.ray.direction.set( 0, 0, -1 ).applyMatrix4( _matrix );
 
 			return this;
 
@@ -78711,7 +78708,7 @@ void main() {
 			} else {
 
 				this.theta = Math.atan2( x, z );
-				this.phi = Math.acos( clamp( y / this.radius, - 1, 1 ) );
+				this.phi = Math.acos( clamp( y / this.radius, -1, 1 ) );
 
 			}
 
@@ -79734,7 +79731,7 @@ void main() {
 	                if (evt.keyCode === 37) {
 	                    this.setCurrentTime(-5);
 	                } else {
-	                    this.setCurrentTime(+5);
+	                    this.setCurrentTime(5);
 	                }
 	                if (!this.player.paused && this.player.seeking) {
 	                    this.togglePlay();
@@ -84537,15 +84534,11 @@ function InsertStackElement(node, body) {
 	/** Detect free variable `global` from Node.js. */
 	var freeGlobal = typeof global == 'object' && global && global.Object === Object && global;
 
-	var freeGlobal$1 = freeGlobal;
-
 	/** Detect free variable `self`. */
 	var freeSelf = typeof self == 'object' && self && self.Object === Object && self;
 
 	/** Used as a reference to the global object. */
-	var root = freeGlobal$1 || freeSelf || Function('return this')();
-
-	var root$1 = root;
+	var root = freeGlobal || freeSelf || Function('return this')();
 
 	/**
 	 * Gets the timestamp of the number of milliseconds that have elapsed since
@@ -84564,10 +84557,8 @@ function InsertStackElement(node, body) {
 	 * // => Logs the number of milliseconds it took for the deferred invocation.
 	 */
 	var now$1 = function() {
-	  return root$1.Date.now();
+	  return root.Date.now();
 	};
-
-	var now$2 = now$1;
 
 	/** Used to match a single whitespace character. */
 	var reWhitespace = /\s/;
@@ -84604,9 +84595,7 @@ function InsertStackElement(node, body) {
 	}
 
 	/** Built-in value references. */
-	var Symbol$1 = root$1.Symbol;
-
-	var Symbol$2 = Symbol$1;
+	var Symbol$1 = root.Symbol;
 
 	/** Used for built-in method references. */
 	var objectProto$1 = Object.prototype;
@@ -84622,7 +84611,7 @@ function InsertStackElement(node, body) {
 	var nativeObjectToString$1 = objectProto$1.toString;
 
 	/** Built-in value references. */
-	var symToStringTag$1 = Symbol$2 ? Symbol$2.toStringTag : undefined;
+	var symToStringTag$1 = Symbol$1 ? Symbol$1.toStringTag : undefined;
 
 	/**
 	 * A specialized version of `baseGetTag` which ignores `Symbol.toStringTag` values.
@@ -84677,7 +84666,7 @@ function InsertStackElement(node, body) {
 	    undefinedTag = '[object Undefined]';
 
 	/** Built-in value references. */
-	var symToStringTag = Symbol$2 ? Symbol$2.toStringTag : undefined;
+	var symToStringTag = Symbol$1 ? Symbol$1.toStringTag : undefined;
 
 	/**
 	 * The base implementation of `getTag` without fallbacks for buggy environments.
@@ -84932,7 +84921,7 @@ function InsertStackElement(node, body) {
 	  }
 
 	  function timerExpired() {
-	    var time = now$2();
+	    var time = now$1();
 	    if (shouldInvoke(time)) {
 	      return trailingEdge(time);
 	    }
@@ -84961,11 +84950,11 @@ function InsertStackElement(node, body) {
 	  }
 
 	  function flush() {
-	    return timerId === undefined ? result : trailingEdge(now$2());
+	    return timerId === undefined ? result : trailingEdge(now$1());
 	  }
 
 	  function debounced() {
-	    var time = now$2(),
+	    var time = now$1(),
 	        isInvoking = shouldInvoke(time);
 
 	    lastArgs = arguments;
@@ -89192,7 +89181,7 @@ function InsertStackElement(node, body) {
 			super();
 
 			const scope = this;
-			const STATE = { NONE: - 1, ROTATE: 0, ZOOM: 1, PAN: 2, TOUCH_ROTATE: 3, TOUCH_ZOOM_PAN: 4 };
+			const STATE = { NONE: -1, ROTATE: 0, ZOOM: 1, PAN: 2, TOUCH_ROTATE: 3, TOUCH_ZOOM_PAN: 4 };
 
 			this.object = object;
 			this.domElement = domElement;
@@ -90338,7 +90327,7 @@ function InsertStackElement(node, body) {
 							if ( this.screenSpacePanning ) {
 
 								// position the orbit target in front of the new camera position
-								scope.target.set( 0, 0, - 1 )
+								scope.target.set( 0, 0, -1 )
 									.transformDirection( scope.object.matrix )
 									.multiplyScalar( newRadius )
 									.add( scope.object.position );
@@ -90347,7 +90336,7 @@ function InsertStackElement(node, body) {
 
 								// get the ray and translation plane to compute target
 								_ray.origin.copy( scope.object.position );
-								_ray.direction.set( 0, 0, - 1 ).transformDirection( scope.object.matrix );
+								_ray.direction.set( 0, 0, -1 ).transformDirection( scope.object.matrix );
 
 								// if the camera is 20 degrees above the horizon then don't adjust the focus target to avoid
 								// extremely large values
@@ -90441,7 +90430,7 @@ function InsertStackElement(node, body) {
 			const scope = this;
 
 			const STATE = {
-				NONE: - 1,
+				NONE: -1,
 				ROTATE: 0,
 				DOLLY: 1,
 				PAN: 2,
@@ -90776,7 +90765,7 @@ function InsertStackElement(node, body) {
 
 						if ( event.ctrlKey || event.metaKey || event.shiftKey ) {
 
-							rotateUp( - 2 * Math.PI * scope.rotateSpeed / scope.domElement.clientHeight );
+							rotateUp( -2 * Math.PI * scope.rotateSpeed / scope.domElement.clientHeight );
 
 						} else {
 
@@ -90806,7 +90795,7 @@ function InsertStackElement(node, body) {
 
 						if ( event.ctrlKey || event.metaKey || event.shiftKey ) {
 
-							rotateLeft( - 2 * Math.PI * scope.rotateSpeed / scope.domElement.clientHeight );
+							rotateLeft( -2 * Math.PI * scope.rotateSpeed / scope.domElement.clientHeight );
 
 						} else {
 
@@ -91101,7 +91090,7 @@ function InsertStackElement(node, body) {
 
 					default:
 
-						mouseAction = - 1;
+						mouseAction = -1;
 
 				}
 
@@ -91914,7 +91903,7 @@ function InsertStackElement(node, body) {
 
 	// Helper for passes that need to fill the viewport with a single quad.
 
-	const _camera = new OrthographicCamera( - 1, 1, 1, - 1, 0, 1 );
+	const _camera = new OrthographicCamera( -1, 1, 1, -1, 0, 1 );
 
 	// https://github.com/mrdoob/three.js/pull/21358
 
@@ -91924,7 +91913,7 @@ function InsertStackElement(node, body) {
 
 			super();
 
-			this.setAttribute( 'position', new Float32BufferAttribute( [ - 1, 3, 0, - 1, - 1, 0, 3, - 1, 0 ], 3 ) );
+			this.setAttribute( 'position', new Float32BufferAttribute( [ -1, 3, 0, -1, -1, 0, 3, -1, 0 ], 3 ) );
 			this.setAttribute( 'uv', new Float32BufferAttribute( [ 0, 2, 0, 0, 2, 0 ], 2 ) );
 
 		}
@@ -92206,7 +92195,7 @@ function InsertStackElement(node, body) {
 
 			const index = this.passes.indexOf( pass );
 
-			if ( index !== - 1 ) {
+			if ( index !== -1 ) {
 
 				this.passes.splice( index, 1 );
 
@@ -92520,9 +92509,9 @@ function InsertStackElement(node, body) {
 	    return Wrapper.prototype = Object.create(t.prototype, {
 	      constructor: {
 	        value: Wrapper,
-	        enumerable: !1,
-	        writable: !0,
-	        configurable: !0
+	        enumerable: false,
+	        writable: true,
+	        configurable: true
 	      }
 	    }), _setPrototypeOf(Wrapper, t);
 	  }, _wrapNativeSuper(t);
@@ -93099,9 +93088,7 @@ function InsertStackElement(node, body) {
 	 * }
 	 */
 	function hsl(value, saturation, lightness) {
-	  if (typeof value === 'number' && typeof saturation === 'number' && typeof lightness === 'number') {
-	    return hslToHex(value, saturation, lightness);
-	  } else if (typeof value === 'object' && saturation === undefined && lightness === undefined) {
+	  if (typeof value === 'object' && saturation === undefined && lightness === undefined) {
 	    return hslToHex(value.hue, value.saturation, value.lightness);
 	  }
 	  throw new PolishedError(1);
@@ -93134,9 +93121,7 @@ function InsertStackElement(node, body) {
 	 * }
 	 */
 	function hsla(value, saturation, lightness, alpha) {
-	  if (typeof value === 'number' && typeof saturation === 'number' && typeof lightness === 'number' && typeof alpha === 'number') {
-	    return alpha >= 1 ? hslToHex(value, saturation, lightness) : "rgba(" + hslToRgb(value, saturation, lightness) + "," + alpha + ")";
-	  } else if (typeof value === 'object' && saturation === undefined && lightness === undefined && alpha === undefined) {
+	  if (typeof value === 'object' && saturation === undefined && lightness === undefined && alpha === undefined) {
 	    return value.alpha >= 1 ? hslToHex(value.hue, value.saturation, value.lightness) : "rgba(" + hslToRgb(value.hue, value.saturation, value.lightness) + "," + value.alpha + ")";
 	  }
 	  throw new PolishedError(2);
@@ -93209,12 +93194,7 @@ function InsertStackElement(node, body) {
 	 * }
 	 */
 	function rgba(firstValue, secondValue, thirdValue, fourthValue) {
-	  if (typeof firstValue === 'string' && typeof secondValue === 'number') {
-	    var rgbValue = parseToRgb(firstValue);
-	    return "rgba(" + rgbValue.red + "," + rgbValue.green + "," + rgbValue.blue + "," + secondValue + ")";
-	  } else if (typeof firstValue === 'number' && typeof secondValue === 'number' && typeof thirdValue === 'number' && typeof fourthValue === 'number') {
-	    return fourthValue >= 1 ? rgb(firstValue, secondValue, thirdValue) : "rgba(" + firstValue + "," + secondValue + "," + thirdValue + "," + fourthValue + ")";
-	  } else if (typeof firstValue === 'object' && secondValue === undefined && thirdValue === undefined && fourthValue === undefined) {
+	  if (typeof firstValue === 'object' && secondValue === undefined && thirdValue === undefined && fourthValue === undefined) {
 	    return firstValue.alpha >= 1 ? rgb(firstValue.red, firstValue.green, firstValue.blue) : "rgba(" + firstValue.red + "," + firstValue.green + "," + firstValue.blue + "," + firstValue.alpha + ")";
 	  }
 	  throw new PolishedError(7);
@@ -94688,9 +94668,9 @@ function InsertStackElement(node, body) {
 	function _defineProperty$1(e, r, t) {
 	  return (r = _toPropertyKey$1(r)) in e ? Object.defineProperty(e, r, {
 	    value: t,
-	    enumerable: !0,
-	    configurable: !0,
-	    writable: !0
+	    enumerable: true,
+	    configurable: true,
+	    writable: true
 	  }) : e[r] = t, e;
 	}
 	function _iterableToArray$1(r) {
@@ -94704,12 +94684,12 @@ function InsertStackElement(node, body) {
 	      i,
 	      u,
 	      a = [],
-	      f = !0,
-	      o = !1;
+	      f = true,
+	      o = false;
 	    try {
 	      if (i = (t = t.call(r)).next, 0 === l) ; else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0);
 	    } catch (r) {
-	      o = !0, n = r;
+	      o = true, n = r;
 	    } finally {
 	      try {
 	        if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return;
@@ -94736,7 +94716,7 @@ function InsertStackElement(node, body) {
 	  if ("object" != typeof t || !t) return t;
 	  var e = t[Symbol.toPrimitive];
 	  if (void 0 !== e) {
-	    var i = e.call(t, r || "default");
+	    var i = e.call(t, r);
 	    if ("object" != typeof i) return i;
 	    throw new TypeError("@@toPrimitive must return a primitive value.");
 	  }
@@ -94771,10 +94751,6 @@ function InsertStackElement(node, body) {
 	  SphereGeometry: SphereGeometry,
 	  MeshBasicMaterial: MeshBasicMaterial,
 	  BackSide: BackSide,
-	  EventDispatcher: EventDispatcher,
-	  MOUSE: MOUSE,
-	  Quaternion: Quaternion,
-	  Spherical: Spherical,
 	  Clock: Clock
 	};
 	var threeRenderObjects = index$1({
@@ -94951,7 +94927,7 @@ function InsertStackElement(node, body) {
 	        }
 	      }
 	      function getLookAt() {
-	        return Object.assign(new three$1.Vector3(0, 0, camera.isOrthographicCamera ? 0 : -1000).applyQuaternion(camera.quaternion).add(camera.position));
+	        return Object.assign(new three$1.Vector3(0, 0, camera.isOrthographicCamera ? 0 : -1e3).applyQuaternion(camera.quaternion).add(camera.position));
 	      }
 	    },
 	    zoomToFit: function zoomToFit(state) {
@@ -95336,9 +95312,9 @@ function InsertStackElement(node, body) {
 	function _defineProperty(e, r, t) {
 	  return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, {
 	    value: t,
-	    enumerable: !0,
-	    configurable: !0,
-	    writable: !0
+	    enumerable: true,
+	    configurable: true,
+	    writable: true
 	  }) : e[r] = t, e;
 	}
 	function _iterableToArray(r) {
@@ -95360,7 +95336,7 @@ function InsertStackElement(node, body) {
 	function _objectSpread2(e) {
 	  for (var r = 1; r < arguments.length; r++) {
 	    var t = null != arguments[r] ? arguments[r] : {};
-	    r % 2 ? ownKeys(Object(t), !0).forEach(function (r) {
+	    r % 2 ? ownKeys(Object(t), true).forEach(function (r) {
 	      _defineProperty(e, r, t[r]);
 	    }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) {
 	      Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r));
@@ -95375,7 +95351,7 @@ function InsertStackElement(node, body) {
 	  if ("object" != typeof t || !t) return t;
 	  var e = t[Symbol.toPrimitive];
 	  if (void 0 !== e) {
-	    var i = e.call(t, r || "default");
+	    var i = e.call(t, r);
 	    if ("object" != typeof i) return i;
 	    throw new TypeError("@@toPrimitive must return a primitive value.");
 	  }
@@ -95426,7 +95402,6 @@ function InsertStackElement(node, body) {
 	: {
 	  AmbientLight: AmbientLight,
 	  DirectionalLight: DirectionalLight,
-	  Vector3: Vector3,
 	  REVISION: REVISION
 	};
 
@@ -96925,7 +96900,7 @@ function InsertStackElement(node, body) {
 
 	var collectableIdsExports = requireCollectableIds();
 
-	var version = "7.0.0";
+	var version = "7.0.1";
 
 	const urlSearchParams = new URLSearchParams(window.location.search);
 
@@ -96960,6 +96935,7 @@ function InsertStackElement(node, body) {
 	let maxWorldDepth;
 	const isMobile = checkIsMobile(navigator.userAgent) || window.matchMedia('(pointer: coarse)').matches;
 	const mobileLayout = window.matchMedia('(max-width: 900px)');
+	const appDisplayMode = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)');
 	const nodeImgDimensions = isMobile ? { x: 160, y: 120 } : { x: 320, y: 240 };
 	const nodeIconImgDimensions = { x: nodeImgDimensions.x / 4, y: nodeImgDimensions.y / 4 };
 	let nodeObjectMaterials = [];
@@ -98238,7 +98214,7 @@ function InsertStackElement(node, body) {
 	}
 
 	function updateControlsContainer(updateTabMargin) {
-	    const viewportHeight = mobileLayout.matches && window.visualViewport && window.visualViewport.scale === 1
+	    const viewportHeight = mobileLayout.matches && window.visualViewport && Math.abs(window.visualViewport.scale - 1) < 0.01
 	        ? Math.round(Math.min(window.innerHeight, window.visualViewport.height))
 	        : window.innerHeight;
 	    document.documentElement.style.setProperty('--app-height', `${viewportHeight}px`);
@@ -98418,7 +98394,10 @@ function InsertStackElement(node, body) {
 	            initWorldTextures().then(() => {
 	                reloadGraph();
 	                loadCallback();
-	            }).catch(err => console.error(err));
+	            }).catch(err => {
+	                console.error(err);
+	                loadCallback();
+	            });
 	        } else {
 	            reloadGraph();
 	            loadCallback();
@@ -99198,6 +99177,8 @@ function InsertStackElement(node, body) {
 
 	    const controls = exports.graph.controls();
 	    controls.screenSpacePanning = true;
+	    controls.removeEventListener('start', clearTweens);
+	    controls.addEventListener('start', clearTweens);
 
 	    if (is2d) {
 	        controls.maxPolarAngle = controls.minPolarAngle = Math.PI / 2;
@@ -99206,7 +99187,8 @@ function InsertStackElement(node, body) {
 	            LEFT: MOUSE.PAN
 	        };
 	        controls.touches = {
-	            ONE: TOUCH.PAN
+	            ONE: TOUCH.PAN,
+	            TWO: TOUCH.DOLLY_PAN
 	        };
 	        controls.enableRotate = false;
 	    }
@@ -100150,13 +100132,26 @@ function InsertStackElement(node, body) {
 	 * @returns {Array} Array containing a Promise for each source 
 	 */
 	function getImageRawData(imageSources) {
+	    let fallbackImage;
+	    const getFallbackImage = () => {
+	        if (!fallbackImage)
+	            fallbackImage = new Promise(resolve => {
+	                imageLoader.load(hiddenWorldImageUrl, resolve, undefined, () => {
+	                    const canvas = document.createElement('canvas');
+	                    canvas.width = nodeImgDimensions.x;
+	                    canvas.height = nodeImgDimensions.y;
+	                    resolve(canvas);
+	                });
+	            });
+	        return fallbackImage;
+	    };
 	    return imageSources.map(imageSource => {
-	        return new Promise((resolve, reject) => {
+	        return new Promise(resolve => {
 	            imageLoader.load(
 	                imageSource,
 	                image => resolve(image),
 	                undefined, // onProgress callback not supported from r84
-	                err => reject(err)
+	                () => resolve(getFallbackImage())
 	            );
 	        });
 	    });
@@ -101795,7 +101790,7 @@ function InsertStackElement(node, body) {
 	}
 
 	function clearTweens() {
-	    exports$1._tweens = {};
+	    exports$1.removeAll();
 	}
 
 	function updateRaycast() {
@@ -103063,6 +103058,8 @@ function InsertStackElement(node, body) {
 	    $$1(window).on('resize', resizeGraph);
 	    if (window.visualViewport)
 	        window.visualViewport.addEventListener('resize', resizeGraph);
+	    document.addEventListener('fullscreenchange', resizeGraph);
+	    appDisplayMode.addEventListener('change', resizeGraph);
 	    const graphResizeObserver = new ResizeObserver(resizeGraph);
 	    graphResizeObserver.observe(document.getElementById('graphContainer'));
 
@@ -103108,7 +103105,10 @@ function InsertStackElement(node, body) {
 	            initWorldTextures().then(() => {
 	                reloadGraph();
 	                loadCallback();
-	            }).catch(err => console.error(err));
+	            }).catch(err => {
+	                console.error(err);
+	                loadCallback();
+	            });
 	        } else {
 	            reloadGraph();
 	            loadCallback();

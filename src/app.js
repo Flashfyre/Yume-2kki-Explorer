@@ -56,6 +56,7 @@ let graphContext;
 let maxWorldDepth;
 const isMobile = checkIsMobile(navigator.userAgent) || window.matchMedia('(pointer: coarse)').matches;
 const mobileLayout = window.matchMedia('(max-width: 900px)');
+const appDisplayMode = window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)');
 const nodeImgDimensions = isMobile ? { x: 160, y: 120 } : { x: 320, y: 240 };
 const nodeIconImgDimensions = { x: nodeImgDimensions.x / 4, y: nodeImgDimensions.y / 4 };
 let nodeObjectMaterials = [];
@@ -1334,7 +1335,7 @@ function getUpdatedVersionDisplayToggles(value) {
 }
 
 function updateControlsContainer(updateTabMargin) {
-    const viewportHeight = mobileLayout.matches && window.visualViewport && window.visualViewport.scale === 1
+    const viewportHeight = mobileLayout.matches && window.visualViewport && Math.abs(window.visualViewport.scale - 1) < 0.01
         ? Math.round(Math.min(window.innerHeight, window.visualViewport.height))
         : window.innerHeight;
     document.documentElement.style.setProperty('--app-height', `${viewportHeight}px`);
@@ -1514,7 +1515,10 @@ function reloadData(update) {
             initWorldTextures().then(() => {
                 reloadGraph();
                 loadCallback();
-            }).catch(err => console.error(err));
+            }).catch(err => {
+                console.error(err);
+                loadCallback();
+            });
         } else {
             reloadGraph();
             loadCallback();
@@ -2294,6 +2298,8 @@ function initGraph(renderMode, displayMode, paths, reset) {
 
     const controls = graph.controls();
     controls.screenSpacePanning = true;
+    controls.removeEventListener('start', clearTweens);
+    controls.addEventListener('start', clearTweens);
 
     if (is2d) {
         controls.maxPolarAngle = controls.minPolarAngle = Math.PI / 2;
@@ -2302,7 +2308,8 @@ function initGraph(renderMode, displayMode, paths, reset) {
             LEFT: THREE.MOUSE.PAN
         };
         controls.touches = {
-            ONE: THREE.TOUCH.PAN
+            ONE: THREE.TOUCH.PAN,
+            TWO: THREE.TOUCH.DOLLY_PAN
         };
         controls.enableRotate = false;
     }
@@ -3251,13 +3258,26 @@ function getLocalizedBgmTrackLabel(localizedBgmTrackLabel) {
  * @returns {Array} Array containing a Promise for each source 
  */
 function getImageRawData(imageSources) {
+    let fallbackImage;
+    const getFallbackImage = () => {
+        if (!fallbackImage)
+            fallbackImage = new Promise(resolve => {
+                imageLoader.load(hiddenWorldImageUrl, resolve, undefined, () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = nodeImgDimensions.x;
+                    canvas.height = nodeImgDimensions.y;
+                    resolve(canvas);
+                });
+            });
+        return fallbackImage;
+    };
     return imageSources.map(imageSource => {
-        return new Promise((resolve, reject) => {
+        return new Promise(resolve => {
             imageLoader.load(
                 imageSource,
                 image => resolve(image),
                 undefined, // onProgress callback not supported from r84
-                err => reject(err)
+                () => resolve(getFallbackImage())
             );
         });
     });
@@ -4898,7 +4918,7 @@ function onDocumentMouseMove(event) {
 }
 
 function clearTweens() {
-    TWEEN._tweens = {};
+    TWEEN.removeAll();
 }
 
 function updateRaycast() {
@@ -6166,6 +6186,8 @@ $(function () {
     $(window).on('resize', resizeGraph);
     if (window.visualViewport)
         window.visualViewport.addEventListener('resize', resizeGraph);
+    document.addEventListener('fullscreenchange', resizeGraph);
+    appDisplayMode.addEventListener('change', resizeGraph);
     const graphResizeObserver = new ResizeObserver(resizeGraph);
     graphResizeObserver.observe(document.getElementById('graphContainer'));
 
@@ -6211,7 +6233,10 @@ $(function () {
             initWorldTextures().then(() => {
                 reloadGraph();
                 loadCallback();
-            }).catch(err => console.error(err));
+            }).catch(err => {
+                console.error(err);
+                loadCallback();
+            });
         } else {
             reloadGraph();
             loadCallback();

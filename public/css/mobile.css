@@ -1,13 +1,17 @@
 :root {
+    --mobile-safe-top: env(safe-area-inset-top, 0px);
+    --mobile-safe-right: env(safe-area-inset-right, 0px);
+    --mobile-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --mobile-safe-left: env(safe-area-inset-left, 0px);
     --mobile-gap: 8px;
     --mobile-border: 8px;
     --mobile-tab-height: 48px;
     --mobile-tab-width: 86px;
-    --mobile-edge-top: calc(env(safe-area-inset-top, 0px) + var(--mobile-gap));
-    --mobile-edge-right: calc(env(safe-area-inset-right, 0px) + var(--mobile-gap));
-    --mobile-edge-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--mobile-gap));
-    --mobile-edge-left: calc(env(safe-area-inset-left, 0px) + var(--mobile-gap));
-    --mobile-dock-offset: calc(env(safe-area-inset-bottom, 0px) + var(--mobile-tab-height) + var(--mobile-gap));
+    --mobile-edge-top: calc(var(--mobile-safe-top) + var(--mobile-gap));
+    --mobile-edge-right: calc(var(--mobile-safe-right) + var(--mobile-gap));
+    --mobile-edge-bottom: calc(var(--mobile-safe-bottom) + var(--mobile-gap));
+    --mobile-edge-left: calc(var(--mobile-safe-left) + var(--mobile-gap));
+    --mobile-dock-offset: calc(var(--mobile-safe-bottom) + var(--mobile-tab-height) + var(--mobile-gap));
 }
 
 html, body, .content {
@@ -30,7 +34,7 @@ body {
     margin: 0;
     padding: var(--mobile-gap);
     min-height: 0;
-    max-height: calc(var(--app-height, 100dvh) - 90px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    max-height: calc(var(--app-height, 100dvh) - 90px - var(--mobile-safe-top) - var(--mobile-safe-bottom));
     overflow-y: auto;
     box-sizing: border-box;
     border-width: var(--mobile-border);
@@ -187,7 +191,7 @@ input[type='text'], select, .slider {
     top: auto !important;
     bottom: 0 !important;
     width: var(--mobile-tab-width) !important;
-    height: calc(var(--mobile-tab-height) + env(safe-area-inset-bottom, 0px)) !important;
+    height: calc(var(--mobile-tab-height) + var(--mobile-safe-bottom)) !important;
     margin: 0 !important;
     padding: 0 !important;
     z-index: 22;
@@ -201,12 +205,12 @@ input[type='text'], select, .slider {
 .controls-collectables--container--tab {
     left: auto !important;
     right: 0;
-    width: calc(var(--mobile-tab-width) + env(safe-area-inset-right, 0px)) !important;
+    width: calc(var(--mobile-tab-width) + var(--mobile-safe-right)) !important;
 }
 
 .controls-playlist--container--tab {
     left: 0 !important;
-    width: calc(var(--mobile-tab-width) + env(safe-area-inset-left, 0px)) !important;
+    width: calc(var(--mobile-tab-width) + var(--mobile-safe-left)) !important;
 }
 
 .controls--container--tab__button {
@@ -214,24 +218,24 @@ input[type='text'], select, .slider {
     height: 100% !important;
     margin: 0 !important;
     padding: 4px;
-    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(4px + var(--mobile-safe-bottom));
     justify-content: center;
     flex-direction: row !important;
 }
 
 .controls-bottom--container--tab > .controls--container--tab__button {
     border-width: var(--mobile-border) var(--mobile-border) 0 !important;
-    padding-bottom: calc(4px + var(--mobile-border) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(4px + var(--mobile-border) + var(--mobile-safe-bottom));
 }
 
 .controls-collectables--container--tab > .controls--container--tab__button {
     border-width: var(--mobile-border) 0 var(--mobile-border) var(--mobile-border) !important;
-    padding-right: calc(4px + var(--mobile-border) + env(safe-area-inset-right, 0px));
+    padding-right: calc(4px + var(--mobile-border) + var(--mobile-safe-right));
 }
 
 .controls-playlist--container--tab > .controls--container--tab__button {
     border-width: var(--mobile-border) var(--mobile-border) var(--mobile-border) 0 !important;
-    padding-left: calc(4px + var(--mobile-border) + env(safe-area-inset-left, 0px));
+    padding-left: calc(4px + var(--mobile-border) + var(--mobile-safe-left));
 }
 
 .footer {
