@@ -15,6 +15,7 @@ const { encodeImageUrl, repairWorldImageFilename } = require('./src/image-url');
 const { wikiText, parseEffectHeading, parseJapaneseEffectName, createEffectNameNormalizer } = require('./src/effect-names');
 const { BGM_UNNUMBERED_OFFSET, BGM_UNUSED_OFFSET, WALLPAPER_ID_RANGE, getWallpaperNumber } = require('./src/collectable-ids');
 const { getWiki, getAudioUrls, getWorldImages } = require('./src/wiki-data');
+const { getWorldConnections } = require('./src/wiki-connections');
 const normalizeEffectNames = createEffectNameNormalizer(require('./public/lang/effect-ja.json'));
 const appConfig = process.env.ADMIN_KEY ?
     {
@@ -1251,37 +1252,14 @@ function populateWorldData(pool, worldData, updatedWorldNames) {
     });
 }
 
-function populateWorldConnData(worldData) {
+async function populateWorldConnData(worldData) {
     const worldDataByName = _.keyBy(worldData, w => w.title);
-    return new Promise((resolve, reject) => {
-        const seenContinueKeys = new Set();
-        let pageNumber = 0;
-        setUpdateTask('fetchConnData');
-        const fetchConnData = continueKey => {
-            getYumeWiki(`https://wrapper.yume.wiki/connections?game=2kki${continueKey ? `&continueKey=${continueKey}` : ''}`, (err, res) => {
-                if (err) return reject(err);
-                const data = JSON.parse(res.text);
-                pageNumber++;
-
-                if (data.continueKey && seenContinueKeys.has(data.continueKey)) {
-                    console.warn(`Connection data pagination restarted at continueKey ${data.continueKey} after ${pageNumber - 1} pages; treating the preceding page as the end of the dataset.`);
-                    return resolve();
-                }
-                
-                for (let conn of data.connections) {
-                    if (worldDataByName[conn.origin] && !conn.isRemoved)
-                        worldDataByName[conn.origin].connections.push(parseWorldConn(conn));
-                }
-
-                if (data.continueKey) {
-                    seenContinueKeys.add(data.continueKey);
-                    fetchConnData(data.continueKey);
-                } else
-                    resolve();
-            });
-        };
-        fetchConnData();
-    });
+    setUpdateTask('fetchConnData');
+    const connections = await getWorldConnections(queryWiki);
+    for (const conn of connections) {
+        if (worldDataByName[conn.origin] && !conn.isRemoved)
+            worldDataByName[conn.origin].connections.push(parseWorldConn(conn));
+    }
 }
 
 function parseWorldConn(conn) {

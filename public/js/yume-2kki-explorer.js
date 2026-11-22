@@ -1,4 +1,4 @@
-// Version 7.1.0 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 7.1.2 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -79908,7 +79908,7 @@ void main() {
 
 			function onPointerMove( event ) {
 
-				if ( scope.enabled === false ) return;
+				if ( scope.enabled === false || event.pointerType === 'touch' ) return;
 
 				updatePointer( event );
 
@@ -79994,7 +79994,7 @@ void main() {
 
 			function onPointerDown( event ) {
 
-				if ( scope.enabled === false ) return;
+				if ( scope.enabled === false || event.pointerType === 'touch' ) return;
 
 				updatePointer( event );
 
@@ -80046,9 +80046,9 @@ void main() {
 
 			}
 
-			function onPointerCancel() {
+			function onPointerCancel( event ) {
 
-				if ( scope.enabled === false ) return;
+				if ( scope.enabled === false || event.pointerType === 'touch' ) return;
 
 				if ( _selected ) {
 
@@ -96900,7 +96900,47 @@ function InsertStackElement(node, body) {
 
 	var collectableIdsExports = requireCollectableIds();
 
-	var version = "7.1.0";
+	var version = "7.1.2";
+
+	function initGraphTouch(element) {
+	    const pointers = new Map();
+	    const blockedClicks = new WeakSet();
+	    let gesture = false;
+
+	    element.addEventListener('pointerdown', event => {
+	        if (event.pointerType !== 'touch')
+	            return;
+	        if (!pointers.size)
+	            gesture = false;
+	        pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+	        if (pointers.size > 1)
+	            gesture = true;
+	    }, { capture: true, passive: true });
+
+	    element.addEventListener('pointermove', event => {
+	        const start = pointers.get(event.pointerId);
+	        if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8)
+	            gesture = true;
+	    }, { capture: true, passive: true });
+
+	    const endPointer = event => {
+	        if (!pointers.has(event.pointerId))
+	            return;
+	        if (event.type === 'pointercancel')
+	            gesture = true;
+	        if (gesture)
+	            blockedClicks.add(event);
+	        pointers.delete(event.pointerId);
+	    };
+	    window.addEventListener('pointerup', endPointer, { capture: true, passive: true });
+	    window.addEventListener('pointercancel', endPointer, { capture: true, passive: true });
+	    window.addEventListener('blur', () => {
+	        pointers.clear();
+	        gesture = true;
+	    });
+
+	    return event => blockedClicks.has(event) || (event?.pointerType === 'touch' && gesture);
+	}
 
 	const urlSearchParams = new URLSearchParams(window.location.search);
 
@@ -98505,6 +98545,7 @@ function InsertStackElement(node, body) {
 	let playlistShuffleIndexes = [];
 
 	let worldImageData = new Uint8ClampedArray();
+	let ignoreGraphTouchClick;
 	let nodeLabelYOffset;
 
 	function initGraph(renderMode, displayMode, paths, reset) {
@@ -98854,6 +98895,8 @@ function InsertStackElement(node, body) {
 	        };
 
 	    const elem = document.getElementById('graph');
+	    if (!ignoreGraphTouchClick)
+	        ignoreGraphTouchClick = initGraphTouch(elem);
 
 	    if (!exports.graph) {
 	        if (isWebGL2) {
@@ -99036,7 +99079,9 @@ function InsertStackElement(node, body) {
 	            if (isWebGL2 && is2d)
 	                updateNodeLabels2D();
 	        })
-	        .onNodeClick(node => {
+	        .onNodeClick((node, event) => {
+	            if (ignoreGraphTouchClick(event))
+	                return;
 	            ['x', 'y'].concat(is2d ? [] : ['z']).forEach(d => node[`f${d}`] = node[d]);
 	            if (!node.hidden && (isCtrl || isShift))
 	                openWorldWikiPage(node.id, isShift);
@@ -99044,6 +99089,8 @@ function InsertStackElement(node, body) {
 	                trySelectNode(node);
 	        })
 	        .onNodeRightClick((node, ev) => {
+	            if (ignoreGraphTouchClick(ev))
+	                return;
 	            if (!node.hidden) {
 	                contextWorldId = node.id;
 	                $$1('.graph canvas').contextMenu({
@@ -99052,7 +99099,9 @@ function InsertStackElement(node, body) {
 	                });
 	            }
 	        })
-	        .onBackgroundClick(node => {
+	        .onBackgroundClick(event => {
+	            if (ignoreGraphTouchClick(event))
+	                return;
 	            $$1('.js--search-world').removeClass('selected').val('');
 	            selectedWorldId = null;
 	            if (tempSelectedAuthor)

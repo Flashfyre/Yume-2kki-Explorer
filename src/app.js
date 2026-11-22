@@ -22,6 +22,7 @@ import { getGalleryItem, restoreGallery, virtualizeGallery, refreshGalleries, re
 import { createEffectNameNormalizer } from './effect-names.js';
 import { BGM_UNNUMBERED_OFFSET, getWallpaperNumber } from './collectable-ids.js';
 import { version as appVersion } from '../package.json';
+import { initGraphTouch } from './graph-touch.js';
 
 const urlSearchParams = new URLSearchParams(window.location.search);
 
@@ -1626,6 +1627,7 @@ let audioPlayer;
 let playlistShuffleIndexes = [];
 
 let worldImageData = new Uint8ClampedArray();
+let ignoreGraphTouchClick;
 let nodeLabelYOffset;
 
 function initGraph(renderMode, displayMode, paths, reset) {
@@ -1975,6 +1977,8 @@ function initGraph(renderMode, displayMode, paths, reset) {
         };
 
     const elem = document.getElementById('graph');
+    if (!ignoreGraphTouchClick)
+        ignoreGraphTouchClick = initGraphTouch(elem);
 
     if (!graph) {
         if (isWebGL2) {
@@ -2157,7 +2161,9 @@ function initGraph(renderMode, displayMode, paths, reset) {
             if (isWebGL2 && is2d)
                 updateNodeLabels2D();
         })
-        .onNodeClick(node => {
+        .onNodeClick((node, event) => {
+            if (ignoreGraphTouchClick(event))
+                return;
             ['x', 'y'].concat(is2d ? [] : ['z']).forEach(d => node[`f${d}`] = node[d]);
             if (!node.hidden && (isCtrl || isShift))
                 openWorldWikiPage(node.id, isShift);
@@ -2165,6 +2171,8 @@ function initGraph(renderMode, displayMode, paths, reset) {
                 trySelectNode(node);
         })
         .onNodeRightClick((node, ev) => {
+            if (ignoreGraphTouchClick(ev))
+                return;
             if (!node.hidden) {
                 contextWorldId = node.id;
                 $('.graph canvas').contextMenu({
@@ -2173,7 +2181,9 @@ function initGraph(renderMode, displayMode, paths, reset) {
                 });
             }
         })
-        .onBackgroundClick(node => {
+        .onBackgroundClick(event => {
+            if (ignoreGraphTouchClick(event))
+                return;
             $('.js--search-world').removeClass('selected').val('');
             selectedWorldId = null;
             if (tempSelectedAuthor)
