@@ -1,0 +1,54 @@
+{
+    "1": {
+        "name": "Voie à sens unique",
+        "description": "Ne ramène pas à cette zone"
+    },
+    "2": {
+        "name": "Pas d'entrée",
+        "description": "N'est pas accessible depuis cette zone"
+    },
+    "4": {
+        "name": "À débloquer",
+        "description": "Débloquez l'accès à cette zone depuis l'entrée opposée"
+    },
+    "8": {
+        "name": "Bloqué",
+        "description": "À débloquer depuis l'entrée opposée"
+    },
+    "16": {
+        "name": "Impasse",
+        "description": "Mène à une section isolée du côté opposé"
+    },
+    "32": {
+        "name": "Isolé",
+        "description": "Lieu isolé seulement accessible depuis le côté opposé"
+    },
+    "64": {
+        "name": "Effet",
+        "description": "Peut être accéder avec l'/les effet(s) suivant(s): {0}"
+    },
+    "128": {
+        "name": "Chance",
+        "description": "{0} chance"
+    },
+    "256": {
+        "name": "Condition",
+        "description": "À débloquer avec la condition suivante: {0}"
+    },
+    "512": {
+        "name": "Raccourci",
+        "description": "Le téléphone sert de raccourci vers la zone où il a été utilisé"
+    },
+    "1024": {
+        "name": "Point de sortie",
+        "description": "Le téléphone mène ici quand il est utilisé depuis la zone opposée"
+    },
+    "2048": {
+        "name": "Saisonnier",
+        "description": "Accessible durant la saison suivante: {0}"
+    },
+    "4096": {
+        "name": "Inaccessible",
+        "description": "Ne peut être accéder dans la version actuelle du jeu"
+    }
+}
