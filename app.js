@@ -38,9 +38,11 @@ let worldNameIdsCache;
 
 let dbInitialized = false;
 
-let updateWorker = isMainThread ? new Worker('./app.js') : null;
+let updateWorker = null;
+let workerRestart;
 let updating = false;
 let workerAlive = false;
+let updateSuccess = null;
 let updateTask = null;
 var updateTaskStartTime;
 
@@ -432,36 +434,59 @@ if (isMainThread) {
         }).catch(err => console.error(err));
     });
 
-    app.post('/updateData', function(req, res) {
-        if (!updating) {
-            updateWorker.postMessage({ reset: req.body.reset, collectablesOnly: req.body.collectablesOnly });
-            setUpdateTask('init');
-            updating = true;
-        } else if (!workerAlive) {
-            // For some reason, the worker died and could not be restarted.
+    app.post('/updateData', async function(req, res) {
+        try {
+            if (!workerAlive)
+                await resetWorker();
+            if (!updating) {
+                updateWorker.postMessage({
+                    reset: req.body.reset === true || req.body.reset === 'true' ? 'true' : 'false',
+                    collectablesOnly: req.body.collectablesOnly
+                });
+                setUpdateTask('init');
+                updateSuccess = null;
+                updating = true;
+                res.status(202).json({ started: true });
+            } else if (req.body.reset === true || req.body.reset === 'true')
+                res.status(409).json({ started: false });
+            else
+                res.json({ started: false });
+        } catch (err) {
+            console.error(err);
+            updateSuccess = false;
             updating = false;
+            setUpdateTask(null);
+            res.status(503).json({ started: false });
         }
-
-        res.end();
     });
 
     app.post('/pollUpdate', function (_req, res) {
         res.json({
             task: updateTask,
-            done: !updating
+            done: !updating,
+            success: updateSuccess
         });
     });
 
-    async function resetWorker() {
-        if (!isMainThread) return;
+    function resetWorker() {
+        if (workerRestart)
+            return workerRestart;
+        workerRestart = startWorker().finally(() => workerRestart = null);
+        return workerRestart;
+    }
 
-        await updateWorker?.terminate();
-        updateWorker = new Worker('./app.js');
-        updateWorker.once('online', () => {
-            workerAlive = true;
-        });
-        updateWorker.on('message', message => {
+    async function startWorker() {
+        const previousWorker = updateWorker;
+        updateWorker = null;
+        workerAlive = false;
+        await previousWorker?.terminate();
+        const worker = new Worker('./app.js');
+        updateWorker = worker;
+        worker.on('message', message => {
+            if (worker !== updateWorker)
+                return;
             if (message.hasOwnProperty('success')) {
+                updateSuccess = message.success;
                 if (!message.success) 
                     console.warn(`Data update failed`); 
                 updating = false;
@@ -469,23 +494,39 @@ if (isMainThread) {
             } else if (message.hasOwnProperty('updateTask'))
                 setUpdateTask(message.updateTask);
         });
-        updateWorker.on('error', err => {
+        worker.on('error', err => {
             console.error(err);
+            if (worker !== updateWorker)
+                return;
+            workerAlive = false;
+            updateSuccess = false;
             updating = false;
             setUpdateTask(null);
         });
-        updateWorker.on('exit', code => {
+        worker.on('exit', code => {
+            if (worker !== updateWorker)
+                return;
+            if (updating)
+                updateSuccess = false;
             updating = false;
             workerAlive = false;
             setUpdateTask(null);
             if (code) {
                 console.error(`Update thread exited code ${code}, restarting`);
-                resetWorker();
+                setImmediate(() => resetWorker().catch(err => console.error(err)));
             }
+        });
+        await new Promise((resolve, reject) => {
+            worker.once('online', () => {
+                workerAlive = true;
+                resolve();
+            });
+            worker.once('error', reject);
+            worker.once('exit', code => reject(new Error(`Update worker exited before becoming ready (${code})`)));
         });
     }
 
-    resetWorker();
+    resetWorker().catch(err => console.error(err));
 
     // Initialize cached world data
     getConnPool().then(pool => {

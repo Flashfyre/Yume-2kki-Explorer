@@ -1,4 +1,4 @@
-// Version 7.1.2 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
+// Version 7.1.3 yume-2kki-explorer - https://github.com/Flashfyre/Yume-2kki-Explorer#readme
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -96900,7 +96900,7 @@ function InsertStackElement(node, body) {
 
 	var collectableIdsExports = requireCollectableIds();
 
-	var version = "7.1.2";
+	var version = "7.1.3";
 
 	function initGraphTouch(element) {
 	    const pointers = new Map();
@@ -98358,7 +98358,7 @@ function InsertStackElement(node, body) {
 	        if (config.removedContentMode === 1)
 	            queryString = '?includeRemovedContent=true';
 	        if (urlSearchParams.has("adminKey"))
-	            queryString += `${queryString.length ? "&" : "?"}adminKey=${urlSearchParams.get("adminKey")}`;
+	            queryString += `${queryString.length ? "&" : "?"}adminKey=${encodeURIComponent(urlSearchParams.get("adminKey"))}`;
 	    } else {
 	        queryString += `?locationNames=${locationModeLocations.join('|')}`;
 	        if (urlSearchParams.has('hiddenConnLocations'))
@@ -98370,18 +98370,23 @@ function InsertStackElement(node, body) {
 	    const loadOrUpdateData = update => {
 	        if (update) {
 	            const req = { reset: update === 'reset', collectablesOnly: update === 'collectables' };
+	            if (urlSearchParams.has('adminKey'))
+	                req.adminKey = urlSearchParams.get('adminKey');
 	            $$1.post('/updateData', req)
 	                .done(() => {
 	                    const pollTimer = setInterval(() => {
 	                        $$1.post('/pollUpdate').done(res => {
 	                            if (res.done) {
 	                                updateTask = null;
-	                                loadData();
 	                                clearInterval(pollTimer);
+	                                if (res.success === false)
+	                                    onFail(null, 'error', new Error('Data update failed'));
+	                                else
+	                                    loadData();
 	                            } else if (res.task)
 	                                updateTask = res.task;
-	                        }).fail(() => {
-	                            onFail();
+	                        }).fail((request, status, error) => {
+	                            onFail(request, status, error || status);
 	                            clearInterval(pollTimer);
 	                        });
 	                    }, 300);
@@ -98491,6 +98496,7 @@ function InsertStackElement(node, body) {
 	let localizedNodeIconNew;
 	let localizedVersionDetails;
 	let localizedVersionDisplayToggle;
+	let localizedLoading;
 	let localizedSeparator;
 	let localizedDot;
 	let localizedComma;
@@ -100793,6 +100799,7 @@ function InsertStackElement(node, body) {
 	            data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
 	            localizedSeparator = data.separator;
 	            localizedDot = data.dot;
+	            localizedLoading = data.loading;
 	            localizedComma = data.comma;
 	            localizedBraces = data.braces;
 	            localizedNA = data.na;
@@ -102378,6 +102385,10 @@ function InsertStackElement(node, body) {
 	    const $content = $container.children();
 	    $content.addClass("display--none");
 	    $container.prepend($loadingContainer);
+	    if (localizedLoading) {
+	        $loadingContainer.find('.loading-container__text__main').text(localizedLoading.label);
+	        $loadingContainer.find('.loading-container__text--error').text(localizedLoading.error);
+	    }
 
 	    let loadingFrameCount = 0;
 	    const updateLoadingText = () => {

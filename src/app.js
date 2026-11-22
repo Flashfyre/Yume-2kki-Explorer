@@ -1440,7 +1440,7 @@ export function loadData(update, onSuccess, onFail) {
         if (config.removedContentMode === 1)
             queryString = '?includeRemovedContent=true';
         if (urlSearchParams.has("adminKey"))
-            queryString += `${queryString.length ? "&" : "?"}adminKey=${urlSearchParams.get("adminKey")}`;
+            queryString += `${queryString.length ? "&" : "?"}adminKey=${encodeURIComponent(urlSearchParams.get("adminKey"))}`;
     } else {
         queryString += `?locationNames=${locationModeLocations.join('|')}`;
         if (urlSearchParams.has('hiddenConnLocations'))
@@ -1452,18 +1452,23 @@ export function loadData(update, onSuccess, onFail) {
     const loadOrUpdateData = update => {
         if (update) {
             const req = { reset: update === 'reset', collectablesOnly: update === 'collectables' };
+            if (urlSearchParams.has('adminKey'))
+                req.adminKey = urlSearchParams.get('adminKey');
             $.post('/updateData', req)
                 .done(() => {
                     const pollTimer = setInterval(() => {
                         $.post('/pollUpdate').done(res => {
                             if (res.done) {
                                 updateTask = null;
-                                loadData();
                                 clearInterval(pollTimer)
+                                if (res.success === false)
+                                    onFail(null, 'error', new Error('Data update failed'));
+                                else
+                                    loadData();
                             } else if (res.task)
                                 updateTask = res.task;
-                        }).fail(() => {
-                            onFail();
+                        }).fail((request, status, error) => {
+                            onFail(request, status, error || status);
                             clearInterval(pollTimer)
                         });
                     }, 300);
@@ -1573,6 +1578,7 @@ let localizedBgmTrackLabel;
 let localizedNodeIconNew;
 let localizedVersionDetails;
 let localizedVersionDisplayToggle;
+let localizedLoading;
 let localizedSeparator;
 let localizedDot;
 let localizedComma;
@@ -3875,6 +3881,7 @@ function initLocalization(isInitial) {
             data.footer.lastFullUpdate = data.footer.lastFullUpdate.replace("{LAST_FULL_UPDATE}", isInitial ? "" : formatDate(lastFullUpdate, config.lang, true));
             localizedSeparator = data.separator;
             localizedDot = data.dot;
+            localizedLoading = data.loading;
             localizedComma = data.comma;
             localizedBraces = data.braces;
             localizedNA = data.na;
@@ -5462,6 +5469,10 @@ function displayLoadingAnim($container) {
     const $content = $container.children();
     $content.addClass("display--none");
     $container.prepend($loadingContainer);
+    if (localizedLoading) {
+        $loadingContainer.find('.loading-container__text__main').text(localizedLoading.label);
+        $loadingContainer.find('.loading-container__text--error').text(localizedLoading.error);
+    }
 
     let loadingFrameCount = 0;
     const updateLoadingText = () => {
